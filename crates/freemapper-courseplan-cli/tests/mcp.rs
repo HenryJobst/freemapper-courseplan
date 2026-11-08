@@ -841,3 +841,32 @@ fn names_and_lists_are_trimmed_and_codes_may_be_integers() {
     let (error, text) = session.call("remove_control", json!({ "project": project, "code": 3.5 }));
     assert!(error, "{text}");
 }
+
+/// The tools added in the final review follow ADR 0023: no file content in their errors.
+#[test]
+fn new_tools_do_not_quote_the_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let broken = dir.path().join("broken.toml");
+    std::fs::write(&broken, "magic = sesame-4711 = oops\n").unwrap();
+    let foreign = dir.path().join("settings.toml");
+    std::fs::write(&foreign, "sesame_key = 1\n[vault]\nopen = 2\n").unwrap();
+    let mut session = Session::start();
+    for project in [&broken, &foreign] {
+        for (tool, args) in [
+            (
+                "set_course_number",
+                json!({ "project": project, "name": "A", "after": 1, "clear": true }),
+            ),
+            (
+                "set_special_courses",
+                json!({ "project": project, "id": "W1", "all": true }),
+            ),
+        ] {
+            let (error, text) = session.call(tool, args);
+            assert!(error, "{tool}: {text}");
+            for word in ["sesame", "4711", "magic", "vault"] {
+                assert!(!text.contains(word), "{tool}: {text}");
+            }
+        }
+    }
+}
