@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 23] = [
+const TOOLS: [&str; 24] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -27,6 +27,7 @@ const TOOLS: [&str; 23] = [
     "set_leg",
     "set_course_details",
     "place_numbers",
+    "set_course_number",
     "map_features_near",
     "map_extent",
     "init_event",
@@ -185,7 +186,7 @@ fn lists_the_tools() {
             "{name}: {tool}"
         );
     }
-    assert_eq!(listed.len(), 23, "unexpected tools");
+    assert_eq!(listed.len(), TOOLS.len(), "unexpected tools");
     let add = listed.iter().find(|t| t["name"] == "add_control").unwrap();
     assert!(add["inputSchema"]["properties"]["at"].is_object(), "{add}");
 }
@@ -597,4 +598,103 @@ fn binary_omap_keeps_its_hint_over_mcp() {
     assert!(error, "{text}");
     assert!(text.contains("old binary format"), "{text}");
     drop(dir);
+}
+
+/// Start S, finish F, controls 31 and 32 and course A over both.
+fn course_a(session: &mut Session, project: &Path) -> Value {
+    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
+    let p = |fx, fy| point(&extent, fx, fy);
+    for (kind, id, at) in [("start", "S", p(0.3, 0.3)), ("finish", "F", p(0.7, 0.7))] {
+        session.ok(
+            "add_special",
+            json!({ "project": project, "kind": kind, "id": id, "at": at }),
+        );
+    }
+    for (code, at) in [("31", p(0.4, 0.5)), ("32", p(0.5, 0.4))] {
+        session.ok(
+            "add_control",
+            json!({ "project": project, "at": at, "code": code }),
+        );
+    }
+    session.ok(
+        "add_course",
+        json!({ "project": project, "name": "A", "start": "S", "finish": "F", "controls": ["31", "32"] }),
+    );
+    extent
+}
+
+fn course_numbers(project: &Path) -> Vec<Option<(f64, f64)>> {
+    let file = freemapper_courseplan_model::ProjectFile::load(project).unwrap();
+    match &file.event.courses[0].kind {
+        freemapper_courseplan_model::CourseKind::Individual { controls } => controls
+            .iter()
+            .map(|c| c.number.as_ref().map(|n| (n.direction, n.gap_mm)))
+            .collect(),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn set_course_number_sets_clears_and_checks_ranges() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    course_a(&mut session, &project);
+    let set = session.ok(
+        "set_course_number",
+        json!({ "project": project, "name": "A", "after": 2, "direction": -90.0, "gap_mm": 1.0 }),
+    );
+    assert_eq!(set["number"]["direction"], 270.0, "{set}");
+    assert_eq!(course_numbers(&project), [None, Some((270.0, 1.0))]);
+    let placed = session.ok("place_numbers", json!({ "project": project, "name": "A" }));
+    assert_eq!(placed["placed"], 1);
+    assert_eq!(course_numbers(&project)[1], Some((270.0, 1.0)));
+    session.ok(
+        "set_course_number",
+        json!({ "project": project, "name": "A", "after": 2, "clear": true }),
+    );
+    assert_eq!(course_numbers(&project)[1], None);
+    let before = std::fs::read_to_string(&project).unwrap();
+    for args in [
+        json!({ "project": project, "name": "A", "after": 3, "clear": true }),
+        json!({ "project": project, "name": "A", "after": 0, "clear": true }),
+        json!({ "project": project, "name": "A", "after": 1, "direction": 0.0, "gap_mm": 0.0 }),
+        json!({ "project": project, "name": "A", "after": 1, "direction": 0.0, "gap_mm": 10.5 }),
+        json!({ "project": project, "name": "A", "after": 1, "direction": 0.0 }),
+        json!({ "project": project, "name": "A", "after": 1, "gap_mm": 1.0, "clear": true }),
+    ] {
+        let (error, text) = session.call("set_course_number", args.clone());
+        assert!(error, "{args}: {text}");
+    }
+    let (error, text) = session.call(
+        "set_control_number",
+        json!({ "project": project, "code": "31", "direction": 0.0, "gap_mm": 20.0 }),
+    );
+    assert!(error && text.contains("10"), "{text}");
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    let set = session.ok(
+        "set_control_number",
+        json!({ "project": project, "code": "31", "direction": 450.0, "gap_mm": 0.5 }),
+    );
+    assert_eq!(set["number"]["direction"], 90.0, "{set}");
+}
+
+#[test]
+fn central_number_is_kept_by_place_numbers() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    course_a(&mut session, &project);
+    session.ok(
+        "set_control_number",
+        json!({ "project": project, "code": "31", "direction": 90.0, "gap_mm": 0.5 }),
+    );
+    for overwrite in [false, true] {
+        let placed = session.ok(
+            "place_numbers",
+            json!({ "project": project, "name": "A", "overwrite": overwrite }),
+        );
+        assert_eq!(placed["placed"], 1);
+        assert_eq!(course_numbers(&project)[0], None);
+    }
 }

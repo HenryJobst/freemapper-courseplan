@@ -593,6 +593,7 @@ mod tests {
             "line",
             "column",
             "needed",
+            "max",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

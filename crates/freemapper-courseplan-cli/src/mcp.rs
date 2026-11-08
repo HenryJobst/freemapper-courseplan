@@ -11,6 +11,7 @@ use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, LegStart};
 use freemapper_courseplan::init::{InitError, init_project};
 use freemapper_courseplan::map::{FeatureGeometry, MapIndex, MapKind, map_kind};
+use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
@@ -364,6 +365,36 @@ impl CoursePlanServer {
         e.localize(&self.lang)
     }
 
+    /// A number placement from `direction` and `gap_mm`, or none with `clear`. The direction is
+    /// brought into [0, 360); the gap must be more than 0 and at most [`MAX_GAP_MM`] print mm.
+    fn number_arg(
+        &self,
+        direction: Option<f64>,
+        gap_mm: Option<f64>,
+        clear: Option<bool>,
+    ) -> Result<Option<NumberPlacement>, String> {
+        match (direction, gap_mm, flag(clear)) {
+            (Some(direction), Some(gap_mm), false) => {
+                if !numbers::gap_in_range(gap_mm) {
+                    return Err(text(
+                        &self.lang,
+                        "mcp-error-bad-gap",
+                        &[
+                            ("value", FluentValue::from(gap_mm.to_string())),
+                            ("max", FluentValue::from(MAX_GAP_MM.to_string())),
+                        ],
+                    ));
+                }
+                Ok(Some(NumberPlacement {
+                    direction: numbers::normalize_direction(direction),
+                    gap_mm,
+                }))
+            }
+            (None, None, true) => Ok(None),
+            _ => Err(text(&self.lang, "mcp-error-number-args", &[])),
+        }
+    }
+
     fn extent(&self, file: &ProjectFile) -> Result<Option<(MapPoint, MapPoint)>, String> {
         Ok(MapIndex::from_document(&self.read_map(file)?).extent())
     }
@@ -562,13 +593,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SetControlNumber>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let number = match (req.direction, req.gap_mm, flag(req.clear)) {
-                (Some(direction), Some(gap_mm), false) => {
-                    Some(NumberPlacement { direction, gap_mm })
-                }
-                (None, None, true) => None,
-                _ => return Err(text(&self.lang, "mcp-error-number-args", &[])),
-            };
+            let number = self.number_arg(req.direction, req.gap_mm, req.clear)?;
             edit::set_central_number(
                 &mut file.event,
                 &ControlCode(req.code.clone()),
@@ -820,6 +845,37 @@ impl CoursePlanServer {
         }))
     }
 
+    #[tool(description = "Set the number placement of a control in a course")]
+    async fn set_course_number(
+        &self,
+        Parameters(req): Parameters<SetCourseNumber>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.edit(&req.project, |file| {
+            let number = self.number_arg(req.direction, req.gap_mm, req.clear)?;
+            // The assistant counts from 1 as on the map; the library counts from 0.
+            let bad_index = || {
+                self.refused(edit::EditError::BadIndex {
+                    course: req.name.clone(),
+                    index: req.after as usize,
+                })
+            };
+            if req.after == 0 {
+                return Err(bad_index());
+            }
+            edit::set_course_number(
+                &mut file.event,
+                &req.name,
+                req.after as usize - 1,
+                number.clone(),
+            )
+            .map_err(|e| match e {
+                edit::EditError::BadIndex { .. } => bad_index(),
+                other => self.refused(other),
+            })?;
+            Ok(json!({ "name": req.name, "after": req.after, "number": placement(&number) }))
+        }))
+    }
+
     #[tool(description = "Map objects near a position")]
     async fn map_features_near(
         &self,
@@ -1006,7 +1062,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 23);
+            assert_eq!(tools.len(), 24);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

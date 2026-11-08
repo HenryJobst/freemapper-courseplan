@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use clap::{ArgGroup, Subcommand, ValueEnum};
 use freemapper_courseplan::edit::{self, LegStart};
 use freemapper_courseplan::map::{MapIndex, map_kind};
+use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
@@ -208,6 +209,27 @@ pub enum CourseCmd {
         #[arg(long)]
         no_print_scale: bool,
     },
+    /// Set or clear the number placement of one control of a course
+    #[command(group(
+        ArgGroup::new("mode").required(true).args(["direction", "clear"])
+    ))]
+    Number {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "N")]
+        after: String,
+        #[arg(long, value_name = "DEG", requires = "gap", allow_hyphen_values = true)]
+        direction: Option<String>,
+        #[arg(
+            long,
+            value_name = "MM",
+            requires = "direction",
+            allow_hyphen_values = true
+        )]
+        gap: Option<String>,
+        #[arg(long, conflicts_with_all = ["direction", "gap"])]
+        clear: bool,
+    },
     /// Place the control numbers of a course
     Numbers {
         project: PathBuf,
@@ -298,6 +320,21 @@ fn parse_number(lang: &Lang, value: &str) -> Result<f64, Failure> {
             &[("value", v(value))],
         ))),
     }
+}
+
+/// A number placement from `--direction` and `--gap`: the direction brought into [0, 360), the gap
+/// more than 0 and at most [`MAX_GAP_MM`] print mm.
+fn parse_placement(lang: &Lang, direction: &str, gap: &str) -> Result<NumberPlacement, Failure> {
+    let direction = numbers::normalize_direction(parse_number(lang, direction)?);
+    let gap_mm = parse_number(lang, gap)?;
+    if !numbers::gap_in_range(gap_mm) {
+        return Err(Failure::Usage(text(
+            lang,
+            "cli-edit-bad-gap",
+            &[("value", v(gap)), ("max", v(fmt(MAX_GAP_MM)))],
+        )));
+    }
+    Ok(NumberPlacement { direction, gap_mm })
 }
 
 fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
@@ -477,10 +514,9 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
             clear,
         } => {
             let placement = match (direction, gap) {
-                (Some(direction), Some(gap)) if !clear => Some(NumberPlacement {
-                    direction: parse_number(lang, &direction)?,
-                    gap_mm: parse_number(lang, &gap)?,
-                }),
+                (Some(direction), Some(gap)) if !clear => {
+                    Some(parse_placement(lang, &direction, &gap)?)
+                }
                 _ => None,
             };
             let mut file = load(lang, &project)?;
@@ -807,6 +843,65 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             say(lang, "cli-edit-course-set", &[("name", v(name))]);
+        }
+        CourseCmd::Number {
+            project,
+            name,
+            after,
+            direction,
+            gap,
+            clear,
+        } => {
+            // The command line counts from 1 as on the map; the library counts from 0.
+            let shown = parse_count(lang, &after)?;
+            let placement = match (direction, gap) {
+                (Some(direction), Some(gap)) if !clear => {
+                    Some(parse_placement(lang, &direction, &gap)?)
+                }
+                _ => None,
+            };
+            let bad_index = || {
+                refused(
+                    lang,
+                    edit::EditError::BadIndex {
+                        course: name.clone(),
+                        index: shown as usize,
+                    },
+                )
+            };
+            if shown == 0 {
+                return Err(bad_index());
+            }
+            let mut file = load(lang, &project)?;
+            edit::set_course_number(
+                &mut file.event,
+                &name,
+                shown as usize - 1,
+                placement.clone(),
+            )
+            .map_err(|e| match e {
+                edit::EditError::BadIndex { .. } => bad_index(),
+                other => refused(lang, other),
+            })?;
+            save(lang, &mut file)?;
+            let index = ("index", v(shown.to_string()));
+            match placement {
+                Some(p) => say(
+                    lang,
+                    "cli-edit-course-number-set",
+                    &[
+                        ("name", v(name)),
+                        index,
+                        ("direction", v(fmt(p.direction))),
+                        ("gap", v(fmt(p.gap_mm))),
+                    ],
+                ),
+                None => say(
+                    lang,
+                    "cli-edit-course-number-cleared",
+                    &[("name", v(name)), index],
+                ),
+            }
         }
         CourseCmd::Numbers {
             project,

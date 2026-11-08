@@ -141,6 +141,7 @@ cli-edit-class-removed = removed class { $name }
 cli-edit-bad-point = { $value } is not a point; write X,Y in map millimetres with a dot as decimal separator, for example 12.5,-30
 cli-edit-bad-number = { $value } is not a number; use a dot as decimal separator, for example 0.5
 cli-edit-bad-count = { $value } is not a whole number
+cli-edit-bad-gap = { $value } is not a usable gap; give more than 0 and at most { $max } print millimetres
 cli-edit-kind-needs-at = a { $kind } is a single point; give --at X,Y and no --point
 cli-edit-kind-needs-points = a { $kind } is drawn through points; give --point X,Y (once per point) and no --at
 cli-edit-no-courses-for-kind = a { $kind } applies to every course; leave out --courses
@@ -180,8 +181,8 @@ cli-arg-control-describe-f = Column F symbol (IOF symbol id)
 cli-arg-control-describe-g = Column G symbol (IOF symbol id)
 cli-arg-control-describe-h = Column H symbol (IOF symbol id)
 cli-arg-control-describe-clear = Empty all columns first; columns given in the same call are set afterwards
-cli-arg-control-number-direction = Degrees, 0 = east, counter-clockwise
-cli-arg-control-number-gap = Gap to the circle in print millimetres
+cli-arg-control-number-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
+cli-arg-control-number-gap = Gap to the circle in print millimetres, more than 0 and at most 10
 cli-arg-control-number-clear = Go back to the default placement
 cli-arg-special-add-kind = What the object is
 cli-arg-special-add-id = Id of the object, unique among special objects
@@ -214,6 +215,8 @@ cli-edit-course-numbers = { $count ->
 }
 cli-edit-course-leg-start = set the leg from the start of course { $name }: bends { $bends }, { $taped }
 cli-edit-course-leg-after = set the leg after position { $index } of course { $name }: bends { $bends }, { $taped }
+cli-edit-course-number-set = course { $name }, position { $index }: number at direction { $direction } degrees, gap { $gap } mm
+cli-edit-course-number-cleared = course { $name }, position { $index }: number placement cleared
 
 cli-help-course = Add, change, number and remove individual courses
 cli-help-course-add = Add an individual course
@@ -221,7 +224,8 @@ cli-help-course-controls = Replace the controls of a course
 cli-help-course-remove = Remove a course and its name from the special objects
 cli-help-course-leg = Set the bends and the marked-route flag of one leg
 cli-help-course-set = Change classes, climb or planned print scale of a course
-cli-help-course-numbers = Place the control numbers of a course clear of legs and circles
+cli-help-course-number = Set or clear the number placement of one control in a course; it wins over the central and the automatic placement
+cli-help-course-numbers = Place the control numbers of a course clear of legs and circles. Runs only when called, so call it again after changing legs; central and course numbers stay
 
 cli-arg-edit-course = Name of the course
 cli-arg-course-add-start = Id of the start special object
@@ -240,7 +244,11 @@ cli-arg-course-set-climb = Climb in metres
 cli-arg-course-set-no-climb = Remove the climb
 cli-arg-course-set-print-scale = Planned print scale, for example 10000 for 1:10000
 cli-arg-course-set-no-print-scale = Remove the planned print scale
-cli-arg-course-numbers-overwrite = Replace numbers that are already placed [default: keep them]
+cli-arg-course-number-after = Position of the control in the course, counted from 1 as on the map; crossing points count as positions
+cli-arg-course-number-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
+cli-arg-course-number-gap = Gap to the circle in print millimetres, more than 0 and at most 10
+cli-arg-course-number-clear = Remove the placement of the course, so the central or the automatic placement applies again
+cli-arg-course-numbers-overwrite = Also replace course numbers placed before; controls with a central number keep it [default: keep them]
 
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
@@ -267,6 +275,7 @@ mcp-error-no-courses-for-kind = a { $kind } applies to every course; leave out c
 mcp-error-leg-target = give either from_start or after, not both and not neither
 mcp-error-no-change = nothing to change; give at least one of classes, climb_m, no_climb, print_scale and no_print_scale
 mcp-error-number-args = give direction and gap_mm together, or clear
+mcp-error-bad-gap = gap_mm { $value } is out of range; give more than 0 and at most { $max } print millimetres
 
 mcp-tool-event-info = Summary of the event: title, map and map kind, map extent, the numbers of controls, special objects, classes and courses, and per course the controls, the length in km, the climb and how many control numbers are placed.
 mcp-tool-list-controls = List the controls with code, kind, position in map mm, description symbols and number placement.
@@ -287,7 +296,8 @@ mcp-tool-remove-course = Remove a course and its name from the special objects.
 mcp-tool-set-course-controls = Replace the controls of a course. The n-th visit of a code keeps the bends, marked-route flag and number placement of the n-th visit before.
 mcp-tool-set-leg = Set the bends and the marked-route flag of one leg of an individual course: the leg from the start (from_start) or the leg after a position (after, counted from 1 as on the map, crossing points included). Without bends the leg loses its bends.
 mcp-tool-set-course-details = Change the classes, the climb or the planned print scale of a course. Parameters you leave out stay as they are.
-mcp-tool-place-numbers = Place the control numbers of a course clear of legs, circles and other numbers. Returns how many numbers it placed. Numbers already placed stay unless overwrite is true.
+mcp-tool-place-numbers = Place the control numbers of a course clear of legs, circles and other numbers. Returns how many numbers it placed. It runs only when called, so call it again after changing legs. A control with a central number (set_control_number) keeps it, and course numbers (set_course_number) stay unless overwrite is true.
+mcp-tool-set-course-number = Set or clear the number placement of one control in an individual course, at a position counted from 1 as on the map (crossing points included). It wins over the central placement of set_control_number and over place_numbers. Direction in degrees (0 = east, counter-clockwise), gap to the circle in print mm, more than 0 and at most 10. clear removes it, so the central or automatic placement applies again.
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
@@ -311,8 +321,8 @@ mcp-param-g = Symbol for column G (IOF symbol id)
 mcp-param-h = Symbol for column H (IOF symbol id)
 mcp-param-set-control-number-clear = Go back to the default placement; then leave out direction and gap_mm [default: false]
 mcp-param-describe-control-clear = Empty all columns first; columns given in the same call are set afterwards [default: false]
-mcp-param-direction = Degrees, 0 = east, counter-clockwise
-mcp-param-gap-mm = Gap to the circle in print millimetres
+mcp-param-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
+mcp-param-gap-mm = Gap to the circle in print millimetres, more than 0 and at most 10
 mcp-param-kind = What the object is: start, finish, marked_route, out_of_bounds, forbidden_route, dangerous_area, first_aid or water
 mcp-param-id = Id of the object, unique among special objects
 mcp-param-points = The points of a marked_route, forbidden_route, out_of_bounds or dangerous_area, in order; each is an object with x and y in map millimetres
@@ -335,6 +345,8 @@ mcp-param-bends = The bends of the leg in order, each an object with x and y in 
 mcp-param-taped = Mark the leg as a marked route [default: false, the flag is cleared]
 mcp-param-no-climb = Remove the climb [default: false]
 mcp-param-no-print-scale = Remove the planned print scale [default: false]
-mcp-param-overwrite = Replace numbers that are already placed [default: false]
+mcp-param-overwrite = Also replace course numbers placed before; central numbers stay [default: false]
+mcp-param-set-course-number-after = Position of the control in the course, counted from 1 as on the map; crossing points count as positions
+mcp-param-set-course-number-clear = Remove the placement of the course, so the central or the automatic placement applies again; then leave out direction and gap_mm [default: false]
 mcp-param-radius-mm = Search radius in map millimetres
 mcp-param-limit = Most features to return [default: 20, at most 200]

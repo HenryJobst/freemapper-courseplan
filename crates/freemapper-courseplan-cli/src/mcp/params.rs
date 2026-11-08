@@ -211,6 +211,17 @@ pub(super) struct PlaceNumbers {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetCourseNumber {
+    pub(super) project: String,
+    pub(super) name: String,
+    pub(super) after: u32,
+    pub(super) direction: Option<f64>,
+    pub(super) gap_mm: Option<f64>,
+    pub(super) clear: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct FeaturesNear {
     pub(super) project: String,
     pub(super) x: f64,

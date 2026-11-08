@@ -60,6 +60,21 @@ pub fn base_scale(kind: MapKind) -> u32 {
     }
 }
 
+/// Largest gap between circle and number that the CLI and the MCP server accept, in print mm.
+pub const MAX_GAP_MM: f64 = 10.0;
+
+/// A number direction in degrees brought into [0, 360).
+pub fn normalize_direction(direction: f64) -> f64 {
+    let d = direction.rem_euclid(360.0);
+    // A tiny negative value rounds up to 360, and -0 stays -0; both mean east.
+    if d >= 360.0 || d == 0.0 { 0.0 } else { d }
+}
+
+/// Whether a gap in print mm is more than 0 and at most [`MAX_GAP_MM`].
+pub fn gap_in_range(gap_mm: f64) -> bool {
+    gap_mm > 0.0 && gap_mm <= MAX_GAP_MM
+}
+
 /// Axis-aligned rectangle in map mm.
 #[derive(Debug, Clone, Copy)]
 struct Rect {
@@ -545,6 +560,24 @@ mod tests {
 
     fn n(code: &str, x: f64, y: f64) -> (&str, f64, f64, ControlKind) {
         (code, x, y, ControlKind::Control)
+    }
+
+    #[test]
+    fn directions_are_normalised_and_gaps_bounded() {
+        for (given, want) in [
+            (-45.0, 315.0),
+            (720.5, 0.5),
+            (360.0, 0.0),
+            (-0.0, 0.0),
+            (-1e-20, 0.0),
+            (90.0, 90.0),
+        ] {
+            let got = normalize_direction(given);
+            assert_eq!(got, want, "{given}");
+            assert!(got.is_sign_positive(), "{given}");
+        }
+        assert!(gap_in_range(0.5) && gap_in_range(MAX_GAP_MM));
+        assert!(!gap_in_range(0.0) && !gap_in_range(-1.0) && !gap_in_range(10.01));
     }
 
     #[test]

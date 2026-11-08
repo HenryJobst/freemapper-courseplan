@@ -122,10 +122,10 @@ fn control_add_move_describe_remove() {
                 "0.5"
             ]
         ),
-        "control 31 number: direction -45 degrees, gap 0.5 mm"
+        "control 31 number: direction 315 degrees, gap 0.5 mm"
     );
     let toml = std::fs::read_to_string(&project).unwrap();
-    assert!(toml.contains("direction") && toml.contains("-45"), "{toml}");
+    assert!(toml.contains("direction") && toml.contains("315"), "{toml}");
     ok(d, &["control", "number", p, "31", "--clear"]);
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(!toml.contains("direction"), "{toml}");
@@ -794,6 +794,188 @@ fn blank_control_code_is_refused() {
             "{}",
             stderr(&out)
         );
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+fn course_numbers_of(project: &Path) -> Vec<Option<(f64, f64)>> {
+    let file = freemapper_courseplan_model::ProjectFile::load(project).unwrap();
+    match &file.event.courses[0].kind {
+        freemapper_courseplan_model::CourseKind::Individual { controls } => controls
+            .iter()
+            .map(|c| c.number.as_ref().map(|n| (n.direction, n.gap_mm)))
+            .collect(),
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn course_number_sets_and_clears() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31,32,33",
+        ],
+    );
+    assert_eq!(
+        ok(
+            d,
+            &[
+                "course",
+                "number",
+                p,
+                "A",
+                "--after",
+                "2",
+                "--direction",
+                "-90",
+                "--gap",
+                "1"
+            ]
+        ),
+        "course A, position 2: number at direction 270 degrees, gap 1 mm"
+    );
+    assert_eq!(
+        course_numbers_of(&project),
+        [None, Some((270.0, 1.0)), None]
+    );
+    // Automatic placement keeps the course number.
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A"]),
+        "placed 2 control numbers on course A"
+    );
+    assert_eq!(course_numbers_of(&project)[1], Some((270.0, 1.0)));
+    assert_eq!(
+        ok(d, &["course", "number", p, "A", "--after", "2", "--clear"]),
+        "course A, position 2: number placement cleared"
+    );
+    assert_eq!(course_numbers_of(&project)[1], None);
+    let before = std::fs::read(&project).unwrap();
+    for after in ["0", "4"] {
+        let out = run(
+            d,
+            &["course", "number", p, "A", "--after", after, "--clear"],
+        );
+        assert_eq!(out.status.code(), Some(1), "{after}: {}", stderr(&out));
+    }
+    for args in [
+        vec!["--after", "1", "--direction", "10", "--gap", "0"],
+        vec!["--after", "1", "--direction", "10", "--gap", "10.5"],
+        vec!["--after", "1", "--direction", "10"],
+        vec!["--after", "1", "--clear", "--gap", "1"],
+        vec!["--direction", "10", "--gap", "1"],
+    ] {
+        let mut all = vec!["course", "number", p, "A"];
+        all.extend(args.iter().copied());
+        let out = run(d, &all);
+        assert_eq!(out.status.code(), Some(2), "{args:?}: {}", stderr(&out));
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn course_numbers_keep_central_numbers() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31,32,33",
+        ],
+    );
+    ok(
+        d,
+        &[
+            "control",
+            "number",
+            p,
+            "32",
+            "--direction",
+            "90",
+            "--gap",
+            "0.5",
+        ],
+    );
+    for overwrite in [false, true] {
+        let mut args = vec!["course", "numbers", p, "A"];
+        if overwrite {
+            args.push("--overwrite");
+        }
+        assert_eq!(ok(d, &args), "placed 2 control numbers on course A");
+        assert_eq!(course_numbers_of(&project)[1], None);
+    }
+}
+
+#[test]
+fn number_direction_is_normalised_and_gap_checked() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    ok(d, &["control", "add", p, "--at", "1,1"]);
+    for (direction, shown) in [
+        ("-45", "315"),
+        ("720.5", "0.5"),
+        ("360", "0"),
+        ("1e2", "100"),
+    ] {
+        assert_eq!(
+            ok(
+                d,
+                &[
+                    "control",
+                    "number",
+                    p,
+                    "31",
+                    "--direction",
+                    direction,
+                    "--gap",
+                    "10"
+                ]
+            ),
+            format!("control 31 number: direction {shown} degrees, gap 10 mm")
+        );
+    }
+    let before = std::fs::read(&project).unwrap();
+    for gap in ["0", "-1", "10.01", "1e3"] {
+        let out = run(
+            d,
+            &[
+                "control",
+                "number",
+                p,
+                "31",
+                "--direction",
+                "0",
+                "--gap",
+                gap,
+            ],
+        );
+        assert_eq!(out.status.code(), Some(2), "{gap}: {}", stderr(&out));
+        assert!(stderr(&out).contains(gap), "{}", stderr(&out));
     }
     assert_eq!(std::fs::read(&project).unwrap(), before);
 }
