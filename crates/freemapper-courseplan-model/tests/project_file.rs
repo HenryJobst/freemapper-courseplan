@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use freemapper_courseplan_model::{
-    ControlCode, ControlKind, CourseKind, Event, MapPoint, ModelError, PrintArea, ProjectError,
-    ProjectFile, SpecialObject,
+    AcceptedFinding, ControlCode, ControlKind, CourseKind, Event, LegRef, MapPoint, ModelError,
+    PrintArea, ProjectError, ProjectFile, SpecialObject,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -972,4 +972,34 @@ fn empty_overlays_and_legs_are_known_and_not_written() {
     let mut project = ProjectFile::load(&file).unwrap();
     project.save().unwrap();
     assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}
+
+#[test]
+fn a_new_finding_writes_legs_as_an_inline_array() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(dir.path(), "[event]\n", "[event]\n");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.accepted_findings.push(AcceptedFinding {
+        rule: "r".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![
+            LegRef {
+                course: "A".to_owned(),
+                after: 3,
+            },
+            LegRef {
+                course: "A".to_owned(),
+                after: 0,
+            },
+        ],
+        note: "n".to_owned(),
+    });
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains("legs = [{ course = \"A\", after = 3 }"),
+        "{text}"
+    );
+    assert!(ProjectFile::load(&file).is_ok());
 }

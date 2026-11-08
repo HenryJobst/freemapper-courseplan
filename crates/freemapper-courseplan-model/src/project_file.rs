@@ -233,8 +233,16 @@ fn tidy(table: &mut Table) {
     for key in empty {
         table.remove(&key);
     }
-    for (_, item) in table.iter_mut() {
-        match item {
+    for (mut key, mut item) in table.iter_mut() {
+        // Leg references are short; the format writes them inline, as `{ course = "A", after = 3 }`.
+        if key.get() == "legs" && matches!(item, Item::ArrayOfTables(_)) {
+            item.make_value();
+            if let Some(value) = item.as_value_mut() {
+                value.decor_mut().set_prefix(" ");
+                key.leaf_decor_mut().set_suffix(" ");
+            }
+        }
+        match &mut item {
             Item::Table(t) => tidy(t),
             Item::ArrayOfTables(a) => a.iter_mut().for_each(tidy),
             _ => {}

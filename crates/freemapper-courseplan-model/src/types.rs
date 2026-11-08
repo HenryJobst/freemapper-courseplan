@@ -342,9 +342,50 @@ pub struct AcceptedFinding {
     pub note: String,
 }
 
+/// What identifies an accepted finding: rule id, course, and the controls and legs it names.
+/// Controls and legs are deduplicated and sorted, so their order in the file does not matter.
+/// `course: None` and `Some` are different keys.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FindingKey {
+    pub rule: String,
+    pub course: Option<String>,
+    pub controls: Vec<ControlCode>,
+    pub legs: Vec<LegRef>,
+}
+
+impl AcceptedFinding {
+    /// The key a check finding is matched against. Controls whose code is all digits come first,
+    /// by numeric value; other codes follow in lexical order.
+    pub fn key(&self) -> FindingKey {
+        let mut controls = self.controls.clone();
+        controls.sort_by(|a, b| control_order(a).cmp(&control_order(b)));
+        controls.dedup();
+        let mut legs = self.legs.clone();
+        legs.sort();
+        legs.dedup();
+        FindingKey {
+            rule: self.rule.clone(),
+            course: self.course.clone(),
+            controls,
+            legs,
+        }
+    }
+}
+
+/// Sort key of a control code: numeric codes (by value, then spelling) before the rest.
+fn control_order(code: &ControlCode) -> (bool, usize, &str, &str) {
+    let text = code.0.as_str();
+    if !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()) {
+        let digits = text.trim_start_matches('0');
+        (false, digits.len(), digits, text)
+    } else {
+        (true, 0, text, text)
+    }
+}
+
 /// A leg of a course: the leg that leaves control number `after` (1-based, as in the CLI;
 /// 0 is the leg from the start).
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LegRef {
     pub course: String,
     pub after: u32,
@@ -569,6 +610,49 @@ mod tests {
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();
         assert_eq!(back, event, "{text}");
+    }
+
+    #[test]
+    fn finding_key_sorts_and_deduplicates() {
+        let code = |s: &str| ControlCode(s.to_owned());
+        let leg = |c: &str, after| LegRef {
+            course: c.to_owned(),
+            after,
+        };
+        let finding =
+            |controls: Vec<ControlCode>, legs: Vec<LegRef>, course: Option<&str>| AcceptedFinding {
+                rule: "r".to_owned(),
+                controls,
+                course: course.map(str::to_owned),
+                legs,
+                note: "n".to_owned(),
+            };
+        let key = finding(
+            vec![
+                code("100"),
+                code("S1"),
+                code("31"),
+                code("100"),
+                code("9"),
+                code("A"),
+            ],
+            vec![leg("B", 1), leg("A", 3), leg("A", 0), leg("A", 3)],
+            None,
+        )
+        .key();
+        assert_eq!(
+            key.controls,
+            vec![code("9"), code("31"), code("100"), code("A"), code("S1")]
+        );
+        assert_eq!(key.legs, vec![leg("A", 0), leg("A", 3), leg("B", 1)]);
+        let shuffled = finding(
+            vec![code("A"), code("9"), code("S1"), code("100"), code("31")],
+            vec![leg("A", 3), leg("B", 1), leg("A", 0)],
+            None,
+        );
+        assert_eq!(shuffled.key(), key);
+        let with_course = finding(shuffled.controls.clone(), shuffled.legs.clone(), Some("A"));
+        assert_ne!(with_course.key(), key);
     }
 
     #[test]
