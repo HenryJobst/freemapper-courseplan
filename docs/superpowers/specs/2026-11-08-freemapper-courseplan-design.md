@@ -90,6 +90,15 @@ after that is Claude's call)*
    freemapper-print; user decision pending)*.
 8. Forest maps (ISOM 2017-2) with their rule values, symbol groups and test maps *(user: later)*. The
    position in this order is open.
+9. Indoor maps for gym training and indoor events *(user, 2026-11-08, agreed across the suite)*:
+   - freemapper makes the starter project with an OOM indoor symbol set after the IOF draft ISInOM 6.6 (OCAD's
+     "Gym" set cannot be copied) and the user's floor plan as template; the fixed gym map is drawn in OOM;
+   - stage 1: each apparatus setup is a copy of the gym map in OOM, and each event names its copy;
+   - courses and tape barriers (maze and labyrinth formats) belong here, as courses and special objects;
+   - here: a map kind "indoor" (scales 1:100 to 1:1000), its own rule profile (WKB distances do not apply),
+     overprint sizes after ISInOM as an assumption until it is final;
+   - stage 2, optional and after the editor: an "apparatus setup" layer in the editor, stored as map objects
+     with OOM symbol codes so freemapper-print draws them like map content.
 
 **Non-goals**
 
