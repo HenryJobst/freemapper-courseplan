@@ -411,6 +411,8 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
             continue;
         }
         let metres = course_length_m(event, course, scale).map_err(|e| e.localize(lang))?;
+        // Fluent's NUMBER() does not localize separators in fluent-bundle 0.16. So the program
+        // formats with one decimal and swaps the separator from the catalog; input keeps the dot.
         let km =
             format!("{:.1}", metres / 1000.0).replace('.', &text(lang, "word-decimal-point", &[]));
         let controls = control_numbers(event, course).iter().flatten().count();
