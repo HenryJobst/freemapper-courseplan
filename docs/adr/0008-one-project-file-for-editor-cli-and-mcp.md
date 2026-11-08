@@ -5,8 +5,9 @@ Status: Accepted
 
 ## Context
 
-An event is prepared in the editor, from the command line or by an AI agent, often mixed. IOF XML 3.0 and
-`.ppen` cannot hold everything the program needs: team courses, accepted findings, class mappings, later tours.
+Course setters prepare an event in the editor, from the command line or through an AI agent, and often mix
+them. IOF XML 3.0 and `.ppen` cannot hold everything the program needs: team courses, accepted findings, class
+mappings, later tours.
 
 ## Decision
 
@@ -16,7 +17,7 @@ read and write only this file. IOF XML 3.0 and `.ppen` are exchange formats, not
 
 ## Consequences
 
-- An event can be copied, reviewed and versioned like any text file.
+- Users can copy, review and version an event like any text file.
 - Cost if wrong: two tools writing at the same moment can overwrite each other; there is no lock at first.
 
 Source: design §5.7; freemapper-print ADR 0008.

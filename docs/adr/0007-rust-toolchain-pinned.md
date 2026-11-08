@@ -1,4 +1,4 @@
-# 0007. The Rust toolchain is pinned in rust-toolchain.toml
+# 0007. rust-toolchain.toml pins the Rust toolchain
 
 Date: 2026-11-08
 Status: Accepted

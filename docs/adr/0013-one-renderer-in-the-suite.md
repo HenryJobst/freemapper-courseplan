@@ -10,9 +10,9 @@ develops it further and needs a browser preview for its own editor.
 
 ## Decision
 
-There is no third copy. freemapper-print's renderer produces a backend-neutral `RenderedPage`, and the browser
-backend (SVG or tiles) is built once there. This project takes over the renderer and the `.omap` reader once they
-are extracted. Texts use the embedded font Arimo; an SVG backend ships it via `@font-face`.
+There is no third copy. freemapper-print's renderer produces a backend-neutral `RenderedPage`, and
+freemapper-print builds the one browser backend (SVG or tiles). This project takes over the renderer and the
+`.omap` reader once they are extracted. Texts use the embedded font Arimo; an SVG backend ships it via `@font-face`.
 
 ## Consequences
 

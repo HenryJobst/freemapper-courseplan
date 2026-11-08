@@ -2,8 +2,8 @@
 
 [Deutsch](de.md) · [README](../../README.en.md)
 
-This manual will be written with the first usable version. It will lead step by step from the finished OOM map to
-finished courses that OE evaluates and freemapper-print prints, without needing the command line.
+This manual takes shape along with the first usable version. It will lead step by step from the finished OOM map
+to finished courses that OE evaluates and freemapper-print prints, even without command-line experience.
 
 Planned chapters:
 

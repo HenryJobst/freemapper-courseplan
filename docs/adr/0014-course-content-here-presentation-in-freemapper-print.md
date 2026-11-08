@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context
 
-Some course details could be set here or in freemapper-print, above all control number positions. Whether a
+Either this project or freemapper-print could set some course details, above all control number positions. Whether a
 number hides a leg is course knowledge; whether it collides with a mask or logo shows only on the sheet.
 
 ## Decision
@@ -14,7 +14,7 @@ What is the same on every sheet of a course belongs here: controls, order, bends
 descriptions, number positions (central per control, overridable per course), planned print scale. What depends
 on the sheet belongs to freemapper-print. Number positions are a direction (degrees, 0 = east,
 counter-clockwise) and a gap in print millimetres. freemapper-print prints control-placer tour sheets from tour
-data delivered here.
+data this project delivers.
 
 ## Consequences
 

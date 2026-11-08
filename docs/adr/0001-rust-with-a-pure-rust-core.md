@@ -11,15 +11,15 @@ placement module.
 
 ## Decision
 
-freemapper-courseplan is written in Rust (edition 2024) with a pure-Rust stack, in three crates:
+freemapper-courseplan uses Rust (edition 2024) with a pure-Rust stack, in three crates:
 `freemapper-courseplan-model` (data model and project file, no map or rendering dependencies),
 `freemapper-courseplan` (domain logic) and `freemapper-courseplan-cli` (CLI, MCP server, editor web server).
-Releases ship one static binary per target, built by the release workflow taken over from freemapper-print.
+The release workflow, taken over from freemapper-print, builds one static binary per target.
 
 ## Consequences
 
-- Code from the siblings can be shared without a language boundary.
-- The model crate can later be used by freemapper-print to read courseplan events.
-- Cost if wrong: a format no Rust crate covers has to be written by hand.
+- This project and its siblings share code without a language boundary.
+- freemapper-print can later use the model crate to read courseplan events.
+- Cost if wrong: this project needs its own code for any format no Rust crate covers.
 
 Source: design §3, §5; freemapper-print ADR 0001; freemapper ADR 0001.

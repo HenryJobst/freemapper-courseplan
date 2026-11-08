@@ -18,7 +18,7 @@ Planned for the first version:
 - control number positions set once per control and changeable per course, with automatic placement;
 - checks against the German competition rules (WKB) 2026, such as control distances, acute angles and enough
   different first controls for a compact start list, each with its source;
-- exchange with Purple Pen (`.ppen`) in both directions, so both programs can be used side by side;
+- exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side;
 - export to IOF XML 3.0 for result software, for example OE;
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser, the command line or an AI assistant (MCP).
@@ -30,7 +30,7 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 ## Status
 
-freemapper-courseplan is being planned. There is no working program yet, only the project skeleton, the
+freemapper-courseplan is in planning. There is no working program yet, only the project skeleton, the
 [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the [glossary](docs/glossary.md),
 the [architecture decisions](docs/adr/README.md) and a
 [collection of course-setting rules](docs/research/2026-11-08-bahnlegung-kriterien.md) (German).

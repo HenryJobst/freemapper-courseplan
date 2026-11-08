@@ -18,6 +18,6 @@ and edits only individual courses. The model lives in its own crate without map 
 
 - Adding team, relay and score later changes the editor and checks, not the project format.
 - The model crate makes no API stability promise until freemapper-print adopts it.
-- Cost if wrong: an early model of a later kind may need rework when it is built.
+- Cost if wrong: an early model of a later kind may need rework once work on that kind starts.
 
 Source: brainstorming 2026-11-08 (user: "mit Einzel-OL starten, Staffel und Mannschaft später"); design §4.3.

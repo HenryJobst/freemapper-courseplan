@@ -3,8 +3,7 @@
 [English](en.md) · [README](../../README.md)
 
 Dieses Handbuch entsteht mit der ersten nutzbaren Version. Es wird Schritt für Schritt von der fertigen OOM-Karte zu
-fertigen Bahnen führen, die in OE ausgewertet und mit freemapper-print gedruckt werden, auch ohne Erfahrung mit der
-Kommandozeile.
+fertigen Bahnen führen, die OE auswertet und freemapper-print druckt, auch ohne Erfahrung mit der Kommandozeile.
 
 Geplante Kapitel:
 

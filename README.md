@@ -7,7 +7,7 @@ Editor im Browser, auf der fertigen Karte aus OpenOrienteering Mapper (OOM). Das
 Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 
 - [freemapper](https://github.com/HenryJobst/freemapper) liefert den Ausgangsstand der Karte,
-- gezeichnet wird in OOM,
+- die Karte zeichnet man in OOM,
 - freemapper-courseplan legt die Bahnen,
 - [freemapper-print](https://github.com/HenryJobst/freemapper-print) druckt die Kartenblätter.
 

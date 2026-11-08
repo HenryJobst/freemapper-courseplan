@@ -4,13 +4,13 @@ An ADR records one decision that shapes freemapper-courseplan: what was decided,
 turns out wrong. Each ADR ends with a `Source:` line that names where the decision was made. Several ADRs take
 over a decision of freemapper-print or freemapper; their source line names that ADR.
 
-`Proposed` marks a decision that stands in the design draft but is not yet approved by the user. It becomes
-`Accepted` when the user approves the design. `Accepted` decisions were made by the user directly or agreed with
-a sibling session on the user's request.
+`Proposed` marks a decision that stands in the design draft but that the user has not yet approved. It becomes
+`Accepted` when the user approves the design. An `Accepted` decision comes from the user directly or from an
+agreement with a sibling session that the user asked for.
 
 ## Numbering
 
-ADRs are numbered from 0001 in the order the decisions were made. A number is never reused. The file name is
+ADR numbers start at 0001, follow the order of the decisions and never repeat. The file name is
 `NNNN-short-kebab-title.md`. A decision that replaces an older one gets a new ADR, and the old one changes its
 status to `Superseded by NNNN`. Its text stays as it was.
 
@@ -50,7 +50,7 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0004](0004-mcp-over-stdio-as-a-primary-interface.md) | MCP over stdio as a primary interface | Accepted | 2026-11-08 |
 | [0005](0005-course-editor-in-a-local-browser-page.md) | Course editor in a local browser page | Accepted | 2026-11-08 |
 | [0006](0006-dependencies-at-least-two-weeks-old.md) | Dependencies at least two weeks old | Accepted | 2026-11-08 |
-| [0007](0007-rust-toolchain-pinned.md) | The Rust toolchain is pinned in rust-toolchain.toml | Accepted | 2026-11-08 |
+| [0007](0007-rust-toolchain-pinned.md) | rust-toolchain.toml pins the Rust toolchain | Accepted | 2026-11-08 |
 | [0008](0008-one-project-file-for-editor-cli-and-mcp.md) | One project file for editor, CLI and MCP | Accepted | 2026-11-08 |
 | [0009](0009-data-model-for-all-course-kinds-individual-first.md) | Data model for all course kinds, individual courses first | Accepted | 2026-11-08 |
 | [0010](0010-sprint-and-schoolyard-maps-first.md) | Sprint and schoolyard maps first | Accepted | 2026-11-08 |
