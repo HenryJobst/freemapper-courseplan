@@ -370,3 +370,75 @@ fn failed_save_keeps_original_and_removes_tmp() {
     assert!(!dir.path().join("event.toml.tmp").exists());
     assert_eq!(std::fs::read_to_string(file.join("keep")).unwrap(), "x");
 }
+
+/// A file written by `create` from minimal.toml plus control 33 and course B, loaded again.
+fn created_with_three_controls_and_two_courses(dir: &Path) -> ProjectFile {
+    let mut event = ProjectFile::load(&fixture("minimal.toml")).unwrap().event;
+    let mut control = event.controls[0].clone();
+    control.code = code("33");
+    control.map_mm.x = 40.0;
+    event.controls.push(control);
+    match &mut event.courses[0].kind {
+        CourseKind::Individual { controls } => {
+            let mut extra = controls[0].clone();
+            extra.code = code("33");
+            controls.push(extra);
+        }
+        other => panic!("unexpected kind {other:?}"),
+    }
+    let mut course = event.courses[0].clone();
+    course.name = "B".to_owned();
+    event.courses.push(course);
+    let file = dir.join("event.toml");
+    ProjectFile::create(&file, event).unwrap();
+    ProjectFile::load(&file).unwrap()
+}
+
+fn save_and_reload(project: &mut ProjectFile) -> Event {
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&project.path).unwrap();
+    let back = ProjectFile::load(&project.path).unwrap().event;
+    assert_eq!(back, project.event, "{text}");
+    back
+}
+
+#[test]
+fn save_keeps_new_order_of_controls() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut project = created_with_three_controls_and_two_courses(dir.path());
+    project.event.controls.reverse();
+    let back = save_and_reload(&mut project);
+    let codes: Vec<_> = back.controls.iter().map(|c| c.code.clone()).collect();
+    assert_eq!(codes, vec![code("33"), code("32"), code("31")]);
+}
+
+#[test]
+fn save_keeps_new_order_of_courses() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut project = created_with_three_controls_and_two_courses(dir.path());
+    project.event.courses.swap(0, 1);
+    let back = save_and_reload(&mut project);
+    let names: Vec<_> = back.courses.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, vec!["B", "A"]);
+}
+
+#[test]
+fn save_keeps_new_order_of_course_controls() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut project = created_with_three_controls_and_two_courses(dir.path());
+    match &mut project.event.courses[0].kind {
+        CourseKind::Individual { controls } => controls.reverse(),
+        other => panic!("unexpected kind {other:?}"),
+    }
+    let back = save_and_reload(&mut project);
+    let CourseKind::Individual { controls } = &back.courses[0].kind else {
+        panic!("unexpected kind");
+    };
+    let codes: Vec<_> = controls.iter().map(|c| c.code.clone()).collect();
+    assert_eq!(codes, vec![code("33"), code("32"), code("31")]);
+    let CourseKind::Individual { controls } = &back.courses[1].kind else {
+        panic!("unexpected kind");
+    };
+    let codes: Vec<_> = controls.iter().map(|c| c.code.clone()).collect();
+    assert_eq!(codes, vec![code("31"), code("32"), code("33")]);
+}

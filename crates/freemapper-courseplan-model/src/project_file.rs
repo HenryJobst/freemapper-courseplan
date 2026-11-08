@@ -125,7 +125,11 @@ impl ProjectFile {
         check(&self.path, &self.event)?;
         let fresh = fresh_document(&self.path, &self.event)?;
         let mut merged = self.document.clone();
-        merge_tables(merged.as_table_mut(), fresh.into_table());
+        let mut reordered = false;
+        merge_tables(merged.as_table_mut(), fresh.into_table(), &mut reordered);
+        if reordered {
+            renumber(merged.as_table_mut(), &mut 0);
+        }
         write_atomic(&self.path, &merged.to_string())?;
         self.document = merged;
         Ok(())
@@ -206,8 +210,27 @@ fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
     Ok(())
 }
 
+/// Gives every table a rising position in tree order: the order of the keys, and within an array
+/// of tables the order of its elements, each followed by its own subtables.
+///
+/// toml_edit prints tables sorted by position, so a kept table would otherwise stay where it was
+/// even after the event moved it. In a file that interleaves sections, for example `[[controls]]`,
+/// `[[courses]]`, `[[controls]]`, this also groups the sections of one array together.
+fn renumber(table: &mut Table, next: &mut isize) {
+    table.set_position(Some(*next));
+    *next += 1;
+    for (_, item) in table.iter_mut() {
+        match item {
+            Item::Table(t) => renumber(t, next),
+            Item::ArrayOfTables(a) => a.iter_mut().for_each(|t| renumber(t, next)),
+            _ => {}
+        }
+    }
+}
+
 /// Brings `old` to the content of `new`, keeping order, comments and formatting of what is equal.
-fn merge_tables(old: &mut Table, new: Table) {
+/// Sets `reordered` when an array of tables now holds kept elements in another order.
+fn merge_tables(old: &mut Table, new: Table, reordered: &mut bool) {
     let stale: Vec<String> = old
         .iter()
         .map(|(k, _)| k.to_owned())
@@ -218,7 +241,7 @@ fn merge_tables(old: &mut Table, new: Table) {
     }
     for (key, item) in new {
         match old.get_mut(&key) {
-            Some(slot) => merge_item(slot, item, identity_key(&key)),
+            Some(slot) => merge_item(slot, item, identity_key(&key), reordered),
             None => {
                 old.insert(&key, item);
             }
@@ -236,21 +259,26 @@ fn identity_key(table_key: &str) -> Option<&'static str> {
 }
 
 /// Merges each new element into the old element with the same identity; the new order wins.
-fn merge_by_identity(old: &mut ArrayOfTables, new: ArrayOfTables, id: &str) {
+fn merge_by_identity(old: &mut ArrayOfTables, new: ArrayOfTables, id: &str, reordered: &mut bool) {
     let mut pool: Vec<Option<Table>> = old.iter().cloned().map(Some).collect();
     old.clear();
+    let mut last_kept = None;
     for fresh in new {
         let wanted = fresh.get(id).and_then(Item::as_value);
-        let found = pool.iter_mut().find(|slot| {
+        let found = pool.iter().position(|slot| {
             let have = slot
                 .as_ref()
                 .and_then(|t| t.get(id))
                 .and_then(Item::as_value);
             matches!((have, wanted), (Some(a), Some(b)) if same_data(a, b))
         });
-        match found.and_then(Option::take) {
-            Some(mut kept) => {
-                merge_tables(&mut kept, fresh);
+        match found.and_then(|i| Some((i, pool[i].take()?))) {
+            Some((index, mut kept)) => {
+                if last_kept.is_some_and(|last| index < last) {
+                    *reordered = true;
+                }
+                last_kept = Some(index);
+                merge_tables(&mut kept, fresh, reordered);
                 old.push(kept);
             }
             None => old.push(fresh),
@@ -258,19 +286,19 @@ fn merge_by_identity(old: &mut ArrayOfTables, new: ArrayOfTables, id: &str) {
     }
 }
 
-fn merge_item(old: &mut Item, mut new: Item, identity: Option<&str>) {
+fn merge_item(old: &mut Item, mut new: Item, identity: Option<&str>, reordered: &mut bool) {
     // The serialiser writes arrays of tables as `[[sections]]`; the file may keep them inline.
     if matches!(old, Item::Value(Value::Array(_))) && matches!(new, Item::ArrayOfTables(_)) {
         new = Item::Value(new.into_value().expect("array of tables is a value"));
     }
     match (&mut *old, new) {
-        (Item::Table(o), Item::Table(n)) => merge_tables(o, n),
+        (Item::Table(o), Item::Table(n)) => merge_tables(o, n, reordered),
         (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if identity.is_some() => {
-            merge_by_identity(o, n, identity.unwrap_or_default());
+            merge_by_identity(o, n, identity.unwrap_or_default(), reordered);
         }
         (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if o.len() == n.len() => {
             for (o, n) in o.iter_mut().zip(n) {
-                merge_tables(o, n);
+                merge_tables(o, n, reordered);
             }
         }
         (Item::Value(o), Item::Value(n)) if same_data(o, &n) => {}
