@@ -282,7 +282,12 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   `EditError`, `OmapError`.
 - Produces:
   - `enum Lang { De, En }`; `fn detect_lang(arg: Option<&str>, env: &dyn Fn(&str) -> Option<String>) -> Lang`
-    (order as in the Global Constraints; a locale starting with `de` → `De`; anything else → `En`).
+    (order as in the Global Constraints). `--lang` accepts only `de` or `en`, case-insensitive (clap reports
+    other values). The environment values are read leniently: a value starting with `de`, case-insensitive,
+    gives `De` (`de-DE`, `de_DE.UTF-8`, `de_AT`); any other value gives `En` (`C`, `POSIX`); an empty or unset
+    variable passes on to the next one. Agreed with freemapper and freemapper-print, which copy this module.
+  - MCP: tool, parameter and JSON field names stay English; tool and parameter descriptions, the server
+    instructions and error texts in results are localized once at server start.
   - `trait Localize { fn localize(&self, lang: Lang) -> String; }`, implemented for every error type above;
     the English text equals the type's `Display`. No new crate: the catalog is Rust code (a `match` per
     message), so a missing translation is a compile error. A later move to translation files for more
