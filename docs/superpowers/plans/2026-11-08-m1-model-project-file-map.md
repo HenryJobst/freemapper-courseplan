@@ -306,3 +306,22 @@ clap 4.6.7, tempfile 3.27.0 (tests).
 
 Final whole-branch review, then merge `--no-ff` into `main`, run the checks on `main`, push to `origin` and
 `github`, watch CI, remove the worktree and run `cargo clean` there (CLAUDE.md).
+
+## Follow-ups after M1 (from the reviews)
+
+Carried into M2 planning; the SDD ledger is deleted after the merge.
+
+- ADR 0019 wording: identity matching holds for the table forms; an inline course `controls = [...]` array
+  merges by index, so a comment inside it stays at its position. "Plain digits" also means no leading zero.
+- First M2 task: `MapIndex::from_document` looks up symbols per object (O(objects × symbol XML)); build a
+  per-symbol table once.
+- Tests for points after a Bézier curve and for chained curves, before M2 checks rely on the geometry.
+- Close the format 1 gaps listed in ADR 0019 (leg and circle gaps, print area, ids and course assignment for
+  special objects, team size per class, relay variant names and assignment).
+- `init`: prefer `map_kind` from `freemapper.toml` when present; Windows absolute fallback keeps the `\\?\`
+  prefix (`//?/C:/…`); empty folder left behind when `create` fails; an empty `title` wins over the map stem.
+- `info` prints `sources.map` as stored (relative to the project file); print the resolved path or label it.
+- Smaller: duplicate-reporting consistency in `validate`, start and finish sharing an id, `write_atomic` and
+  an existing `<file>.tmp`, serialisation errors reported as parse errors, glossary rows for `RelayPart`,
+  `ScoreControl`, `Sources`, `DangerousArea`, `FirstAid`, `Water`, doc comments on `Course`, `Discipline`,
+  `EventMeta`.
