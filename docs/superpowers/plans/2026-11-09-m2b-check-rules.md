@@ -9,8 +9,8 @@ profile (WKB 2026) plus optional regional overlays (NOR Berlin/Brandenburg), rep
 rule id, source and a localized explanation, and lets the user accept a deliberate exception with a note.
 
 **Architecture:** Rule profiles are TOML files embedded in the library (`crates/freemapper-courseplan/rules/`),
-loaded into a `RuleSet` (base plus overlays, an overlay replaces or adds rules by id). Each rule names a `check`
-kind implemented once in Rust (`check/` module, one file per family); the values and sources come from the data.
+loaded into a `RuleSet` (base plus overlays, an overlay replaces or adds rules by id). Each rule names a `key`
+implemented once in Rust (`check/` module, one file per family); the values and sources come from the data.
 Findings are plain data, localized through the Fluent catalog. Only class-A rules that need no routing
 (design §5.6, research §3) are in scope.
 
@@ -76,9 +76,12 @@ classes, starters), §1 (audience: profiles are data anyone can add). Rule sourc
 **Files:** create `crates/freemapper-courseplan/rules/wkb-2026.toml`, `rules/nor-bb-2021.toml`,
 `rules/README.md` (how to add a profile), `src/rules.rs`; modify `src/lib.rs`.
 
-**Profile file format** (embedded with `include_str!`; listed in `rules::available()`):
+**Profile file format** (embedded with `include_str!`; listed in `rules::available()`; agreed with
+freemapper-print, ruling R3, ADR 0025):
 
 ```toml
+format = 1
+
 [profile]
 id = "wkb-2026"                # file stem
 kind = "base"                  # "base" | "overlay"
@@ -92,25 +95,28 @@ url = "https://o-sport.de/assets/dokumente/allgemein/wettkampfwesen/wkb2026.pdf"
 
 [[rules]]
 id = "wkb2026.distance.min"
-check = "min_distance"         # implementation key, see the table below
+key = "min_distance"           # implementation key, see the table below
 severity = "error"             # "error" | "warning" | "hint"
+enabled = true                 # default true; an overlay sets false to switch a base rule off
 map_kinds = ["sprint", "schoolyard"]   # optional filter; empty = all
-values = { metres = 15.0 }
+disciplines = []               # optional filter; empty = all
+print_scales = []              # optional filter; course planned_print_scale, else map scale; empty = all
+values = { metres = 15.0 }     # value names carry their unit: metres, mm, degrees, percent, factor
 source = { doc = "WKB26", section = "B 7.2.1" }
 note = { de = "…", en = "…" }  # optional, shown with the finding
 ```
 
-`values` is a free table; each `check` kind documents the keys it reads. Tables (Anlage 5 percentages, category
+`values` is a free table; each `key` documents the keys it reads. Tables (Anlage 5 percentages, category
 → difficulty level, NOR course combinations) are `values` with nested tables or arrays.
 
 **Interfaces:**
 - `struct RuleProfile { id, kind, base: Option<String>, name: LocalizedText, sources: BTreeMap<String, Source>, rules: Vec<Rule> }`;
-  `struct Rule { id, check: String, severity: Severity, map_kinds: Vec<MapKind>, disciplines: Vec<Discipline>, values: toml::Table, source: SourceRef, note: Option<LocalizedText> }`.
+  `struct Rule { id, key: String, severity: Severity, enabled: bool, map_kinds: Vec<MapKind>, disciplines: Vec<Discipline>, print_scales: Vec<u32>, values: toml::Table, source: SourceRef, note: Option<LocalizedText> }`; a profile file without `format = 1` or with a higher format is refused.
 - `fn load_rule_set(base: &str, overlays: &[String]) -> Result<RuleSet, RulesError>`: base must be `kind = "base"`;
   each overlay must name that base; an overlay rule with an existing id replaces it, a new id is added; the
-  result keeps for each rule the profile it came from.
+  result keeps for each rule the profile it came from; an overlay rule with `enabled = false` removes the base rule from the set (and is reported as switched off by `check --all`).
 - `RulesError` (localized): unknown profile, overlay for another base, malformed file (only in tests: embedded
-  files are checked at build time by a test), unknown `check` kind.
+  files are checked at build time by a test), unknown rule `key`.
 - Data, with exact values from the documents (implementer reads them; the WKB 2026 text is in the session
   scratchpad `…/scratchpad/dl/wkb2026.txt` if still present, else download from the URL in the research file):
   - `wkb-2026.toml`: every rule of Tasks 4–8 with the values given there, the Anlage 5 length percentages for
@@ -120,7 +126,7 @@ note = { de = "…", en = "…" }  # optional, shown with the finding
     (BB-Kombi14), the three course-combination tables of BB-Lkm21 (Lang, Mittel, Ultralang: course letter, Lkm,
     O-value, categories) exactly as in research §3.3a, with a `note` that course D (D/H-14, 2.6 Lkm) looks like a
     transcription error in the source.
-- [ ] Tests: `every_embedded_profile_parses`, `every_rule_has_a_known_check_kind_and_a_source_in_its_file`,
+- [ ] Tests: `every_embedded_profile_parses`, `every_rule_has_a_known_key_and_a_source_in_its_file`, `overlay_can_switch_a_rule_off`, `print_scale_filter_selects_courses`, `value_names_carry_units` (every numeric value key ends in or equals one of metres, mm, degrees, percent, factor, or is a documented table),
   `overlay_replaces_base_rule`, `overlay_for_another_base_is_refused`, `unknown_profile_is_refused`.
 - [ ] Implement, run, commit `feat(rules): rule profiles as data, base plus overlays`.
 
@@ -137,8 +143,8 @@ catalogs.
 - `fn check_event(event: &Event, map: &MapDocument, rules: &RuleSet) -> CheckReport`, `struct CheckReport { findings: Vec<Finding>, accepted: Vec<(Finding, String /* note */)>, skipped: Vec<Skipped> }`,
   `struct Skipped { rule: String, reason_id: &'static str, args }` (map kind filter, discipline training, class
   not mapped, climb missing, course kind not individual).
-- Each check kind is a function `fn(&CheckContext, &Rule, &mut Vec<Finding>, &mut Vec<Skipped>)` registered in
-  one table by its `check` key; unknown keys are rejected in Task 2.
+- Each rule key is a function `fn(&CheckContext, &Rule, &mut Vec<Finding>, &mut Vec<Skipped>)` registered in
+  one table by its `key`; unknown keys are rejected in Task 2.
 - Accepted findings: a finding is accepted when an `AcceptedFinding` has the same rule id and the same sorted
   control codes and leg refs (course must match when set). Accepted ones move to `accepted`.
 - CLI `check <PROJECT> [--all]`: prints findings grouped by course, each line `<severity> <location>: <text>
@@ -160,7 +166,7 @@ catalogs.
 
 **Files:** `src/check/distance.rs` (+ tests), profile data, catalogs.
 
-**Check kinds and values (WKB 2026 profile):**
+**Rule keys and values (WKB 2026 profile):**
 - `min_distance`: centres of any two controls of the event closer than `metres` → error. Values: 30 m; 15 m for
   map kinds sprint and schoolyard (two rules with `map_kinds` filters). Crossing points count. Start counts as a
   control (IOF-R 19.4 "Startflagge eingeschlossen"; for WKB the same reading, *(Claude's call)*).
