@@ -76,6 +76,17 @@ fn placement(number: &Option<NumberPlacement>) -> Value {
     }
 }
 
+/// The legs that lost bends and taped flag, as `[{course, after}]`; `after` counts from 1, and 0
+/// is the leg from the start.
+fn cleared_json(cleared: &[edit::ClearedLeg]) -> Value {
+    Value::Array(
+        cleared
+            .iter()
+            .map(|leg| json!({ "course": leg.course, "after": leg.after }))
+            .collect(),
+    )
+}
+
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
@@ -541,9 +552,13 @@ impl CoursePlanServer {
         Parameters(req): Parameters<ControlRef>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let left = edit::remove_control(&mut file.event, &ControlCode(req.code.clone()))
+            let removed = edit::remove_control(&mut file.event, &ControlCode(req.code.clone()))
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({ "code": req.code, "left_courses": left }))
+            Ok(json!({
+                "code": req.code,
+                "left_courses": removed.courses,
+                "cleared_legs": cleared_json(&removed.cleared),
+            }))
         }))
     }
 
@@ -764,9 +779,13 @@ impl CoursePlanServer {
         reply(self.edit(&req.project, |file| {
             let codes = edit_cmd::codes(req.codes.iter().map(|c| c.trim().to_owned()));
             let sequence: Vec<ControlCode> = codes.iter().cloned().map(ControlCode).collect();
-            edit::set_course_controls(&mut file.event, &req.name, &sequence)
+            let cleared = edit::set_course_controls(&mut file.event, &req.name, &sequence)
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name, "controls": codes }))
+            Ok(json!({
+                "name": req.name,
+                "controls": codes,
+                "cleared_legs": cleared_json(&cleared),
+            }))
         }))
     }
 

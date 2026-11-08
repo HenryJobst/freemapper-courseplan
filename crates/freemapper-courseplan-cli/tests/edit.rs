@@ -979,3 +979,65 @@ fn number_direction_is_normalised_and_gap_checked() {
     }
     assert_eq!(std::fs::read(&project).unwrap(), before);
 }
+
+#[test]
+fn changed_legs_lose_their_bends_and_say_so() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31,32,33",
+        ],
+    );
+    ok(
+        d,
+        &["course", "leg", p, "A", "--after", "1", "--bend", "60,60"],
+    );
+    ok(d, &["course", "leg", p, "A", "--after", "2", "--taped"]);
+    assert_eq!(
+        ok(d, &["course", "controls", p, "A", "31,33,32"]),
+        "course A now visits 31, 33, 32\n\
+         course A: cleared the bends and taped flag of the leg after position 1, which now runs to another stop\n\
+         course A: cleared the bends and taped flag of the leg after position 3, which now runs to another stop"
+    );
+    ok(
+        d,
+        &["course", "leg", p, "A", "--after", "1", "--bend", "60,60"],
+    );
+    assert_eq!(
+        ok(d, &["control", "remove", p, "33"]),
+        "removed control 33 and its visits in A\n\
+         course A: cleared the bends and taped flag of the leg after position 1, which now runs to another stop"
+    );
+    ok(
+        d,
+        &["course", "leg", p, "A", "--from-start", "--bend", "5,5"],
+    );
+    let out = run_lang(d, "de", &["course", "controls", p, "A", "32,31"]);
+    assert_eq!(
+        stdout(&out).trim_end(),
+        "Bahn A führt jetzt über 32, 31\n\
+         Bahn A: Knickpunkte und Abflaggung der Strecke vom Start entfernt, weil sie jetzt zu einem anderen Bahnpunkt führt",
+        "{}",
+        stderr(&out)
+    );
+    // The length is the straight sum again: S1 (0,0), 32 (90,40), 31 (30,40), F1 (60,0).
+    let mm = dist((0.0, 0.0), (90.0, 40.0)) + 60.0 + dist((30.0, 40.0), (60.0, 0.0));
+    let km = format!("{:.1}", mm * 4.0 / 1000.0);
+    assert_eq!(
+        info_line(d, &project, "course A"),
+        format!("course A: 2 controls, {km} km, climb \u{2013} m")
+    );
+}

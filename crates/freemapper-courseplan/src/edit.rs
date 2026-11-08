@@ -63,6 +63,69 @@ pub enum LegStart {
     After(usize),
 }
 
+/// A leg whose bends and taped flag an edit removed, because the leg now runs to another stop
+/// (ruling R12).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClearedLeg {
+    pub course: String,
+    /// Position of the stop the leg leaves, counted from 1 as on the map; 0 is the leg from the
+    /// start.
+    pub after: usize,
+}
+
+/// What [`remove_control`] changed besides the control list.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RemovedControl {
+    /// The courses that lost a visit.
+    pub courses: Vec<String>,
+    /// The legs that lost their bends and taped flag.
+    pub cleared: Vec<ClearedLeg>,
+}
+
+/// After a change of an individual course's sequence: clears the bends and taped flag of every
+/// leg whose next stop changed and returns the legs that had any (ruling R12). `old_first` is the
+/// first stop before the change; `old_next[j]` is the stop that the leg leaving new position `j`
+/// ran to before. `None` stands for the finish, and also for new visits, which carry no leg data.
+fn clear_changed_legs(
+    course: &mut Course,
+    old_first: Option<ControlCode>,
+    old_next: &[Option<ControlCode>],
+) -> Vec<ClearedLeg> {
+    let Course {
+        name,
+        start_bends,
+        start_taped,
+        kind,
+        ..
+    } = course;
+    let CourseKind::Individual { controls } = kind else {
+        return Vec::new();
+    };
+    let mut cleared = Vec::new();
+    let mut clear = |bends: &mut Vec<MapPoint>, taped: &mut bool, after: usize| {
+        if !bends.is_empty() || *taped {
+            bends.clear();
+            *taped = false;
+            cleared.push(ClearedLeg {
+                course: name.clone(),
+                after,
+            });
+        }
+    };
+    if controls.first().map(|c| &c.code) != old_first.as_ref() {
+        clear(start_bends, start_taped, 0);
+    }
+    let next: Vec<Option<ControlCode>> = (0..controls.len())
+        .map(|j| controls.get(j + 1).map(|c| c.code.clone()))
+        .collect();
+    for (j, cc) in controls.iter_mut().enumerate() {
+        if next[j] != old_next.get(j).cloned().flatten() {
+            clear(&mut cc.bends, &mut cc.taped, j + 1);
+        }
+    }
+    cleared
+}
+
 /// Runs `change` on a clone of the event and writes the clone back when it is consistent.
 pub(crate) fn apply<T>(
     event: &mut Event,
@@ -203,9 +266,11 @@ pub fn move_control(
     })
 }
 
-/// Removes a control and every visit of it in individual courses. Returns the names of the courses
-/// that lost a visit. A team, relay or score course that uses the control refuses the removal.
-pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<Vec<String>, EditError> {
+/// Removes a control and every visit of it in individual courses. A leg that ran to a removed
+/// visit now runs to the next stop, so it loses its bends and taped flag (ruling R12). Returns the
+/// courses that lost a visit and the cleared legs. A team, relay or score course that uses the
+/// control refuses the removal.
+pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<RemovedControl, EditError> {
     apply(event, |e| {
         if !e.controls.iter().any(|c| &c.code == code) {
             return Err(not_found("control", code.0.clone()));
@@ -235,17 +300,27 @@ pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<Vec<Strin
                 courses: blocked,
             });
         }
-        let mut touched = Vec::new();
+        let mut removed = RemovedControl::default();
         for course in &mut e.courses {
-            if let CourseKind::Individual { controls } = &mut course.kind
-                && uses(controls)
-            {
-                controls.retain(|c| &c.code != code);
-                touched.push(course.name.clone());
+            let CourseKind::Individual { controls } = &mut course.kind else {
+                continue;
+            };
+            if !uses(controls) {
+                continue;
             }
+            let old_first = controls.first().map(|c| c.code.clone());
+            let old_next: Vec<Option<ControlCode>> = (0..controls.len())
+                .filter(|&k| &controls[k].code != code)
+                .map(|k| controls.get(k + 1).map(|c| c.code.clone()))
+                .collect();
+            controls.retain(|c| &c.code != code);
+            removed.courses.push(course.name.clone());
+            removed
+                .cleared
+                .extend(clear_changed_legs(course, old_first, &old_next));
         }
         e.controls.retain(|c| &c.code != code);
-        Ok(touched)
+        Ok(removed)
     })
 }
 
@@ -355,13 +430,15 @@ pub fn remove_course(event: &mut Event, name: &str) -> Result<(), EditError> {
 }
 
 /// Replaces the sequence of an individual course. The n-th visit of a code in the new sequence keeps
-/// the number, bends and `taped` flag of the n-th visit of that code in the old sequence; new
-/// visits start empty.
+/// the number of the n-th visit of that code in the old sequence, and its bends and `taped` flag
+/// only while its leg runs to the same next stop as before (ruling R12); new visits start empty.
+/// The leg from the start keeps its bends only while the first stop stays. Returns the legs that
+/// lost bends or the taped flag.
 pub fn set_course_controls(
     event: &mut Event,
     name: &str,
     codes: &[ControlCode],
-) -> Result<(), EditError> {
+) -> Result<Vec<ClearedLeg>, EditError> {
     apply(event, |e| {
         let known: Vec<ControlCode> = e.controls.iter().map(|c| c.code.clone()).collect();
         let controls = individual_mut(course_mut(e, name)?)?;
@@ -369,19 +446,31 @@ pub fn set_course_controls(
             return Err(not_found("control", unknown.0.clone()));
         }
         let old = std::mem::take(controls);
+        let old_first = old.first().map(|c| c.code.clone());
+        let mut old_next = Vec::with_capacity(codes.len());
         let mut seen: std::collections::HashMap<&ControlCode, usize> = Default::default();
         for code in codes {
             let n = seen.entry(code).or_insert(0);
-            let previous = old.iter().filter(|c| &c.code == code).nth(*n);
+            let previous = old
+                .iter()
+                .enumerate()
+                .filter(|(_, c)| &c.code == code)
+                .nth(*n);
             *n += 1;
-            controls.push(previous.cloned().unwrap_or_else(|| CourseControl {
-                code: code.clone(),
-                number: None,
-                bends: vec![],
-                taped: false,
-            }));
+            old_next.push(previous.and_then(|(k, _)| old.get(k + 1).map(|c| c.code.clone())));
+            controls.push(
+                previous
+                    .map(|(_, c)| c.clone())
+                    .unwrap_or_else(|| CourseControl {
+                        code: code.clone(),
+                        number: None,
+                        bends: vec![],
+                        taped: false,
+                    }),
+            );
         }
-        Ok(())
+        let course = course_mut(e, name)?;
+        Ok(clear_changed_legs(course, old_first, &old_next))
     })
 }
 

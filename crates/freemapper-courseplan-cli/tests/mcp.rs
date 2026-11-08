@@ -698,3 +698,44 @@ fn central_number_is_kept_by_place_numbers() {
         assert_eq!(course_numbers(&project)[0], None);
     }
 }
+
+#[test]
+fn changed_legs_are_reported() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let extent = course_a(&mut session, &project);
+    let bend = point(&extent, 0.45, 0.45);
+    session.ok(
+        "set_leg",
+        json!({ "project": project, "name": "A", "after": 1, "bends": [bend] }),
+    );
+    let set = session.ok(
+        "set_course_controls",
+        json!({ "project": project, "name": "A", "codes": ["31", "31", "32"] }),
+    );
+    assert_eq!(
+        set["cleared_legs"],
+        json!([{ "course": "A", "after": 1 }]),
+        "{set}"
+    );
+    let set = session.ok(
+        "set_course_controls",
+        json!({ "project": project, "name": "A", "codes": ["31", "32"] }),
+    );
+    assert_eq!(set["cleared_legs"], json!([]), "{set}");
+    session.ok(
+        "set_leg",
+        json!({ "project": project, "name": "A", "after": 1, "bends": [bend], "taped": true }),
+    );
+    let removed = session.ok(
+        "remove_control",
+        json!({ "project": project, "code": "32" }),
+    );
+    assert_eq!(removed["left_courses"], json!(["A"]), "{removed}");
+    assert_eq!(
+        removed["cleared_legs"],
+        json!([{ "course": "A", "after": 1 }]),
+        "{removed}"
+    );
+}

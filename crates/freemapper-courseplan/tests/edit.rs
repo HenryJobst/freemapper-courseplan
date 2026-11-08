@@ -173,8 +173,9 @@ fn move_control_checks_extent_and_existence() {
 #[test]
 fn remove_control_takes_it_out_of_courses() {
     let mut e = event();
-    let courses = remove_control(&mut e, &code("32")).unwrap();
-    assert_eq!(courses, ["A", "B"]);
+    let removed = remove_control(&mut e, &code("32")).unwrap();
+    assert_eq!(removed.courses, ["A", "B"]);
+    assert!(removed.cleared.is_empty());
     assert_eq!(codes_of(&e, "A"), ["31"]);
     assert_eq!(codes_of(&e, "B"), ["33"]);
     assert!(e.controls.iter().all(|c| c.code != code("32")));
@@ -226,34 +227,50 @@ fn describe_and_central_number_edit_the_control() {
 }
 
 #[test]
-fn set_course_controls_keeps_leg_data_per_visit() {
+fn set_course_controls_keeps_data_per_visit() {
     let mut e = event();
-    e.controls.push(control("34"));
     let b1 = vec![pt(1.0, 1.0)];
     let b2 = vec![pt(2.0, 2.0)];
+    let number = |direction: f64| {
+        Some(NumberPlacement {
+            direction,
+            gap_mm: 0.5,
+        })
+    };
     let CourseKind::Individual { controls } = &mut e.courses[0].kind else {
         unreachable!()
     };
     *controls = vec![
         CourseControl {
             bends: b1.clone(),
+            number: number(10.0),
             ..cc("31")
         },
         cc("32"),
         CourseControl {
             bends: b2.clone(),
             taped: true,
+            number: number(20.0),
             ..cc("31")
         },
     ];
-    set_course_controls(&mut e, "A", &[code("31"), code("31"), code("33")]).unwrap();
+    // The first visit of 31 still runs to 32 and keeps its bends; the second ran to the finish
+    // and now runs to 33, so it loses bends and taped flag. Both keep their numbers.
+    let cleared = set_course_controls(
+        &mut e,
+        "A",
+        &[code("31"), code("32"), code("31"), code("33")],
+    )
+    .unwrap();
+    assert_eq!(cleared, [leg("A", 3)]);
     let CourseKind::Individual { controls } = &e.courses[0].kind else {
         unreachable!()
     };
     assert_eq!(controls[0].bends, b1);
-    assert_eq!(controls[1].bends, b2);
-    assert!(controls[1].taped && !controls[0].taped);
-    assert_eq!(controls[2], cc("33"));
+    assert_eq!(controls[0].number, number(10.0));
+    assert!(controls[2].bends.is_empty() && !controls[2].taped);
+    assert_eq!(controls[2].number, number(20.0));
+    assert_eq!(controls[3], cc("33"));
     assert!(matches!(
         set_course_controls(&mut e, "A", &[code("99")]),
         Err(EditError::NotFound {
@@ -525,4 +542,134 @@ fn set_controls_on_team_course_is_not_supported_even_with_unknown_codes() {
         set_course_controls(&mut e, "nope", &[code("99")]),
         Err(EditError::NotFound { what: "course", .. })
     ));
+}
+
+fn leg(course: &str, after: usize) -> ClearedLeg {
+    ClearedLeg {
+        course: course.to_owned(),
+        after,
+    }
+}
+
+/// Course A from S1 (0, 0) over 31 (10, 0), 32 (20, 0), 33 (30, 0) to F1 (40, 0), every leg with a
+/// bend 5 mm off the line, the leg after 32 taped, and a number at 32.
+fn bent_course() -> Event {
+    let mut e = event();
+    for (control, x) in e.controls.iter_mut().zip([10.0, 20.0, 30.0]) {
+        control.map_mm = pt(x, 0.0);
+    }
+    e.controls.push(Control {
+        map_mm: pt(25.0, 0.0),
+        ..control("34")
+    });
+    e.specials[1] = SpecialObject::Finish {
+        id: "F1".to_owned(),
+        map_mm: pt(40.0, 0.0),
+    };
+    let course = &mut e.courses[0];
+    course.start_bends = vec![pt(5.0, 5.0)];
+    course.kind = CourseKind::Individual {
+        controls: vec![
+            CourseControl {
+                bends: vec![pt(15.0, 5.0)],
+                ..cc("31")
+            },
+            CourseControl {
+                bends: vec![pt(25.0, 5.0)],
+                taped: true,
+                number: Some(NumberPlacement {
+                    direction: 90.0,
+                    gap_mm: 0.5,
+                }),
+                ..cc("32")
+            },
+            CourseControl {
+                bends: vec![pt(35.0, 5.0)],
+                ..cc("33")
+            },
+        ],
+    };
+    e.courses.truncate(1);
+    e
+}
+
+fn legs_of(e: &Event) -> Vec<(String, usize, bool)> {
+    let CourseKind::Individual { controls } = &e.courses[0].kind else {
+        unreachable!()
+    };
+    controls
+        .iter()
+        .map(|c| (c.code.0.clone(), c.bends.len(), c.taped))
+        .collect()
+}
+
+#[test]
+fn reorder_clears_only_the_legs_whose_next_stop_changed() {
+    let mut e = bent_course();
+    // 31 -> 32 stays, 32 -> 33 becomes 32 -> 34, 33 -> finish stays.
+    let cleared = set_course_controls(
+        &mut e,
+        "A",
+        &[code("31"), code("32"), code("34"), code("33")],
+    )
+    .unwrap();
+    assert_eq!(cleared, [leg("A", 2)]);
+    assert_eq!(
+        legs_of(&e),
+        [
+            ("31".to_owned(), 1, false),
+            ("32".to_owned(), 0, false),
+            ("34".to_owned(), 0, false),
+            ("33".to_owned(), 1, false),
+        ]
+    );
+    assert_eq!(e.courses[0].start_bends.len(), 1);
+    // The number belongs to the visit, not to the leg, and stays.
+    let CourseKind::Individual { controls } = &e.courses[0].kind else {
+        unreachable!()
+    };
+    assert!(controls[1].number.is_some());
+}
+
+#[test]
+fn reorder_reports_the_start_leg_as_position_zero() {
+    let mut e = bent_course();
+    let cleared = set_course_controls(&mut e, "A", &[code("32"), code("31"), code("33")]).unwrap();
+    // Start -> 31 becomes start -> 32; 31 -> 32 becomes 31 -> 33; 32 -> 33 becomes 32 -> 31.
+    assert_eq!(cleared, [leg("A", 0), leg("A", 1), leg("A", 2)]);
+    assert!(e.courses[0].start_bends.is_empty());
+    assert_eq!(
+        legs_of(&e),
+        [
+            ("32".to_owned(), 0, false),
+            ("31".to_owned(), 0, false),
+            ("33".to_owned(), 1, false),
+        ]
+    );
+}
+
+#[test]
+fn removal_clears_the_previous_leg_and_the_length_is_the_straight_sum() {
+    let mut e = bent_course();
+    let removed = remove_control(&mut e, &code("32")).unwrap();
+    assert_eq!(removed.courses, ["A"]);
+    assert_eq!(removed.cleared, [leg("A", 1)]);
+    assert_eq!(
+        legs_of(&e),
+        [("31".to_owned(), 0, false), ("33".to_owned(), 1, false)]
+    );
+    // Straight from 31 to 33 now: 5 + 5 (start leg via its bend), 20, and the 33 leg via its bend.
+    let bend = (5.0f64 * 5.0 + 5.0 * 5.0).sqrt();
+    let want_mm = 2.0 * bend + 20.0 + 2.0 * bend;
+    let metres = freemapper_courseplan::course::course_length_m(&e, &e.courses[0], 1000).unwrap();
+    assert!((metres - want_mm).abs() < 1e-9, "{metres} vs {want_mm}");
+
+    // Without bends anywhere the length is the straight sum of the remaining stops.
+    let mut e = bent_course();
+    let removed = remove_control(&mut e, &code("31")).unwrap();
+    assert_eq!(removed.cleared, [leg("A", 0)]);
+    set_leg(&mut e, "A", LegStart::After(0), vec![], false).unwrap();
+    set_leg(&mut e, "A", LegStart::After(1), vec![], false).unwrap();
+    let metres = freemapper_courseplan::course::course_length_m(&e, &e.courses[0], 1000).unwrap();
+    assert!((metres - 40.0).abs() < 1e-9, "{metres}");
 }

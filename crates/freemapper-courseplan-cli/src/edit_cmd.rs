@@ -430,19 +430,20 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
         }
         ControlCmd::Remove { project, code } => {
             let mut file = load(lang, &project)?;
-            let left = edit::remove_control(&mut file.event, &ControlCode(code.clone()))
+            let removed = edit::remove_control(&mut file.event, &ControlCode(code.clone()))
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            if left.is_empty() {
+            if removed.courses.is_empty() {
                 say(lang, "cli-edit-control-removed", &[("code", v(code))]);
             } else {
-                let courses = left.join(", ");
+                let courses = removed.courses.join(", ");
                 say(
                     lang,
                     "cli-edit-control-removed-from",
                     &[("code", v(code)), ("courses", v(courses))],
                 );
             }
+            say_cleared(lang, &removed.cleared);
         }
         ControlCmd::Describe {
             project,
@@ -741,7 +742,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             let list = codes(list.split(',').map(|c| c.trim().to_owned()));
             let mut file = load(lang, &project)?;
             let sequence: Vec<ControlCode> = list.iter().cloned().map(ControlCode).collect();
-            edit::set_course_controls(&mut file.event, &name, &sequence)
+            let cleared = edit::set_course_controls(&mut file.event, &name, &sequence)
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             let shown = if list.is_empty() {
@@ -754,6 +755,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 "cli-edit-course-controls",
                 &[("name", v(name)), ("codes", v(shown))],
             );
+            say_cleared(lang, &cleared);
         }
         CourseCmd::Remove { project, name } => {
             let mut file = load(lang, &project)?;
@@ -927,6 +929,21 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
         }
     }
     Ok(())
+}
+
+/// One line per leg that lost its bends and taped flag (ruling R12).
+fn say_cleared(lang: &Lang, cleared: &[edit::ClearedLeg]) {
+    for leg in cleared {
+        let name = ("name", v(leg.course.clone()));
+        match leg.after {
+            0 => say(lang, "cli-edit-start-leg-cleared", &[name]),
+            after => say(
+                lang,
+                "cli-edit-leg-cleared",
+                &[name, ("index", v(after.to_string()))],
+            ),
+        }
+    }
 }
 
 fn say(lang: &Lang, id: &str, args: &[(&str, FluentValue)]) {
