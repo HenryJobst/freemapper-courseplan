@@ -35,6 +35,18 @@ pub enum ModelError {
     },
     #[error("project file format {0} is newer than this program supports")]
     UnsupportedFormat(u32),
+    /// `table` is a dotted path such as `courses[0]` or `controls[2].description`, empty for
+    /// the top level of the file.
+    #[error("unknown key {key} {}", place(table))]
+    UnknownKey { table: String, key: String },
+}
+
+fn place(table: &str) -> String {
+    if table.is_empty() {
+        "at the top level".to_owned()
+    } else {
+        format!("in {table}")
+    }
 }
 
 fn list_errors(errors: &[ModelError]) -> String {
@@ -87,7 +99,8 @@ impl ProjectFile {
             .map_err(|e| parse_error(e.to_string()))?;
         let event: Event = toml_edit::de::from_document(document.clone())
             .map_err(|e| parse_error(e.to_string()))?;
-        let errors = validate(&event);
+        let mut errors = unknown_keys(&document, &fresh_document(path, &event)?);
+        errors.extend(validate(&event));
         if !errors.is_empty() {
             return Err(ProjectError::Invalid {
                 path: path.to_owned(),
@@ -195,6 +208,110 @@ fn tidy(table: &mut Table) {
             Item::ArrayOfTables(a) => a.iter_mut().for_each(tidy),
             _ => {}
         }
+    }
+}
+
+/// The keys of `document` that the event does not hold. Format 1 is strict, so a misspelt key
+/// is an error instead of a value that silently goes missing.
+///
+/// `fresh` is the serialisation of the event loaded from `document`. Serde ignores unknown keys,
+/// and `Course` flattens its kind, so `deny_unknown_fields` cannot catch them; a key of the file
+/// that the serialisation lacks is unknown instead. The serialiser leaves out empty lists and
+/// empty tables, so such a key counts as known where the format has a field of that name.
+fn unknown_keys(document: &DocumentMut, fresh: &DocumentMut) -> Vec<ModelError> {
+    let mut errors = Vec::new();
+    walk_table(document.as_table(), fresh.as_table(), "", &mut errors);
+    errors
+}
+
+/// A table or an array in the file or in the fresh serialisation, whatever its TOML form.
+#[derive(Clone, Copy)]
+enum Node<'a> {
+    Item(&'a Item),
+    Value(&'a Value),
+    Table(&'a Table),
+}
+
+impl<'a> Node<'a> {
+    fn table(self) -> Option<&'a dyn TableLike> {
+        match self {
+            Node::Item(item) => item.as_table_like(),
+            Node::Value(Value::InlineTable(t)) => Some(t),
+            Node::Value(_) => None,
+            Node::Table(t) => Some(t),
+        }
+    }
+
+    fn elements(self) -> Option<Vec<Node<'a>>> {
+        match self {
+            Node::Item(Item::ArrayOfTables(a)) => Some(a.iter().map(Node::Table).collect()),
+            Node::Item(Item::Value(Value::Array(a))) | Node::Value(Value::Array(a)) => {
+                Some(a.iter().map(Node::Value).collect())
+            }
+            _ => None,
+        }
+    }
+}
+
+fn walk(doc: Node<'_>, fresh: Node<'_>, path: &str, errors: &mut Vec<ModelError>) {
+    if let (Some(d), Some(f)) = (doc.table(), fresh.table()) {
+        walk_table(d, f, path, errors);
+    } else if let (Some(d), Some(f)) = (doc.elements(), fresh.elements()) {
+        for (i, (d, f)) in d.into_iter().zip(f).enumerate() {
+            walk(d, f, &format!("{path}[{i}]"), errors);
+        }
+    }
+}
+
+fn walk_table(
+    doc: &dyn TableLike,
+    fresh: &dyn TableLike,
+    path: &str,
+    errors: &mut Vec<ModelError>,
+) {
+    for (key, item) in doc.iter() {
+        let child = if path.is_empty() {
+            key.to_owned()
+        } else {
+            format!("{path}.{key}")
+        };
+        match (fresh.get(key), item.as_table_like()) {
+            (Some(f), _) => walk(Node::Item(item), Node::Item(f), &child, errors),
+            // Every key inside a table the serialisation left out is unknown.
+            (None, Some(t)) if omitted_when_empty(path, key) => {
+                walk_table(t, &Table::new(), &child, errors);
+            }
+            (None, None) if omitted_when_empty(path, key) && is_empty(item) => {}
+            (None, _) => errors.push(ModelError::UnknownKey {
+                table: path.to_owned(),
+                key: key.to_owned(),
+            }),
+        }
+    }
+}
+
+/// Whether the serialiser leaves out the key `key` of the table at `path` when it is empty.
+///
+/// `bends` is allowed in every element of a course's lists, so an empty `bends = []` on a score
+/// control or a relay part counts as known; it has no effect there.
+fn omitted_when_empty(path: &str, key: &str) -> bool {
+    let element_of = |array: &str| {
+        path.strip_prefix(array)
+            .and_then(|rest| rest.strip_prefix('['))
+            .and_then(|rest| rest.strip_suffix(']'))
+            .is_some_and(|index| index.bytes().all(|b| b.is_ascii_digit()))
+    };
+    match key {
+        "classes" | "controls" | "specials" | "courses" | "accepted_findings"
+            if path.is_empty() =>
+        {
+            true
+        }
+        "classes" => element_of("courses"),
+        "description" => element_of("controls"),
+        "controls" => element_of("accepted_findings"),
+        "bends" => path.starts_with("courses[") && path.contains('.') && path.ends_with(']'),
+        _ => false,
     }
 }
 

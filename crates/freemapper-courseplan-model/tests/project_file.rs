@@ -535,3 +535,88 @@ fn quoted_code_matches_integer_code() {
         "{text}"
     );
 }
+
+/// minimal.toml with `from` replaced by `to`, written to `dir`.
+fn edited_minimal(dir: &Path, from: &str, to: &str) -> PathBuf {
+    let text = std::fs::read_to_string(fixture("minimal.toml")).unwrap();
+    assert!(text.contains(from), "{from:?} not in minimal.toml");
+    let file = dir.join("event.toml");
+    std::fs::write(&file, text.replacen(from, to, 1)).unwrap();
+    file
+}
+
+fn load_errors(file: &Path) -> Vec<ModelError> {
+    match ProjectFile::load(file).unwrap_err() {
+        ProjectError::Invalid { errors, .. } => errors,
+        other => panic!("unexpected error {other:?}"),
+    }
+}
+
+fn unknown_key(table: &str, key: &str) -> ModelError {
+    ModelError::UnknownKey {
+        table: table.into(),
+        key: key.into(),
+    }
+}
+
+#[test]
+fn misspelt_key_in_course_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(
+        dir.path(),
+        "finish = \"F1\"\n",
+        "finish = \"F1\"\nclimb = 35\n",
+    );
+    let err = ProjectFile::load(&file).unwrap_err();
+    let ProjectError::Invalid { errors, .. } = &err else {
+        panic!("unexpected error {err:?}");
+    };
+    assert_eq!(errors, &vec![unknown_key("courses[0]", "climb")]);
+    assert!(err.to_string().contains("climb"), "{err}");
+}
+
+#[test]
+fn unknown_keys_are_found_at_every_depth() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(dir.path(), "format = 1\n", "format = 1\nauthor = \"me\"\n");
+    assert_eq!(load_errors(&file), vec![unknown_key("", "author")]);
+    let file = edited_minimal(
+        dir.path(),
+        "code = 32\n",
+        "code = 32\ndescription = { d = \"1.8\", x = \"2\" }\n",
+    );
+    assert_eq!(
+        load_errors(&file),
+        vec![unknown_key("controls[1].description", "x")]
+    );
+    let file = edited_minimal(
+        dir.path(),
+        "code = 32\n",
+        "code = 32\ndescription = { x = \"2\" }\n",
+    );
+    assert_eq!(
+        load_errors(&file),
+        vec![unknown_key("controls[1].description", "x")]
+    );
+    let file = edited_minimal(dir.path(), "{ code = 32 }", "{ code = 32, value = 10 }");
+    assert_eq!(
+        load_errors(&file),
+        vec![unknown_key("courses[0].controls[1]", "value")]
+    );
+    let file = edited_minimal(dir.path(), "[event]\n", "[event]\nplace = \"Potsdam\"\n");
+    assert_eq!(load_errors(&file), vec![unknown_key("event", "place")]);
+}
+
+#[test]
+fn empty_lists_are_known_and_kept() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(
+        dir.path(),
+        "finish = \"F1\"\ncontrols = [{ code = 31 }, { code = 32 }]\n",
+        "finish = \"F1\"\nclasses = []\ncontrols = [{ code = 31, bends = [] }, { code = 32 }]\n\n[[accepted_findings]]\nrule = \"r\"\ncontrols = []\nnote = \"n\"\n",
+    );
+    let before = std::fs::read_to_string(&file).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+}
