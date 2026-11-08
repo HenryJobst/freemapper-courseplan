@@ -402,4 +402,59 @@ mod tests {
             MapKind::Forest
         );
     }
+
+    #[test]
+    fn symbol_table_matches_direct_lookups() {
+        // Symbols: id 3 hidden; id 9 missing; ids 0 and 6 share code 101.
+        let xml = SYMBOLS.replace(
+            "</symbols>",
+            r#"<symbol type="1" id="6" code="101" name="pt2"><point_symbol/></symbol></symbols>"#,
+        );
+        let mut doc = document(4000, "X", vec![]);
+        doc.symbol_set = SymbolSet::from_omap_xml(&xml).unwrap();
+        let line = |id| path(id, vec![MapCoord::new(0, 0), MapCoord::new(1000, 0)]);
+        let pt = |id| MapObject {
+            symbol_id: id,
+            kind: MapObjectKind::Point { rotation_rad: 0.0 },
+            coords: vec![MapCoord::new(1000, 2000)],
+            tags: vec![],
+            pattern: None,
+        };
+        let objects = vec![
+            line(1),
+            line(3),
+            line(9),
+            pt(0),
+            pt(6),
+            pt(0),
+            path(2, square(0, 0, 1000, 1000)),
+            line(1),
+        ];
+        doc.parts[0].objects = objects.clone();
+        let index = MapIndex::from_document(&doc);
+
+        let mut expected = Vec::new();
+        for o in &objects {
+            let set = &doc.symbol_set;
+            if set.is_hidden(o.symbol_id) {
+                continue;
+            }
+            let Some(ty) = set.symbol_type(o.symbol_id) else {
+                continue;
+            };
+            let geometry = match ty {
+                1 => FeatureGeometry::Point(to_point(&o.coords[0])),
+                2 => FeatureGeometry::Line(sub_paths(&o.coords).remove(0).0),
+                4 => FeatureGeometry::Area(vec![sub_paths(&o.coords).remove(0).0]),
+                _ => continue,
+            };
+            expected.push(MapFeature {
+                symbol_code: set.code_for_id(o.symbol_id).map(|c| c.0.clone()),
+                part: "p".into(),
+                geometry,
+            });
+        }
+        assert_eq!(expected.len(), 6);
+        assert_eq!(index.features, expected);
+    }
 }
