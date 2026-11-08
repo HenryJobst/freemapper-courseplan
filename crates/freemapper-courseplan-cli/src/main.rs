@@ -5,6 +5,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Arg, ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{MapKind, map_kind};
@@ -44,6 +45,11 @@ enum Command {
         /// The project file
         project: PathBuf,
     },
+    /// Show the help of a command
+    Help {
+        /// The command
+        command: Option<String>,
+    },
 }
 
 /// The `--lang` value in the arguments: `--lang de` or `--lang=de`, the last one wins. The scan
@@ -65,10 +71,44 @@ fn lang_from_args(args: &[OsString]) -> Option<String> {
 }
 
 /// The command from the derive with its help texts taken from the catalog in `lang`.
+///
+/// Clap's own texts are replaced too: the headings come from the catalog through `help_template`,
+/// `subcommand_help_heading` and `Arg::help_heading`, and the automatic `help` subcommand is
+/// disabled in favour of the derived `Help` variant. Remaining English: the placeholders in the
+/// usage line (`[OPTIONS]`, `<COMMAND>`, `<MAP>`), and the text of rare parse errors
+/// (see `parse_error_message`).
 fn localized_command(lang: &Lang) -> clap::Command {
     let t = |id: &str| text(lang, id, &[]);
     let with_help = |arg: Arg, id: &str| arg.help(text(lang, id, &[]));
-    Cli::command()
+    let template = format!(
+        "{{about-with-newline}}\n{} {{usage}}\n\n{{all-args}}",
+        t("cli-heading-usage")
+    );
+    // Clap wants 'static headings; the program builds its command once, so leaking is harmless.
+    let leak = |id: &str| -> &'static str { Box::leak(t(id).into_boxed_str()) };
+    // Clap adds the colon after a heading itself.
+    let options = leak("cli-heading-options").trim_end_matches(':');
+    let arguments = leak("cli-heading-arguments").trim_end_matches(':');
+    let commands = leak("cli-heading-commands").trim_end_matches(':');
+    let style = |cmd: clap::Command| {
+        cmd.help_template(template.clone())
+            .disable_help_subcommand(true)
+            .subcommand_help_heading(commands)
+            .mut_args(|a| {
+                if a.is_positional() {
+                    a.help_heading(arguments)
+                } else {
+                    a.help_heading(options)
+                }
+            })
+    };
+    let help_flag = Arg::new("help")
+        .short('h')
+        .long("help")
+        .action(clap::ArgAction::Help)
+        .global(true)
+        .help(t("cli-arg-help"));
+    let root = Cli::command()
         .about(t("cli-about"))
         .mut_arg("lang", |a| with_help(a, "cli-arg-lang"))
         .mut_subcommand("init", |s| {
@@ -81,23 +121,80 @@ fn localized_command(lang: &Lang) -> clap::Command {
             s.about(t("cli-help-info"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
         })
+        .mut_subcommand("help", |s| {
+            s.about(t("cli-help-help"))
+                .mut_arg("command", |a| with_help(a, "cli-arg-help-command"))
+        })
         .disable_help_flag(true)
         .disable_version_flag(true)
-        .arg(
-            Arg::new("help")
-                .short('h')
-                .long("help")
-                .action(clap::ArgAction::Help)
-                .global(true)
-                .help(t("cli-arg-help")),
-        )
+        .arg(help_flag)
         .arg(
             Arg::new("version")
                 .short('V')
                 .long("version")
                 .action(clap::ArgAction::Version)
                 .help(t("cli-arg-version")),
-        )
+        );
+    let mut root = style(root);
+    let names: Vec<String> = root
+        .get_subcommands()
+        .map(|c| c.get_name().to_owned())
+        .collect();
+    for name in names {
+        root = root.mut_subcommand(name, style);
+    }
+    root
+}
+
+/// Text of a context value (an argument name, a value, a list of them).
+fn context(error: &clap::Error, kind: ContextKind) -> String {
+    match error.get(kind) {
+        Some(ContextValue::String(s)) => s.clone(),
+        Some(ContextValue::Strings(list)) => list.join(", "),
+        Some(ContextValue::StyledStr(s)) => s.to_string(),
+        Some(ContextValue::StyledStrs(list)) => list
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(", "),
+        Some(ContextValue::Number(n)) => n.to_string(),
+        _ => String::new(),
+    }
+}
+
+/// The catalog text for the common parse errors; `None` for the rare kinds, which keep clap's
+/// English text.
+fn parse_error_message(lang: &Lang, error: &clap::Error) -> Option<String> {
+    let arg = || FluentValue::from(context(error, ContextKind::InvalidArg));
+    let value = || FluentValue::from(context(error, ContextKind::InvalidValue));
+    let (id, args): (&str, Vec<(&str, FluentValue)>) = match error.kind() {
+        ErrorKind::UnknownArgument => ("cli-parse-unknown-argument", vec![("arg", arg())]),
+        ErrorKind::MissingRequiredArgument => ("cli-parse-missing-required", vec![("args", arg())]),
+        ErrorKind::InvalidValue => (
+            "cli-parse-invalid-value",
+            vec![("arg", arg()), ("value", value())],
+        ),
+        ErrorKind::InvalidSubcommand => ("cli-parse-invalid-subcommand", vec![("value", arg())]),
+        ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
+            ("cli-parse-missing-subcommand", vec![])
+        }
+        ErrorKind::TooManyValues => (
+            "cli-parse-too-many-values",
+            vec![("arg", arg()), ("value", value())],
+        ),
+        ErrorKind::ArgumentConflict => (
+            "cli-parse-argument-conflict",
+            vec![
+                ("arg", arg()),
+                (
+                    "other",
+                    FluentValue::from(context(error, ContextKind::PriorArg)),
+                ),
+            ],
+        ),
+        _ => return None,
+    };
+    Some(text(lang, id, &args))
 }
 
 fn env_var(name: &str) -> Option<String> {
@@ -106,6 +203,25 @@ fn env_var(name: &str) -> Option<String> {
 
 fn print_error(lang: &Lang, message: &str) {
     eprintln!("{}: {message}", text(lang, "cli-error-prefix", &[]));
+}
+
+/// Prints help and version as clap does; shows other errors from the catalog where it has a
+/// text, else with clap's own message. Usage errors exit with 2.
+fn report_parse_error(lang: &Lang, error: &clap::Error) -> ExitCode {
+    if !error.use_stderr() {
+        let _ = error.print();
+        return ExitCode::SUCCESS;
+    }
+    match parse_error_message(lang, error) {
+        Some(message) => {
+            print_error(lang, &message);
+            eprintln!("\n{}", text(lang, "cli-parse-hint", &[]));
+        }
+        None => {
+            let _ = error.print();
+        }
+    }
+    ExitCode::from(2)
 }
 
 fn main() -> ExitCode {
@@ -129,8 +245,15 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     }
     let lang = detect_lang(arg.as_deref(), &env_var);
-    let matches: ArgMatches = localized_command(&lang).get_matches_from(args);
-    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+    let mut command = localized_command(&lang);
+    let matches: ArgMatches = match command.clone().try_get_matches_from(args) {
+        Ok(matches) => matches,
+        Err(error) => return report_parse_error(&lang, &error),
+    };
+    let cli = match Cli::from_arg_matches(&matches) {
+        Ok(cli) => cli,
+        Err(error) => return report_parse_error(&lang, &error),
+    };
     let result = match cli.command {
         Command::Init {
             map,
@@ -138,6 +261,18 @@ fn main() -> ExitCode {
             title,
         } => init(&lang, &map, project, title),
         Command::Info { project } => info(&lang, &project),
+        Command::Help { command: name } => {
+            command.build();
+            let target = name
+                .as_deref()
+                .and_then(|n| command.find_subcommand_mut(n))
+                .map(|c| c.print_help());
+            let _ = match target {
+                Some(result) => result,
+                None => command.print_help(),
+            };
+            Ok(())
+        }
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -245,6 +380,33 @@ mod tests {
     fn localized_commands_are_valid_in_every_language() {
         for lang in available() {
             localized_command(&lang).debug_assert();
+        }
+    }
+
+    #[test]
+    fn ids_used_in_the_cli_exist() {
+        let code = include_str!("main.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let ids: Vec<&str> = code
+            .split('"')
+            .skip(1)
+            .step_by(2)
+            .filter(|lit| {
+                ["error-", "cli-", "word-"]
+                    .iter()
+                    .any(|p| lit.starts_with(p))
+                    && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
+            })
+            .collect();
+        assert!(ids.len() > 25, "scanner found only {}", ids.len());
+        for lang in available() {
+            for id in &ids {
+                let out = text(&lang, id, &[]);
+                assert_ne!(&out, id, "{}: {id} is missing", lang.code());
+                assert!(!out.contains(['\u{2068}', '\u{2069}']), "{id}");
+            }
         }
     }
 }

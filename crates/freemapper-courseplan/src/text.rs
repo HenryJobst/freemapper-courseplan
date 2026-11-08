@@ -544,6 +544,9 @@ mod tests {
             "relay",
             "score",
             "available",
+            "arg",
+            "args",
+            "other",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -571,6 +574,126 @@ mod tests {
                 assert!(errors.is_empty(), "{code}/{id}: {errors:?}");
                 assert!(!out.trim().is_empty(), "{code}/{id} is empty");
             }
+        }
+    }
+
+    /// The variables a pattern refers to, including those inside selectors and variants.
+    fn variables_of(source: &str) -> std::collections::BTreeMap<String, BTreeSet<String>> {
+        use fluent_syntax::ast::{
+            CallArguments, Entry, Expression, InlineExpression, Pattern, PatternElement,
+        };
+        fn in_inline(e: &InlineExpression<&str>, out: &mut BTreeSet<String>) {
+            match e {
+                InlineExpression::VariableReference { id } => {
+                    out.insert(id.name.to_owned());
+                }
+                InlineExpression::FunctionReference { arguments, .. } => in_args(arguments, out),
+                InlineExpression::TermReference {
+                    arguments: Some(arguments),
+                    ..
+                } => in_args(arguments, out),
+                InlineExpression::Placeable { expression } => in_expression(expression, out),
+                _ => {}
+            }
+        }
+        fn in_args(a: &CallArguments<&str>, out: &mut BTreeSet<String>) {
+            a.positional.iter().for_each(|e| in_inline(e, out));
+            a.named.iter().for_each(|n| in_inline(&n.value, out));
+        }
+        fn in_expression(e: &Expression<&str>, out: &mut BTreeSet<String>) {
+            match e {
+                Expression::Inline(i) => in_inline(i, out),
+                Expression::Select { selector, variants } => {
+                    in_inline(selector, out);
+                    variants.iter().for_each(|v| in_pattern(&v.value, out));
+                }
+            }
+        }
+        fn in_pattern(p: &Pattern<&str>, out: &mut BTreeSet<String>) {
+            for element in &p.elements {
+                if let PatternElement::Placeable { expression } = element {
+                    in_expression(expression, out);
+                }
+            }
+        }
+        let resource = fluent_syntax::parser::parse(source).expect("file parses");
+        let mut map = std::collections::BTreeMap::new();
+        for entry in &resource.body {
+            if let Entry::Message(m) = entry {
+                let mut vars = BTreeSet::new();
+                if let Some(pattern) = &m.value {
+                    in_pattern(pattern, &mut vars);
+                }
+                map.insert(m.id.name.to_owned(), vars);
+            }
+        }
+        map
+    }
+
+    #[test]
+    fn every_language_uses_the_same_variables() {
+        let english = variables_of(EMBEDDED[0].1);
+        for (code, source) in EMBEDDED {
+            let vars = variables_of(source);
+            for (id, expected) in &english {
+                assert_eq!(
+                    vars.get(id),
+                    Some(expected),
+                    "{code}/{id}: variables differ from English"
+                );
+            }
+        }
+    }
+
+    /// Message ids written as string literals in the code above the test module.
+    fn ids_in_source(source: &str) -> BTreeSet<String> {
+        let code = source.split("#[cfg(test)]").next().unwrap();
+        code.split('"')
+            .skip(1)
+            .step_by(2)
+            .filter(|lit| {
+                ["error-", "cli-", "word-"]
+                    .iter()
+                    .any(|p| lit.starts_with(p))
+                    && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
+                    && !lit.ends_with('-')
+                    && !["word-kind", "word-what"].contains(lit)
+            })
+            .map(str::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn ids_used_in_code_exist() {
+        let mut ids = ids_in_source(include_str!("text.rs"));
+        assert!(ids.len() > 30, "scanner found only {}", ids.len());
+        for kind in ["individual", "team", "relay", "score"] {
+            ids.insert(format!("word-kind-{kind}"));
+        }
+        for what in [
+            "control",
+            "course",
+            "special-object",
+            "class",
+            "control-or-special-object",
+        ] {
+            ids.insert(format!("word-what-{what}"));
+        }
+        let args = sample_args();
+        for lang in available() {
+            for id in &ids {
+                let out = text(&lang, id, &args);
+                assert_ne!(&out, id, "{}: {id} is missing", lang.code());
+                assert!(
+                    !out.contains(['\u{2068}', '\u{2069}']),
+                    "{}/{id} has isolation marks",
+                    lang.code()
+                );
+            }
+        }
+        let english = message_ids(EMBEDDED[0].1);
+        for id in &ids {
+            assert!(english.contains(id), "{id} not in the English file");
         }
     }
 

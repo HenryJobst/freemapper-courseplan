@@ -289,3 +289,61 @@ fn unknown_language_is_a_usage_error() {
         "error: unknown language fr; available: en, de\n"
     );
 }
+
+#[test]
+fn help_in_german_has_no_english_headings() {
+    let dir = tempfile::tempdir().unwrap();
+    for args in [
+        &["--lang", "de", "--help"][..],
+        &["--lang", "de", "init", "--help"][..],
+    ] {
+        let out = run_env(dir.path(), &[], args);
+        assert!(out.status.success(), "{}", stderr(&out));
+        let help = stdout(&out);
+        for english in [
+            "Usage:",
+            "Options:",
+            "Commands:",
+            "Arguments:",
+            "Print this message",
+        ] {
+            assert!(!help.contains(english), "{english} in {help}");
+        }
+        assert!(
+            help.contains("Aufruf:") && help.contains("Optionen:"),
+            "{help}"
+        );
+    }
+}
+
+#[test]
+fn unknown_argument_in_german() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "de", "init", "--bogus"]);
+    assert_eq!(out.status.code(), Some(2));
+    let err = stderr(&out);
+    assert!(
+        err.starts_with("Fehler: Unbekanntes Argument --bogus"),
+        "{err}"
+    );
+    assert!(!err.contains("unexpected"), "{err}");
+}
+
+#[test]
+fn missing_command_in_german_and_help_subcommand() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "de"]);
+    assert_eq!(out.status.code(), Some(2));
+    assert!(
+        stderr(&out).starts_with("Fehler: Ein Befehl ist nötig"),
+        "{}",
+        stderr(&out)
+    );
+    let out = run_env(dir.path(), &[], &["--lang", "de", "help", "info"]);
+    assert!(out.status.success());
+    assert!(
+        stdout(&out).contains("Die Projektdatei"),
+        "{}",
+        stdout(&out)
+    );
+}
