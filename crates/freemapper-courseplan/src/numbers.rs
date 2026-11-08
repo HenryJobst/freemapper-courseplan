@@ -697,20 +697,46 @@ mod tests {
 
     #[test]
     fn ties_resolve_to_the_lowest_direction() {
-        // Legs at 198.75 and 318.75 degrees: the widest gap has its bisector at 78.75, which lies
-        // exactly between the candidates 67.5 and 90.
+        // Legs at 153.75 and 273.75 degrees: the widest gap has its bisector at 33.75, exactly
+        // between the candidates 22.5 and 45. The loop visits 45 first and 22.5 last, so only an
+        // explicit direction comparison picks 22.5.
         let c = (100.0_f64, 100.0_f64);
         let at = |deg: f64| {
             let r = deg.to_radians();
             (c.0 + 30.0 * r.cos(), c.1 - 30.0 * r.sin())
         };
-        let e = event(at(198.75), &[n("31", c.0, c.1)], at(318.75));
+        let e = event(at(153.75), &[n("31", c.0, c.1)], at(273.75));
         let placed = place(&e, 4000);
         assert!(
-            (placed[0].direction - 67.5).abs() < 1e-9,
+            (placed[0].direction - 22.5).abs() < 1e-9,
             "{}",
             placed[0].direction
         );
+    }
+
+    #[test]
+    fn overwrite_does_not_seed_kept_numbers() {
+        // Without the existing number, 31 takes north (90). The existing number of 32 also
+        // points north; with `overwrite` it must not push 31 away.
+        let mut e = event(
+            (70.0, 100.0),
+            &[n("31", 100.0, 100.0), n("32", 102.0, 100.0)],
+            (140.0, 100.0),
+        );
+        if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+            controls[1].number = Some(NumberPlacement {
+                direction: 90.0,
+                gap_mm: 0.5,
+            });
+        }
+        assert_eq!(
+            place_numbers(&mut e, "A", 4000, MapKind::Sprint, true),
+            Ok(2)
+        );
+        let CourseKind::Individual { controls } = &e.courses[0].kind else {
+            unreachable!()
+        };
+        assert_eq!(controls[0].number.as_ref().unwrap().direction, 90.0);
     }
 
     #[test]
