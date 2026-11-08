@@ -4,3 +4,6 @@
 //! All domain logic lives in this library and in `freemapper-courseplan-model`. The binary crate
 //! `freemapper-courseplan-cli` holds the CLI, the MCP server and the course editor (ADR 0001). Terms
 //! follow `docs/glossary.md`.
+
+pub mod map;
+pub mod omap;

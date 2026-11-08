@@ -46,6 +46,8 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Kategorie | class | Startklasse mit freiem Namen, passend zu OE; optional einer WKB-Kategorie zugeordnet. | `Class` |
 | WKB-Kategorie | rule category | Kategorie nach WKB (H21, D-12, 130T …), an der Längentabelle und Schwierigkeitsstufe hängen. | `RuleCategory` |
 | Kartenpunkt | map point | Punkt in Millimetern auf der Karte im Kartenmaßstab, `f64`, y nach unten. `omap::MapCoord` ist die Dateiform der OOM in 1/1000 mm. | `MapPoint` |
+| Kartenindex | map index | Alle Geländeobjekte einer Karte in Millimetern, abfragbar nach Abstand zu einem Punkt. Blatt-Objekte (`freemapper:source=sheet`) fehlen. | `MapIndex` |
+| Kartenobjekt für Abfragen | map feature | Ein Geländeobjekt im Kartenindex: Symbolnummer, Kartenteil und Geometrie (Punkt, Linie, Fläche). | `MapFeature` |
 | Startfenster | start window | Zeit vom ersten bis zum letzten Start. | `start_window` |
 | erster Posten | first control | Der erste Posten einer Bahn nach dem Start. | `first_control` |
 
