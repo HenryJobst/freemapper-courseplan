@@ -14,6 +14,9 @@ freemapper-courseplan-model = { path = "crates/freemapper-courseplan-model" }
 freemapper-courseplan = { path = "crates/freemapper-courseplan" }
 serde = { version = "1", features = ["derive"] }
 toml = "1.2.1"
+toml_edit = "=0.25.17"
+thiserror = "2.0.21"
+tempfile = "3.27.0"
 clap = { version = "4.6.7", features = ["derive"] }
 
 [workspace.lints.rust]

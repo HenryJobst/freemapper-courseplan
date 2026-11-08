@@ -35,7 +35,7 @@ impl From<MapPoint> for [f64; 2] {
 ///
 /// Read from a TOML integer or string. Written as an integer when the text is all ASCII digits
 /// without a leading zero, otherwise as a string.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ControlCode(pub String);
 
 impl fmt::Display for ControlCode {
