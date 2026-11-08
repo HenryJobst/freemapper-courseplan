@@ -29,6 +29,9 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   freemapper and freemapper-print.
 - `cargo fmt`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo test --workspace` must pass;
   hooks in `.claude/` and `lefthook.yml` run them.
+- Work on without asking for confirmation as long as the next step is clear *(user, 2026-11-08)*: the next
+  plan from the approved design, its execution, merges and releases. Ask only for decisions that are the
+  user's to make.
 - Superpowers process: brainstorming, design approved by the user, writing-plans, then subagent-driven
   development; TDD for readers, writers, geometry and check rules. Rulings made during implementation go into
   ADRs before the ledger is deleted.
