@@ -28,6 +28,31 @@ tours for the people who put out the controls, and AI support that judges course
 
 The program needs no OCAD and runs on macOS, Linux and Windows.
 
+## Example
+
+<a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Sketch of a sprint course in Lübeck's old town"></a>
+
+A sprint course with seven controls in Lübeck's old town, set with the command line only. The image is a sketch:
+the map comes from freemapper-print, the course is drawn on top. Commands, project file and output are in
+[`examples/luebeck-sprint`](examples/luebeck-sprint/); [`examples/README.en.md`](examples/README.en.md) lists all
+examples.
+
+```text
+$ freemapper-courseplan info luebeck-sprint.courseplan.toml
+title: Sprint training Lübeck old town
+map kind: sprint
+controls: 7, crossing points: 0
+course A: 7 controls, 1.3 km, climb 5 m
+```
+
+<br clear="right">
+
+## Installing
+
+Ready-made programs for Windows, macOS and Linux are on the
+[releases page](https://github.com/HenryJobst/freemapper-courseplan/releases). Download the archive, unpack it and
+start `freemapper-courseplan` in a terminal or register it with your AI assistant (user manual, chapter 3).
+
 ## Status
 
 freemapper-courseplan is in early development. On a sprint or schoolyard map (`.omap`) you can already set whole

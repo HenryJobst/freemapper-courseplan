@@ -16,6 +16,11 @@ and a preview image. The map itself is referenced or copied from freemapper. The
 courses can be set, checked and exported (after M3): a sprint training on freemapper's Lübeck old town map,
 the map freemapper-print uses for its first example too.
 
+Amendment (user, 2026-11-08: "Beispiele auch in der README darstellen"): the first example comes now, with M2a,
+and both READMEs show it with a preview image. Until freemapper-print prints courses from a `.ppen`, the preview is
+a sketch: the map rendered by freemapper-print v0.1.0 with the course drawn on top by the example's own script,
+labelled as a sketch. The print PDF replaces it once both M3s exist.
+
 ## Consequences
 
 - Each feature that changes what an event shows updates at least one example.

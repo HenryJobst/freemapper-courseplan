@@ -27,6 +27,31 @@ Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge ma
 
 Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
+## Beispiel
+
+<a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Skizze einer Sprintbahn in der Lübecker Altstadt"></a>
+
+Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Das Bild ist eine
+Skizze: Die Karte stammt aus freemapper-print, die Bahn ist darübergezeichnet. Befehle, Projektdatei und Ausgaben
+stehen unter [`examples/luebeck-sprint`](examples/luebeck-sprint/); alle Beispiele zeigt
+[`examples/README.md`](examples/README.md).
+
+```text
+$ freemapper-courseplan info luebeck-sprint.courseplan.toml
+Titel: Sprinttraining Lübecker Altstadt
+Kartenart: Sprintkarte
+Posten: 7, Querungsstellen: 0
+Bahn A: 7 Posten, 1,3 km, Anstieg 5 m
+```
+
+<br clear="right">
+
+## Installieren
+
+Fertige Programme für Windows, macOS und Linux gibt es auf der
+[Release-Seite](https://github.com/HenryJobst/freemapper-courseplan/releases). Archiv herunterladen, entpacken und
+`freemapper-courseplan` im Terminal starten oder beim KI-Assistenten eintragen (Handbuch, Kapitel 3).
+
 ## Status
 
 freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schulhofkarte (`.omap`) legst du schon

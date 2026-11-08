@@ -8,6 +8,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- First example: a sprint course in Lübeck's old town in `examples/luebeck-sprint`, with project file, commands
+  and a sketch that the README shows too.
 - MCP server: `freemapper-courseplan mcp` serves course setting to AI assistants over MCP (stdin and stdout).
   25 tools read and change a project: `event_info`, `list_controls|courses|specials|classes`, `add_control`,
   `move_control`, `remove_control`, `describe_control`, `set_control_number`, `add_special`, `remove_special`,

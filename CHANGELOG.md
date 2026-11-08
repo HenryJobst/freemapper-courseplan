@@ -8,6 +8,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Erstes Beispiel: eine Sprintbahn in der Lübecker Altstadt unter `examples/luebeck-sprint`, mit Projektdatei,
+  Befehlen und einer Skizze, die auch die README zeigt.
 - MCP-Server: `freemapper-courseplan mcp` bietet KI-Assistenten das Bahnlegen über MCP an (stdin und stdout).
   25 Werkzeuge lesen und ändern ein Projekt: `event_info`, `list_controls|courses|specials|classes`,
   `add_control`, `move_control`, `remove_control`, `describe_control`, `set_control_number`, `add_special`,
