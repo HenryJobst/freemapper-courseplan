@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use toml_edit::{ArrayOfTables, DocumentMut, InlineTable, Item, Table, TableLike, Value};
 
-use crate::{Event, validate};
+use crate::{Event, FORMAT_VERSION, validate};
 
 /// An inconsistency inside an event.
 #[derive(Debug, Clone, PartialEq, Error)]
@@ -97,6 +97,16 @@ impl ProjectFile {
         let document = text
             .parse::<DocumentMut>()
             .map_err(|e| parse_error(e.to_string()))?;
+        // A newer format may hold anything, so its version is read before the rest.
+        let format = document.get("format").and_then(Item::as_integer);
+        if let Some(format) = format.filter(|&f| f > i64::from(FORMAT_VERSION)) {
+            return Err(ProjectError::Invalid {
+                path: path.to_owned(),
+                errors: vec![ModelError::UnsupportedFormat(
+                    u32::try_from(format).unwrap_or(u32::MAX),
+                )],
+            });
+        }
         let event: Event = toml_edit::de::from_document(document.clone())
             .map_err(|e| parse_error(e.to_string()))?;
         let mut errors = unknown_keys(&document, &fresh_document(path, &event)?);

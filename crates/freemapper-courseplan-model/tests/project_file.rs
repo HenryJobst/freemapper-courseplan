@@ -620,3 +620,15 @@ fn empty_lists_are_known_and_kept() {
     project.save().unwrap();
     assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
 }
+
+#[test]
+fn newer_format_is_reported_before_unknown_course_kind() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = std::fs::read_to_string(fixture("newer_format.toml"))
+        .unwrap()
+        .replace("kind = \"individual\"", "kind = \"forked\"");
+    assert!(text.contains("kind = \"forked\""));
+    let file = dir.path().join("event.toml");
+    std::fs::write(&file, text).unwrap();
+    assert_eq!(load_errors(&file), vec![ModelError::UnsupportedFormat(2)]);
+}
