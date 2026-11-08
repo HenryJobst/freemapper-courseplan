@@ -33,7 +33,8 @@ Komplettüberarbeitung der WKB angekündigt.
 | BL12 | Grundlagen der Bahnlegung (A. Spengler, LTV Sachsen-Anhalt) | 2012 | https://o-sport.de/assets/dokumente/allgemein/lehrwesen/grundlagen-bahnlegung2012.pdf |
 | BLM-BB | Bahnlegung Mannschafts-OL (M. Frenzel), OCAD-Workflow und Prüfliste | 15.07.2025 | https://olberlin.de/wp-content/uploads/2020/09/Bahnlegung-Mannschafts-OL-1.pdf |
 | BB-WO26 | Wettkampfordnung OL Berlin/Brandenburg | 01.01.2026 | https://olberlin.de/wp-content/uploads/2025/12/wo2026.pdf |
-| BB-Lkm21 | Empfohlene Bahnwerte in Lkm (Berlin) | 2021 | https://olberlin.de/wp-content/uploads/2020/01/bahnempfehlungen2021.pdf |
+| BB-Lkm21 | Empfohlene Bahnwerte in Lkm und Kategoriekombinationen für 2021 (G. Brettschneider, aus den Ergebnissen 2020), NOR-Bereich Berlin/Brandenburg | 2021 | https://olberlin.de/wp-content/uploads/2020/01/bahnempfehlungen2021.pdf |
+| BB-Kombi14 | Empfohlene Bahnkombinationen und Leistungskilometer 2014 ff., mit Vorwort zur Toleranz | 2014 | https://olberlin.de/wp-content/uploads/2020/01/Bahnkombi2014.pdf |
 | BY25 | WKB OL Bayern | 02.02.2025 | https://btv-turnen.de/sport/orientierungslauf/wettkampfbestimmungen/wkb2025_bayern.pdf |
 | NDS25 | Sonderbestimmungen Niedersachsen 2025 Rev2 | 01.01.2025 | https://www.ntbwelt.de/fileadmin/user_upload/04_Sportarten/Turnsportarten/Orientierungslauf/PDF/Dokumente/LFA-Sitzungen/Sonderbestimmungen_NDS_2025_Rev2.pdf |
 | TeamWE26 | Ausschreibung DM Staffel und DBK Mannschafts-OL 2026 | 20./21.06.2026 | https://erz-ol.de/api/uploads/competitions5/1773603307_Ausschreibung_Team-We_2026.pdf |
@@ -133,8 +134,38 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Bahnlänge in % der HE-Länge je Kategorie | Tabellen | WKB26 Anlage 5 | A |
 | Kinder und Schüler nie auf Seniorenbahnen | – | WKB26 B 7.2.4 | A |
 | Sprint-Tempo der Besten: H 3,5 min/km, D 4,1 min/km; 100 m Steigung ≙ 1 km | – | IOF-SG | A |
-| Landesvarianten: Bayern Lkm mit Steigungsfaktor 10 (Einheit unklar), Toleranzen ±10/15/20 %; NDS Luftlinien-km; Berlin Lkm-Tabellen | – | BY25; NDS25; BB-Lkm21 | A |
+| Landesvarianten: Bayern Lkm mit Steigungsfaktor 10, Toleranzen ±10/15/20 %; NDS Luftlinien-km; Berlin/Brandenburg Lkm-Tabellen (§3.3a) | – | BY25; NDS25; BB-Lkm21 | A |
 | Verpflegung: DE ab Richtzeit > 60 min mindestens alle 35 min · IOF ab 30 min alle 25 min | – | WKB26 B 7.2.1; IOF-R 19.8 | A |
+
+### 3.3a Berlin/Brandenburg: Bahnempfehlungen für die Ranglistenläufe (NOR-Bereich)
+
+Quelle: Seite „LFA-Dokumente“ von Orientierungssport Nordost, https://olberlin.de/lfa-dokumente/ (Hinweis des
+Nutzers, 2026-11-08). Die neueste Empfehlung ist BB-Lkm21; Neueres ist dort nicht verlinkt.
+
+- **Leistungskilometer:** Lkm = Luftlinie in km plus Höhenmeter × 10 (also 100 m Steigung ≙ 1 km), wie die
+  IOF-Sprintregel und die Bayern-Formel (BB-Kombi14). Klasse A, braucht die Steigung.
+- **Toleranz:** „Die Abweichungen sollten aber +/- 6 Prozent unterschreiten“; geländebedingte Abweichungen sind
+  erlaubt (BB-Kombi14, Vorwort). Klasse A.
+- **Kategoriekombinationen:** Jede Empfehlung legt fest, welche Kategorien eine Bahn teilen, mit Lkm je Bahn und
+  einem O-Wert (Orientierungsschwierigkeit 1–4) in BB-Lkm21. Bei vielen Meldungen auf einer Bahn soll eine
+  zusätzliche Bahn gleicher Länge entstehen (BB-Kombi14). Grundlage für eine Vorlage „Bahnen nach Empfehlung
+  anlegen“.
+- **Lang-OL 2021 (Bahn: Lkm, O-Wert, Kategorien):** A 2,1 (1) D-10 · B 3,1 (1) H-10 · C 3,9 (2) D-12 H-12 ·
+  D 2,6 (3) D-14 H-14 · E 5,9 (4) D-16 D19K D50 H70 · F 7,1 (4) D-18 D35 D40 D45 H-16 H-18 H19K H55 H60 H65 ·
+  G 8,8 (4) D19L H45 H50 · H 4,5 (4) D55 D60 · I 3,0 (4) D65 D70 D75 · K 4,0 (4) H75 H80 · L 13,5 (4) H19L ·
+  M 11,3 (4) H35 · N 10,3 (4) H40 · O 2,7 (1) BK · P 4,9 (1) BL.
+- **Mittel-OL 2021:** A 2,1 D-10 · B 3,1 H-10 · C 3,9 D-12 H-12 · D 2,6 D-14 H-14 · E 2,6 D-16 D19K D55 D60 ·
+  F 3,5 D-18 D35 D40 D45 D50 H19K · G 4,3 D19L H45 H50 H55 H60 · H 1,9 D65 D70 D75 · I 2,3 H75 H80 ·
+  K 5,9 H19L · L 5,2 H35 H40 · M 3,1 H-16 H-18 · N 3,5 H65 H70 · O 2,7 BK · P 4,9 BL (O-Werte wie Lang).
+- **Ultralang-OL 2021:** A 2,1 D-10 · B 3,1 H-10 · C 3,9 D-12 H-12 · D 2,6 D-14 H-14 · E 7,5 D-16 D50 H70 ·
+  F 10,0 D-18 D35 D40 H-16 H-18 H19K H65 · G 11,1 D19L H55 H60 · H 6,3 D19K · I 5,8 D55 D60 ·
+  K 4,0 D65 D70 D75 · L 21,0 H19L · M 16,5 H35 · N 15,4 H40 · O 2,7 BK · P 4,9 BL · Q 8,6 D45 ·
+  R 14,5 H45 H50 · S 4,6 H75 H80.
+- **Auffällig:** Bahn D (D/H-14) hat in allen drei Tabellen 2,6 Lkm und ist damit kürzer als C (D/H-12, 3,9 Lkm),
+  und Mittel A–D gleichen Lang A–D. Vermutlich Übertragungsfehler in der Quelle; vor der Nutzung mit dem LFA
+  klären.
+- Ältere Tabellen (2001, 2004, 2008, 2010 mit Richtzeiten; 2014 mit Lkm) und Siegerzeit-Auswertungen 2003–2013
+  stehen auf derselben Seite.
 
 ### 3.4 Technische Schwierigkeit
 
