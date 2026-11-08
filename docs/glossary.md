@@ -33,18 +33,18 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Score-Bahn | score course | Menge von Posten mit Werten, Zeitlimit und Strafe; Reihenfolge frei. | `CourseKind::Score` |
 | Bahnposten | course control | Ein Posten in einer Bahn, mit eigener Nummernlage und eigenen Knickpunkten der folgenden Strecke. | `CourseControl` |
 | geplanter Druckmaßstab | planned print scale | Maßstab, für den die Bahn gelegt wird. Grundlage für maßstabsabhängige Prüfungen; für freemapper-print nur ein Vorgabewert. | `planned_print_scale` |
-| Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenstelle, Erste Hilfe, Verpflegung. | `SpecialObject` |
+| Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenbereich, Erste-Hilfe-Stelle, Verpflegungsstelle. | `SpecialObject` |
 | Querungsstelle | crossing point | Pflichtübergang, etwa über eine Straße oder durch einen Zaun. Ein Posten, den die Bahn in ihrer Folge führt, der aber keine Nummer bekommt. | `ControlKind::CrossingPoint` |
-| markierte Strecke | taped leg | Strecke, die als Pflichtstrecke markiert ist; am Bahnposten oder, ab dem Start, an der Bahn. | `taped`, `start_taped` |
-| Streckengeometrie | leg geometry | Linienzug einer Strecke vom einen Bahnpunkt zum nächsten (Start, Posten, Querungsstelle, Ziel) über die Knickpunkte, mit Länge in Kartenmillimetern und Kennzeichen markierte Strecke. | `LegGeometry` |
-| Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), markierte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
+| abgeflaggte Strecke | taped leg | Strecke, die als Pflichtstrecke abgeflaggt ist; am Bahnposten oder, ab dem Start, an der Bahn. | `taped`, `start_taped` |
+| Streckengeometrie | leg geometry | Linienzug einer Strecke vom einen Bahnpunkt zum nächsten (Start, Posten, Querungsstelle, Ziel) über die Knickpunkte, mit Länge in Kartenmillimetern und Kennzeichen abgeflaggte Strecke. | `LegGeometry` |
+| Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), abgeflaggte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
 | Druckbereich | print area | Rechteck der Karte, das das Blatt einer Bahn zeigt, in Millimetern auf der Karte. | `PrintArea` |
 | Staffelteil | relay part | Gemeinsamer Teil oder Gabelung einer Staffelbahn. | `RelayPart` |
 | Score-Posten | score control | Posten einer Score-Bahn mit seinem Wert. | `ScoreControl` |
 | Eingabedateien | sources | Karte und optional Purple-Pen-Projekt der Veranstaltung, Pfade relativ zur Projektdatei. | `Sources` |
-| Gefahrenstelle | dangerous area | Fläche, vor der die Bahn warnt. | `SpecialObject::DangerousArea` |
-| Erste Hilfe | first aid | Erste-Hilfe-Punkt auf der Karte. | `SpecialObject::FirstAid` |
-| Verpflegung | water | Verpflegungsstelle auf der Karte. | `SpecialObject::Water` |
+| Gefahrenbereich | dangerous area | Fläche, vor der der Bahnaufdruck mit violetter Markierung warnt (WKB B 7.2.1). | `SpecialObject::DangerousArea` |
+| Erste-Hilfe-Stelle | first aid | Ort der Ersten Hilfe, auf der Karte eingezeichnet. | `SpecialObject::FirstAid` |
+| Verpflegungsstelle | water | Ort mit Getränken für die Läufer, auf der Karte eingezeichnet. | `SpecialObject::Water` |
 | Sperrgebiet | out-of-bounds area | Fläche, die nicht betreten werden darf (ISOM/ISSprOM 709). | `OutOfBoundsArea` |
 | verbotene Route | forbidden route | Linie, die nicht begangen werden darf (ISOM/ISSprOM 711). | `ForbiddenRoute` |
 

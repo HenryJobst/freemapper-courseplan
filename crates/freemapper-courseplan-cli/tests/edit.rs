@@ -749,15 +749,11 @@ fn counts_use_plural_forms_and_german_decimal_comma() {
         "added marked route M2 with 2 points"
     );
     for (id, points, want) in [
-        (
-            "M3",
-            vec!["1,1"],
-            "Markierte Strecke M3 mit 1 Punkt angelegt",
-        ),
+        ("M3", vec!["1,1"], "Pflichtstrecke M3 mit 1 Punkt angelegt"),
         (
             "M4",
             vec!["1,1", "2,2"],
-            "Markierte Strecke M4 mit 2 Punkten angelegt",
+            "Pflichtstrecke M4 mit 2 Punkten angelegt",
         ),
     ] {
         let mut args = vec!["special", "add", p, "--kind", "marked-route", "--id", id];

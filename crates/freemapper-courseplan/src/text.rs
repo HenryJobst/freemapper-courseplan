@@ -908,6 +908,22 @@ mod tests {
         assert!(e.localize(&de()).contains("Mannschaftsbahn"));
     }
 
+    /// The German catalog uses the glossary terms (ruling R13), not the older wording.
+    #[test]
+    fn german_catalog_uses_the_glossary_terms() {
+        let german = EMBEDDED.iter().find(|(code, _)| *code == "de").unwrap().1;
+        for old in [
+            "Querungspunkt",
+            "Nummernplatz",
+            "Erste-Hilfe-Posten",
+            "Verbotene Strecke",
+            "Teilstrecke",
+            "Markierte Strecke",
+        ] {
+            assert!(!german.contains(old), "the German catalog still says {old}");
+        }
+    }
+
     #[test]
     fn parser_text_stays_english_inside_a_german_sentence() {
         let e = ProjectError::Parse {

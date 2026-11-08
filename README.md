@@ -31,7 +31,7 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schulhofkarte (`.omap`) legst du schon
 ganze Einzelbahnen an. `freemapper-courseplan init <Karte>` erzeugt die Projektdatei. Mit `control`, `special`,
-`class` und `course` legst du Posten, Start, Ziel, Kategorien und Bahnen an, setzt Knicke und lässt die
+`class` und `course` legst du Posten, Start, Ziel, Kategorien und Bahnen an, setzt Knickpunkte und lässt die
 Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im Projekt steht, auch die Länge jeder
 Bahn. Die Projektdatei ist TOML, du kannst sie auch von Hand bearbeiten. Mannschafts-, Staffel- und Score-Bahnen
 kann das Programm noch nicht bearbeiten oder messen. Prüfen und drucken kann es auch noch nicht, und Waldkarten
