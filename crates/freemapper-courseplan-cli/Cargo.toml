@@ -1,0 +1,19 @@
+[package]
+name = "freemapper-courseplan-cli"
+description = "CLI, MCP server and course editor for freemapper-courseplan"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "freemapper-courseplan"
+path = "src/main.rs"
+
+[dependencies]
+freemapper-courseplan.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true
