@@ -60,6 +60,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Kartenobjekt für Abfragen | map feature | Ein Geländeobjekt im Kartenindex: Symbolnummer, Kartenteil und Geometrie (Punkt, Linie, Fläche). | `MapFeature` |
 | Startfenster | start window | Zeit vom ersten bis zum letzten Start. | `start_window` |
 | erster Posten | first control | Der erste Posten einer Bahn nach dem Start. | `first_control` |
+| Sprache | language | Sprache der Programmtexte: `de` oder `en`, gewählt mit `--lang`, `FREEMAPPER_LANG` oder der Systemsprache (ADR 0022). | `Lang` |
 
 ## Prüfen / checking
 

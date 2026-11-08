@@ -11,3 +11,4 @@ pub mod init;
 pub mod map;
 pub mod numbers;
 pub mod omap;
+pub mod text;

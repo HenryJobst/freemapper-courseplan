@@ -8,6 +8,9 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Programmtexte kommen aus Fluent-Dateien, eine je Sprache (`crates/freemapper-courseplan/i18n/`). Deutsch und
+  Englisch sind dabei. `--lang`, sonst `FREEMAPPER_LANG`, sonst die Systemsprache bestimmt die Sprache; Hilfe und
+  Meldungen richten sich danach. Eine weitere Sprache braucht nur einen neuen Ordner.
 - Projektdatei `*.courseplan.toml` mit Individual-, Team-, Staffel- und Score-Bahnen. Das Programm prüft sie beim
   Laden und lehnt unbekannte Schlüssel ab, damit ein Tippfehler auffällt. Wenn es die Datei speichert, bleiben
   deine Kommentare und das Layout erhalten; bisher ändert aber noch kein Befehl eine bestehende Projektdatei.

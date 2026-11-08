@@ -15,12 +15,34 @@ fn with_map(name: &str) -> (tempfile::TempDir, PathBuf) {
     (dir, map)
 }
 
+/// Runs the program in English, whatever the machine's locale.
 fn run(cwd: &Path, args: &[&str]) -> Output {
     Command::new(BIN)
         .current_dir(cwd)
+        .env_remove("FREEMAPPER_LANG")
+        .env_remove("LC_ALL")
+        .env_remove("LC_MESSAGES")
+        .env("LANG", "C")
+        .arg("--lang")
+        .arg("en")
         .args(args)
         .output()
         .unwrap()
+}
+
+/// Runs the program with the given extra environment and no `--lang` of its own.
+fn run_env(cwd: &Path, env: &[(&str, &str)], args: &[&str]) -> Output {
+    let mut command = Command::new(BIN);
+    command
+        .current_dir(cwd)
+        .env_remove("FREEMAPPER_LANG")
+        .env_remove("LC_ALL")
+        .env_remove("LC_MESSAGES")
+        .env("LANG", "C");
+    for (name, value) in env {
+        command.env(name, value);
+    }
+    command.args(args).output().unwrap()
 }
 
 fn stdout(o: &Output) -> String {
@@ -191,4 +213,79 @@ fn info_reports_invalid_project() {
     assert_eq!(out.status.code(), Some(1));
     assert!(stderr(&out).contains("44"), "{}", stderr(&out));
     assert!(stdout(&out).is_empty());
+}
+
+#[test]
+fn init_refuses_forest_map_in_german() {
+    let (dir, map) = with_map("forest-sample.omap");
+    let out = run_env(
+        dir.path(),
+        &[],
+        &["--lang", "de", "init", map.to_str().unwrap()],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let err = stderr(&out);
+    assert!(err.starts_with("Fehler: "), "{err}");
+    assert!(err.contains("Waldkarten"), "{err}");
+}
+
+#[test]
+fn info_prints_german_labels() {
+    let (dir, map) = with_map("luebeck.omap");
+    assert!(
+        run(dir.path(), &["init", map.to_str().unwrap()])
+            .status
+            .success()
+    );
+    let project = dir.path().join("luebeck.courseplan.toml");
+    let out = run_env(
+        dir.path(),
+        &[("LANG", "de_DE.UTF-8")],
+        &["info", project.to_str().unwrap()],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(
+        stdout(&out),
+        "Titel: luebeck\nKarte: luebeck.omap\nKartenart: Sprintkarte\nPosten: 0\n\
+         Bahnen: 0 (einzeln 0, Mannschaft 0, Staffel 0, Score 0)\nKategorien: 0\n"
+    );
+}
+
+#[test]
+fn help_in_german() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "de", "init", "--help"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let help = stdout(&out);
+    assert!(help.contains("Projektdatei"), "{help}");
+    assert!(help.contains("Hilfe anzeigen"), "{help}");
+    assert!(!help.contains("Where to write"), "{help}");
+}
+
+#[test]
+fn help_in_english_and_language_from_environment() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run(dir.path(), &["init", "--help"]);
+    assert!(stdout(&out).contains("Where to write the project file"));
+    let out = run_env(
+        dir.path(),
+        &[("FREEMAPPER_LANG", "de")],
+        &["info", "--help"],
+    );
+    assert!(
+        stdout(&out).contains("Die Projektdatei"),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
+fn unknown_language_is_a_usage_error() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "fr", "info", "x.toml"]);
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        stderr(&out),
+        "error: unknown language fr; available: en, de\n"
+    );
 }

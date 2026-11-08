@@ -8,6 +8,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- Program texts come from Fluent files, one per language (`crates/freemapper-courseplan/i18n/`). German and
+  English ship now. `--lang`, then `FREEMAPPER_LANG`, then the system language picks the language; help and
+  messages follow it. Adding a language takes one new folder.
 - Project file `*.courseplan.toml` with individual, team, relay and score courses. The program checks it on load
   and rejects unknown keys, so a typo shows up. When it saves the file, your comments and layout stay as they
   were, but no command changes an existing project file yet.
