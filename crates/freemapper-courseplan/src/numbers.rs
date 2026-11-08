@@ -151,11 +151,12 @@ fn digits(n: u32) -> usize {
 }
 
 /// The rectangle a number occupies on the map. The centre lies along `direction` at the distance
-/// circle radius + gap + half the extent of the box in that direction.
+/// circle radius + gap + half the extent of the box in that direction. `gap_mm` is in print mm.
 fn number_rect(
     centre: &MapPoint,
     direction: f64,
     number: u32,
+    gap_mm: f64,
     sizes: &OverprintSizes,
     factor: f64,
 ) -> Rect {
@@ -165,7 +166,7 @@ fn number_rect(
     // y is down: 90 degrees (north) is -y.
     let (dx, dy) = (rad.cos(), -rad.sin());
     let extent = rad.cos().abs() * w / 2.0 + rad.sin().abs() * h / 2.0;
-    let dist = sizes.circle_diameter_mm * factor / 2.0 + GAP_PRINT_MM * factor + extent;
+    let dist = sizes.circle_diameter_mm * factor / 2.0 + gap_mm * factor + extent;
     Rect::centred(centre.x + dx * dist, centre.y + dy * dist, w, h)
 }
 
@@ -222,7 +223,12 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// Number box: `0.6 * height * digits` wide and `height` high. Of 16 directions (every 22.5
 /// degrees from 45) the one with the fewest hard conflicts wins (box on another circle, on a leg
 /// widened by half the line width, or on a number placed before), then the one nearest to the
-/// bisector of the widest gap between the legs at the control, then the lowest direction.
+/// bisector of the widest gap between the legs at the control, then the lowest direction value:
+/// candidates are compared as (conflicts, angular distance to the bisector, direction).
+///
+/// With `keep_existing`, controls that already have a number keep it: their boxes are obstacles
+/// for the others (placed first), and their placement is returned unchanged. Without it, every
+/// number is placed afresh and none is an obstacle at the start.
 ///
 /// # Errors
 /// As for [`course_legs`].
@@ -231,6 +237,7 @@ pub fn auto_place(
     course: &freemapper_courseplan_model::Course,
     map_scale: u32,
     kind: MapKind,
+    keep_existing: bool,
 ) -> Result<Vec<NumberPlacement>, CourseError> {
     let legs = course_legs(event, course)?;
     let CourseKind::Individual { controls } = &course.kind else {
@@ -255,10 +262,27 @@ pub fn auto_place(
         })
         .collect();
 
+    let kept = |k: usize| keep_existing.then(|| controls[k].number.clone()).flatten();
     let mut placed: Vec<Rect> = Vec::new();
+    for (k, number) in numbers.iter().enumerate() {
+        if let (Some(number), Some(existing)) = (*number, kept(k)) {
+            placed.push(number_rect(
+                &positions[k],
+                existing.direction,
+                number,
+                existing.gap_mm,
+                &sizes,
+                factor,
+            ));
+        }
+    }
     let mut out = Vec::new();
     for (k, number) in numbers.iter().enumerate() {
         let Some(number) = *number else { continue };
+        if let Some(existing) = kept(k) {
+            out.push(existing);
+            continue;
+        }
         let here = &positions[k];
         // Leg k arrives at this control, leg k + 1 leaves it.
         let incoming = &legs[k];
@@ -284,10 +308,11 @@ pub fn auto_place(
             }
         }
 
+        // Best so far: (conflicts, angular distance to the bisector, direction).
         let mut best: Option<(usize, f64, f64)> = None;
         for step in 0..CANDIDATE_COUNT {
             let direction = (CANDIDATE_START + CANDIDATE_STEP * f64::from(step)).rem_euclid(360.0);
-            let rect = number_rect(here, direction, number, &sizes, factor);
+            let rect = number_rect(here, direction, number, GAP_PRINT_MM, &sizes, factor);
             let mut conflicts = 0;
             for (j, pos) in positions.iter().enumerate() {
                 let is_circle = numbers[j].is_some();
@@ -312,14 +337,25 @@ pub fn auto_place(
             let off = angle_diff(direction, preferred);
             let better = match best {
                 None => true,
-                Some((c, o, _)) => conflicts < c || (conflicts == c && off < o - EPS),
+                Some((c, o, d)) => {
+                    conflicts < c
+                        || (conflicts == c
+                            && (off < o - EPS || ((off - o).abs() <= EPS && direction < d)))
+                }
             };
             if better {
                 best = Some((conflicts, off, direction));
             }
         }
         let direction = best.map_or(CANDIDATE_START, |(_, _, d)| d);
-        placed.push(number_rect(here, direction, number, &sizes, factor));
+        placed.push(number_rect(
+            here,
+            direction,
+            number,
+            GAP_PRINT_MM,
+            &sizes,
+            factor,
+        ));
         out.push(NumberPlacement {
             direction,
             gap_mm: GAP_PRINT_MM,
@@ -352,7 +388,7 @@ pub fn place_numbers(
                     what: "course",
                     id: course_name.to_owned(),
                 })?;
-            auto_place(e, course, map_scale, kind).map_err(|err| match err {
+            auto_place(e, course, map_scale, kind, !overwrite).map_err(|err| match err {
                 CourseError::NotSupported { course, .. } => EditError::NotSupported { course },
                 CourseError::UnknownCourse(id) => EditError::NotFound { what: "course", id },
                 CourseError::UnknownReference { id, .. } => EditError::NotFound {
@@ -497,51 +533,184 @@ mod tests {
         assert_eq!(base_scale(MapKind::Forest), 15000);
     }
 
+    fn place(e: &Event, scale: u32) -> Vec<NumberPlacement> {
+        auto_place(e, &e.courses[0], scale, MapKind::Sprint, false).unwrap()
+    }
+
     #[test]
     fn number_avoids_both_legs() {
-        // Map y is down: the start lies west, the finish south of the control. Direction 90 is
-        // -y (north), so the free quadrant is north-east, between 0 and 90 degrees.
-        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 130.0));
-        let placed = auto_place(&e, &e.courses[0], 4000, MapKind::Sprint).unwrap();
+        // Map y is down. The start lies north-east of the control (45 degrees), the finish
+        // south-east (315 degrees); the widest gap is the west side, bisector 180. Direction 90
+        // is -y (north), so the free half is 135..225.
+        let e = event((120.0, 80.0), &[n("31", 100.0, 100.0)], (120.0, 120.0));
+        let placed = place(&e, 4000);
         assert_eq!(placed.len(), 1);
-        assert!(
-            placed[0].direction > 0.0 && placed[0].direction < 90.0,
-            "direction {}",
-            placed[0].direction
-        );
+        let d = placed[0].direction;
+        assert!((135.0..=225.0).contains(&d), "direction {d}");
         assert_eq!(placed[0].gap_mm, 0.5);
     }
 
     #[test]
     fn number_avoids_a_neighbour_circle() {
-        // The second control lies 8 mm away at 45 degrees (north-east; -y is north).
+        // Start west, second control south: the bisector at control 31 is 45 (north-east). The
+        // fourth stop sits 8 mm away on that very direction and is reached from the north, so
+        // only the circle check can move the number off 45 degrees.
         let d = 8.0 / 2f64.sqrt();
-        let e = event(
+        let mut e = event(
             (70.0, 100.0),
-            &[n("31", 100.0, 100.0), n("32", 100.0 + d, 100.0 - d)],
-            (100.0, 140.0),
+            &[
+                n("31", 100.0, 100.0),
+                n("32", 100.0, 130.0),
+                n("33", 100.0 + d, 100.0 - d),
+            ],
+            (130.0, 100.0 - d),
         );
-        let placed = auto_place(&e, &e.courses[0], 4000, MapKind::Sprint).unwrap();
-        assert_eq!(placed.len(), 2);
+        if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+            controls[1].bends = vec![p(140.0, 130.0), p(140.0, 70.0), p(100.0 + d, 70.0)];
+        }
+        let placed = place(&e, 4000);
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let rect = number_rect(
+            &e.controls[0].map_mm,
+            placed[0].direction,
+            1,
+            0.5,
+            &sizes,
+            1.0,
+        );
+        let other = &e.controls[2].map_mm;
         assert!(
-            angle_diff(placed[0].direction, 45.0) > 30.0,
-            "direction {}",
+            rect.distance_to_point(other.x, other.y) >= 3.0 + 0.175,
+            "direction {} touches the circle",
             placed[0].direction
         );
+        assert!(angle_diff(placed[0].direction, 45.0) > 30.0);
     }
 
     #[test]
     fn numbers_do_not_overlap_each_other() {
+        // Both controls sit on a straight east-west course, so both prefer north; 2 mm apart,
+        // their boxes (2.4 mm wide) would overlap there.
         let e = event(
             (70.0, 100.0),
-            &[n("31", 100.0, 100.0), n("32", 107.0, 100.0)],
+            &[n("31", 100.0, 100.0), n("32", 102.0, 100.0)],
             (140.0, 100.0),
         );
-        let placed = auto_place(&e, &e.courses[0], 4000, MapKind::Sprint).unwrap();
+        let placed = place(&e, 4000);
         let sizes = overprint_sizes(MapKind::Sprint);
-        let a = number_rect(&e.controls[0].map_mm, placed[0].direction, 1, &sizes, 1.0);
-        let b = number_rect(&e.controls[1].map_mm, placed[1].direction, 2, &sizes, 1.0);
+        let a = number_rect(
+            &e.controls[0].map_mm,
+            placed[0].direction,
+            1,
+            0.5,
+            &sizes,
+            1.0,
+        );
+        let b = number_rect(
+            &e.controls[1].map_mm,
+            placed[1].direction,
+            2,
+            0.5,
+            &sizes,
+            1.0,
+        );
         assert!(!a.overlaps(&b), "{a:?} overlaps {b:?}");
+    }
+
+    #[test]
+    fn new_numbers_avoid_kept_numbers() {
+        let mut e = event(
+            (70.0, 100.0),
+            &[n("31", 100.0, 100.0), n("32", 102.0, 100.0)],
+            (140.0, 100.0),
+        );
+        // Kept number of 31 points north, exactly where 32 would like to put its own.
+        let kept = NumberPlacement {
+            direction: 90.0,
+            gap_mm: 0.5,
+        };
+        if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+            controls[0].number = Some(kept.clone());
+        }
+        assert_eq!(
+            place_numbers(&mut e, "A", 4000, MapKind::Sprint, false),
+            Ok(1)
+        );
+        let CourseKind::Individual { controls } = &e.courses[0].kind else {
+            unreachable!()
+        };
+        assert_eq!(controls[0].number, Some(kept));
+        let new = controls[1].number.clone().unwrap();
+        assert!(
+            angle_diff(new.direction, 90.0) > 1.0,
+            "direction {}",
+            new.direction
+        );
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let a = number_rect(&e.controls[0].map_mm, 90.0, 1, 0.5, &sizes, 1.0);
+        let b = number_rect(&e.controls[1].map_mm, new.direction, 2, 0.5, &sizes, 1.0);
+        assert!(!a.overlaps(&b));
+    }
+
+    #[test]
+    fn box_at_90_degrees_lies_above() {
+        // y is down, so north (90 degrees) is smaller y.
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let rect = number_rect(&p(100.0, 100.0), 90.0, 1, 0.5, &sizes, 1.0);
+        assert!(rect.max_y < 100.0);
+        assert!((rect.max_y - (100.0 - 3.5)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn placement_scales_with_the_map_scale() {
+        // The neighbour-circle layout drawn at 1:5000 with all distances times 4000/5000 must
+        // give the same direction as at 1:4000 (sizes in map mm shrink by the same factor).
+        let layout = |f: f64| {
+            let d = 8.0 * f / 2f64.sqrt();
+            let mut e = event(
+                (100.0 - 30.0 * f, 100.0),
+                &[
+                    n("31", 100.0, 100.0),
+                    n("32", 100.0, 100.0 + 30.0 * f),
+                    n("33", 100.0 + d, 100.0 - d),
+                ],
+                (100.0 + 30.0 * f, 100.0 - d),
+            );
+            if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+                controls[1].bends = vec![
+                    p(100.0 + 40.0 * f, 100.0 + 30.0 * f),
+                    p(100.0 + 40.0 * f, 100.0 - 30.0 * f),
+                    p(100.0 + d, 100.0 - 30.0 * f),
+                ];
+            }
+            e
+        };
+        let base = place(&layout(1.0), 4000);
+        let small = place(&layout(0.8), 5000);
+        assert_eq!(base[0].direction, small[0].direction);
+        // A box at 1:5000 is 0.8 times as high: east box starts at 0.8 * (3 + 0.5).
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let r = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 0.8);
+        assert!((r.min_x - 0.8 * 3.5).abs() < 1e-9);
+        assert!(((r.max_y - r.min_y) - 3.2).abs() < 1e-9);
+    }
+
+    #[test]
+    fn ties_resolve_to_the_lowest_direction() {
+        // Legs at 198.75 and 318.75 degrees: the widest gap has its bisector at 78.75, which lies
+        // exactly between the candidates 67.5 and 90.
+        let c = (100.0_f64, 100.0_f64);
+        let at = |deg: f64| {
+            let r = deg.to_radians();
+            (c.0 + 30.0 * r.cos(), c.1 - 30.0 * r.sin())
+        };
+        let e = event(at(198.75), &[n("31", c.0, c.1)], at(318.75));
+        let placed = place(&e, 4000);
+        assert!(
+            (placed[0].direction - 67.5).abs() < 1e-9,
+            "{}",
+            placed[0].direction
+        );
     }
 
     #[test]
@@ -555,15 +724,15 @@ mod tests {
             ],
             (190.0, 100.0),
         );
-        let placed = auto_place(&e, &e.courses[0], 4000, MapKind::Sprint).unwrap();
+        let placed = place(&e, 4000);
         assert_eq!(placed.len(), 2);
     }
 
     #[test]
     fn number_size_scales_with_the_map_scale() {
         let sizes = overprint_sizes(MapKind::Sprint);
-        let at_base = number_rect(&p(0.0, 0.0), 0.0, 1, &sizes, 1.0);
-        let at_double = number_rect(&p(0.0, 0.0), 0.0, 1, &sizes, 2.0);
+        let at_base = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 1.0);
+        let at_double = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 2.0);
         assert!(
             ((at_double.max_y - at_double.min_y) - 2.0 * (at_base.max_y - at_base.min_y)).abs()
                 < 1e-9
