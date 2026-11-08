@@ -53,8 +53,11 @@ fn load_reports_every_inconsistency() {
         assert!(errors.contains(e), "missing {e:?} in {errors:?}");
     }
     let text = err.to_string();
-    assert!(text.contains('A') && text.contains("44"), "{text}");
-    assert!(text.lines().count() >= 5, "{text}");
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    for e in &want {
+        let line = e.to_string();
+        assert!(lines.contains(&line.as_str()), "no line {line:?} in {text}");
+    }
 }
 
 #[test]
@@ -115,4 +118,58 @@ fn round_trip_keeps_unicode() {
     assert_eq!(back.classes.len(), 0);
     assert_eq!(back.courses[0].name, "Weiß");
     assert_eq!(back.courses[0].classes, vec!["Anfänger".to_owned()]);
+}
+
+fn errors_of(name: &str) -> Vec<ModelError> {
+    match ProjectFile::load(&fixture(name)).unwrap_err() {
+        ProjectError::Invalid { errors, .. } => errors,
+        other => panic!("unexpected error {other:?}"),
+    }
+}
+
+fn unknown(course: &str, c: &str) -> ModelError {
+    ModelError::UnknownControl {
+        course: course.into(),
+        code: code(c),
+    }
+}
+
+#[test]
+fn unknown_control_in_relay_common_part() {
+    assert!(errors_of("unknown_controls.toml").contains(&unknown("R1", "44")));
+}
+
+#[test]
+fn unknown_control_in_relay_fork_variant() {
+    assert!(errors_of("unknown_controls.toml").contains(&unknown("R2", "45")));
+}
+
+#[test]
+fn unknown_control_in_score_course() {
+    assert!(errors_of("unknown_controls.toml").contains(&unknown("P", "46")));
+}
+
+#[test]
+fn unknown_control_in_team_free_list() {
+    assert!(errors_of("unknown_controls.toml").contains(&unknown("T", "47")));
+}
+
+#[test]
+fn unknown_finish_is_reported() {
+    assert!(
+        errors_of("structure.toml").contains(&ModelError::UnknownFinish {
+            course: "A".into(),
+            id: "F9".into(),
+        })
+    );
+}
+
+#[test]
+fn duplicate_course_is_reported() {
+    assert!(errors_of("structure.toml").contains(&ModelError::DuplicateCourse("A".into())));
+}
+
+#[test]
+fn duplicate_special_id_is_reported() {
+    assert!(errors_of("structure.toml").contains(&ModelError::DuplicateSpecialId("S1".into())));
 }

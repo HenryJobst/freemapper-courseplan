@@ -84,7 +84,8 @@ impl ProjectFile {
         let document = text
             .parse::<toml_edit::DocumentMut>()
             .map_err(|e| parse_error(e.to_string()))?;
-        let event: Event = toml::from_str(&text).map_err(|e| parse_error(e.to_string()))?;
+        let event: Event = toml_edit::de::from_document(document.clone())
+            .map_err(|e| parse_error(e.to_string()))?;
         let errors = validate(&event);
         if !errors.is_empty() {
             return Err(ProjectError::Invalid {
