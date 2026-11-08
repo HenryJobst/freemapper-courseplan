@@ -6,6 +6,7 @@
 //! follow `docs/glossary.md`.
 
 pub mod course;
+pub mod edit;
 pub mod init;
 pub mod map;
 pub mod omap;
