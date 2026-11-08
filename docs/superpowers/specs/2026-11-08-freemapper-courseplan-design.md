@@ -396,7 +396,9 @@ Paths are relative to the project file. The editor keeps comments it did not cre
   merge case (one side changed, both sides changed, deleted on one side, renamed).
 - Each check rule has a positive and a negative fixture.
 - Length: fixed cases computed by hand against WKB B 7.2.5.
-- Example events built on freemapper's examples, as freemapper-print does (its ADR 0013).
+- Example events in `examples/`, built on freemapper's examples, as freemapper-print does (its ADR 0013):
+  project file, IOF XML and `.ppen` exports, check findings, later the print PDF. The first one, a sprint
+  training on the Lübeck old town map, comes after M3 *(user, 2026-11-08; ADR 0018)*.
 - fmt, clippy `-D warnings` and tests in CI on Linux, macOS and Windows, lefthook pre-commit, as in the
   sibling projects.
 
