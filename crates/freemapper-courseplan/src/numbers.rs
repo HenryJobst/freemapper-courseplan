@@ -226,9 +226,13 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// bisector of the widest gap between the legs at the control, then the lowest direction value:
 /// candidates are compared as (conflicts, angular distance to the bisector, direction).
 ///
-/// With `keep_existing`, controls that already have a number keep it: their boxes are obstacles
-/// for the others (placed first), and their placement is returned unchanged. Without it, every
-/// number is placed afresh and none is an obstacle at the start.
+/// Kept numbers follow the levels of design §5.3, the more specific winning: automatic placement,
+/// then the central number of the control (`Control.number`), then the number of the course
+/// control (`CourseControl.number`) (ruling R11). A control with a central number always keeps the
+/// number drawn for it, its course number if it has one, else the central one. With
+/// `keep_existing`, a course number is kept as well. Kept boxes are obstacles for the others
+/// (placed first), and the kept placement is returned unchanged. Without `keep_existing`, course
+/// numbers of controls without a central number are placed afresh and are no obstacles.
 ///
 /// # Errors
 /// As for [`course_legs`].
@@ -262,7 +266,23 @@ pub fn auto_place(
         })
         .collect();
 
-    let kept = |k: usize| keep_existing.then(|| controls[k].number.clone()).flatten();
+    let central: Vec<Option<NumberPlacement>> = controls
+        .iter()
+        .map(|cc| {
+            event
+                .controls
+                .iter()
+                .find(|c| c.code == cc.code)
+                .and_then(|c| c.number.clone())
+        })
+        .collect();
+    let kept = |k: usize| {
+        let own = controls[k].number.clone();
+        match &central[k] {
+            Some(central) => Some(own.unwrap_or_else(|| central.clone())),
+            None => own.filter(|_| keep_existing),
+        }
+    };
     let mut placed: Vec<Rect> = Vec::new();
     for (k, number) in numbers.iter().enumerate() {
         if let (Some(number), Some(existing)) = (*number, kept(k)) {
@@ -364,9 +384,11 @@ pub fn auto_place(
     Ok(out)
 }
 
-/// Writes [`auto_place`] results into the controls of the named individual course that have no
-/// number, or into all of them with `overwrite`. Returns how many numbers it set. All or nothing,
-/// like every edit.
+/// Writes [`auto_place`] results into the course controls of the named individual course that have
+/// neither a course number nor a central number. With `overwrite` it also replaces course
+/// numbers, except at controls with a central number, and it never copies a central number into
+/// the course (ruling R11). Returns how many numbers it set. All or nothing, like every edit.
+/// Placement runs only on request; editing a leg does not move numbers.
 ///
 /// # Errors
 /// [`EditError::NotFound`] for an unknown course, [`EditError::NotSupported`] for other kinds,
@@ -403,15 +425,33 @@ pub fn place_numbers(
                 .map(|c| control_numbers(e, c).iter().map(Option::is_some).collect())
                 .unwrap_or_default()
         };
+        let centrally_numbered: Vec<bool> = {
+            let course = e.courses.iter().find(|c| c.name == course_name);
+            match course.map(|c| &c.kind) {
+                Some(CourseKind::Individual { controls }) => controls
+                    .iter()
+                    .map(|cc| {
+                        e.controls
+                            .iter()
+                            .any(|c| c.code == cc.code && c.number.is_some())
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            }
+        };
         let course = course_mut(e, course_name)?;
         let mut next = placements.into_iter();
         let mut set = 0;
-        for (cc, numbered) in individual_mut(course)?.iter_mut().zip(numbered) {
+        for ((cc, numbered), central) in individual_mut(course)?
+            .iter_mut()
+            .zip(numbered)
+            .zip(centrally_numbered)
+        {
             if !numbered {
                 continue;
             }
             let Some(placement) = next.next() else { break };
-            if overwrite || cc.number.is_none() {
+            if !central && (overwrite || cc.number.is_none()) {
                 cc.number = Some(placement);
                 set += 1;
             }
@@ -650,6 +690,73 @@ mod tests {
         let a = number_rect(&e.controls[0].map_mm, 90.0, 1, 0.5, &sizes, 1.0);
         let b = number_rect(&e.controls[1].map_mm, new.direction, 2, 0.5, &sizes, 1.0);
         assert!(!a.overlaps(&b));
+    }
+
+    fn numbers_of(e: &Event) -> Vec<Option<NumberPlacement>> {
+        let CourseKind::Individual { controls } = &e.courses[0].kind else {
+            unreachable!()
+        };
+        controls.iter().map(|c| c.number.clone()).collect()
+    }
+
+    #[test]
+    fn central_number_wins_over_automatic_placement() {
+        // 31 has a central number pointing north, where 32 would like to put its own (as in
+        // new_numbers_avoid_kept_numbers). Placement keeps it, copies nothing into the course and
+        // steers 32 away from it, with and without overwrite.
+        for overwrite in [false, true] {
+            let mut e = event(
+                (70.0, 100.0),
+                &[n("31", 100.0, 100.0), n("32", 102.0, 100.0)],
+                (140.0, 100.0),
+            );
+            let central = NumberPlacement {
+                direction: 90.0,
+                gap_mm: 0.5,
+            };
+            e.controls[0].number = Some(central.clone());
+            assert_eq!(
+                place_numbers(&mut e, "A", 4000, MapKind::Sprint, overwrite),
+                Ok(1),
+                "overwrite {overwrite}"
+            );
+            let numbers = numbers_of(&e);
+            assert_eq!(numbers[0], None, "overwrite {overwrite}");
+            assert_eq!(e.controls[0].number, Some(central));
+            let new = numbers[1].clone().unwrap();
+            let sizes = overprint_sizes(MapKind::Sprint);
+            let a = number_rect(&e.controls[0].map_mm, 90.0, 1, 0.5, &sizes, 1.0);
+            let b = number_rect(&e.controls[1].map_mm, new.direction, 2, 0.5, &sizes, 1.0);
+            assert!(!a.overlaps(&b), "overwrite {overwrite}: {}", new.direction);
+        }
+    }
+
+    #[test]
+    fn overwrite_keeps_a_course_number_of_a_control_with_central_number() {
+        // 31 has both: the course number is the one drawn, so it stays and is the obstacle.
+        let mut e = event(
+            (70.0, 100.0),
+            &[n("31", 100.0, 100.0), n("32", 102.0, 100.0)],
+            (140.0, 100.0),
+        );
+        e.controls[0].number = Some(NumberPlacement {
+            direction: 270.0,
+            gap_mm: 0.5,
+        });
+        let own = NumberPlacement {
+            direction: 90.0,
+            gap_mm: 0.5,
+        };
+        if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+            controls[0].number = Some(own.clone());
+        }
+        assert_eq!(
+            place_numbers(&mut e, "A", 4000, MapKind::Sprint, true),
+            Ok(1)
+        );
+        let numbers = numbers_of(&e);
+        assert_eq!(numbers[0], Some(own));
+        assert!(angle_diff(numbers[1].as_ref().unwrap().direction, 90.0) > 1.0);
     }
 
     #[test]
