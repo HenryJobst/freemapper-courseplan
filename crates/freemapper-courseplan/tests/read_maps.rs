@@ -89,3 +89,16 @@ fn luebeck_index_skips_sheet_objects() {
     assert!(all.iter().all(|(f, _)| f.part != "peripheral information"));
     assert!(all.windows(2).all(|w| w[0].1 <= w[1].1));
 }
+
+#[test]
+fn luebeck_index_builds_fast() {
+    let doc = read_map_file(Path::new(&fixture("luebeck.omap"))).unwrap();
+    let started = std::time::Instant::now();
+    let index = MapIndex::from_document(&doc);
+    let elapsed = started.elapsed();
+    eprintln!("from_document: {elapsed:?}, {} features", index.len());
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "from_document took {elapsed:?}"
+    );
+}

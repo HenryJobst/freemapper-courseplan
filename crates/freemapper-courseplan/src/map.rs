@@ -3,11 +3,13 @@
 //! [`MapIndex`] flattens the objects of a [`MapDocument`] into points, lines and area rings in
 //! millimetres (map scale, y down). It is a linear scan; there is no spatial index in M1.
 
+use std::collections::HashMap;
+
 use freemapper_courseplan_model::MapPoint;
 
 mod geometry;
 
-use crate::omap::{MapDocument, MapObjectKind};
+use crate::omap::{MapDocument, MapObjectKind, SymbolSet};
 use geometry::{feature_distance, push_area, push_lines, sub_paths, to_point};
 
 /// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart).
@@ -53,26 +55,47 @@ pub fn map_kind(doc: &MapDocument) -> MapKind {
     }
 }
 
+/// What `from_document` needs to know about a symbol, looked up once per symbol id.
+struct SymbolInfo {
+    symbol_type: u32,
+    hidden: bool,
+    code: Option<String>,
+}
+
+impl SymbolInfo {
+    fn lookup(set: &SymbolSet, id: u32) -> Option<SymbolInfo> {
+        Some(SymbolInfo {
+            symbol_type: set.symbol_type(id)?,
+            hidden: set.is_hidden(id),
+            code: set.code_for_id(id).map(|c| c.0.clone()),
+        })
+    }
+}
+
 impl MapIndex {
     pub fn from_document(doc: &MapDocument) -> MapIndex {
         let mut features = Vec::new();
+        // One lookup per distinct symbol id; the symbol set scans its XML on every query.
+        let mut symbols: HashMap<u32, Option<SymbolInfo>> = HashMap::new();
         for part in &doc.parts {
             for object in &part.objects {
                 if object
                     .tags
                     .iter()
                     .any(|(k, v)| k == "freemapper:source" && v == "sheet")
-                    || doc.symbol_set.is_hidden(object.symbol_id)
                 {
                     continue;
                 }
-                let Some(symbol_type) = doc.symbol_set.symbol_type(object.symbol_id) else {
+                let Some(symbol) = symbols
+                    .entry(object.symbol_id)
+                    .or_insert_with(|| SymbolInfo::lookup(&doc.symbol_set, object.symbol_id))
+                else {
                     continue;
                 };
-                let symbol_code = doc
-                    .symbol_set
-                    .code_for_id(object.symbol_id)
-                    .map(|c| c.0.clone());
+                if symbol.hidden {
+                    continue;
+                }
+                let (symbol_type, symbol_code) = (symbol.symbol_type, symbol.code.clone());
                 let mut push = |geometry| {
                     features.push(MapFeature {
                         symbol_code: symbol_code.clone(),

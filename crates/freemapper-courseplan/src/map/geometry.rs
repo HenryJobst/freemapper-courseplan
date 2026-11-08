@@ -167,3 +167,51 @@ pub(super) fn inside_area(p: &MapPoint, rings: &[Vec<MapPoint>]) -> bool {
     }
     inside
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn curve_start(x: i32, y: i32) -> MapCoord {
+        MapCoord {
+            x,
+            y,
+            flags: FLAG_CURVE_START,
+        }
+    }
+
+    #[test]
+    fn points_after_a_curve_are_kept() {
+        let coords = vec![
+            curve_start(0, 0),
+            MapCoord::new(0, 5000),
+            MapCoord::new(5000, 10_000),
+            MapCoord::new(10_000, 10_000),
+            MapCoord::new(20_000, 10_000),
+            MapCoord::new(30_000, 10_000),
+        ];
+        let (points, closed) = flatten(&coords);
+        assert!(!closed);
+        assert_eq!(points.len(), 11);
+        assert_eq!(points[8], MapPoint { x: 10.0, y: 10.0 });
+        assert_eq!(points[9], MapPoint { x: 20.0, y: 10.0 });
+        assert_eq!(points[10], MapPoint { x: 30.0, y: 10.0 });
+    }
+
+    #[test]
+    fn chained_curves_flatten() {
+        let coords = vec![
+            curve_start(0, 0),
+            MapCoord::new(0, 5000),
+            MapCoord::new(5000, 10_000),
+            curve_start(10_000, 10_000),
+            MapCoord::new(15_000, 10_000),
+            MapCoord::new(20_000, 5000),
+            MapCoord::new(20_000, 0),
+        ];
+        let (points, _) = flatten(&coords);
+        assert_eq!(points.len(), 17);
+        assert_eq!(points[8], MapPoint { x: 10.0, y: 10.0 });
+        assert_eq!(points[16], MapPoint { x: 20.0, y: 0.0 });
+    }
+}
