@@ -174,7 +174,17 @@ fn parse_error_message(lang: &Lang, error: &clap::Error) -> Option<String> {
             "cli-parse-invalid-value",
             vec![("arg", arg()), ("value", value())],
         ),
-        ErrorKind::InvalidSubcommand => ("cli-parse-invalid-subcommand", vec![("value", arg())]),
+        ErrorKind::InvalidSubcommand => {
+            // Clap stores the unknown word under its own key.
+            let word = match context(error, ContextKind::InvalidSubcommand) {
+                word if word.is_empty() => context(error, ContextKind::InvalidArg),
+                word => word,
+            };
+            (
+                "cli-parse-invalid-subcommand",
+                vec![("value", FluentValue::from(word))],
+            )
+        }
         ErrorKind::MissingSubcommand | ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand => {
             ("cli-parse-missing-subcommand", vec![])
         }
@@ -407,6 +417,65 @@ mod tests {
                 assert_ne!(&out, id, "{}: {id} is missing", lang.code());
                 assert!(!out.contains(['\u{2068}', '\u{2069}']), "{id}");
             }
+        }
+    }
+
+    #[test]
+    fn parse_errors_keep_their_values() {
+        let lang = available().into_iter().find(|l| l.code() == "de").unwrap();
+        type Case<'a> = (ErrorKind, Vec<(ContextKind, &'a str)>, Vec<&'a str>);
+        let cases: Vec<Case> = vec![
+            (
+                ErrorKind::UnknownArgument,
+                vec![(ContextKind::InvalidArg, "--bogus")],
+                vec!["--bogus"],
+            ),
+            (
+                ErrorKind::MissingRequiredArgument,
+                vec![(ContextKind::InvalidArg, "<MAP>")],
+                vec!["<MAP>"],
+            ),
+            (
+                ErrorKind::InvalidValue,
+                vec![
+                    (ContextKind::InvalidArg, "--lang"),
+                    (ContextKind::InvalidValue, "xx"),
+                ],
+                vec!["--lang", "xx"],
+            ),
+            (
+                ErrorKind::InvalidSubcommand,
+                vec![(ContextKind::InvalidSubcommand, "frob")],
+                vec!["frob"],
+            ),
+            (ErrorKind::MissingSubcommand, vec![], vec![]),
+            (
+                ErrorKind::TooManyValues,
+                vec![
+                    (ContextKind::InvalidArg, "<MAP>"),
+                    (ContextKind::InvalidValue, "extra"),
+                ],
+                vec!["<MAP>", "extra"],
+            ),
+            (
+                ErrorKind::ArgumentConflict,
+                vec![
+                    (ContextKind::InvalidArg, "--a"),
+                    (ContextKind::PriorArg, "--b"),
+                ],
+                vec!["--a", "--b"],
+            ),
+        ];
+        for (kind, context, expected) in cases {
+            let mut error = clap::Error::new(kind);
+            for (key, value) in context {
+                error.insert(key, ContextValue::String(value.to_owned()));
+            }
+            let message = parse_error_message(&lang, &error).expect("mapped kind");
+            for value in expected {
+                assert!(message.contains(value), "{kind:?}: {message}");
+            }
+            assert!(!message.contains("unexpected"), "{kind:?}: {message}");
         }
     }
 }

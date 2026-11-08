@@ -347,3 +347,12 @@ fn missing_command_in_german_and_help_subcommand() {
         stdout(&out)
     );
 }
+
+#[test]
+fn unknown_command_in_german_names_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "de", "frob"]);
+    assert_eq!(out.status.code(), Some(2));
+    let err = stderr(&out);
+    assert!(err.starts_with("Fehler: Unbekannter Befehl frob"), "{err}");
+}
