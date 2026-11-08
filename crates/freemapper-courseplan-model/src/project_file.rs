@@ -37,6 +37,21 @@ pub enum ModelError {
         course: String,
         code: crate::ControlCode,
     },
+    /// `what` is "control code", "special object id", "course name" or "class name".
+    #[error("{what} \"{value}\" is empty or starts or ends with a space")]
+    BlankName { what: &'static str, value: String },
+    /// Courses name their start and finish by id, so a control code must not look like one.
+    #[error("control code {0} is also the id of a special object")]
+    CodeClashesWithSpecial(crate::ControlCode),
+    #[error("special object {id} lists course {course} more than once")]
+    DuplicateCourseInSpecial { id: String, course: String },
+    /// `kind` is "marked route", "forbidden route", "out-of-bounds area" or "dangerous area".
+    #[error("{kind} {id} needs at least {needed} points")]
+    TooFewPoints {
+        id: String,
+        kind: &'static str,
+        needed: usize,
+    },
     #[error("event date {0} is not a date; write it as YYYY-MM-DD, without time or offset")]
     DateNotADate(String),
     #[error("project file format {0} is newer than this program supports")]

@@ -255,6 +255,40 @@ impl Localize for ModelError {
                 "error-model-free-control-is-mandatory",
                 &[("course", v(course)), ("code", v(code))],
             ),
+            ModelError::BlankName { what, value } => text(
+                lang,
+                "error-model-blank-name",
+                &[
+                    ("what", v(word(lang, "word-name", what))),
+                    ("value", v(value)),
+                ],
+            ),
+            ModelError::CodeClashesWithSpecial(code) => text(
+                lang,
+                "error-model-code-clashes-with-special",
+                &[("code", v(code))],
+            ),
+            ModelError::DuplicateCourseInSpecial { id, course } => text(
+                lang,
+                "error-model-duplicate-course-in-special",
+                &[("id", v(id)), ("course", v(course))],
+            ),
+            ModelError::TooFewPoints { id, kind, needed } => {
+                // The words of `special add`, which name the out-of-bounds area without "area".
+                let kind_id = match *kind {
+                    "out-of-bounds area" => "out-of-bounds",
+                    other => other,
+                };
+                text(
+                    lang,
+                    "error-model-too-few-points",
+                    &[
+                        ("kind", v(word(lang, "word-special", kind_id))),
+                        ("id", v(id)),
+                        ("needed", v(needed)),
+                    ],
+                )
+            }
             ModelError::DateNotADate(date) => {
                 text(lang, "error-model-date-not-a-date", &[("date", v(date))])
             }
@@ -558,6 +592,7 @@ mod tests {
             "climb",
             "line",
             "column",
+            "needed",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -668,7 +703,7 @@ mod tests {
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
                     && !lit.ends_with('-')
-                    && !["word-kind", "word-what"].contains(lit)
+                    && !["word-kind", "word-what", "word-name", "word-special"].contains(lit)
             })
             .map(str::to_owned)
             .collect()
@@ -689,6 +724,22 @@ mod tests {
             "control-or-special-object",
         ] {
             ids.insert(format!("word-what-{what}"));
+        }
+        for what in [
+            "control-code",
+            "special-object-id",
+            "course-name",
+            "class-name",
+        ] {
+            ids.insert(format!("word-name-{what}"));
+        }
+        for kind in [
+            "marked-route",
+            "forbidden-route",
+            "out-of-bounds",
+            "dangerous-area",
+        ] {
+            ids.insert(format!("word-special-{kind}"));
         }
         let args = sample_args();
         for lang in available() {
@@ -761,6 +812,20 @@ mod tests {
             ModelError::FreeControlIsMandatory {
                 course: s("A"),
                 code: code("31"),
+            },
+            ModelError::BlankName {
+                what: "control code",
+                value: s(" 31"),
+            },
+            ModelError::CodeClashesWithSpecial(code("S1")),
+            ModelError::DuplicateCourseInSpecial {
+                id: s("w1"),
+                course: s("A"),
+            },
+            ModelError::TooFewPoints {
+                id: s("o1"),
+                kind: "out-of-bounds area",
+                needed: 3,
             },
             ModelError::DateNotADate(s("2026-13-45")),
             ModelError::UnsupportedFormat(7),

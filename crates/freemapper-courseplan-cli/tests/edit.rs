@@ -712,23 +712,30 @@ fn counts_use_plural_forms_and_german_decimal_comma() {
         stdout(&out).trim_end(),
         "3 Postennummern auf Bahn A gesetzt"
     );
-    assert_eq!(
-        ok(
-            d,
-            &[
-                "special",
-                "add",
-                p,
-                "--kind",
-                "marked-route",
-                "--id",
-                "M1",
-                "--point",
-                "1,1"
-            ]
-        ),
-        "added marked route M1 with 1 point"
+    // A line needs two points, so "1 point" never appears; the singular is checked in the
+    // catalog test of main.rs.
+    let before = std::fs::read(&project).unwrap();
+    let out = run(
+        d,
+        &[
+            "special",
+            "add",
+            p,
+            "--kind",
+            "marked-route",
+            "--id",
+            "M1",
+            "--point",
+            "1,1",
+        ],
     );
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert!(
+        stderr(&out).contains("marked route M1 needs at least 2 points"),
+        "{}",
+        stderr(&out)
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
     assert_eq!(
         ok(
             d,
@@ -748,19 +755,45 @@ fn counts_use_plural_forms_and_german_decimal_comma() {
         ),
         "added marked route M2 with 2 points"
     );
-    for (id, points, want) in [
-        ("M3", vec!["1,1"], "Pflichtstrecke M3 mit 1 Punkt angelegt"),
+    for (id, kind, points, want) in [
         (
-            "M4",
+            "M3",
+            "marked-route",
             vec!["1,1", "2,2"],
-            "Pflichtstrecke M4 mit 2 Punkten angelegt",
+            "Pflichtstrecke M3 mit 2 Punkten angelegt",
+        ),
+        (
+            "O4",
+            "out-of-bounds",
+            vec!["1,1", "2,2", "1,3"],
+            "Sperrgebiet O4 mit 3 Punkten angelegt",
         ),
     ] {
-        let mut args = vec!["special", "add", p, "--kind", "marked-route", "--id", id];
+        let mut args = vec!["special", "add", p, "--kind", kind, "--id", id];
         for point in points {
             args.extend(["--point", point]);
         }
         let out = run_lang(d, "de", &args);
         assert_eq!(stdout(&out).trim_end(), want, "{}", stderr(&out));
     }
+}
+
+#[test]
+fn blank_control_code_is_refused() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let before = std::fs::read(&project).unwrap();
+    for code in ["", " 31"] {
+        let out = run(
+            dir.path(),
+            &["control", "add", p, "--at", "1,1", "--code", code],
+        );
+        assert_eq!(out.status.code(), Some(1), "{code:?}: {}", stderr(&out));
+        assert!(
+            stderr(&out).contains("is empty or starts or ends with a space"),
+            "{}",
+            stderr(&out)
+        );
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
 }

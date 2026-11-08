@@ -541,6 +541,25 @@ mod tests {
         }
     }
 
+    /// A line needs two points, so the CLI never prints the singular; the catalog still has it.
+    #[test]
+    fn point_count_has_a_singular() {
+        let de = available().into_iter().find(|l| l.code() == "de").unwrap();
+        let args = [
+            ("kind", FluentValue::from("Pflichtstrecke")),
+            ("id", FluentValue::from("M1")),
+            ("count", FluentValue::from(1)),
+        ];
+        assert_eq!(
+            text(&de, "cli-edit-special-added-points", &args),
+            "Pflichtstrecke M1 mit 1 Punkt angelegt"
+        );
+        assert_eq!(
+            text(&Lang::english(), "cli-edit-special-added-points", &args),
+            "added Pflichtstrecke M1 with 1 point"
+        );
+    }
+
     #[test]
     fn parse_errors_keep_their_values() {
         let lang = available().into_iter().find(|l| l.code() == "de").unwrap();
