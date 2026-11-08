@@ -44,6 +44,8 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   `cargo clean` in the worktree and in the main checkout, then remove the worktree; check `df -h` before long
   runs. The program itself writes only small files and saves atomically (tmp file, then rename), so a full
   disk leaves the old project file intact and the error names the file.
+- Before every push *(user, 2026-11-08)*: check that `README.md` and `README.en.md` describe the pushed state
+  (status paragraph, features, commands, links), fix them in the same push if not, and keep both languages equal.
 - Remotes as in freemapper *(user, 2026-11-08)*: `origin` is the private GitLab
   (https://gitlab.jobst-server.de/henry/freemapper-courseplan, HTTPS), `github` the public GitHub repository
   (https://github.com/HenryJobst/freemapper-courseplan, push over SSH). CI runs on GitHub. Push `main` to both
