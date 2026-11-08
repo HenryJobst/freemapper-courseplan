@@ -1256,3 +1256,23 @@ fn small_texts_of_the_final_review() {
         "placed 1 control number on course A"
     );
 }
+
+#[test]
+fn refused_special_removal_leaves_the_file_byte_identical() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &["course", "add", p, "A", "--start", "S1", "--finish", "F1"],
+    );
+    let before = std::fs::read(&project).unwrap();
+    let out = run(d, &["special", "remove", p, "S1"]);
+    assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
+    assert_eq!(
+        stderr(&out).trim_end(),
+        "error: S1 is still used by A; change those first"
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}

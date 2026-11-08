@@ -299,7 +299,15 @@ mod tests {
 
     #[test]
     fn butterfly_numbers_both_visits() {
-        let c = individual(vec![cc("31", vec![]), cc("32", vec![]), cc("31", vec![])]);
+        // Each visit of 31 carries the bends of its own leg: the first towards 32, the second
+        // towards the finish.
+        let first = vec![p(120.0, 50.0)];
+        let second = vec![p(50.0, 20.0), p(20.0, 60.0)];
+        let c = individual(vec![
+            cc("31", first.clone()),
+            cc("32", vec![]),
+            cc("31", second.clone()),
+        ]);
         assert_eq!(control_numbers(&event(), &c), [Some(1), Some(2), Some(3)]);
         let legs = course_legs(&event(), &c).unwrap();
         assert_eq!(
@@ -309,6 +317,12 @@ mod tests {
             2
         );
         assert_eq!(legs.len(), 4);
+        let route = |i: usize| (legs[i].from.as_str(), legs[i].to.as_str());
+        assert_eq!(route(1), ("31", "32"));
+        assert_eq!(legs[1].points[1..legs[1].points.len() - 1], first[..]);
+        assert_eq!(route(3), ("31", "F1"));
+        assert_eq!(legs[3].points[1..legs[3].points.len() - 1], second[..]);
+        assert_eq!(legs[2].points.len(), 2);
     }
 
     #[test]
