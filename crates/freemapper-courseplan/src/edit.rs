@@ -64,7 +64,7 @@ pub enum LegStart {
 }
 
 /// Runs `change` on a clone of the event and writes the clone back when it is consistent.
-fn apply<T>(
+pub(crate) fn apply<T>(
     event: &mut Event,
     change: impl FnOnce(&mut Event) -> Result<T, EditError>,
 ) -> Result<T, EditError> {
@@ -106,7 +106,10 @@ fn control_mut<'a>(event: &'a mut Event, code: &ControlCode) -> Result<&'a mut C
         .ok_or_else(|| not_found("control", code.0.clone()))
 }
 
-fn course_mut<'a>(event: &'a mut Event, name: &str) -> Result<&'a mut Course, EditError> {
+pub(crate) fn course_mut<'a>(
+    event: &'a mut Event,
+    name: &str,
+) -> Result<&'a mut Course, EditError> {
     event
         .courses
         .iter_mut()
@@ -114,7 +117,7 @@ fn course_mut<'a>(event: &'a mut Event, name: &str) -> Result<&'a mut Course, Ed
         .ok_or_else(|| not_found("course", name))
 }
 
-fn individual_mut(course: &mut Course) -> Result<&mut Vec<CourseControl>, EditError> {
+pub(crate) fn individual_mut(course: &mut Course) -> Result<&mut Vec<CourseControl>, EditError> {
     match &mut course.kind {
         CourseKind::Individual { controls } => Ok(controls),
         _ => Err(EditError::NotSupported {
