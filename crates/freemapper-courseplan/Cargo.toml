@@ -11,6 +11,10 @@ rust-version.workspace = true
 freemapper-courseplan-model.workspace = true
 quick-xml = "0.42.0"
 thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

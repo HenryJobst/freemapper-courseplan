@@ -29,7 +29,11 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 ## Status
 
-freemapper-courseplan ist in der Planung. Es gibt noch kein lauffähiges Programm, nur das Projektgerüst, das
+freemapper-courseplan ist früh in der Entwicklung. Lauffähig sind bisher zwei Befehle:
+`freemapper-courseplan init <Karte>` legt aus einer Sprint- oder Schulhofkarte (`.omap`) eine Projektdatei an,
+`freemapper-courseplan info <Projekt>` zeigt, was darin steht. Die Projektdatei ist ein TOML-Text, den du von Hand
+bearbeiten kannst; deine Kommentare bleiben beim Speichern erhalten. Bahnen anlegen, Prüfen und Drucken
+fehlen noch. Waldkarten kann die Version noch nicht verarbeiten. Dazu kommen das
 [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), das
 [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine
 [Sammlung der Regeln zur Bahnlegung](docs/research/2026-11-08-bahnlegung-kriterien.md).

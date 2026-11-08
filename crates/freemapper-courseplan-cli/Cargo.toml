@@ -14,6 +14,10 @@ path = "src/main.rs"
 [dependencies]
 freemapper-courseplan.workspace = true
 clap.workspace = true
+freemapper-courseplan-model.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

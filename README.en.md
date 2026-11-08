@@ -30,8 +30,11 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 ## Status
 
-freemapper-courseplan is in planning. There is no working program yet, only the project skeleton, the
-[design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the [glossary](docs/glossary.md),
+freemapper-courseplan is in early development. Two commands work so far.
+`freemapper-courseplan init <map>` starts a project file from a sprint or schoolyard map (`.omap`), and
+`freemapper-courseplan info <project>` shows what it holds. The project file is plain TOML that you can edit by
+hand; your comments survive saving. Creating courses, checking and printing are still missing, and forest maps are
+not supported yet. Also in the repository are the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the [glossary](docs/glossary.md),
 the [architecture decisions](docs/adr/README.md) and a
 [collection of course-setting rules](docs/research/2026-11-08-bahnlegung-kriterien.md) (German).
 
