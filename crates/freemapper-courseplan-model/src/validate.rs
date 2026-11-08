@@ -27,6 +27,16 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
         }
     }
 
+    // Classes are matched by name when saving, and OE needs unique names.
+    let mut class_names: HashSet<&str> = HashSet::new();
+    let mut reported_classes: HashSet<&str> = HashSet::new();
+    for class in &event.classes {
+        let name = class.name.as_str();
+        if !class_names.insert(name) && reported_classes.insert(name) {
+            errors.push(ModelError::DuplicateClass(class.name.clone()));
+        }
+    }
+
     let mut starts: HashSet<&str> = HashSet::new();
     let mut finishes: HashSet<&str> = HashSet::new();
     let mut special_ids: HashSet<&str> = HashSet::new();

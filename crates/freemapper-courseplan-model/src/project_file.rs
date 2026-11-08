@@ -15,6 +15,8 @@ pub enum ModelError {
     DuplicateControl(crate::ControlCode),
     #[error("course {0} is defined more than once")]
     DuplicateCourse(String),
+    #[error("class {0} is defined more than once")]
+    DuplicateClass(String),
     #[error("start or finish id {0} is used more than once")]
     DuplicateSpecialId(String),
     #[error("course {course} uses control {code}, which is not defined")]

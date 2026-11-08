@@ -660,3 +660,19 @@ fn event_date_with_time_or_offset_is_rejected() {
     );
     assert!(ProjectFile::load(&file).is_ok());
 }
+
+#[test]
+fn duplicate_class_is_reported() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(
+        dir.path(),
+        "[[specials]]\n",
+        "[[classes]]\nname = \"H21\"\n\n[[classes]]\nname = \"D21\"\n\n[[classes]]\nname = \"H21\"\n\n[[specials]]\n",
+    );
+    let err = ProjectFile::load(&file).unwrap_err();
+    let ProjectError::Invalid { errors, .. } = &err else {
+        panic!("unexpected error {err:?}");
+    };
+    assert_eq!(errors, &vec![ModelError::DuplicateClass("H21".into())]);
+    assert!(err.to_string().contains("class H21"), "{err}");
+}
