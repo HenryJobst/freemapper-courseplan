@@ -17,8 +17,8 @@ start and finish could be named by. The leg from the start to the first control 
 - Every special object has an `id`, and a save matches them by it. Every kind except start and finish takes
   `courses`, a list of course names; empty means all courses.
 - A course control takes `taped = true` when the leg leaving it is a marked route. A course takes
-  `start_bends` and `start_taped` for the leg from the start, and `print_area` with `min` and `max` corners: the planned print area of the course, which checks use and
-  freemapper-print takes as a default.
+  `start_bends` and `start_taped` for the leg from the start, and `print_area` with `min` and `max` corners:
+  the planned print area of the course, which checks use and freemapper-print takes as a default.
 - The writer leaves out `kind = "control"`, empty lists and `false`, and the loader accepts them.
 
 ## Consequences

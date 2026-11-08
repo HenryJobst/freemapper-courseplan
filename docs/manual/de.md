@@ -55,19 +55,25 @@ Werkzeugnamen und Feldnamen bleiben in jeder Sprache Englisch.
 
 ### Eine Bahn legen
 
-Sag dem Assistenten, was du brauchst, zum Beispiel:
+Der Assistent sieht die Karte nicht. Er kann ihre Ausdehnung abfragen und für einen Punkt die Kartenobjekte im
+Umkreis, jeweils mit Symbolnummer, Art (Punkt, Linie, Fläche) und Abstand. Namen wie „Südtür“ oder
+„Sporthalle“ kennt er nicht, und wo ein Objekt genau liegt, sagt ihm die Abfrage auch nicht. Gib ihm deshalb
+Positionen vor, in Kartenmillimetern oder bezogen auf die Ausdehnung der Karte, zum Beispiel:
 
-> Lege eine Veranstaltung aus ~/karten/halle.omap an. Setze den Start an die Südtür und das Ziel neben die
-> Sporthalle. Setze drei Posten auf den Hof, lege daraus die Bahn „Kurz“ für die Kategorie D10, setze die Nummern
-> und sag mir die Länge.
+> Lege eine Veranstaltung aus ~/karten/halle.omap an. Setze den Start ein Viertel vom linken Rand auf halbe Höhe
+> und das Ziel 10 mm rechts daneben. Setze drei Posten über die Karte verteilt und sag mir zu jedem, welche
+> Kartenobjekte im Umkreis von 2 mm liegen. Lege daraus die Bahn „Kurz“ für die Kategorie D10 an, setze die
+> Postennummern und sag mir die Länge.
 
 Der Assistent geht dann so vor:
 
 1. Er legt die Veranstaltung an. Die Projektdatei liegt neben der Karte und heißt `halle.courseplan.toml`.
-2. Er fragt die Ausdehnung der Karte und die Kartenobjekte rund um eine Stelle ab, um die Tür, die Sporthalle und
-   gute Plätze für Posten zu finden.
-3. Er setzt Start, Ziel und Posten.
-4. Er legt die Bahn an, setzt die Postennummern und liest Länge und Anstieg.
+2. Er fragt die Ausdehnung der Karte ab, also ihre kleinste und größte Ecke in Kartenmillimetern, den Maßstab
+   und die Kartenart, und rechnet daraus die Positionen aus.
+3. Er setzt Start, Ziel und Posten an diese Positionen.
+4. Er fragt für jeden Posten die Kartenobjekte in der Nähe ab und nennt dir Symbolnummern und Abstände, etwa
+   „Symbol 521, Fläche, 0,4 mm“. Was das Symbol bedeutet, schlägst du im Symbolsatz der Karte nach.
+5. Er legt die Bahn an, setzt die Postennummern und liest Länge und Anstieg.
 
 Du kannst in einem späteren Gespräch weitermachen. Gib dem Assistenten den Pfad der Projektdatei, dann setzt er
 dort an.
@@ -78,9 +84,13 @@ dort an.
   Arbeitsordner des Programms nicht kennt.
 - Jede Änderung wird sofort gespeichert. Lehnt das Programm eine Änderung ab, etwa einen Punkt außerhalb der Karte
   oder einen vergebenen Code, bleibt die Datei, wie sie war, und der Assistent bekommt den Grund.
-- Positionen stehen in Kartenmillimetern im Kartenmaßstab, y zeigt nach unten. Der Assistent holt sie aus den
-  Kartenobjekten. Sieh dir jede Postenposition selbst auf der Karte an, denn noch prüft nichts sie gegen die
-  Regeln.
+- Positionen stehen in Kartenmillimetern im Kartenmaßstab, y zeigt nach unten. Sieh dir jede Postenposition
+  selbst auf der Karte an, denn noch prüft nichts sie gegen die Regeln.
+- Postennummern setzt das Programm nur, wenn der Assistent darum bittet. Ändert er danach Strecken oder die
+  Reihenfolge, muss er sie neu setzen lassen. Eine Nummernlage, die für einen Posten oder in einer Bahn
+  festgelegt ist, bleibt dabei stehen.
+- Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
+  Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
 - Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das
   Programm das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat.

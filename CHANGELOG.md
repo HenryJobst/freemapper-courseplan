@@ -9,27 +9,39 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 ### Hinzugefügt
 
 - MCP-Server: `freemapper-courseplan mcp` bietet KI-Assistenten das Bahnlegen über MCP an (stdin und stdout).
-  23 Werkzeuge lesen und ändern ein Projekt: `event_info`, `list_controls|courses|specials|classes`,
+  25 Werkzeuge lesen und ändern ein Projekt: `event_info`, `list_controls|courses|specials|classes`,
   `add_control`, `move_control`, `remove_control`, `describe_control`, `set_control_number`, `add_special`,
-  `remove_special`, `add_class`, `remove_class`, `add_course`, `remove_course`, `set_course_controls`, `set_leg`,
-  `set_course_details`, `place_numbers`, `map_features_near`, `map_extent` und `init_event`. Positionen sind
-  Objekte mit `x` und `y` in Kartenmillimetern. Jeder Aufruf lädt die Projektdatei, wendet eine Änderung an und
+  `remove_special`, `set_special_courses`, `add_class`, `remove_class`, `add_course`, `remove_course`,
+  `set_course_controls`, `set_leg`, `set_course_details`, `place_numbers`, `set_course_number`,
+  `map_features_near`, `map_extent` und `init_event`. Positionen sind Objekte mit `x` und `y` in
+  Kartenmillimetern. Ein Postencode darf Text oder eine ganze Zahl sein. `set_course_controls` und
+  `remove_control` nennen in `cleared_legs` die Strecken, die ihre Knickpunkte verloren haben. Jeder Aufruf lädt die Projektdatei, wendet eine Änderung an und
   speichert nur bei Erfolg. Relative Pfade lehnt der Server ab. Beschreibungen, Hinweise für den Assistenten und
   Fehlertexte kommen aus dem Katalog in der Sprache von `--lang`, `FREEMAPPER_LANG` oder dem System; Werkzeug- und
   Feldnamen bleiben Englisch. Das Handbuch hat dazu das Kapitel 3.
-- Befehle für Bahnen: `course add`, `course controls`, `course leg`, `course set`, `course numbers` und
-  `course remove`. Anlegen und ändern geht nur für Einzelbahnen. `course leg --after N` zählt ab 1 wie auf der
-  Karte, Querungsstellen eingeschlossen. Knickpunkte gibst du mit wiederholtem `--bend X,Y` an; ohne `--bend`
-  verliert die Strecke ihre Knickpunkte, ohne `--taped` gilt sie als nicht abgeflaggt. `course numbers` setzt die
-  Postennummern so, dass sie Strecken und Kreise frei lassen. Die Ausgabe nutzt im Deutschen das Dezimalkomma, Eingaben behalten den Punkt.
+- Befehle für Bahnen: `course add`, `course controls`, `course leg`, `course set`, `course number`,
+  `course numbers` und `course remove`. Anlegen und ändern geht nur für Einzelbahnen. `course leg --after N` zählt
+  ab 1 wie auf der Karte, Querungsstellen eingeschlossen. Knickpunkte gibst du mit wiederholtem `--bend X,Y` an;
+  ohne `--bend` verliert die Strecke ihre Knickpunkte, ohne `--taped` gilt sie als nicht abgeflaggt. Führt eine
+  Strecke nach `course controls` oder `control remove` zu einem anderen Bahnpunkt, verliert sie Knickpunkte und
+  Abflaggung, und der Befehl meldet sie in einer eigenen Zeile. So ändern alte Knickpunkte die Länge nicht mehr
+  unbemerkt. `course number --after N` setzt oder löscht die Nummernlage eines Postens in einer Bahn. `course
+  numbers` setzt die übrigen Postennummern so, dass sie Strecken und Kreise frei lassen; es läuft nur auf Aufruf
+  und behält zentrale Nummernlagen und die der Bahn. Richtungen rechnet das Programm auf 0 bis 360 Grad um, ein
+  Abstand muss größer als 0 und höchstens 10 Druckmillimeter sein. Die Ausgabe nutzt im Deutschen das
+  Dezimalkomma, Eingaben behalten den Punkt.
 - `info` zeigt je Bahn eine Zeile mit Postenzahl, Länge in Kilometern und Anstieg. Querungsstellen zählen nicht als
-  Posten. Die Länge folgt WKB B 7.2.5: gerade Linien, Umwege als Knickpunkte, abgeflaggte Strecken entlang ihrer
-  Knickpunkte.
-  Für Mannschafts-, Staffel- und Score-Bahnen steht noch keine Länge da.
+  Posten, auch nicht in der Zeile mit den Summen, die sie getrennt zählt. Die Länge folgt WKB B 7.2.5: gerade
+  Linien, Umwege als Knickpunkte, abgeflaggte Strecken entlang ihrer Knickpunkte. Für Mannschafts-, Staffel- und
+  Score-Bahnen steht noch keine Länge da.
 - Befehle für Posten, Sonderobjekte und Kategorien: `control add|move|remove|describe|number`,
-  `special add|remove` und `class add|remove`. Jede Änderung wird erst geprüft und dann gespeichert; schlägt die
-  Prüfung fehl, bleibt die Datei unverändert. Punkte stehen in Kartenmillimetern, mit Punkt als Dezimaltrenner.
-  Das Programm lehnt Punkte außerhalb der Karte ab.
+  `special add|courses|remove` und `class add|remove`. Jede Änderung wird erst geprüft und dann gespeichert;
+  schlägt die Prüfung fehl, bleibt die Datei unverändert. Punkte stehen in Kartenmillimetern, mit Punkt als
+  Dezimaltrenner. Das Programm lehnt Punkte außerhalb der Karte ab. `special courses <PROJEKT> <ID> (A,B | --all)`
+  ordnet ein Sonderobjekt Bahnen zu. Die einzige Bahn eines Sonderobjekts lässt sich nicht entfernen; die Meldung
+  sagt, was zu tun ist. Codes, IDs, Namen und die Einträge von Listen mit Kommas verlieren Leerzeichen am Rand, so
+  geht `--controls "31, 32"`. `help control add` zeigt die Hilfe eines Unterbefehls. Die deutsche Hilfe nennt die
+  möglichen Werte auf Deutsch, und ein ungültiger Wert führt die gültigen auf.
 - Bibliothek: Bahnlegen, Bahnlänge und Postennummern. Das Programm berechnet Strecken mit Knickpunkten, die
   Länge einer Bahn bei einem Kartenmaßstab und die Nummern der Posten (Querungsstellen bekommen keine). Eine Nummer
   platziert es neben dem Kreis, ohne Strecken, Kreise oder andere Nummern zu berühren. Überdruckgrößen folgen der
@@ -38,6 +50,12 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   beschleunigt das Prüfen von Punkten gegen die Karte, die Ergebnisse bleiben gleich.
 - Datenmodell: Querungsstellen, IDs für Sonderobjekte, Knickpunkte und Abflaggung der Strecke vom Start sowie ein
   Druckbereich je Bahn.
+- Die Projektdatei lehnt leere oder von Leerzeichen umgebene Postencodes, Sonderobjekt-IDs, Bahn- und
+  Kategorienamen ab, ebenso einen Postencode, der zugleich ID eines Sonderobjekts ist, eine doppelt genannte Bahn
+  in einem Sonderobjekt, Linien mit weniger als zwei Punkten und Flächen mit weniger als drei.
+- Die deutschen Programmtexte nutzen die Begriffe des Glossars: Pflichtstrecke, abgeflaggte Strecke,
+  Querungsstelle, Gefahrenbereich, Erste-Hilfe-Stelle, Verpflegungsstelle, verbotene Route, Nummernlage, Strecke
+  und Knickpunkt.
 - Programmtexte kommen aus Fluent-Dateien, eine je Sprache (`crates/freemapper-courseplan/i18n/`). Deutsch und
   Englisch sind dabei. `--lang`, sonst `FREEMAPPER_LANG`, sonst die Systemsprache bestimmt die Sprache; Hilfe und
   Meldungen richten sich danach. Eine weitere Sprache braucht nur einen neuen Ordner. Platzhalter in der

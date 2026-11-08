@@ -34,8 +34,10 @@ freemapper-courseplan is in early development. On a sprint or schoolyard map (`.
 individual courses. `freemapper-courseplan init <map>` creates the project file. With `control`, `special`,
 `class` and `course` you add controls, start, finish, classes and courses, set bends and have the control numbers
 placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course.
-The project file is TOML, and you can edit it by hand too. The program cannot edit or measure team, relay or score
-courses yet. It cannot check or print courses either, and it does not read forest maps.
+An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
+[user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up. The project file is TOML, and
+you can edit it by hand too. The program cannot edit or measure team, relay or score courses yet. It cannot check
+or print courses either, and it does not read forest maps.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

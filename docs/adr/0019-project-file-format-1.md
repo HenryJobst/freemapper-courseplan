@@ -17,9 +17,8 @@ M1 writes the first project files (ADR 0008). People edit them by hand, and the 
   objects are matched by `id` (ADR 0020), accepted findings by index.
 - Loading rejects unknown keys. Every field added later raises `format`.
 - Format 1 is provisional and carries no compatibility promise until the first release. Before then it needs gaps
-  on legs and circles, the planned print area, ids and course assignment for special objects other than start and
-  finish (for mandatory crossing points in the WKB length, the `.ppen` export and freemapper-print), team size per
-  class, and relay variant names with their assignment to legs and teams.
+  on legs and circles, team size per class, and relay variant names with their assignment to legs and teams. ADR
+  0020 added the print area, crossing points, and ids and course lists for special objects.
 
 ## Consequences
 

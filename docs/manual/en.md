@@ -53,18 +53,25 @@ program. Tool names and field names stay English in every language.
 
 ### Set a course
 
-Tell the assistant what you want, for example:
+The assistant does not see the map. It can ask for the extent of the map and, for a point, for the map objects
+around it, each with its symbol number, its kind (point, line, area) and its distance. It knows no names such as
+"south door" or "gym", and the query does not tell it where exactly an object lies. So give it positions, in map
+millimetres or relative to the extent of the map, for example:
 
-> Start an event from ~/maps/hall.omap. Put the start at the south door and the finish by the gym. Add three
-> controls in the yard, make a course "Short" from them for class D10, place the numbers and tell me the length.
+> Start an event from ~/maps/hall.omap. Put the start a quarter of the way in from the left edge, at half the
+> height, and the finish 10 mm to the right of it. Add three controls spread over the map and tell me for each
+> which map objects lie within 2 mm. Make a course "Short" from them for class D10, place the control numbers
+> and tell me the length.
 
 The assistant then works like this:
 
 1. It starts the event. The project file lands next to the map, named `hall.courseplan.toml`.
-2. It asks for the extent of the map and for the map objects around a spot, to find the door, the gym and
-   good places for controls.
-3. It adds the start, the finish and the controls.
-4. It adds the course, places the control numbers and reads the length and the climb.
+2. It asks for the extent of the map, that is its smallest and largest corner in map millimetres, the scale and
+   the map kind, and works out the positions from it.
+3. It adds the start, the finish and the controls at these positions.
+4. For each control it asks for the map objects nearby and tells you their symbol numbers and distances, such as
+   "symbol 521, area, 0.4 mm". Look up what a symbol means in the symbol set of the map.
+5. It adds the course, places the control numbers and reads the length and the climb.
 
 You can also continue in a later chat. Give the assistant the path of the project file and it picks up from
 there.
@@ -75,9 +82,12 @@ there.
   working folder of the program.
 - Every change is saved at once. If the program refuses a change, for example a point outside the map or a
   code that is taken, the file stays as it was and the assistant gets the reason.
-- Positions are in map millimetres at map scale, with y pointing down. The assistant gets them from the map
-  objects. Look at every control position yourself on the map, because nothing checks them against the rules
-  yet.
+- Positions are in map millimetres at map scale, with y pointing down. Look at every control position yourself
+  on the map, because nothing checks them against the rules yet.
+- The program places control numbers only when the assistant asks for it. If the assistant then changes legs or
+  the order, it has to have them placed again. A number placement set for a control or in a course stays.
+- When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
+  flag. The assistant gets a list of these legs.
 - Only individual courses can be edited and measured so far. For team, relay and score courses the program
   says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did.

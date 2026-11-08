@@ -38,6 +38,8 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | abgeflaggte Strecke | taped leg | Strecke, die als Pflichtstrecke abgeflaggt ist; am Bahnposten oder, ab dem Start, an der Bahn. | `taped`, `start_taped` |
 | Streckengeometrie | leg geometry | Linienzug einer Strecke vom einen Bahnpunkt zum nächsten (Start, Posten, Querungsstelle, Ziel) über die Knickpunkte, mit Länge in Kartenmillimetern und Kennzeichen abgeflaggte Strecke. | `LegGeometry` |
 | Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), abgeflaggte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
+| Aufdruckgrößen | overprint sizes | Kreisdurchmesser, Linienbreite und Nummernhöhe des Bahnaufdrucks in Druckmillimetern beim Grundmaßstab der Kartenart: ISSprOM 2019-2 für Sprint und Schulhof, ISOM 2017-2 für Wald. | `OverprintSizes` |
+| Grundmaßstab | base scale | Maßstab, für den die Aufdruckgrößen gelten: Sprint 1:4000, Schulhof 1:1000, Wald 1:15000. Auf der Karte gilt `map_mm = print_mm × base_scale / map_scale`, auch bei vergrößertem Druck. | `base_scale` |
 | Druckbereich | print area | Rechteck der Karte, das das Blatt einer Bahn zeigt, in Millimetern auf der Karte. | `PrintArea` |
 | Staffelteil | relay part | Gemeinsamer Teil oder Gabelung einer Staffelbahn. | `RelayPart` |
 | Score-Posten | score control | Posten einer Score-Bahn mit seinem Wert. | `ScoreControl` |

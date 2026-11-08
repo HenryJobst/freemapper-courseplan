@@ -33,9 +33,10 @@ freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schul
 ganze Einzelbahnen an. `freemapper-courseplan init <Karte>` erzeugt die Projektdatei. Mit `control`, `special`,
 `class` und `course` legst du Posten, Start, Ziel, Kategorien und Bahnen an, setzt Knickpunkte und lässt die
 Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im Projekt steht, auch die Länge jeder
-Bahn. Die Projektdatei ist TOML, du kannst sie auch von Hand bearbeiten. Mannschafts-, Staffel- und Score-Bahnen
-kann das Programm noch nicht bearbeiten oder messen. Prüfen und drucken kann es auch noch nicht, und Waldkarten
-liest es nicht.
+Bahn. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
+einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten). Die Projektdatei ist
+TOML, du kannst sie auch von Hand bearbeiten. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
+bearbeiten oder messen. Prüfen und drucken kann es auch noch nicht, und Waldkarten liest es nicht.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

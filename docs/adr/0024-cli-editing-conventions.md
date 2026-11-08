@@ -19,11 +19,20 @@ clap's option parsing.
   file byte-identical. Refusals exit with 1, usage errors with 2.
 - Output follows the language: German prints lengths with a decimal comma, input keeps the dot.
 - Removing a course takes its name out of special objects; if that would leave a special object with no
-  course (which means all courses), the removal is refused.
+  course (which means all courses), the removal is refused with its own message, and `special courses` reassigns
+  or widens the object first (ruling R5, amended). A special object lists each course once.
+- A leg keeps its bends and taped flag only while it runs to the same next stop. When `course controls` or
+  `control remove` changes the next stop, the leg loses both, and the command prints one line per such leg
+  (ruling R12).
+- `course number --after N` counts like `course leg`. A course number beats the control's central number, and
+  that beats automatic placement; `course numbers` fills only the rest and runs only when called (ruling R11).
+- A number direction is brought into [0, 360); a gap must be more than 0 and at most 10 print mm.
+- Codes, ids, names and list items lose surrounding white space; empty or padded names in the file are refused.
+- M2a edits and measures individual courses only; team, relay and score courses get a clear refusal.
 
 ## Consequences
 
 - Command lines are a little longer, and behave the same in every shell and locale.
 - Cost if wrong: a later editor may want other conventions; the library operations do not depend on these.
 
-Source: plan M2a Tasks 4, 7, 8; rulings R5, R8.
+Source: plan M2a Tasks 4, 7, 8; rulings R5 (amended), R8, R11, R12; final review of M2a, 2026-11-08.
