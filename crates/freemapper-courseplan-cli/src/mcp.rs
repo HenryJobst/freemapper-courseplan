@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, LegStart};
-use freemapper_courseplan::init::init_project;
+use freemapper_courseplan::init::{InitError, init_project};
 use freemapper_courseplan::map::{FeatureGeometry, MapIndex, MapKind, map_kind};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
@@ -253,6 +253,15 @@ fn is_courseplan_project(path: &std::path::Path) -> bool {
         })
 }
 
+/// An init error as text for the assistant, with the same redaction as the other tools.
+fn init_error(lang: &Lang, error: InitError) -> String {
+    match error {
+        InitError::Map { path, source } => map_error(lang, &path, source),
+        InitError::Project(e) => project_error(lang, e),
+        other => other.localize(lang),
+    }
+}
+
 /// "line N, column M" of a toml_edit error text.
 fn error_position(message: &str) -> Option<(u64, u64)> {
     let rest = &message[message.find("line ")? + 5..];
@@ -264,8 +273,12 @@ fn error_position(message: &str) -> Option<(u64, u64)> {
 /// A map error as text for the assistant: read errors keep the OS text, format errors get a
 /// fixed reason, because XML errors can quote the file.
 fn map_error(lang: &Lang, path: &std::path::Path, error: OmapError) -> String {
-    let source = match error {
+    /// The fixed refusal text of `omap/read.rs` for the old binary format. It reveals only that
+    /// the file starts with `OMAP`.
+    const BINARY_FORMAT_MESSAGE: &str = "This file is in the old binary format of OpenOrienteering Mapper, which this program cannot read. Open it in Mapper and save it again as a current .omap or .xmap file.";
+    let source = match &error {
         OmapError::Io(_) | OmapError::MissingElement(_) => error.localize(lang),
+        OmapError::Unsupported(m) if m == BINARY_FORMAT_MESSAGE => error.localize(lang),
         _ => text(
             lang,
             "mcp-error-map-invalid",
@@ -871,7 +884,7 @@ impl CoursePlanServer {
                 None => crate::default_project_path(&map),
             };
             let created = init_project(&map, &project, req.title.clone())
-                .map_err(|e| e.localize(&self.lang))?;
+                .map_err(|e| init_error(&self.lang, e))?;
             Ok(json!({ "project": created.path.display().to_string() }))
         })())
     }

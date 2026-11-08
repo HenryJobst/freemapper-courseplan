@@ -575,3 +575,26 @@ fn unknown_keys_of_a_foreign_toml_are_not_listed() {
         assert!(!text.contains(name), "{text}");
     }
 }
+
+#[test]
+fn init_event_map_errors_do_not_quote_the_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("broken.omap");
+    std::fs::write(&map, "<map><barrier hunter2 =\n").unwrap();
+    let mut session = Session::start();
+    let (error, text) = session.call("init_event", json!({ "map": map }));
+    assert!(error, "{text}");
+    assert!(!text.contains("hunter2"), "{text}");
+    assert!(!dir.path().join("broken.courseplan.toml").exists());
+}
+
+#[test]
+fn binary_omap_keeps_its_hint_over_mcp() {
+    let (dir, map, project) = workspace();
+    let mut session = Session::start();
+    std::fs::write(&map, b"OMAP\0\0\0\x01rest").unwrap();
+    let (error, text) = session.call("init_event", json!({ "map": map, "project": project }));
+    assert!(error, "{text}");
+    assert!(text.contains("old binary format"), "{text}");
+    drop(dir);
+}
