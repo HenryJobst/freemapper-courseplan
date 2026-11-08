@@ -32,16 +32,23 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   use `cargo update -p <crate> --precise <version>` where needed.
 - Identifiers follow `docs/glossary.md` and freemapper-print's glossary. New terms get glossary rows in the same
   task.
-- Map coordinates in mm at map scale, y down (`MapPoint`). Print millimetres convert to map millimetres as
-  `map_mm = print_mm × print_scale / map_scale`, where `print_scale` is the course's `planned_print_scale` or,
-  without one, the map scale.
+- Map coordinates in mm at map scale, y down (`MapPoint`). Overprint sizes are given in print mm at the map
+  kind's base scale (sprint 1:4000, schoolyard 1:1000, forest 1:15000). Enlarged prints grow every symbol in
+  proportion (ISSprOM 4.7: 133 % at 1:3000; ISOM: 150 % at 1:10000; freemapper-print, 2026-11-08), so on the
+  map the overprint keeps its size: `map_mm = print_mm × base_scale / map_scale`, whatever the planned print
+  scale.
 - Number placement: `direction` in degrees, 0 = east, counter-clockwise; `gap_mm` in print mm.
 - Only individual courses are edited and measured in M2a. Operations on other kinds return a clear
   "not supported yet" error.
 - No AI in the program (ADR 0016). The MCP server lets an external agent drive it.
 - Project file format stays `format = 1` (provisional until the first release, ADR 0019).
-- CLI messages and MCP texts in English; anything longer than a short phrase follows unslop/humanizer.
-  Changelog entries in both changelogs.
+- Program texts in German and English (ADR 0021): every user-facing message, CLI help text and MCP text
+  exists in both languages through the catalog of Task 6; the language comes from `--lang de|en`, else
+  `FREEMAPPER_LANG`, else the system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`), else English. Code, identifiers,
+  logs and `Display` of error types stay English. Texts longer than a short phrase follow unslop/humanizer in
+  both languages. Changelog entries in both changelogs.
+- CLI and MCP tests set `LANG=C` and pass `--lang en` (or the MCP equivalent `FREEMAPPER_LANG=en`) unless
+  they test German texts, so they do not depend on the machine's locale.
 - Branch `m2a-editing`, worktree `.worktrees/m2a-editing`.
 - Commit trailers: `Co-Authored-By: <model> <noreply@anthropic.com>` and
   `Claude-Session: https://claude.ai/code/session_01BW25YoqN46qrkRXtWogXH1`.
@@ -49,7 +56,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 ## Review Focus
 
 1. A failed edit (unknown code, a removal that would break a course, an invalid value) leaves the project file
-   byte-identical (Task 6, `failed_edit_leaves_file_unchanged`).
+   byte-identical (Task 7, `failed_edit_leaves_file_unchanged`).
 2. Removing a control that courses use takes it out of those courses and names them, rather than failing late
    or leaving a dangling code (Task 4, `remove_control_takes_it_out_of_courses`).
 3. The same control twice in one course (a butterfly loop): numbering counts both visits, and replacing the
@@ -57,7 +64,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
    `set_course_controls_keeps_leg_data_per_visit`).
 4. A position outside the map's extent: refused with the extent in the message (Task 4,
    `add_control_outside_map_is_refused`).
-5. MCP with a relative project path: refused with a message, no file touched (Task 8,
+5. MCP with a relative project path: refused with a message, no file touched (Task 9,
    `relative_path_is_refused`).
 
 ---
@@ -231,14 +238,16 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - Consumes: `course_legs` (Task 3), `MapKind`.
 - Produces:
   - `struct OverprintSizes { circle_diameter_mm: f64, line_width_mm: f64, number_height_mm: f64 }` in print mm;
-    `fn overprint_sizes(kind: MapKind) -> OverprintSizes`: sprint and schoolyard (ISSprOM 2019-2): 6.0, 0.35,
-    4.0; forest (ISOM 2017-2): 5.0, 0.35, 4.0.
+    `fn overprint_sizes(kind: MapKind) -> OverprintSizes` and `fn base_scale(kind: MapKind) -> u32`: sprint
+    (ISSprOM 2019-2) 6.0, 0.35, 4.0 at 1:4000; schoolyard the same print values at 1:1000 (assumption until
+    the school set's overprint is checked; say so in a code comment); forest (ISOM 2017-2) 5.0, 0.35, 4.0 at
+    1:15000.
   - `fn auto_place(event: &Event, course: &Course, map_scale: u32, kind: MapKind) -> Result<Vec<NumberPlacement>, CourseError>`:
     one placement per numbered course control, in sequence; crossing points are skipped.
   - Algorithm (deterministic, no map detail yet; the shared `freemapper-placement` module replaces it later,
     ADR 0013/0014):
-    - gap 0.5 mm print; number box `0.6 × height × digits` wide and `height` high, in print mm, converted to
-      map mm with the course's print scale (Global Constraints);
+    - gap 0.5 mm print; number box `0.6 × height × digits` wide and `height` high, in print mm at the base
+      scale, converted to map mm as in the Global Constraints;
     - 16 candidate directions, every 22.5°, starting at 45°;
     - hard conflicts: the box overlaps another circle of the course, a leg polyline of the course (widened by
       half the line width), or a number already placed for this course;
@@ -260,7 +269,42 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy.
 - [ ] **Step 5: Commit** `feat(numbers): place control numbers clear of legs and circles`.
 
-### Task 6: CLI for controls, special objects and classes
+### Task 6: Program texts in German and English
+
+**Files:**
+- Create: `crates/freemapper-courseplan/src/text.rs` (language detection and the message catalog)
+- Modify: `crates/freemapper-courseplan/src/lib.rs`, `crates/freemapper-courseplan/src/init.rs`,
+  `crates/freemapper-courseplan-cli/src/main.rs`, `docs/glossary.md` (row Sprache / language `Lang`)
+- Test: unit tests in `text.rs`, `crates/freemapper-courseplan-cli/tests/cli.rs`
+
+**Interfaces:**
+- Consumes: the error types `ProjectError`, `ModelError` (model crate), `InitError`, `CourseError`,
+  `EditError`, `OmapError`.
+- Produces:
+  - `enum Lang { De, En }`; `fn detect_lang(arg: Option<&str>, env: &dyn Fn(&str) -> Option<String>) -> Lang`
+    (order as in the Global Constraints; a locale starting with `de` → `De`; anything else → `En`).
+  - `trait Localize { fn localize(&self, lang: Lang) -> String; }`, implemented for every error type above;
+    the English text equals the type's `Display`. No new crate: the catalog is Rust code (a `match` per
+    message), so a missing translation is a compile error. A later move to translation files for more
+    languages is left open.
+  - CLI: global option `--lang de|en`; help texts of all commands in both languages (build the clap command
+    at start-up and set `about`/`help` from the catalog, e.g. with `Command::mut_subcommand`/`mut_arg`);
+    `info` labels stay as in M1 in English and get German labels (`Titel`, `Karte`, `Kartenart`, `Posten`,
+    `Bahnen (einzeln …, Mannschaft …, Staffel …, Score …)`, `Kategorien`) when the language is German.
+  - The M1 messages (init, info, project file errors) are translated.
+
+- [ ] **Step 1: Write the failing tests**:
+  - `detects_language_in_order`: `--lang` wins over `FREEMAPPER_LANG`, which wins over `LANG=de_DE.UTF-8`;
+    `LANG=C` → English.
+  - `every_error_has_both_languages`: for one value of each error variant, `localize(De)` is non-empty and
+    differs from `localize(En)`, and `localize(En) == to_string()`.
+  - CLI: `init_refuses_forest_map_in_german` (`--lang de` → German stderr), `help_in_german`
+    (`--lang de init --help` contains a German phrase), and the existing English tests run with `--lang en`
+    or `LANG=C` so they do not depend on the machine.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy.
+- [ ] **Step 5: Commit** `feat(text): program texts in German and English`.
+
+### Task 7: CLI for controls, special objects and classes
 
 **Files:**
 - Create: `crates/freemapper-courseplan-cli/src/edit_cmd.rs` (clap types and handlers for the edit commands)
@@ -270,7 +314,8 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 **Interfaces:**
 - Consumes: `edit::*` (Task 4), `ProjectFile`, `read_map_file`, `MapIndex::extent`.
 - Produces commands (every one: load the project, read the map when the operation needs the extent, apply,
-  save, print one confirmation line; on error print `error: …`, exit 1, file unchanged). Points are written
+  save, print one confirmation line from the catalog (Task 6) in the chosen language; on error print
+  `error: …` (German `Fehler: …`), exit 1, file unchanged). Points are written
   `X,Y` in map mm; several points are separate arguments.
   - `control add <PROJECT> --at X,Y [--code CODE] [--crossing-point]` → `added control 33 at 12.5,-30`.
   - `control move <PROJECT> <CODE> --at X,Y`; `control remove <PROJECT> <CODE>` (prints the courses it left);
@@ -290,7 +335,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy.
 - [ ] **Step 5: Commit** `feat(cli): edit controls, special objects and classes`.
 
-### Task 7: CLI for courses, numbers and lengths
+### Task 8: CLI for courses, numbers and lengths
 
 **Files:**
 - Modify: `crates/freemapper-courseplan-cli/src/edit_cmd.rs`, `src/main.rs`, `CHANGELOG.md`,
@@ -298,7 +343,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - Test: `crates/freemapper-courseplan-cli/tests/edit.rs`, `crates/freemapper-courseplan-cli/tests/cli.rs`
 
 **Interfaces:**
-- Consumes: Tasks 3–6.
+- Consumes: Tasks 3–7.
 - Produces:
   - `course add <PROJECT> <NAME> --start ID --finish ID [--controls 31,32,…] [--classes A,B] [--climb M] [--print-scale N]`.
   - `course controls <PROJECT> <NAME> 31,32,…` (replace the sequence); `course remove <PROJECT> <NAME>`.
@@ -309,7 +354,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   - `info` keeps its six M1 lines and adds one line per course:
     `course <NAME>: <n> controls, <km> km, climb <m> m` with km to one decimal (WKB B 7.2.5 format) and
     `climb –` when unset. Crossing points do not count as controls.
-  - Changelog entries (both languages) and README status paragraph (what works now) for Tasks 1–7.
+  - Changelog entries (both languages) and README status paragraph (what works now) for Tasks 1–8.
 
 - [ ] **Step 1: Write the failing tests**:
   - `course_cycle`: add start, finish, three controls, a course, set its controls, add a bend, place numbers →
@@ -321,7 +366,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - [ ] **Step 5: Docs** (changelog, README; unslop/humanizer). **Step 6: Commit**
   `feat(cli): set courses, legs and control numbers`.
 
-### Task 8: MCP server
+### Task 9: MCP server
 
 **Files:**
 - Create: `crates/freemapper-courseplan-cli/src/mcp.rs`, `crates/freemapper-courseplan-cli/tests/mcp.rs`,
@@ -330,7 +375,8 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   `Cargo.toml`, `CHANGELOG.md`, `CHANGELOG.en.md`
 
 **Interfaces:**
-- Consumes: Tasks 3–7. Pattern: freemapper's `crates/freemapper-cli/src/mcp.rs` and `tests/mcp.rs`
+- Consumes: Tasks 3–8; tool descriptions and server instructions come from the catalog (Task 6) in the language
+  detected at server start. Pattern: freemapper's `crates/freemapper-cli/src/mcp.rs` and `tests/mcp.rs`
   (`/Users/henryprivat/Documents/gitrepos/freemapper`), same rmcp version and style.
 - Produces: `freemapper-courseplan mcp` serves MCP over stdio (ADR 0004). Every tool takes `project` (absolute
   path or `~/…`; relative → error result "use an absolute path") and returns compact JSON text. Tools:

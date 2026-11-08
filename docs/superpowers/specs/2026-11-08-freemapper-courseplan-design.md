@@ -31,8 +31,12 @@ browser editor on top of the OOM map *(user)*. Where it helps, and only after it
 the work as a checker and as a source of proposals *(user)*. Later versions add relay, team and score formats,
 pre-planned control-placer tours and a route analysis.
 
-Users: the author and club members who set courses for training and events, through the browser editor, the
-CLI or an AI agent via MCP *(Claude's call: same audience as freemapper-print)*.
+Users: course setters across the German orienteering community, and internationally where it makes sense
+*(user, 2026-11-08)*; first the author and club members who set courses for training and events. They work
+through the browser editor, the CLI or an AI agent via MCP. Consequences *(Claude's call)*: rule profiles are
+data that anyone can add (national rules, regional recommendations such as the NOR tables for
+Berlin/Brandenburg, IOF and other federations, research §3.3a); nothing in the code assumes one region; exports
+use the international formats (IOF XML 3.0) besides `.ppen`.
 
 ## 2. Goals, non-goals, anti-goals
 
@@ -121,6 +125,7 @@ uniform)*.
 | Number position | direction in degrees (0 = east, counter-clockwise) and gap in print mm | agreed with freemapper-print |
 | Coordinates | OOM map coordinates (mm at map scale, y down), as freemapper-print | agreed with freemapper-print |
 | Rule source | WKB 2026 in the first version; an IOF profile later, the rule data is shaped for it | Claude's call, narrowed after the review |
+| Program language | German and English for every user-facing text (editor, CLI, findings, MCP texts); chosen by `--lang`, `FREEMAPPER_LANG` or the system locale; more languages later | user, 2026-11-08; ADR 0021 |
 | AI judgments | through the `typesafe-ai` skill's approach (TypeSafe), per the user's CLAUDE.md | user's standing instruction |
 
 ## 4. Concepts
@@ -296,7 +301,10 @@ Claude's call.)*
 
 Rules are data, not code: each rule has an id, the rule profile it belongs to, its values and its source
 (document and section), so `check` can say why it complains and the values can be updated when the WKB change
-(a complete revision is announced for 2027). All rules here are class A (machine-checkable) and need no
+(a complete revision is announced for 2027). Profiles stack *(Claude's call, 2026-11-08)*: a base profile
+(WKB 2026, later IOF and others) plus optional regional overlays (for example the NOR recommendations for
+Berlin/Brandenburg with Lkm targets, category combinations and ±6 % tolerance, research §3.3a, or Bavaria's
+Lkm rules). An overlay adds or overrides values; the event names its base profile and its overlays. All rules here are class A (machine-checkable) and need no
 routing *(Claude's call: selection)*.
 
 | Check | Source |

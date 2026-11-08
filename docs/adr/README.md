@@ -63,3 +63,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0017](0017-omap-reader-copied-from-freemapper-print.md) | The .omap reader is copied from freemapper-print | Accepted | 2026-11-08 |
 | [0018](0018-example-events-built-on-freemapper-examples.md) | Example events built on freemapper's examples | Accepted | 2026-11-08 |
 | [0019](0019-project-file-format-1.md) | Project file format 1 | Accepted | 2026-11-08 |
+| [0021](0021-program-texts-in-german-and-english.md) | Program texts in German and English | Accepted | 2026-11-08 |
