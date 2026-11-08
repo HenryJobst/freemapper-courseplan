@@ -409,3 +409,87 @@ fn info_lists_courses_in_german_and_skips_length_of_team_courses() {
         stdout(&out)
     );
 }
+
+#[test]
+fn help_takes_a_path_of_commands() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(dir.path(), &[], &["--lang", "de", "help", "control", "add"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let help = stdout(&out);
+    assert!(help.starts_with("Einen Posten anlegen"), "{help}");
+    assert!(help.contains("--crossing-point"), "{help}");
+    let out = run(dir.path(), &["help", "course", "number"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(stdout(&out).contains("--after <N>"), "{}", stdout(&out));
+    let out = run(dir.path(), &["help", "control", "frob"]);
+    assert_eq!(out.status.code(), Some(2));
+    assert!(stderr(&out).contains("frob"), "{}", stderr(&out));
+}
+
+#[test]
+fn help_lists_arguments_in_declaration_order() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run(dir.path(), &["course", "controls", "--help"]);
+    let help = stdout(&out);
+    let at = |name: &str| {
+        help.find(&format!("  <{name}>"))
+            .unwrap_or_else(|| panic!("{name} in {help}"))
+    };
+    assert!(
+        at("PROJECT") < at("NAME") && at("NAME") < at("CODES"),
+        "{help}"
+    );
+    let out = run(dir.path(), &["special", "add", "--help"]);
+    let help = stdout(&out);
+    let at = |name: &str| {
+        help.find(name)
+            .unwrap_or_else(|| panic!("{name} in {help}"))
+    };
+    assert!(
+        at("--kind") < at("--id") && at("--id") < at("--at"),
+        "{help}"
+    );
+    assert!(
+        at("--courses") < at("--lang") && at("--lang") < at("--help"),
+        "{help}"
+    );
+}
+
+#[test]
+fn possible_values_are_shown_and_listed_in_german() {
+    let dir = tempfile::tempdir().unwrap();
+    let out = run_env(
+        dir.path(),
+        &[],
+        &["--lang", "de", "special", "add", "--help"],
+    );
+    let help = stdout(&out);
+    assert!(
+        help.contains("[mögliche Werte: start, finish, marked-route,"),
+        "{help}"
+    );
+    assert!(!help.contains("possible values"), "{help}");
+    let out = run_env(
+        dir.path(),
+        &[],
+        &[
+            "--lang", "de", "special", "add", "x.toml", "--kind", "wasser", "--id", "a",
+        ],
+    );
+    assert_eq!(out.status.code(), Some(2));
+    let err = stderr(&out);
+    assert!(
+        err.starts_with("Fehler: Ungültiger Wert wasser für --kind <KIND>"),
+        "{err}"
+    );
+    assert!(err.contains("Mögliche Werte: start, finish, marked-route, out-of-bounds, forbidden-route, dangerous-area, first-aid, water"), "{err}");
+    let out = run(
+        dir.path(),
+        &["special", "add", "x.toml", "--kind", "wasser", "--id", "a"],
+    );
+    assert!(
+        stderr(&out).contains("possible values: start, finish,"),
+        "{}",
+        stderr(&out)
+    );
+}

@@ -74,8 +74,8 @@ enum Command {
     Mcp,
     /// Show the help of a command
     Help {
-        /// The command
-        command: Option<String>,
+        /// The command, with its subcommands: `help control add`
+        command: Vec<String>,
     },
 }
 
@@ -117,11 +117,34 @@ fn localized_command(lang: &Lang) -> clap::Command {
     let options = leak("cli-heading-options").trim_end_matches(':');
     let arguments = leak("cli-heading-arguments").trim_end_matches(':');
     let commands = leak("cli-heading-commands").trim_end_matches(':');
+    let possible = t("cli-help-possible-values");
     let style = |cmd: clap::Command| {
+        // Clap sorts the help by display order and then by name, so the arguments get their
+        // declaration order here; global arguments (--lang, --help) come after a command's own.
+        let mut order = 0;
         cmd.help_template(template.clone())
             .disable_help_subcommand(true)
             .subcommand_help_heading(commands)
             .mut_args(|a| {
+                order += 1;
+                let offset = if a.is_global_set() { 1000 } else { 0 };
+                let a = a.display_order(offset + order);
+                // Clap's "[possible values: …]" is English; the catalog's words replace it.
+                let takes_values = a.get_action().takes_values();
+                let values: Vec<String> = a
+                    .get_possible_values()
+                    .iter()
+                    .filter(|_| takes_values)
+                    .filter(|v| !v.is_hide_set())
+                    .map(|v| v.get_name().to_owned())
+                    .collect();
+                let a = if values.is_empty() {
+                    a
+                } else {
+                    let help = a.get_help().map(ToString::to_string).unwrap_or_default();
+                    let text = format!("{help} [{possible}: {}]", values.join(", "));
+                    a.hide_possible_values(true).help(text)
+                };
                 if a.is_positional() {
                     a.help_heading(arguments)
                 } else {
@@ -204,10 +227,20 @@ fn parse_error_message(lang: &Lang, error: &clap::Error) -> Option<String> {
     let (id, args): (&str, Vec<(&str, FluentValue)>) = match error.kind() {
         ErrorKind::UnknownArgument => ("cli-parse-unknown-argument", vec![("arg", arg())]),
         ErrorKind::MissingRequiredArgument => ("cli-parse-missing-required", vec![("args", arg())]),
-        ErrorKind::InvalidValue => (
-            "cli-parse-invalid-value",
-            vec![("arg", arg()), ("value", value())],
-        ),
+        ErrorKind::InvalidValue => match context(error, ContextKind::ValidValue) {
+            values if values.is_empty() => (
+                "cli-parse-invalid-value",
+                vec![("arg", arg()), ("value", value())],
+            ),
+            values => (
+                "cli-parse-invalid-value-choices",
+                vec![
+                    ("arg", arg()),
+                    ("value", value()),
+                    ("values", FluentValue::from(values)),
+                ],
+            ),
+        },
         ErrorKind::InvalidSubcommand => {
             // Clap stores the unknown word under its own key.
             let word = match context(error, ContextKind::InvalidSubcommand) {
@@ -310,17 +343,31 @@ fn main() -> ExitCode {
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
         Command::Mcp => mcp::run(lang.clone()).map_err(Failure::Error),
-        Command::Help { command: name } => {
+        Command::Help { command: path } => {
             command.build();
-            let target = name
-                .as_deref()
-                .and_then(|n| command.find_subcommand_mut(n))
-                .map(|c| c.print_help());
-            let _ = match target {
-                Some(result) => result,
-                None => command.print_help(),
-            };
-            Ok(())
+            let mut found: &clap::Command = &command;
+            let unknown = path.iter().find(|name| match found.find_subcommand(name) {
+                Some(sub) => {
+                    found = sub;
+                    false
+                }
+                None => true,
+            });
+            match unknown {
+                Some(name) => Err(Failure::Usage(text(
+                    &lang,
+                    "cli-parse-invalid-subcommand",
+                    &[("value", FluentValue::from(name.clone()))],
+                ))),
+                None => {
+                    let mut target = &mut command;
+                    for name in &path {
+                        target = target.find_subcommand_mut(name).expect("found above");
+                    }
+                    let _ = target.print_help();
+                    Ok(())
+                }
+            }
         }
     };
     match result {
@@ -587,6 +634,15 @@ mod tests {
                 ErrorKind::InvalidSubcommand,
                 vec![(ContextKind::InvalidSubcommand, "frob")],
                 vec!["frob"],
+            ),
+            (
+                ErrorKind::InvalidValue,
+                vec![
+                    (ContextKind::InvalidArg, "--kind"),
+                    (ContextKind::InvalidValue, "wasser"),
+                    (ContextKind::ValidValue, "start, water"),
+                ],
+                vec!["--kind", "wasser", "Mögliche Werte: start, water"],
             ),
             (ErrorKind::MissingSubcommand, vec![], vec![]),
             (
