@@ -36,8 +36,11 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   English (`feat(scope): …`, `fix`, `docs`, `test`, `chore`); merge with `--no-ff` after the final review;
   never force-push. Merge feature branches on your own judgment, without asking *(user, 2026-11-08)*: when the
   final review is clean or its residuals are parked with rulings, and fmt, clippy and tests pass on the merged
-  `main`. After a merge remove the worktree and run `cargo clean` there, because `target/` fills the
-  disk.
+  `main`.
+- Disk space (the Mac is shared by the suite; freemapper's `target/` once reached 31 GB): after a merge run
+  `cargo clean` in the worktree and in the main checkout, then remove the worktree; check `df -h` before long
+  runs. The program itself writes only small files and saves atomically (tmp file, then rename), so a full
+  disk leaves the old project file intact and the error names the file.
 - Remotes as in freemapper *(user, 2026-11-08)*: `origin` is the private GitLab
   (https://gitlab.jobst-server.de/henry/freemapper-courseplan, HTTPS), `github` the public GitHub repository
   (https://github.com/HenryJobst/freemapper-courseplan, push over SSH). CI runs on GitHub. Push `main` to both
