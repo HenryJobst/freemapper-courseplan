@@ -190,9 +190,11 @@ fn special_add_start_and_water_point() {
                 "marked-route",
                 "--id",
                 "M1",
-                "--points",
+                "--point",
                 "1,1",
+                "--point",
                 "5,5",
+                "--point",
                 "-3,2"
             ]
         ),
@@ -241,7 +243,8 @@ fn special_add_wrong_combination_is_a_usage_error() {
     let before = std::fs::read(&project).unwrap();
     for args in [
         vec![
-            "special", "add", p, "--kind", "start", "--id", "S1", "--points", "1,1", "2,2",
+            "special", "add", p, "--kind", "start", "--id", "S1", "--point", "1,1", "--point",
+            "2,2",
         ],
         vec![
             "special",
@@ -371,26 +374,60 @@ fn german_texts() {
 }
 
 #[test]
-fn special_add_points_last_after_other_options() {
+fn points_and_courses_in_any_order() {
     let (dir, project) = project();
     let p = project.to_str().unwrap();
+    let d = dir.path();
+    ok(
+        d,
+        &[
+            "special", "add", p, "--kind", "start", "--id", "S1", "--at", "1,1",
+        ],
+    );
+    ok(
+        d,
+        &[
+            "special", "add", p, "--kind", "finish", "--id", "F1", "--at", "2,2",
+        ],
+    );
+    let mut toml = std::fs::read_to_string(&project).unwrap();
+    toml.push_str(
+        "\n[[courses]]\nname = \"A\"\nkind = \"individual\"\nstart = \"S1\"\nfinish = \"F1\"\ncontrols = []\n",
+    );
+    std::fs::write(&project, toml).unwrap();
     assert_eq!(
         ok(
-            dir.path(),
+            d,
             &[
                 "special",
                 "add",
                 p,
                 "--kind",
-                "out-of-bounds",
+                "forbidden-route",
                 "--id",
-                "O1",
-                "--points",
+                "R1",
+                "--point",
                 "1,1",
-                "5,1",
-                "-3,2"
+                "--courses",
+                "A",
+                "--point",
+                "-2,5",
             ]
         ),
-        "added out-of-bounds area O1 with 3 points"
+        "added forbidden route R1 with 2 points"
     );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    let route = file.event.specials.iter().find(|s| s.id() == "R1").unwrap();
+    match route {
+        freemapper_courseplan_model::SpecialObject::ForbiddenRoute {
+            points, courses, ..
+        } => {
+            assert_eq!(
+                points.iter().map(|q| (q.x, q.y)).collect::<Vec<_>>(),
+                [(1.0, 1.0), (-2.0, 5.0)]
+            );
+            assert_eq!(courses, &["A".to_owned()]);
+        }
+        other => panic!("{other:?}"),
+    }
 }

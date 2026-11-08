@@ -103,16 +103,17 @@ pub enum SpecialCmd {
             long,
             value_name = "X,Y",
             allow_hyphen_values = true,
-            conflicts_with = "points"
+            conflicts_with = "point"
         )]
         at: Option<String>,
         #[arg(
             long,
             value_name = "X,Y",
-            num_args = 1..,
+            num_args = 1,
+            action = clap::ArgAction::Append,
             allow_hyphen_values = true,
         )]
-        points: Vec<String>,
+        point: Vec<String>,
         #[arg(long, value_name = "A,B", value_delimiter = ',')]
         courses: Vec<String>,
     },
@@ -419,7 +420,7 @@ pub fn special(lang: &Lang, cmd: SpecialCmd) -> Outcome {
             kind,
             id,
             at,
-            points,
+            point: points,
             courses,
         } => {
             let kind_word = text(lang, kind.word_id(), &[]);
