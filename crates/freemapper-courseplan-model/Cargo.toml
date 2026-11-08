@@ -9,8 +9,6 @@ rust-version.workspace = true
 
 [dependencies]
 serde.workspace = true
-
-[dev-dependencies]
 toml.workspace = true
 
 [lints]

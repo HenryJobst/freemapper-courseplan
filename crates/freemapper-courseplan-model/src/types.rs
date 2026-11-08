@@ -243,7 +243,8 @@ fn default_rule_profile() -> String {
 pub struct EventMeta {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub date: Option<String>,
+    /// Local date, written as an unquoted TOML date.
+    pub date: Option<toml::value::Datetime>,
     #[serde(default)]
     pub discipline: Discipline,
     #[serde(default = "default_rule_profile")]
@@ -328,7 +329,7 @@ mod tests {
             format: FORMAT_VERSION,
             event: EventMeta {
                 title: "Test".to_owned(),
-                date: Some("2026-11-14".to_owned()),
+                date: Some("2026-11-14".parse().unwrap()),
                 discipline: Discipline::Sprint,
                 rule_profile: "wkb-2026".to_owned(),
                 start_window_min: Some(90),
@@ -430,6 +431,18 @@ mod tests {
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();
         assert_eq!(back, event, "{text}");
+    }
+
+    #[test]
+    fn event_date_is_unquoted_toml_date() {
+        let read = |text: &str| -> EventMeta { toml::from_str(text).unwrap() };
+        let meta = read("title = \"T\"\ndate = 2026-11-14\n");
+        assert_eq!(meta.date, Some("2026-11-14".parse().unwrap()));
+        let text = toml::to_string(&meta).unwrap();
+        assert!(text.contains("date = 2026-11-14\n"), "{text}");
+        let none = read("title = \"T\"\n");
+        assert_eq!(none.date, None);
+        assert!(!toml::to_string(&none).unwrap().contains("date"));
     }
 
     #[test]
