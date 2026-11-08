@@ -70,7 +70,10 @@ fn control_add_move_describe_remove() {
         ok(d, &["control", "add", p, "--at", "12.5,-30"]),
         "added control 31 at 12.5,-30"
     );
-    assert_eq!(info_line(d, &project, "controls"), "controls: 1");
+    assert_eq!(
+        info_line(d, &project, "controls"),
+        "controls: 1, crossing points: 0"
+    );
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(toml.contains("31") && toml.contains("12.5"), "{toml}");
 
@@ -131,7 +134,10 @@ fn control_add_move_describe_remove() {
     assert!(!toml.contains("direction"), "{toml}");
 
     assert_eq!(ok(d, &["control", "remove", p, "31"]), "removed control 31");
-    assert_eq!(info_line(d, &project, "controls"), "controls: 0");
+    assert_eq!(
+        info_line(d, &project, "controls"),
+        "controls: 0, crossing points: 0"
+    );
 }
 
 #[test]
@@ -149,11 +155,14 @@ fn control_add_picks_next_free_code() {
     );
     assert_eq!(
         ok(d, &["control", "add", p, "--at", "3,3", "--crossing-point"]),
-        "added control 32 at 3,3"
+        "added crossing point 32 at 3,3"
     );
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(toml.contains("crossing_point"), "{toml}");
-    assert_eq!(info_line(d, &project, "controls"), "controls: 3");
+    assert_eq!(
+        info_line(d, &project, "controls"),
+        "controls: 2, crossing points: 1"
+    );
 }
 
 #[test]
@@ -588,7 +597,7 @@ fn course_leg_index_counts_from_one() {
         let out = run(d, &["course", "leg", p, "A", "--after", bad]);
         assert_eq!(out.status.code(), Some(1), "{bad}");
         let err = stderr(&out);
-        assert!(err.contains(&format!("index {bad}")), "{err}");
+        assert!(err.contains(&format!("position {bad}")), "{err}");
     }
     assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
     // The start leg.
@@ -1181,4 +1190,69 @@ fn codes(project: &Path) -> Vec<String> {
         }
         other => panic!("{other:?}"),
     }
+}
+
+#[test]
+fn small_texts_of_the_final_review() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    let help = stdout(&run(d, &["control", "add", "--help"]));
+    assert!(
+        help.contains("Code of the new control [default: the lowest free number from 31]"),
+        "{help}"
+    );
+    for args in [["course", "add", "--help"], ["course", "set", "--help"]] {
+        let help = stdout(&run(d, &args));
+        assert!(help.contains("3000 for 1:3000"), "{help}");
+    }
+    let out = run_lang(
+        d,
+        "de",
+        &["control", "add", p, "--at", "3,3", "--crossing-point"],
+    );
+    assert_eq!(
+        stdout(&out).trim_end(),
+        "Querungsstelle 31 bei 3,3 angelegt"
+    );
+    let out = run_lang(d, "de", &["info", p]);
+    assert!(
+        stdout(&out).contains("Posten: 0, Querungsstellen: 1\n"),
+        "{}",
+        stdout(&out)
+    );
+    course_setup(d, p);
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "32,31",
+        ],
+    );
+    let out = run_lang(d, "de", &["course", "leg", p, "A", "--after", "3"]);
+    assert_eq!(
+        stderr(&out).trim_end(),
+        "Fehler: Bahn A hat keinen Posten an Position 3"
+    );
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A"]),
+        "placed 1 control number on course A"
+    );
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A"]),
+        "placed no control numbers on course A, because every control has its number already; \
+         --overwrite places the course numbers again"
+    );
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A", "--overwrite"]),
+        "placed 1 control number on course A"
+    );
 }

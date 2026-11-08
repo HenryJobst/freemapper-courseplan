@@ -610,6 +610,7 @@ mod tests {
             "max",
             "specials",
             "values",
+            "crossings",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

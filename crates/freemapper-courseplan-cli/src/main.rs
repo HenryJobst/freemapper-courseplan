@@ -18,7 +18,7 @@ use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::text::{
     FluentValue, Lang, Localize, available, detect_lang, parse_lang_arg, text,
 };
-use freemapper_courseplan_model::{CourseKind, ProjectFile};
+use freemapper_courseplan_model::{ControlKind, CourseKind, ProjectFile};
 
 // The help texts come from the Fluent catalog, not from doc comments: `localized_command` sets
 // `about` and `help` on the command that `Cli::command()` derives, once the language is known.
@@ -427,7 +427,19 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     value("cli-info-title", event.event.title.clone());
     value("cli-info-map", event.sources.map.display().to_string());
     value("cli-info-map-kind", text(lang, kind, &[]));
-    number("cli-info-controls", event.controls.len());
+    // Crossing points get no number, so they are not counted as controls, as in the course lines.
+    let crossings = event
+        .controls
+        .iter()
+        .filter(|c| c.kind == ControlKind::CrossingPoint)
+        .count();
+    line(
+        "cli-info-controls",
+        &[
+            ("count", FluentValue::from(event.controls.len() - crossings)),
+            ("crossings", FluentValue::from(crossings)),
+        ],
+    );
     let n = |n: usize| FluentValue::from(n);
     line(
         "cli-info-courses",

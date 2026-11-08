@@ -187,7 +187,7 @@ pub enum CourseCmd {
         name: String,
         #[arg(long)]
         from_start: bool,
-        #[arg(long, value_name = "INDEX")]
+        #[arg(long, value_name = "N")]
         after: Option<String>,
         #[arg(
             long,
@@ -312,7 +312,7 @@ pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
                             };
                             let id = match a.get_id().as_str() {
                                 "project" => "cli-arg-info-project".to_owned(),
-                                "code" => "cli-arg-edit-code".to_owned(),
+                                "code" if path != "control-add" => "cli-arg-edit-code".to_owned(),
                                 "name" if group == "course" => "cli-arg-edit-course".to_owned(),
                                 name => format!("cli-arg-{path}-{}", name.replace('_', "-")),
                             };
@@ -436,11 +436,12 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
             let code = edit::add_control(&mut file.event, extent, at, code.map(ControlCode), kind)
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            say(
-                lang,
-                "cli-edit-control-added",
-                &[("code", v(code.0)), ("x", v(x)), ("y", v(y))],
-            );
+            let id = if crossing_point {
+                "cli-edit-crossing-point-added"
+            } else {
+                "cli-edit-control-added"
+            };
+            say(lang, id, &[("code", v(code.0)), ("x", v(x)), ("y", v(y))]);
         }
         ControlCmd::Move { project, code, at } => {
             let at = parse_point(lang, &at)?;
@@ -989,11 +990,35 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             )
             .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            say(
-                lang,
-                "cli-edit-course-numbers",
-                &[("count", FluentValue::from(placed)), ("name", v(name))],
-            );
+            // Nothing placed although --overwrite would place course numbers again: say so.
+            let replaceable = file
+                .event
+                .courses
+                .iter()
+                .find(|c| c.name == name)
+                .map_or(0, |c| match &c.kind {
+                    CourseKind::Individual { controls } => controls
+                        .iter()
+                        .filter(|cc| cc.number.is_some())
+                        .filter(|cc| {
+                            !file
+                                .event
+                                .controls
+                                .iter()
+                                .any(|c| c.code == cc.code && c.number.is_some())
+                        })
+                        .count(),
+                    _ => 0,
+                });
+            if placed == 0 && !overwrite && replaceable > 0 {
+                say(lang, "cli-edit-course-numbers-none", &[("name", v(name))]);
+            } else {
+                say(
+                    lang,
+                    "cli-edit-course-numbers",
+                    &[("count", FluentValue::from(placed)), ("name", v(name))],
+                );
+            }
         }
     }
     Ok(())

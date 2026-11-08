@@ -73,7 +73,7 @@ error-edit-id-taken = Sonderobjekt { $id } gibt es schon
 error-edit-outside-map = Der Punkt ({ $x }, { $y }) liegt außerhalb der Karte, die von ({ $min_x }, { $min_y }) bis ({ $max_x }, { $max_y }) reicht
 error-edit-in-use = { $id } wird noch von { $courses } verwendet. Ändere zuerst diese Bahnen
 error-edit-not-supported = Bahn { $course } ist keine Einzelbahn. Bisher lassen sich nur Einzelbahnen bearbeiten
-error-edit-bad-index = Bahn { $course } hat keinen Posten an Index { $index }
+error-edit-bad-index = Bahn { $course } hat keinen Posten an Position { $index }
 error-edit-special-would-cover-all-courses = { $count ->
     [one] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälte { $specials } für alle Bahnen. Ordne { $specials } zuerst einer anderen Bahn zu oder lösche es
    *[other] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälten diese Sonderobjekte für alle Bahnen. Ordne sie zuerst einer anderen Bahn zu oder lösche sie
@@ -96,7 +96,7 @@ cli-error-unknown-lang = Unbekannte Sprache { $value }. Verfügbar: { $available
 cli-info-title = Titel: { $value }
 cli-info-map = Karte: { $value }
 cli-info-map-kind = Kartenart: { $value }
-cli-info-controls = Posten: { $count }
+cli-info-controls = Posten: { $count }, Querungsstellen: { $crossings }
 cli-info-courses = Bahnen: { $total } (einzeln { $individual }, Mannschaft { $team }, Staffel { $relay }, Score { $score })
 cli-info-classes = Kategorien: { $count }
 
@@ -131,6 +131,7 @@ cli-parse-argument-conflict = { $arg } lässt sich nicht zusammen mit { $other }
 ## Bearbeiten
 
 cli-edit-control-added = Posten { $code } bei { $x },{ $y } angelegt
+cli-edit-crossing-point-added = Querungsstelle { $code } bei { $x },{ $y } angelegt
 cli-edit-control-moved = Posten { $code } nach { $x },{ $y } verschoben
 cli-edit-control-removed = Posten { $code } entfernt
 cli-edit-control-removed-from = Posten { $code } und seine Besuche in { $courses } entfernt
@@ -224,6 +225,7 @@ cli-edit-course-numbers = { $count ->
     [one] 1 Postennummer auf Bahn { $name } gesetzt
    *[other] { $count } Postennummern auf Bahn { $name } gesetzt
 }
+cli-edit-course-numbers-none = Keine Postennummer auf Bahn { $name } gesetzt, weil jeder Posten schon seine Nummer hat; --overwrite setzt die Nummernlagen der Bahn neu
 cli-edit-course-leg-start = Strecke vom Start der Bahn { $name } gesetzt: Knickpunkte { $bends }, { $taped }
 cli-edit-course-leg-after = Strecke nach Position { $index } der Bahn { $name } gesetzt: Knickpunkte { $bends }, { $taped }
 cli-edit-course-number-set = Bahn { $name }, Position { $index }: Nummer in Richtung { $direction } Grad, Abstand { $gap } mm
@@ -246,7 +248,7 @@ cli-arg-course-add-finish = ID des Ziel-Sonderobjekts
 cli-arg-course-add-controls = Codes der Posten in Laufreihenfolge, durch Kommas getrennt; eine Querungsstelle zählt als Position [Standard: keine]
 cli-arg-course-add-classes = Kategorien, die die Bahn laufen, durch Kommas getrennt
 cli-arg-course-add-climb = Anstieg in Metern
-cli-arg-course-add-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+cli-arg-course-add-print-scale = Geplanter Druckmaßstab, zum Beispiel 3000 für 1:3000
 cli-arg-course-controls-codes = Codes in Laufreihenfolge, durch Kommas getrennt. Der n-te Besuch eines Codes behält die Nummernlage des bisherigen n-ten Besuchs; seine Strecke behält Knickpunkte und Abflaggung nur, wenn sie weiter zum selben Bahnpunkt führt
 cli-arg-course-leg-from-start = Die Strecke vom Start zum ersten Posten bearbeiten
 cli-arg-course-leg-after = Die Strecke nach dieser Position bearbeiten, ab 1 gezählt wie auf der Karte; Querungsstellen zählen als Positionen
@@ -255,7 +257,7 @@ cli-arg-course-leg-taped = Die Strecke ist abgeflaggt. Ohne --taped gilt sie als
 cli-arg-course-set-classes = Kategorien, die die Bahn laufen, durch Kommas getrennt
 cli-arg-course-set-climb = Anstieg in Metern
 cli-arg-course-set-no-climb = Den Anstieg entfernen
-cli-arg-course-set-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+cli-arg-course-set-print-scale = Geplanter Druckmaßstab, zum Beispiel 3000 für 1:3000
 cli-arg-course-set-no-print-scale = Den geplanten Druckmaßstab entfernen
 cli-arg-course-number-after = Position des Postens in der Bahn, ab 1 gezählt wie auf der Karte; Querungsstellen zählen als Positionen
 cli-arg-course-number-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn; jeder Wert wird auf 0 bis 360 umgerechnet
@@ -356,7 +358,7 @@ mcp-param-finish = ID des Sonderobjekts, das das Ziel bildet
 mcp-param-controls = Codes der Posten in Laufreihenfolge, als Text oder ganze Zahl; eine Querungsstelle zählt als Position [Standard: keine]
 mcp-param-classes = Kategorien, die die Bahn laufen
 mcp-param-climb-m = Anstieg in Metern
-mcp-param-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+mcp-param-print-scale = Geplanter Druckmaßstab, zum Beispiel 3000 für 1:3000
 mcp-param-codes = Codes in Laufreihenfolge, als Text oder ganze Zahl; eine leere Liste entfernt alle Posten
 mcp-param-from-start = Die Strecke vom Start zum ersten Posten bearbeiten [Standard: false]
 mcp-param-after = Die Strecke nach dieser Position bearbeiten, ab 1 gezählt wie auf der Karte; Querungsstellen zählen als Positionen

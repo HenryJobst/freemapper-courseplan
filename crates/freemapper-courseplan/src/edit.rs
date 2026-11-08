@@ -42,8 +42,9 @@ pub enum EditError {
         "course {course} is not an individual course; only individual courses can be edited yet"
     )]
     NotSupported { course: String },
-    /// The index is beyond the controls of the course.
-    #[error("course {course} has no control at index {index}")]
+    /// The position is beyond the controls of the course. The library passes its 0-based index;
+    /// the CLI and the MCP server pass the position counted from 1, as the user gave it.
+    #[error("course {course} has no control at position {index}")]
     BadIndex { course: String, index: usize },
     /// Removing the course would empty the course list of these special objects, and an empty
     /// list means all courses (ruling R5, amended).

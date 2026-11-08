@@ -73,7 +73,7 @@ error-edit-id-taken = special object { $id } already exists
 error-edit-outside-map = point ({ $x }, { $y }) is outside the map, which spans ({ $min_x }, { $min_y }) to ({ $max_x }, { $max_y })
 error-edit-in-use = { $id } is still used by { $courses }; change those first
 error-edit-not-supported = course { $course } is not an individual course; only individual courses can be edited yet
-error-edit-bad-index = course { $course } has no control at index { $index }
+error-edit-bad-index = course { $course } has no control at position { $index }
 error-edit-special-would-cover-all-courses = { $count ->
     [one] course { $course } is the only course of { $specials }; without it, { $specials } would apply to all courses. Assign { $specials } to another course first or remove it
    *[other] course { $course } is the only course of { $specials }; without it, they would apply to all courses. Assign them to another course first or remove them
@@ -96,7 +96,7 @@ cli-error-unknown-lang = unknown language { $value }; available: { $available }
 cli-info-title = title: { $value }
 cli-info-map = map: { $value }
 cli-info-map-kind = map kind: { $value }
-cli-info-controls = controls: { $count }
+cli-info-controls = controls: { $count }, crossing points: { $crossings }
 cli-info-courses = courses: { $total } (individual { $individual }, team { $team }, relay { $relay }, score { $score })
 cli-info-classes = classes: { $count }
 
@@ -131,6 +131,7 @@ cli-parse-argument-conflict = { $arg } cannot be used together with { $other }
 ## Edit commands
 
 cli-edit-control-added = added control { $code } at { $x },{ $y }
+cli-edit-crossing-point-added = added crossing point { $code } at { $x },{ $y }
 cli-edit-control-moved = moved control { $code } to { $x },{ $y }
 cli-edit-control-removed = removed control { $code }
 cli-edit-control-removed-from = removed control { $code } and its visits in { $courses }
@@ -227,6 +228,7 @@ cli-edit-course-numbers = { $count ->
     [one] placed 1 control number on course { $name }
    *[other] placed { $count } control numbers on course { $name }
 }
+cli-edit-course-numbers-none = placed no control numbers on course { $name }, because every control has its number already; --overwrite places the course numbers again
 cli-edit-course-leg-start = set the leg from the start of course { $name }: bends { $bends }, { $taped }
 cli-edit-course-leg-after = set the leg after position { $index } of course { $name }: bends { $bends }, { $taped }
 cli-edit-course-number-set = course { $name }, position { $index }: number at direction { $direction } degrees, gap { $gap } mm
@@ -249,7 +251,7 @@ cli-arg-course-add-finish = Id of the finish special object
 cli-arg-course-add-controls = Codes of the controls in running order, separated by commas; a crossing point counts as a position [default: none]
 cli-arg-course-add-classes = Classes that run the course, separated by commas
 cli-arg-course-add-climb = Climb in metres
-cli-arg-course-add-print-scale = Planned print scale, for example 10000 for 1:10000
+cli-arg-course-add-print-scale = Planned print scale, for example 3000 for 1:3000
 cli-arg-course-controls-codes = Codes in running order, separated by commas. The n-th visit of a code keeps the number placement of the n-th visit before; its leg keeps bends and taped flag only if it still runs to the same next stop
 cli-arg-course-leg-from-start = Edit the leg from the start to the first control
 cli-arg-course-leg-after = Edit the leg after this position, counted from 1 as on the map; crossing points count as positions
@@ -258,7 +260,7 @@ cli-arg-course-leg-taped = Mark the leg as a marked route. Without --taped the f
 cli-arg-course-set-classes = Classes that run the course, separated by commas
 cli-arg-course-set-climb = Climb in metres
 cli-arg-course-set-no-climb = Remove the climb
-cli-arg-course-set-print-scale = Planned print scale, for example 10000 for 1:10000
+cli-arg-course-set-print-scale = Planned print scale, for example 3000 for 1:3000
 cli-arg-course-set-no-print-scale = Remove the planned print scale
 cli-arg-course-number-after = Position of the control in the course, counted from 1 as on the map; crossing points count as positions
 cli-arg-course-number-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
@@ -358,7 +360,7 @@ mcp-param-finish = Id of the finish special object
 mcp-param-controls = Codes of the controls in running order, strings or whole numbers; a crossing point counts as a position [default: none]
 mcp-param-classes = Classes that run the course
 mcp-param-climb-m = Climb in metres
-mcp-param-print-scale = Planned print scale, for example 10000 for 1:10000
+mcp-param-print-scale = Planned print scale, for example 3000 for 1:3000
 mcp-param-codes = Codes in running order, strings or whole numbers; an empty list removes all controls
 mcp-param-from-start = Edit the leg from the start to the first control [default: false]
 mcp-param-after = Edit the leg after this position, counted from 1 as on the map; crossing points count as positions
