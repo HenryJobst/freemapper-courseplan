@@ -783,7 +783,7 @@ fn blank_control_code_is_refused() {
     let (dir, project) = project();
     let p = project.to_str().unwrap();
     let before = std::fs::read(&project).unwrap();
-    for code in ["", " 31"] {
+    for code in ["", "  "] {
         let out = run(
             dir.path(),
             &["control", "add", p, "--at", "1,1", "--code", code],
@@ -1104,4 +1104,81 @@ fn special_courses_assign_and_widen() {
     );
     assert!(special_courses_of(&project, "W1").is_empty());
     ok(d, &["course", "remove", p, "A"]);
+}
+
+#[test]
+fn lists_and_names_are_trimmed() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    for class in ["H21", "D21"] {
+        ok(d, &["class", "add", p, class]);
+    }
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            " A ",
+            "--start",
+            " S1",
+            "--finish",
+            "F1 ",
+            "--controls",
+            "31, 32",
+            "--classes",
+            "H21, D21",
+        ],
+    );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    let course = &file.event.courses[0];
+    assert_eq!(course.name, "A");
+    assert_eq!(course.classes, ["H21", "D21"]);
+    assert_eq!(
+        codes(&project),
+        ["31", "32"],
+        "{}",
+        std::fs::read_to_string(&project).unwrap()
+    );
+    ok(d, &["course", "set", p, "A", "--classes", " D21 ,H21 "]);
+    ok(
+        d,
+        &[
+            "special",
+            "add",
+            p,
+            "--kind",
+            "water",
+            "--id",
+            " W1 ",
+            "--at",
+            "20,5",
+            "--courses",
+            "A ,",
+        ],
+    );
+    ok(d, &["control", "move", p, " 31 ", "--at", "31,41"]);
+    ok(
+        d,
+        &["course", "leg", p, " A", "--after", "1", "--bend", "1,1"],
+    );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    assert_eq!(file.event.courses[0].classes, ["D21", "H21"]);
+    let water = file.event.specials.iter().find(|s| s.id() == "W1").unwrap();
+    assert_eq!(water.courses(), ["A"]);
+    assert_eq!(file.event.controls[0].map_mm.x, 31.0);
+    ok(d, &["class", "remove", p, " H21"]);
+    ok(d, &["special", "remove", p, "W1 "]);
+}
+
+fn codes(project: &Path) -> Vec<String> {
+    let file = freemapper_courseplan_model::ProjectFile::load(project).unwrap();
+    match &file.event.courses[0].kind {
+        freemapper_courseplan_model::CourseKind::Individual { controls } => {
+            controls.iter().map(|c| c.code.0.clone()).collect()
+        }
+        other => panic!("{other:?}"),
+    }
 }

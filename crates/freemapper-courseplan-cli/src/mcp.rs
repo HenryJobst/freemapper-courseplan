@@ -520,7 +520,7 @@ impl CoursePlanServer {
                 &mut file.event,
                 extent,
                 req.at.map_point(),
-                req.code.map(ControlCode),
+                req.code.map(|c| ControlCode(c.0)),
                 kind,
             )
             .map_err(|e| self.refused(e))?;
@@ -538,11 +538,11 @@ impl CoursePlanServer {
             edit::move_control(
                 &mut file.event,
                 extent,
-                &ControlCode(req.code.clone()),
+                &ControlCode(req.code.0.clone()),
                 req.at.map_point(),
             )
             .map_err(|e| self.refused(e))?;
-            Ok(json!({ "code": req.code }))
+            Ok(json!({ "code": req.code.0 }))
         }))
     }
 
@@ -552,10 +552,10 @@ impl CoursePlanServer {
         Parameters(req): Parameters<ControlRef>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let removed = edit::remove_control(&mut file.event, &ControlCode(req.code.clone()))
+            let removed = edit::remove_control(&mut file.event, &ControlCode(req.code.0.clone()))
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
-                "code": req.code,
+                "code": req.code.0,
                 "left_courses": removed.courses,
                 "cleared_legs": cleared_json(&removed.cleared),
             }))
@@ -568,7 +568,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<DescribeControl>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let key = ControlCode(req.code.clone());
+            let key = ControlCode(req.code.0.clone());
             // An unknown code is reported by the edit operation below.
             let current = file
                 .event
@@ -596,7 +596,7 @@ impl CoursePlanServer {
             edit::describe_control(&mut file.event, &key, description.clone())
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
-                "code": req.code,
+                "code": req.code.0,
                 "description": serde_json::to_value(&description).unwrap_or(Value::Null),
             }))
         }))
@@ -611,11 +611,11 @@ impl CoursePlanServer {
             let number = self.number_arg(req.direction, req.gap_mm, req.clear)?;
             edit::set_central_number(
                 &mut file.event,
-                &ControlCode(req.code.clone()),
+                &ControlCode(req.code.0.clone()),
                 number.clone(),
             )
             .map_err(|e| self.refused(e))?;
-            Ok(json!({ "code": req.code, "number": placement(&number) }))
+            Ok(json!({ "code": req.code.0, "number": placement(&number) }))
         }))
     }
 
@@ -637,7 +637,7 @@ impl CoursePlanServer {
                 )
             };
             let points = req.points.unwrap_or_default();
-            let courses = req.courses.unwrap_or_default();
+            let courses = name_list(req.courses.unwrap_or_default());
             if kind.is_point() && (req.at.is_none() || !points.is_empty()) {
                 return Err(wrong("mcp-error-kind-needs-at"));
             }
@@ -648,7 +648,7 @@ impl CoursePlanServer {
             {
                 return Err(wrong("mcp-error-no-courses-for-kind"));
             }
-            let id = req.id.clone();
+            let id = req.id.0.clone();
             let at = || {
                 req.at
                     .map(Point::map_point)
@@ -691,7 +691,7 @@ impl CoursePlanServer {
             };
             let extent = self.extent(file)?;
             edit::add_special(&mut file.event, extent, special).map_err(|e| self.refused(e))?;
-            Ok(json!({ "id": req.id }))
+            Ok(json!({ "id": req.id.0 }))
         }))
     }
 
@@ -701,8 +701,8 @@ impl CoursePlanServer {
         Parameters(req): Parameters<RemoveSpecial>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            edit::remove_special(&mut file.event, &req.id).map_err(|e| self.refused(e))?;
-            Ok(json!({ "id": req.id }))
+            edit::remove_special(&mut file.event, &req.id.0).map_err(|e| self.refused(e))?;
+            Ok(json!({ "id": req.id.0 }))
         }))
     }
 
@@ -714,7 +714,7 @@ impl CoursePlanServer {
         reply(self.edit(&req.project, |file| {
             let courses = match (req.courses, flag(req.all)) {
                 (Some(list), false) => {
-                    let names = edit_cmd::codes(list);
+                    let names = name_list(list);
                     if names.is_empty() {
                         return Err(text(&self.lang, "mcp-error-special-courses-args", &[]));
                     }
@@ -723,9 +723,9 @@ impl CoursePlanServer {
                 (None, true) => Vec::new(),
                 _ => return Err(text(&self.lang, "mcp-error-special-courses-args", &[])),
             };
-            edit::set_special_courses(&mut file.event, &req.id, courses.clone())
+            edit::set_special_courses(&mut file.event, &req.id.0, courses.clone())
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({ "id": req.id, "courses": courses }))
+            Ok(json!({ "id": req.id.0, "courses": courses }))
         }))
     }
 
@@ -736,12 +736,12 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
             let class = Class {
-                name: req.name.clone(),
+                name: req.name.0.clone(),
                 rule_category: req.rule_category,
                 expected_starters: req.expected_starters,
             };
             edit::add_class(&mut file.event, class).map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name }))
+            Ok(json!({ "name": req.name.0 }))
         }))
     }
 
@@ -751,8 +751,8 @@ impl CoursePlanServer {
         Parameters(req): Parameters<RemoveClass>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            edit::remove_class(&mut file.event, &req.name).map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name }))
+            edit::remove_class(&mut file.event, &req.name.0).map_err(|e| self.refused(e))?;
+            Ok(json!({ "name": req.name.0 }))
         }))
     }
 
@@ -762,15 +762,15 @@ impl CoursePlanServer {
         Parameters(req): Parameters<AddCourse>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let controls = edit_cmd::codes(req.controls.unwrap_or_default())
+            let controls = code_list(req.controls.unwrap_or_default())
                 .into_iter()
                 .map(edit_cmd::course_control)
                 .collect();
             let course = Course {
-                name: req.name.clone(),
-                classes: edit_cmd::codes(req.classes.unwrap_or_default()),
-                start: req.start,
-                finish: req.finish,
+                name: req.name.0.clone(),
+                classes: name_list(req.classes.unwrap_or_default()),
+                start: req.start.0,
+                finish: req.finish.0,
                 start_bends: vec![],
                 start_taped: false,
                 print_area: None,
@@ -779,7 +779,7 @@ impl CoursePlanServer {
                 kind: CourseKind::Individual { controls },
             };
             edit::add_course(&mut file.event, course).map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name }))
+            Ok(json!({ "name": req.name.0 }))
         }))
     }
 
@@ -789,8 +789,8 @@ impl CoursePlanServer {
         Parameters(req): Parameters<CourseRef>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            edit::remove_course(&mut file.event, &req.name).map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name }))
+            edit::remove_course(&mut file.event, &req.name.0).map_err(|e| self.refused(e))?;
+            Ok(json!({ "name": req.name.0 }))
         }))
     }
 
@@ -800,12 +800,12 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SetCourseControls>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let codes = edit_cmd::codes(req.codes.iter().map(|c| c.trim().to_owned()));
+            let codes = code_list(req.codes);
             let sequence: Vec<ControlCode> = codes.iter().cloned().map(ControlCode).collect();
-            let cleared = edit::set_course_controls(&mut file.event, &req.name, &sequence)
+            let cleared = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
-                "name": req.name,
+                "name": req.name.0,
                 "controls": codes,
                 "cleared_legs": cleared_json(&cleared),
             }))
@@ -821,7 +821,7 @@ impl CoursePlanServer {
             // The assistant counts from 1 as on the map; the library counts from 0.
             let bad_index = |index: u32| {
                 self.refused(edit::EditError::BadIndex {
-                    course: req.name.clone(),
+                    course: req.name.0.clone(),
                     index: index as usize,
                 })
             };
@@ -834,11 +834,13 @@ impl CoursePlanServer {
             let bends = map_points(req.bends.unwrap_or_default());
             let taped = flag(req.taped);
             let count = bends.len();
-            edit::set_leg(&mut file.event, &req.name, leg, bends, taped).map_err(|e| match e {
-                edit::EditError::BadIndex { .. } => bad_index(req.after.unwrap_or(0)),
-                other => self.refused(other),
-            })?;
-            Ok(json!({ "name": req.name, "bends": count, "taped": taped }))
+            edit::set_leg(&mut file.event, &req.name.0, leg, bends, taped).map_err(
+                |e| match e {
+                    edit::EditError::BadIndex { .. } => bad_index(req.after.unwrap_or(0)),
+                    other => self.refused(other),
+                },
+            )?;
+            Ok(json!({ "name": req.name.0, "bends": count, "taped": taped }))
         }))
     }
 
@@ -858,13 +860,13 @@ impl CoursePlanServer {
                 (None, true) => Some(None),
                 (None, false) => None,
             };
-            let classes = req.classes.map(edit_cmd::codes);
+            let classes = req.classes.map(name_list);
             if classes.is_none() && climb.is_none() && scale.is_none() {
                 return Err(text(&self.lang, "mcp-error-no-change", &[]));
             }
-            edit::set_course_details(&mut file.event, &req.name, classes, climb, scale)
+            edit::set_course_details(&mut file.event, &req.name.0, classes, climb, scale)
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name }))
+            Ok(json!({ "name": req.name.0 }))
         }))
     }
 
@@ -877,13 +879,13 @@ impl CoursePlanServer {
             let doc = self.read_map(file)?;
             let placed = freemapper_courseplan::numbers::place_numbers(
                 &mut file.event,
-                &req.name,
+                &req.name.0,
                 doc.georef.scale_denominator,
                 map_kind(&doc),
                 flag(req.overwrite),
             )
             .map_err(|e| self.refused(e))?;
-            Ok(json!({ "name": req.name, "placed": placed }))
+            Ok(json!({ "name": req.name.0, "placed": placed }))
         }))
     }
 
@@ -897,7 +899,7 @@ impl CoursePlanServer {
             // The assistant counts from 1 as on the map; the library counts from 0.
             let bad_index = || {
                 self.refused(edit::EditError::BadIndex {
-                    course: req.name.clone(),
+                    course: req.name.0.clone(),
                     index: req.after as usize,
                 })
             };
@@ -906,7 +908,7 @@ impl CoursePlanServer {
             }
             edit::set_course_number(
                 &mut file.event,
-                &req.name,
+                &req.name.0,
                 req.after as usize - 1,
                 number.clone(),
             )
@@ -914,7 +916,7 @@ impl CoursePlanServer {
                 edit::EditError::BadIndex { .. } => bad_index(),
                 other => self.refused(other),
             })?;
-            Ok(json!({ "name": req.name, "after": req.after, "number": placement(&number) }))
+            Ok(json!({ "name": req.name.0, "after": req.after, "number": placement(&number) }))
         }))
     }
 

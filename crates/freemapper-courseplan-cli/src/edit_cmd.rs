@@ -279,7 +279,18 @@ impl SpecialKind {
     }
 }
 
-/// Sets the catalog texts on the three command groups and everything below them.
+/// Arguments that hold codes, ids or names, or lists of them. Their values lose surrounding white
+/// space, each list item on its own, so `--controls "31, 32"` means 31 and 32.
+const TRIMMED: [&str; 8] = [
+    "code", "id", "name", "start", "finish", "controls", "classes", "courses",
+];
+
+fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
+    Ok(value.trim().to_owned())
+}
+
+/// Sets the catalog texts on the four command groups and everything below them, and the trimming
+/// value parser on the arguments in [`TRIMMED`].
 pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
     let mut root = root;
     for group in ["control", "special", "class", "course"] {
@@ -294,6 +305,11 @@ pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
                 g = g.mut_subcommand(&sub, |s| {
                     s.about(text(lang, &format!("cli-help-{path}"), &[]))
                         .mut_args(|a| {
+                            let a = if TRIMMED.contains(&a.get_id().as_str()) {
+                                a.value_parser(trimmed)
+                            } else {
+                                a
+                            };
                             let id = match a.get_id().as_str() {
                                 "project" => "cli-arg-info-project".to_owned(),
                                 "code" => "cli-arg-edit-code".to_owned(),
@@ -567,6 +583,7 @@ pub fn special(lang: &Lang, cmd: SpecialCmd) -> Outcome {
             point: points,
             courses,
         } => {
+            let courses = codes(courses);
             let kind_word = text(lang, kind.word_id(), &[]);
             let wrong =
                 |id: &str| Failure::Usage(text(lang, id, &[("kind", v(kind_word.clone()))]));
@@ -741,12 +758,15 @@ pub fn course_control(code: String) -> CourseControl {
 /// The items of a comma-separated list, each without surrounding white space; empty items are
 /// left out.
 pub fn split_list(list: &str) -> Vec<String> {
-    codes(list.split(',').map(|c| c.trim().to_owned()))
+    codes(list.split(',').map(str::to_owned))
 }
 
-/// Codes from a comma-separated list; empty items are left out.
+/// Codes or names from a list, each without surrounding white space; empty items are left out.
 pub fn codes(list: impl IntoIterator<Item = String>) -> Vec<String> {
-    list.into_iter().filter(|c| !c.is_empty()).collect()
+    list.into_iter()
+        .map(|c| c.trim().to_owned())
+        .filter(|c| !c.is_empty())
+        .collect()
 }
 
 pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {

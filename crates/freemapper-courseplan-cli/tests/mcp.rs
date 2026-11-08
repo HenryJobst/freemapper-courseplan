@@ -777,3 +777,67 @@ fn set_special_courses_assigns_and_widens() {
     assert_eq!(set["courses"], json!([]), "{set}");
     session.ok("remove_course", json!({ "project": project, "name": "A" }));
 }
+
+#[test]
+fn names_and_lists_are_trimmed_and_codes_may_be_integers() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
+    let p = |fx, fy| point(&extent, fx, fy);
+    for (kind, id, at) in [("start", " S", p(0.3, 0.3)), ("finish", "F ", p(0.7, 0.7))] {
+        session.ok(
+            "add_special",
+            json!({ "project": project, "kind": kind, "id": id, "at": at }),
+        );
+    }
+    let added = session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(0.4, 0.5), "code": 31 }),
+    );
+    assert_eq!(added["code"], "31", "{added}");
+    session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(0.5, 0.4), "code": " 32 " }),
+    );
+    for class in ["H10", "D10"] {
+        session.ok("add_class", json!({ "project": project, "name": class }));
+    }
+    session.ok(
+        "add_course",
+        json!({
+            "project": project, "name": " A ", "start": "S ", "finish": " F",
+            "controls": [31, " 32"], "classes": [" H10", "D10 "]
+        }),
+    );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    let course = &file.event.courses[0];
+    assert_eq!(course.name, "A");
+    assert_eq!((course.start.as_str(), course.finish.as_str()), ("S", "F"));
+    assert_eq!(course.classes, ["H10", "D10"]);
+    let set = session.ok(
+        "set_course_controls",
+        json!({ "project": project, "name": "A", "codes": [32, "31 ", 32] }),
+    );
+    assert_eq!(set["controls"], json!(["32", "31", "32"]), "{set}");
+    session.ok(
+        "set_course_details",
+        json!({ "project": project, "name": "A ", "classes": ["D10 "] }),
+    );
+    session.ok(
+        "set_control_number",
+        json!({ "project": project, "code": 31, "direction": 0.0, "gap_mm": 1.0 }),
+    );
+    session.ok(
+        "describe_control",
+        json!({ "project": project, "code": 32, "d": "1.1" }),
+    );
+    session.ok(
+        "move_control",
+        json!({ "project": project, "code": 32, "at": p(0.55, 0.4) }),
+    );
+    let removed = session.ok("remove_control", json!({ "project": project, "code": 32 }));
+    assert_eq!(removed["left_courses"], json!(["A"]), "{removed}");
+    let (error, text) = session.call("remove_control", json!({ "project": project, "code": 3.5 }));
+    assert!(error, "{text}");
+}

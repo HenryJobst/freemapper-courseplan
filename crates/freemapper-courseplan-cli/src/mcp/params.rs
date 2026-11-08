@@ -1,9 +1,100 @@
 //! The parameters of the MCP tools. Their descriptions come from the catalog
 //! (`localize_schema` in the parent module), not from doc comments.
 
+use std::borrow::Cow;
+use std::fmt;
+
 use freemapper_courseplan_model::MapPoint;
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator, json_schema};
 use serde::Deserialize;
+use serde::de::{self, Deserializer, Visitor};
+
+/// A name or id from the assistant, without surrounding white space.
+#[derive(Clone)]
+pub(super) struct Name(pub(super) String);
+
+impl<'de> Deserialize<'de> for Name {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        Ok(Name(String::deserialize(deserializer)?.trim().to_owned()))
+    }
+}
+
+impl JsonSchema for Name {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        "Name".into()
+    }
+
+    fn json_schema(generator: &mut SchemaGenerator) -> Schema {
+        String::json_schema(generator)
+    }
+}
+
+/// The names of a list; empty ones are left out.
+pub(super) fn name_list(list: Vec<Name>) -> Vec<String> {
+    list.into_iter()
+        .map(|n| n.0)
+        .filter(|n| !n.is_empty())
+        .collect()
+}
+
+/// A control code: a JSON string or a whole number, as in the project file, without surrounding
+/// white space.
+#[derive(Clone)]
+pub(super) struct Code(pub(super) String);
+
+impl<'de> Deserialize<'de> for Code {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct CodeVisitor;
+
+        impl Visitor<'_> for CodeVisitor {
+            type Value = Code;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("a control code as string or whole number")
+            }
+
+            fn visit_i64<E: de::Error>(self, v: i64) -> Result<Code, E> {
+                Ok(Code(v.to_string()))
+            }
+
+            fn visit_u64<E: de::Error>(self, v: u64) -> Result<Code, E> {
+                Ok(Code(v.to_string()))
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Code, E> {
+                Ok(Code(v.trim().to_owned()))
+            }
+        }
+
+        deserializer.deserialize_any(CodeVisitor)
+    }
+}
+
+impl JsonSchema for Code {
+    fn inline_schema() -> bool {
+        true
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        "ControlCode".into()
+    }
+
+    fn json_schema(_: &mut SchemaGenerator) -> Schema {
+        json_schema!({ "type": ["string", "integer"] })
+    }
+}
+
+/// The codes of a list; empty ones are left out.
+pub(super) fn code_list(list: Vec<Code>) -> Vec<String> {
+    list.into_iter()
+        .map(|c| c.0)
+        .filter(|c| !c.is_empty())
+        .collect()
+}
 
 /// A position on the map in millimetres at map scale, y pointing down.
 #[derive(Deserialize, JsonSchema, Clone, Copy)]
@@ -37,7 +128,7 @@ pub(super) struct ProjectOnly {
 pub(super) struct AddControl {
     pub(super) project: String,
     pub(super) at: Point,
-    pub(super) code: Option<String>,
+    pub(super) code: Option<Code>,
     pub(super) crossing_point: Option<bool>,
 }
 
@@ -45,7 +136,7 @@ pub(super) struct AddControl {
 #[serde(deny_unknown_fields)]
 pub(super) struct MoveControl {
     pub(super) project: String,
-    pub(super) code: String,
+    pub(super) code: Code,
     pub(super) at: Point,
 }
 
@@ -53,14 +144,14 @@ pub(super) struct MoveControl {
 #[serde(deny_unknown_fields)]
 pub(super) struct ControlRef {
     pub(super) project: String,
-    pub(super) code: String,
+    pub(super) code: Code,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct DescribeControl {
     pub(super) project: String,
-    pub(super) code: String,
+    pub(super) code: Code,
     pub(super) c: Option<String>,
     pub(super) d: Option<String>,
     pub(super) e: Option<String>,
@@ -74,7 +165,7 @@ pub(super) struct DescribeControl {
 #[serde(deny_unknown_fields)]
 pub(super) struct SetControlNumber {
     pub(super) project: String,
-    pub(super) code: String,
+    pub(super) code: Code,
     pub(super) direction: Option<f64>,
     pub(super) gap_mm: Option<f64>,
     pub(super) clear: Option<bool>,
@@ -121,25 +212,25 @@ impl SpecialKindArg {
 pub(super) struct AddSpecial {
     pub(super) project: String,
     pub(super) kind: SpecialKindArg,
-    pub(super) id: String,
+    pub(super) id: Name,
     pub(super) at: Option<Point>,
     pub(super) points: Option<Vec<Point>>,
-    pub(super) courses: Option<Vec<String>>,
+    pub(super) courses: Option<Vec<Name>>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct RemoveSpecial {
     pub(super) project: String,
-    pub(super) id: String,
+    pub(super) id: Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SetSpecialCourses {
     pub(super) project: String,
-    pub(super) id: String,
-    pub(super) courses: Option<Vec<String>>,
+    pub(super) id: Name,
+    pub(super) courses: Option<Vec<Name>>,
     pub(super) all: Option<bool>,
 }
 
@@ -147,7 +238,7 @@ pub(super) struct SetSpecialCourses {
 #[serde(deny_unknown_fields)]
 pub(super) struct AddClass {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
     pub(super) rule_category: Option<String>,
     pub(super) expected_starters: Option<u32>,
 }
@@ -156,18 +247,18 @@ pub(super) struct AddClass {
 #[serde(deny_unknown_fields)]
 pub(super) struct RemoveClass {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct AddCourse {
     pub(super) project: String,
-    pub(super) name: String,
-    pub(super) start: String,
-    pub(super) finish: String,
-    pub(super) controls: Option<Vec<String>>,
-    pub(super) classes: Option<Vec<String>>,
+    pub(super) name: Name,
+    pub(super) start: Name,
+    pub(super) finish: Name,
+    pub(super) controls: Option<Vec<Code>>,
+    pub(super) classes: Option<Vec<Name>>,
     pub(super) climb_m: Option<u32>,
     pub(super) print_scale: Option<u32>,
 }
@@ -176,22 +267,22 @@ pub(super) struct AddCourse {
 #[serde(deny_unknown_fields)]
 pub(super) struct CourseRef {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SetCourseControls {
     pub(super) project: String,
-    pub(super) name: String,
-    pub(super) codes: Vec<String>,
+    pub(super) name: Name,
+    pub(super) codes: Vec<Code>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct SetLeg {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
     pub(super) from_start: Option<bool>,
     pub(super) after: Option<u32>,
     pub(super) bends: Option<Vec<Point>>,
@@ -202,8 +293,8 @@ pub(super) struct SetLeg {
 #[serde(deny_unknown_fields)]
 pub(super) struct SetCourseDetails {
     pub(super) project: String,
-    pub(super) name: String,
-    pub(super) classes: Option<Vec<String>>,
+    pub(super) name: Name,
+    pub(super) classes: Option<Vec<Name>>,
     pub(super) climb_m: Option<u32>,
     pub(super) no_climb: Option<bool>,
     pub(super) print_scale: Option<u32>,
@@ -214,7 +305,7 @@ pub(super) struct SetCourseDetails {
 #[serde(deny_unknown_fields)]
 pub(super) struct PlaceNumbers {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
     pub(super) overwrite: Option<bool>,
 }
 
@@ -222,7 +313,7 @@ pub(super) struct PlaceNumbers {
 #[serde(deny_unknown_fields)]
 pub(super) struct SetCourseNumber {
     pub(super) project: String,
-    pub(super) name: String,
+    pub(super) name: Name,
     pub(super) after: u32,
     pub(super) direction: Option<f64>,
     pub(super) gap_mm: Option<f64>,
