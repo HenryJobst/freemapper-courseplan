@@ -12,6 +12,8 @@ rust-version = "1.88"
 [workspace.dependencies]
 freemapper-courseplan-model = { path = "crates/freemapper-courseplan-model" }
 freemapper-courseplan = { path = "crates/freemapper-courseplan" }
+serde = { version = "1", features = ["derive"] }
+toml = "1.2.1"
 clap = { version = "4.6.7", features = ["derive"] }
 
 [workspace.lints.rust]
