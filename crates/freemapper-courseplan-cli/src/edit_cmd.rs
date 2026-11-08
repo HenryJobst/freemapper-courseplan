@@ -1,17 +1,18 @@
-//! The edit commands: `control`, `special` and `class`. Each loads the project, applies one edit
+//! The edit commands: `control`, `special`, `class` and `course`. Each loads the project, applies one edit
 //! from `freemapper_courseplan::edit`, saves, and prints one confirmation line from the catalog.
 //! The map is read only where the operation checks a point against its extent.
 
 use std::path::{Path, PathBuf};
 
 use clap::{ArgGroup, Subcommand, ValueEnum};
-use freemapper_courseplan::edit;
-use freemapper_courseplan::map::MapIndex;
+use freemapper_courseplan::edit::{self, LegStart};
+use freemapper_courseplan::map::{MapIndex, map_kind};
+use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
-    Class, ControlCode, ControlDescription, ControlKind, MapPoint, NumberPlacement, ProjectFile,
-    SpecialObject,
+    Class, ControlCode, ControlDescription, ControlKind, Course, CourseControl, CourseKind,
+    MapPoint, NumberPlacement, ProjectFile, SpecialObject,
 };
 
 /// Why a command failed: a wrong call (exit code 2) or a refused operation (exit code 1).
@@ -136,6 +137,86 @@ pub enum ClassCmd {
     Remove { project: PathBuf, name: String },
 }
 
+#[derive(Subcommand)]
+pub enum CourseCmd {
+    /// Add an individual course
+    Add {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "ID")]
+        start: String,
+        #[arg(long, value_name = "ID")]
+        finish: String,
+        #[arg(long, value_name = "31,32", value_delimiter = ',')]
+        controls: Vec<String>,
+        #[arg(long, value_name = "A,B", value_delimiter = ',')]
+        classes: Vec<String>,
+        #[arg(long, value_name = "M")]
+        climb: Option<String>,
+        #[arg(long, value_name = "N")]
+        print_scale: Option<String>,
+    },
+    /// Replace the controls of a course
+    Controls {
+        project: PathBuf,
+        name: String,
+        /// Codes in running order, separated by commas
+        codes: String,
+    },
+    /// Remove a course
+    Remove { project: PathBuf, name: String },
+    /// Set the bends and the marked-route flag of one leg
+    #[command(group(
+        ArgGroup::new("leg").required(true).args(["from_start", "after"])
+    ))]
+    Leg {
+        project: PathBuf,
+        name: String,
+        #[arg(long)]
+        from_start: bool,
+        #[arg(long, value_name = "INDEX")]
+        after: Option<String>,
+        #[arg(
+            long,
+            value_name = "X,Y",
+            num_args = 1,
+            action = clap::ArgAction::Append,
+            allow_hyphen_values = true,
+        )]
+        bend: Vec<String>,
+        #[arg(long)]
+        taped: bool,
+    },
+    /// Change classes, climb or print scale of a course
+    #[command(group(
+        ArgGroup::new("change")
+            .required(true)
+            .multiple(true)
+            .args(["classes", "climb", "no_climb", "print_scale", "no_print_scale"])
+    ))]
+    Set {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "A,B", value_delimiter = ',')]
+        classes: Option<Vec<String>>,
+        #[arg(long, value_name = "M", conflicts_with = "no_climb")]
+        climb: Option<String>,
+        #[arg(long)]
+        no_climb: bool,
+        #[arg(long, value_name = "N", conflicts_with = "no_print_scale")]
+        print_scale: Option<String>,
+        #[arg(long)]
+        no_print_scale: bool,
+    },
+    /// Place the control numbers of a course
+    Numbers {
+        project: PathBuf,
+        name: String,
+        #[arg(long)]
+        overwrite: bool,
+    },
+}
+
 /// The kinds of `special add`, named as on the command line.
 #[derive(Clone, Copy, ValueEnum)]
 pub enum SpecialKind {
@@ -167,7 +248,7 @@ impl SpecialKind {
 /// Sets the catalog texts on the three command groups and everything below them.
 pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
     let mut root = root;
-    for group in ["control", "special", "class"] {
+    for group in ["control", "special", "class", "course"] {
         root = root.mut_subcommand(group, |g| {
             let subs: Vec<String> = g
                 .get_subcommands()
@@ -182,6 +263,7 @@ pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
                             let id = match a.get_id().as_str() {
                                 "project" => "cli-arg-info-project".to_owned(),
                                 "code" => "cli-arg-edit-code".to_owned(),
+                                "name" if group == "course" => "cli-arg-edit-course".to_owned(),
                                 name => format!("cli-arg-{path}-{}", name.replace('_', "-")),
                             };
                             a.help(text(lang, &id, &[]))
@@ -218,6 +300,12 @@ fn parse_number(lang: &Lang, value: &str) -> Result<f64, Failure> {
     }
 }
 
+fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
+    value
+        .parse::<u32>()
+        .map_err(|_| Failure::Usage(text(lang, "cli-edit-bad-count", &[("value", v(value))])))
+}
+
 /// `X,Y` in map millimetres with a dot as decimal separator.
 fn parse_point(lang: &Lang, value: &str) -> Result<MapPoint, Failure> {
     let parsed = value.split_once(',').and_then(|(x, y)| {
@@ -236,10 +324,10 @@ fn save(lang: &Lang, project: &mut ProjectFile) -> Outcome {
     project.save().map_err(|e| Failure::Error(e.localize(lang)))
 }
 
-/// The extent of the project's map, for checking points against it.
-fn map_extent(lang: &Lang, project: &ProjectFile) -> Result<Option<(MapPoint, MapPoint)>, Failure> {
+/// The project's map.
+fn read_map(lang: &Lang, project: &ProjectFile) -> Result<MapDocument, Failure> {
     let map_path = project.map_path();
-    let doc = read_map_file(&map_path).map_err(|e| {
+    read_map_file(&map_path).map_err(|e| {
         Failure::Error(text(
             lang,
             "error-init-map",
@@ -248,8 +336,12 @@ fn map_extent(lang: &Lang, project: &ProjectFile) -> Result<Option<(MapPoint, Ma
                 ("source", v(e.localize(lang))),
             ],
         ))
-    })?;
-    Ok(MapIndex::from_document(&doc).extent())
+    })
+}
+
+/// The extent of the project's map, for checking points against it.
+fn map_extent(lang: &Lang, project: &ProjectFile) -> Result<Option<(MapPoint, MapPoint)>, Failure> {
+    Ok(MapIndex::from_document(&read_map(lang, project)?).extent())
 }
 
 fn refused(lang: &Lang, e: edit::EditError) -> Failure {
@@ -550,6 +642,190 @@ pub fn class(lang: &Lang, cmd: ClassCmd) -> Outcome {
             edit::remove_class(&mut file.event, &name).map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             say(lang, "cli-edit-class-removed", &[("name", v(name))]);
+        }
+    }
+    Ok(())
+}
+
+fn course_control(code: String) -> CourseControl {
+    CourseControl {
+        code: ControlCode(code),
+        number: None,
+        bends: vec![],
+        taped: false,
+    }
+}
+
+/// Codes from a comma-separated list; empty items are left out.
+fn codes(list: impl IntoIterator<Item = String>) -> Vec<String> {
+    list.into_iter().filter(|c| !c.is_empty()).collect()
+}
+
+pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
+    match cmd {
+        CourseCmd::Add {
+            project,
+            name,
+            start,
+            finish,
+            controls,
+            classes,
+            climb,
+            print_scale,
+        } => {
+            let climb_m = climb.map(|c| parse_count(lang, &c)).transpose()?;
+            let planned_print_scale = print_scale.map(|c| parse_count(lang, &c)).transpose()?;
+            let controls: Vec<CourseControl> =
+                codes(controls).into_iter().map(course_control).collect();
+            let mut file = load(lang, &project)?;
+            let course = Course {
+                name: name.clone(),
+                classes: codes(classes),
+                start,
+                finish,
+                start_bends: vec![],
+                start_taped: false,
+                print_area: None,
+                climb_m,
+                planned_print_scale,
+                kind: CourseKind::Individual { controls },
+            };
+            edit::add_course(&mut file.event, course).map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(lang, "cli-edit-course-added", &[("name", v(name))]);
+        }
+        CourseCmd::Controls {
+            project,
+            name,
+            codes: list,
+        } => {
+            let list = codes(list.split(',').map(|c| c.trim().to_owned()));
+            let mut file = load(lang, &project)?;
+            let sequence: Vec<ControlCode> = list.iter().cloned().map(ControlCode).collect();
+            edit::set_course_controls(&mut file.event, &name, &sequence)
+                .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            let shown = if list.is_empty() {
+                text(lang, "word-empty", &[])
+            } else {
+                list.join(", ")
+            };
+            say(
+                lang,
+                "cli-edit-course-controls",
+                &[("name", v(name)), ("codes", v(shown))],
+            );
+        }
+        CourseCmd::Remove { project, name } => {
+            let mut file = load(lang, &project)?;
+            edit::remove_course(&mut file.event, &name).map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(lang, "cli-edit-course-removed", &[("name", v(name))]);
+        }
+        CourseCmd::Leg {
+            project,
+            name,
+            from_start,
+            after,
+            bend,
+            taped,
+        } => {
+            // The command line counts from 1 as on the map; the library counts from 0.
+            let shown = after.as_deref().map(|a| parse_count(lang, a)).transpose()?;
+            let bad_index = |index: u32| {
+                refused(
+                    lang,
+                    edit::EditError::BadIndex {
+                        course: name.clone(),
+                        index: index as usize,
+                    },
+                )
+            };
+            let leg = match shown {
+                _ if from_start => LegStart::Start,
+                Some(0) | None => return Err(bad_index(0)),
+                Some(n) => LegStart::After(n as usize - 1),
+            };
+            let bends = bend
+                .iter()
+                .map(|b| parse_point(lang, b))
+                .collect::<Result<Vec<_>, _>>()?;
+            let count = bends.len();
+            let mut file = load(lang, &project)?;
+            edit::set_leg(&mut file.event, &name, leg, bends, taped).map_err(|e| match e {
+                edit::EditError::BadIndex { .. } => bad_index(shown.unwrap_or(0)),
+                other => refused(lang, other),
+            })?;
+            save(lang, &mut file)?;
+            let taped = text(
+                lang,
+                if taped {
+                    "word-taped"
+                } else {
+                    "word-not-taped"
+                },
+                &[],
+            );
+            let mut args = vec![
+                ("name", v(name)),
+                ("bends", v(count.to_string())),
+                ("taped", v(taped)),
+            ];
+            match shown {
+                Some(index) if !from_start => {
+                    args.push(("index", v(index.to_string())));
+                    say(lang, "cli-edit-course-leg-after", &args);
+                }
+                _ => say(lang, "cli-edit-course-leg-start", &args),
+            }
+        }
+        CourseCmd::Set {
+            project,
+            name,
+            classes,
+            climb,
+            no_climb,
+            print_scale,
+            no_print_scale,
+        } => {
+            let climb = match (climb, no_climb) {
+                (Some(c), _) => Some(Some(parse_count(lang, &c)?)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let scale = match (print_scale, no_print_scale) {
+                (Some(c), _) => Some(Some(parse_count(lang, &c)?)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let classes = classes.map(codes);
+            let mut file = load(lang, &project)?;
+            edit::set_course_details(&mut file.event, &name, classes, climb, scale)
+                .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(lang, "cli-edit-course-set", &[("name", v(name))]);
+        }
+        CourseCmd::Numbers {
+            project,
+            name,
+            overwrite,
+        } => {
+            let mut file = load(lang, &project)?;
+            let doc = read_map(lang, &file)?;
+            let placed = freemapper_courseplan::numbers::place_numbers(
+                &mut file.event,
+                &name,
+                doc.georef.scale_denominator,
+                map_kind(&doc),
+                overwrite,
+            )
+            .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(
+                lang,
+                "cli-edit-course-numbers",
+                &[("count", v(placed.to_string())), ("name", v(name))],
+            );
         }
     }
     Ok(())

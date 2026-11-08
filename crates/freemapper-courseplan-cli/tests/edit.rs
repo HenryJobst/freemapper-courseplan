@@ -390,11 +390,10 @@ fn points_and_courses_in_any_order() {
             "special", "add", p, "--kind", "finish", "--id", "F1", "--at", "2,2",
         ],
     );
-    let mut toml = std::fs::read_to_string(&project).unwrap();
-    toml.push_str(
-        "\n[[courses]]\nname = \"A\"\nkind = \"individual\"\nstart = \"S1\"\nfinish = \"F1\"\ncontrols = []\n",
+    ok(
+        d,
+        &["course", "add", p, "A", "--start", "S1", "--finish", "F1"],
     );
-    std::fs::write(&project, toml).unwrap();
     assert_eq!(
         ok(
             d,
@@ -430,4 +429,238 @@ fn points_and_courses_in_any_order() {
         }
         other => panic!("{other:?}"),
     }
+}
+
+/// Start S1 at 0,0, finish F1 at 60,0, controls 31 (30,40), 32 (90,40), 33 (90,0).
+fn course_setup(d: &Path, p: &str) {
+    for (id, kind, at) in [("S1", "start", "0,0"), ("F1", "finish", "60,0")] {
+        ok(
+            d,
+            &["special", "add", p, "--kind", kind, "--id", id, "--at", at],
+        );
+    }
+    for at in ["30,40", "90,40", "90,0"] {
+        ok(d, &["control", "add", p, "--at", at]);
+    }
+}
+
+fn dist(a: (f64, f64), b: (f64, f64)) -> f64 {
+    (a.0 - b.0).hypot(a.1 - b.1)
+}
+
+#[test]
+fn course_cycle() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    assert_eq!(
+        ok(
+            d,
+            &["course", "add", p, "A", "--start", "S1", "--finish", "F1"]
+        ),
+        "added course A"
+    );
+    assert_eq!(
+        ok(d, &["course", "controls", p, "A", "31,32,33"]),
+        "course A now visits 31, 32, 33"
+    );
+    assert_eq!(
+        ok(
+            d,
+            &["course", "leg", p, "A", "--after", "1", "--bend", "60,60"]
+        ),
+        "set the leg after position 1 of course A: bends 1, not taped"
+    );
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A"]),
+        "placed 3 control numbers on course A"
+    );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    match &file.event.courses[0].kind {
+        freemapper_courseplan_model::CourseKind::Individual { controls } => {
+            assert_eq!(controls.len(), 3);
+            assert!(controls.iter().all(|c| c.number.is_some()));
+            assert_eq!(controls[0].bends.len(), 1);
+        }
+        other => panic!("{other:?}"),
+    }
+    // Map scale 1:4000; expected length from the coordinates.
+    let mm = dist((0.0, 0.0), (30.0, 40.0))
+        + dist((30.0, 40.0), (60.0, 60.0))
+        + dist((60.0, 60.0), (90.0, 40.0))
+        + dist((90.0, 40.0), (90.0, 0.0))
+        + dist((90.0, 0.0), (60.0, 0.0));
+    let km = format!("{:.1}", mm * 4.0 / 1000.0);
+    assert_eq!(
+        info_line(d, &project, "course A"),
+        format!("course A: 3 controls, {km} km, climb \u{2013} m")
+    );
+    ok(
+        d,
+        &[
+            "course",
+            "set",
+            p,
+            "A",
+            "--climb",
+            "35",
+            "--classes",
+            "H21,D21",
+        ],
+    );
+    assert_eq!(
+        info_line(d, &project, "course A"),
+        format!("course A: 3 controls, {km} km, climb 35 m")
+    );
+    ok(
+        d,
+        &[
+            "course",
+            "set",
+            p,
+            "A",
+            "--no-climb",
+            "--print-scale",
+            "10000",
+        ],
+    );
+    assert!(info_line(d, &project, "course A").ends_with("climb \u{2013} m"));
+    assert_eq!(ok(d, &["course", "remove", p, "A"]), "removed course A");
+    assert!(!ok(d, &["info", p]).contains("course A"));
+}
+
+#[test]
+fn course_leg_index_counts_from_one() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    // 34 is a crossing point between 31 and 32; it counts as position 2.
+    ok(
+        d,
+        &["control", "add", p, "--at", "60,40", "--crossing-point"],
+    );
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31,34,32",
+        ],
+    );
+    let bends_of = || {
+        let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+        match &file.event.courses[0].kind {
+            freemapper_courseplan_model::CourseKind::Individual { controls } => controls
+                .iter()
+                .map(|c| (c.bends.len(), c.taped))
+                .collect::<Vec<_>>(),
+            other => panic!("{other:?}"),
+        }
+    };
+    ok(
+        d,
+        &[
+            "course", "leg", p, "A", "--after", "2", "--bend", "70,50", "--bend", "80,50",
+            "--taped",
+        ],
+    );
+    assert_eq!(bends_of(), [(0, false), (2, true), (0, false)]);
+    // No --bend and no --taped clears the leg.
+    ok(d, &["course", "leg", p, "A", "--after", "2"]);
+    assert_eq!(bends_of(), [(0, false); 3]);
+    // The last control's leg runs to the finish.
+    ok(
+        d,
+        &["course", "leg", p, "A", "--after", "3", "--bend", "70,10"],
+    );
+    assert_eq!(bends_of()[2], (1, false));
+    let before = std::fs::read_to_string(&project).unwrap();
+    for bad in ["0", "4"] {
+        let out = run(d, &["course", "leg", p, "A", "--after", bad]);
+        assert_eq!(out.status.code(), Some(1), "{bad}");
+        let err = stderr(&out);
+        assert!(err.contains(&format!("index {bad}")), "{err}");
+    }
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    // The start leg.
+    ok(
+        d,
+        &[
+            "course",
+            "leg",
+            p,
+            "A",
+            "--from-start",
+            "--bend",
+            "5,5",
+            "--taped",
+        ],
+    );
+    let file = freemapper_courseplan_model::ProjectFile::load(&project).unwrap();
+    assert_eq!(file.event.courses[0].start_bends.len(), 1);
+    assert!(file.event.courses[0].start_taped);
+    // Exactly one of --from-start and --after.
+    for args in [
+        vec!["course", "leg", p, "A"],
+        vec!["course", "leg", p, "A", "--from-start", "--after", "1"],
+    ] {
+        let out = run(d, &args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+    }
+}
+
+#[test]
+fn course_errors_are_localized() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    let out = run(
+        d,
+        &["course", "add", p, "A", "--start", "S9", "--finish", "F1"],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let out = run(
+        d,
+        &[
+            "course", "add", p, "A", "--start", "S1", "--finish", "F1", "--climb", "x",
+        ],
+    );
+    assert_eq!(out.status.code(), Some(2));
+    let out = run(d, &["course", "set", p, "A"]);
+    assert_eq!(out.status.code(), Some(2));
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31",
+        ],
+    );
+    let out = run_lang(d, "de", &["course", "numbers", p, "A"]);
+    assert_eq!(
+        stdout(&out).trim_end(),
+        "1 Postennummern auf Bahn A gesetzt"
+    );
+    let out = run_lang(d, "de", &["course", "remove", p, "B"]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stderr(&out).starts_with("Fehler: "), "{}", stderr(&out));
+    let out = run_lang(d, "de", &["course", "--help"]);
+    assert!(stdout(&out).contains("Befehle:"), "{}", stdout(&out));
 }

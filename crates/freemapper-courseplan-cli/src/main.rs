@@ -9,7 +9,8 @@ use std::process::ExitCode;
 
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Arg, ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
-use edit_cmd::{ClassCmd, ControlCmd, Failure, SpecialCmd};
+use edit_cmd::{ClassCmd, ControlCmd, CourseCmd, Failure, SpecialCmd};
+use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{MapKind, map_kind};
 use freemapper_courseplan::omap::read::read_map_file;
@@ -62,6 +63,11 @@ enum Command {
     Class {
         #[command(subcommand)]
         action: ClassCmd,
+    },
+    /// Add, change, number and remove courses
+    Course {
+        #[command(subcommand)]
+        action: CourseCmd,
     },
     /// Show the help of a command
     Help {
@@ -298,6 +304,7 @@ fn main() -> ExitCode {
         Command::Control { action } => edit_cmd::control(&lang, action),
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
+        Command::Course { action } => edit_cmd::course(&lang, action),
         Command::Help { command: name } => {
             command.build();
             let target = name
@@ -384,6 +391,42 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
         ],
     );
     number("cli-info-classes", event.classes.len());
+    let scale = doc.georef.scale_denominator;
+    for course in &event.courses {
+        let name = || FluentValue::from(course.name.clone());
+        if !matches!(course.kind, CourseKind::Individual { .. }) {
+            let kind = match course.kind {
+                CourseKind::Individual { .. } => "word-kind-individual",
+                CourseKind::Team { .. } => "word-kind-team",
+                CourseKind::Relay { .. } => "word-kind-relay",
+                CourseKind::Score { .. } => "word-kind-score",
+            };
+            line(
+                "cli-info-course-unmeasured",
+                &[
+                    ("name", name()),
+                    ("kind", FluentValue::from(text(lang, kind, &[]))),
+                ],
+            );
+            continue;
+        }
+        let metres = course_length_m(event, course, scale).map_err(|e| e.localize(lang))?;
+        let km =
+            format!("{:.1}", metres / 1000.0).replace('.', &text(lang, "word-decimal-point", &[]));
+        let controls = control_numbers(event, course).iter().flatten().count();
+        let climb = course
+            .climb_m
+            .map_or_else(|| "\u{2013}".to_owned(), |m| m.to_string());
+        line(
+            "cli-info-course",
+            &[
+                ("name", name()),
+                ("controls", n(controls)),
+                ("km", FluentValue::from(km)),
+                ("climb", FluentValue::from(climb)),
+            ],
+        );
+    }
     Ok(())
 }
 
@@ -475,7 +518,7 @@ mod tests {
         for lang in available() {
             let command = localized_command(&lang);
             let mut seen = 0;
-            for group in ["control", "special", "class"] {
+            for group in ["control", "special", "class", "course"] {
                 walk(
                     &clap::Command::new("x")
                         .subcommand(command.find_subcommand(group).unwrap().clone()),

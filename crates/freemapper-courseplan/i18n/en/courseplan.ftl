@@ -182,3 +182,45 @@ cli-arg-class-add-name = Name of the class
 cli-arg-class-add-rule-category = Rule category of the class
 cli-arg-class-add-starters = Expected number of starters
 cli-arg-class-remove-name = Name of the class
+
+## Course commands
+
+cli-info-course = course { $name }: { $controls } controls, { $km } km, climb { $climb } m
+cli-info-course-unmeasured = course { $name }: { $kind }, length not supported yet
+word-decimal-point = .
+word-taped = taped
+word-not-taped = not taped
+cli-edit-course-added = added course { $name }
+cli-edit-course-removed = removed course { $name }
+cli-edit-course-controls = course { $name } now visits { $codes }
+cli-edit-course-set = changed course { $name }
+cli-edit-course-numbers = placed { $count } control numbers on course { $name }
+cli-edit-course-leg-start = set the leg from the start of course { $name }: bends { $bends }, { $taped }
+cli-edit-course-leg-after = set the leg after position { $index } of course { $name }: bends { $bends }, { $taped }
+
+cli-help-course = Add, change, number and remove individual courses
+cli-help-course-add = Add an individual course
+cli-help-course-controls = Replace the controls of a course
+cli-help-course-remove = Remove a course and its name from the special objects
+cli-help-course-leg = Set the bends and the marked-route flag of one leg
+cli-help-course-set = Change classes, climb or planned print scale of a course
+cli-help-course-numbers = Place the control numbers of a course clear of legs and circles
+
+cli-arg-edit-course = Name of the course
+cli-arg-course-add-start = Id of the start special object
+cli-arg-course-add-finish = Id of the finish special object
+cli-arg-course-add-controls = Codes of the controls in running order, separated by commas; a crossing point counts as a position [default: none]
+cli-arg-course-add-classes = Classes that run the course, separated by commas
+cli-arg-course-add-climb = Climb in metres
+cli-arg-course-add-print-scale = Planned print scale, for example 10000 for 1:10000
+cli-arg-course-controls-codes = Codes in running order, separated by commas. The n-th visit of a code keeps its bends, taped flag and number placement from the n-th visit before
+cli-arg-course-leg-from-start = Edit the leg from the start to the first control
+cli-arg-course-leg-after = Edit the leg after this position, counted from 1 as on the map; crossing points count as positions
+cli-arg-course-leg-bend = A bend of the leg: X,Y in map millimetres; repeat the option for each bend, in order. Without any --bend the leg loses its bends
+cli-arg-course-leg-taped = Mark the leg as a marked route. Without --taped the flag is cleared
+cli-arg-course-set-classes = Classes that run the course, separated by commas
+cli-arg-course-set-climb = Climb in metres
+cli-arg-course-set-no-climb = Remove the climb
+cli-arg-course-set-print-scale = Planned print scale, for example 10000 for 1:10000
+cli-arg-course-set-no-print-scale = Remove the planned print scale
+cli-arg-course-numbers-overwrite = Replace numbers that are already placed [default: keep them]

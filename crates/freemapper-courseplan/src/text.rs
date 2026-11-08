@@ -550,6 +550,12 @@ mod tests {
             "columns",
             "direction",
             "gap",
+            "codes",
+            "bends",
+            "taped",
+            "km",
+            "controls",
+            "climb",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

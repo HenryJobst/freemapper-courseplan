@@ -356,3 +356,56 @@ fn unknown_command_in_german_names_it() {
     let err = stderr(&out);
     assert!(err.starts_with("Fehler: Unbekannter Befehl frob"), "{err}");
 }
+
+#[test]
+fn info_lines_from_m1_unchanged() {
+    let (dir, map) = with_map("luebeck.omap");
+    assert!(
+        run(dir.path(), &["init", map.to_str().unwrap()])
+            .status
+            .success()
+    );
+    let project = dir.path().join("luebeck.courseplan.toml");
+    let out = run(dir.path(), &["info", project.to_str().unwrap()]);
+    assert_eq!(
+        stdout(&out),
+        "title: luebeck\nmap: luebeck.omap\nmap kind: sprint\ncontrols: 0\n\
+         courses: 0 (individual 0, team 0, relay 0, score 0)\nclasses: 0\n"
+    );
+}
+
+#[test]
+fn info_lists_courses_in_german_and_skips_length_of_team_courses() {
+    let (dir, map) = with_map("luebeck.omap");
+    assert!(
+        run(dir.path(), &["init", map.to_str().unwrap()])
+            .status
+            .success()
+    );
+    let project = dir.path().join("luebeck.courseplan.toml");
+    let mut toml = std::fs::read_to_string(&project).unwrap();
+    toml.push_str(
+        "\n[[specials]]\nkind = \"start\"\nid = \"S1\"\nmap_mm = [0.0, 0.0]\n\
+         \n[[specials]]\nkind = \"finish\"\nid = \"F1\"\nmap_mm = [60.0, 0.0]\n\
+         \n[[courses]]\nname = \"T\"\nkind = \"team\"\nstart = \"S1\"\nfinish = \"F1\"\n\
+         team_size = 2\nmandatory = []\nfree = []\n",
+    );
+    std::fs::write(&project, toml).unwrap();
+    let out = run_env(
+        dir.path(),
+        &[("LANG", "de_DE.UTF-8")],
+        &["info", project.to_str().unwrap()],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(
+        stdout(&out).ends_with("Bahn T: Mannschaftsbahn, Länge noch nicht unterstützt\n"),
+        "{}",
+        stdout(&out)
+    );
+    let out = run(dir.path(), &["info", project.to_str().unwrap()]);
+    assert!(
+        stdout(&out).ends_with("course T: team, length not supported yet\n"),
+        "{}",
+        stdout(&out)
+    );
+}

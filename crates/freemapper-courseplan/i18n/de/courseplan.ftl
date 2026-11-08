@@ -182,3 +182,45 @@ cli-arg-class-add-name = Name der Kategorie
 cli-arg-class-add-rule-category = Regelkategorie der Kategorie
 cli-arg-class-add-starters = Erwartete Zahl der Starter
 cli-arg-class-remove-name = Name der Kategorie
+
+## Bahnbefehle
+
+cli-info-course = Bahn { $name }: { $controls } Posten, { $km } km, Anstieg { $climb } m
+cli-info-course-unmeasured = Bahn { $name }: { $kind }, Länge noch nicht unterstützt
+word-decimal-point = ,
+word-taped = markiert
+word-not-taped = nicht markiert
+cli-edit-course-added = Bahn { $name } angelegt
+cli-edit-course-removed = Bahn { $name } entfernt
+cli-edit-course-controls = Bahn { $name } führt jetzt über { $codes }
+cli-edit-course-set = Bahn { $name } geändert
+cli-edit-course-numbers = { $count } Postennummern auf Bahn { $name } gesetzt
+cli-edit-course-leg-start = Teilstrecke vom Start der Bahn { $name } gesetzt: Knicke { $bends }, { $taped }
+cli-edit-course-leg-after = Teilstrecke nach Position { $index } der Bahn { $name } gesetzt: Knicke { $bends }, { $taped }
+
+cli-help-course = Einzelbahnen anlegen, ändern, nummerieren und entfernen
+cli-help-course-add = Eine Einzelbahn anlegen
+cli-help-course-controls = Die Posten einer Bahn ersetzen
+cli-help-course-remove = Eine Bahn samt ihrem Namen in den Sonderobjekten entfernen
+cli-help-course-leg = Knicke und Markierung einer Teilstrecke setzen
+cli-help-course-set = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern
+cli-help-course-numbers = Die Postennummern einer Bahn frei von Strecken und Kreisen platzieren
+
+cli-arg-edit-course = Name der Bahn
+cli-arg-course-add-start = ID des Start-Sonderobjekts
+cli-arg-course-add-finish = ID des Ziel-Sonderobjekts
+cli-arg-course-add-controls = Codes der Posten in Laufreihenfolge, durch Kommas getrennt; ein Querungspunkt zählt als Position [Standard: keine]
+cli-arg-course-add-classes = Kategorien, die die Bahn laufen, durch Kommas getrennt
+cli-arg-course-add-climb = Anstieg in Metern
+cli-arg-course-add-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+cli-arg-course-controls-codes = Codes in Laufreihenfolge, durch Kommas getrennt. Der n-te Besuch eines Codes behält Knicke, Markierung und Nummernplatz vom bisherigen n-ten Besuch
+cli-arg-course-leg-from-start = Die Teilstrecke vom Start zum ersten Posten bearbeiten
+cli-arg-course-leg-after = Die Teilstrecke nach dieser Position bearbeiten, ab 1 gezählt wie auf der Karte; Querungspunkte zählen als Positionen
+cli-arg-course-leg-bend = Ein Knick der Teilstrecke: X,Y in Kartenmillimetern; die Option je Knick wiederholen, in der Reihenfolge. Ohne --bend verliert die Teilstrecke ihre Knicke
+cli-arg-course-leg-taped = Die Teilstrecke als markierte Strecke kennzeichnen. Ohne --taped wird die Markierung entfernt
+cli-arg-course-set-classes = Kategorien, die die Bahn laufen, durch Kommas getrennt
+cli-arg-course-set-climb = Anstieg in Metern
+cli-arg-course-set-no-climb = Den Anstieg entfernen
+cli-arg-course-set-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+cli-arg-course-set-no-print-scale = Den geplanten Druckmaßstab entfernen
+cli-arg-course-numbers-overwrite = Schon gesetzte Nummern ersetzen [Standard: behalten]
