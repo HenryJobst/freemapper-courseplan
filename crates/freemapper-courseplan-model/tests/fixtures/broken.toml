@@ -1,0 +1,41 @@
+format = 1
+
+[event]
+title = "Test"
+
+[sources]
+map = "maps/m.omap"
+
+[[specials]]
+kind = "start"
+id = "S1"
+map_mm = [0.0, 0.0]
+
+[[specials]]
+kind = "finish"
+id = "F1"
+map_mm = [50.0, 50.0]
+
+[[controls]]
+code = 31
+map_mm = [10.0, 10.0]
+
+[[controls]]
+code = 31
+map_mm = [20.0, 30.0]
+
+[[courses]]
+name = "A"
+kind = "individual"
+start = "S9"
+finish = "F1"
+controls = [{ code = 31 }, { code = 44 }]
+
+[[courses]]
+name = "T"
+kind = "team"
+start = "S1"
+finish = "F1"
+team_size = 1
+mandatory = [{ code = 31 }]
+free = [31]

@@ -280,7 +280,8 @@ Claude's call.)*
   settings. A team course is not written to the `.ppen`; `sync` says so.
 - **Format changes.** The `.ppen` reader and writer follow Purple Pen 3.x. Before writing, `sync` checks
   that the file's version is one it knows and refuses otherwise, so a newer Purple Pen file is never damaged.
-  Purple Pen 4 is tested when it is released.
+  Purple Pen 4 (4.0.0 beta) is installed on the author's Mac and already used for small courses *(user,
+  2026-11-08)*; the reader and writer cover the 3.x and 4.0 files, and M3 tests the round trip with both.
 - **Not in scope.** Live editing by several people at the same moment. Sync is a step someone runs.
 
 ### 5.5b IOF XML 3.0 export
@@ -389,12 +390,15 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 ## 7. Testing and quality
 
 - Readers and writers test-first with small fixtures and real files: `.ppen` from Purple Pen 3.x, IOF XML
-  round trip, and an IOF XML import into OE.
+  round trip, and an IOF XML import into OE. Real `.ppen` files from the author (Purple Pen 4.0.0) become
+  fixtures only with the author's consent, with absolute paths removed.
 - Sync: a `.ppen` written here opens in Purple Pen unchanged, is edited there and merges back; one test per
   merge case (one side changed, both sides changed, deleted on one side, renamed).
 - Each check rule has a positive and a negative fixture.
 - Length: fixed cases computed by hand against WKB B 7.2.5.
-- Example events built on freemapper's examples, as freemapper-print does (its ADR 0013).
+- Example events in `examples/`, built on freemapper's examples, as freemapper-print does (its ADR 0013):
+  project file, IOF XML and `.ppen` exports, check findings, later the print PDF. The first one, a sprint
+  training on the Lübeck old town map, comes after M3 *(user, 2026-11-08; ADR 0018)*.
 - fmt, clippy `-D warnings` and tests in CI on Linux, macOS and Windows, lefthook pre-commit, as in the
   sibling projects.
 

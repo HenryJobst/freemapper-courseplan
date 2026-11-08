@@ -1,0 +1,26 @@
+//! Copied from freemapper-print 8b0a0a6 (ADR 0017).
+//! OpenOrienteering Mapper file format (XML, version 9).
+
+pub mod coord;
+pub mod model;
+pub mod read;
+pub mod symbol_set;
+
+pub use coord::MapCoord;
+pub use model::{
+    MapDocument, MapGeoref, MapObject, MapObjectKind, MapPart, PatternOrigin, TemplateKind,
+    TemplateRef, closed_ring,
+};
+pub use symbol_set::{SymbolCode, SymbolSet};
+
+#[derive(Debug, thiserror::Error)]
+pub enum OmapError {
+    #[error("invalid OOM XML: {0}")]
+    Xml(String),
+    #[error("element <{0}> not found")]
+    MissingElement(&'static str),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Unsupported(String),
+}

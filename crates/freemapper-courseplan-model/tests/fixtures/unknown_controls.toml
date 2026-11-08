@@ -1,0 +1,59 @@
+format = 1
+
+[event]
+title = "Test"
+
+[sources]
+map = "maps/m.omap"
+
+[[specials]]
+kind = "start"
+id = "S1"
+map_mm = [0.0, 0.0]
+
+[[specials]]
+kind = "finish"
+id = "F1"
+map_mm = [50.0, 50.0]
+
+[[controls]]
+code = 31
+map_mm = [10.0, 10.0]
+
+[[controls]]
+code = 32
+map_mm = [20.0, 30.0]
+
+[[courses]]
+name = "R1"
+kind = "relay"
+start = "S1"
+finish = "F1"
+legs = 2
+parts = [{ kind = "common", controls = [{ code = 44 }] }]
+
+[[courses]]
+name = "R2"
+kind = "relay"
+start = "S1"
+finish = "F1"
+legs = 2
+parts = [{ kind = "fork", variants = [[{ code = 31 }], [{ code = 45 }]] }]
+
+[[courses]]
+name = "P"
+kind = "score"
+start = "S1"
+finish = "F1"
+time_limit_min = 60
+penalty_per_min = 30
+controls = [{ code = 31, value = 10 }, { code = 46, value = 20 }]
+
+[[courses]]
+name = "T"
+kind = "team"
+start = "S1"
+finish = "F1"
+team_size = 2
+mandatory = [{ code = 31 }]
+free = [32, 47]

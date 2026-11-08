@@ -1,0 +1,52 @@
+# Laid out like the sketch in design §5.7, edited by hand.
+format = 1
+
+[event]
+title = "Vereinstraining Sanssouci"
+date = 2026-11-14
+rule_profile = "wkb-2026"
+
+[sources]
+map = "maps/sanssouci.omap"
+
+[[specials]]
+kind = "start"
+id = "S1"
+map_mm = [0, 0]
+
+[[specials]]
+kind = "finish"
+id = "F1"
+map_mm = [50.0, 50.0]
+
+[[controls]]
+code = 31
+map_mm = [12.4, -33.1]          # OOM map coordinates, y down
+description = { d = "1.8", g = "11.2" }   # IOF 2024 symbol ids per column
+number = { direction = 45, gap_mm = 1.0 }
+
+[[controls]]
+code = 32
+map_mm = [10, 20] # at the boat shed
+
+[[controls]]
+code = "33" # quoted by hand
+map_mm = [30, 40]
+
+[[courses]]
+name = "A"
+kind = "individual"
+classes = ["H21", "D21"]
+start = "S1"
+finish = "F1"
+climb_m = 35                    # entered by hand
+controls = [
+  { code = 31, number = { direction = 270, gap_mm = 1.0 } },
+  { code = 32, bends = [[20.0, -30.0]] },
+  { code = 33 },
+]
+
+[[accepted_findings]]
+rule = "wkb26.b7.2.1.min_distance"
+controls = [31, 32]
+note = "Control 32 is on a different level, checked on site."
