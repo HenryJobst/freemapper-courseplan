@@ -13,7 +13,8 @@ M1 writes the first project files (ADR 0008). People edit them by hand, and the 
   control code is an integer when it is plain digits, else a string.
 - Start and finish are special objects. Each course names its start and finish by id, outside its control list.
 - A save matches controls by `code` and courses and classes by `name`, and writes them in the event's new order.
-  It matches special objects and accepted findings by index.
+  This holds for tables (`[[controls]]`); an inline `controls = [...]` array of a course merges by index. It
+  matches special objects and accepted findings by index.
 - Loading rejects unknown keys. Every field added later raises `format`.
 - Format 1 is provisional and carries no compatibility promise until the first release. Before then it needs gaps
   on legs and circles, the planned print area, ids and course assignment for special objects other than start and

@@ -17,8 +17,10 @@ pub enum ModelError {
     DuplicateCourse(String),
     #[error("class {0} is defined more than once")]
     DuplicateClass(String),
-    #[error("start or finish id {0} is used more than once")]
+    #[error("special object id {0} is used more than once")]
     DuplicateSpecialId(String),
+    #[error("special object {id} belongs to course {course}, which is not defined")]
+    UnknownCourseInSpecial { id: String, course: String },
     #[error("course {course} uses control {code}, which is not defined")]
     UnknownControl {
         course: String,
@@ -295,7 +297,7 @@ fn walk_table(
             (None, Some(t)) if omitted_when_empty(path, key) => {
                 walk_table(t, &Table::new(), &child, errors);
             }
-            (None, None) if omitted_when_empty(path, key) && is_empty(item) => {}
+            (None, None) if omitted_when_empty(path, key) && is_default(item) => {}
             (None, _) => errors.push(ModelError::UnknownKey {
                 table: path.to_owned(),
                 key: key.to_owned(),
@@ -304,9 +306,10 @@ fn walk_table(
     }
 }
 
-/// Whether the serialiser leaves out the key `key` of the table at `path` when it is empty.
+/// Whether the serialiser leaves out the key `key` of the table at `path` when it is empty or has
+/// its default (see [`is_default`]).
 ///
-/// `bends` is allowed in every element of a course's lists, so an empty `bends = []` on a score
+/// `bends` and `taped` are allowed in every element of a course's lists, so an empty `bends = []` on a score
 /// control or a relay part counts as known; it has no effect there.
 fn omitted_when_empty(path: &str, key: &str) -> bool {
     let element_of = |array: &str| {
@@ -321,10 +324,13 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
         {
             true
         }
-        "classes" => element_of("courses"),
-        "description" => element_of("controls"),
+        "classes" | "start_bends" | "start_taped" => element_of("courses"),
+        "description" | "kind" => element_of("controls"),
+        "courses" => element_of("specials"),
         "controls" => element_of("accepted_findings"),
-        "bends" => path.starts_with("courses[") && path.contains('.') && path.ends_with(']'),
+        "bends" | "taped" => {
+            path.starts_with("courses[") && path.contains('.') && path.ends_with(']')
+        }
         _ => false,
     }
 }
@@ -376,7 +382,7 @@ fn merge_table_like(old: &mut dyn TableLike, new: Vec<(String, Item)>, reordered
     // same as no key. Keeping it keeps the file as the user wrote it.
     let stale: Vec<String> = old
         .iter()
-        .filter(|(k, item)| !new.iter().any(|(n, _)| n == k) && !is_empty(item))
+        .filter(|(k, item)| !new.iter().any(|(n, _)| n == k) && !is_default(item))
         .map(|(k, _)| k.to_owned())
         .collect();
     for key in stale {
@@ -403,6 +409,12 @@ fn is_empty(item: &Item) -> bool {
     }
 }
 
+/// An empty list or table, `false`, or `"control"` (the default `kind` of a control). The serialiser
+/// leaves such a value out, so a key that holds one in the file means the same as no key.
+fn is_default(item: &Item) -> bool {
+    is_empty(item) || item.as_bool() == Some(false) || item.as_str() == Some("control")
+}
+
 /// A key the file leaves out keeps being left out while the event holds its default.
 fn left_out_default(key: &str, item: &Item) -> bool {
     let default = match key {
@@ -418,6 +430,7 @@ fn identity_key(table_key: &str) -> Option<&'static str> {
     match table_key {
         "controls" => Some("code"),
         "courses" | "classes" => Some("name"),
+        "specials" => Some("id"),
         _ => None,
     }
 }

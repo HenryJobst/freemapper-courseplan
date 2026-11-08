@@ -40,20 +40,32 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut starts: HashSet<&str> = HashSet::new();
     let mut finishes: HashSet<&str> = HashSet::new();
     let mut special_ids: HashSet<&str> = HashSet::new();
+    let mut reported_ids: HashSet<&str> = HashSet::new();
     for special in &event.specials {
-        let id = match special {
-            SpecialObject::Start { id, .. } => {
+        let id = special.id();
+        match special {
+            SpecialObject::Start { .. } => {
                 starts.insert(id);
-                id
             }
-            SpecialObject::Finish { id, .. } => {
+            SpecialObject::Finish { .. } => {
                 finishes.insert(id);
-                id
             }
-            _ => continue,
-        };
-        if !special_ids.insert(id) {
-            errors.push(ModelError::DuplicateSpecialId(id.clone()));
+            _ => {}
+        }
+        if !special_ids.insert(id) && reported_ids.insert(id) {
+            errors.push(ModelError::DuplicateSpecialId(id.to_owned()));
+        }
+    }
+
+    let known_courses: HashSet<&str> = event.courses.iter().map(|c| c.name.as_str()).collect();
+    for special in &event.specials {
+        for course in special.courses() {
+            if !known_courses.contains(course.as_str()) {
+                errors.push(ModelError::UnknownCourseInSpecial {
+                    id: special.id().to_owned(),
+                    course: course.clone(),
+                });
+            }
         }
     }
 
