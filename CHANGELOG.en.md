@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-09
+
 ### Added
 
 - First example: a sprint course in Lübeck's old town in `examples/luebeck-sprint`, with project file, commands

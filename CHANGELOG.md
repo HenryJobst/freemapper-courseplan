@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.1.0] - 2026-11-09
+
 ### Hinzugefügt
 
 - Erstes Beispiel: eine Sprintbahn in der Lübecker Altstadt unter `examples/luebeck-sprint`, mit Projektdatei,
