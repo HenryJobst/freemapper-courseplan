@@ -247,6 +247,8 @@ mcp-instructions =
     control, add_course, place_numbers and event_info again to read the length. Each call saves its change. A
     refused change leaves the file as it was. Only individual courses can be edited and measured yet.
 mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
+mcp-error-not-toml = { $path } is not a project file; project files end in .toml
+mcp-error-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
 mcp-error-no-home = this system has no home folder; use an absolute path
 mcp-error-kind-needs-at = a { $kind } is a single point; give at and leave out points
 mcp-error-kind-needs-points = a { $kind } is drawn through points; give points and leave out at

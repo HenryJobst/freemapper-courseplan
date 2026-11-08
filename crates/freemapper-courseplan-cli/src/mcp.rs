@@ -11,10 +11,11 @@ use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, LegStart};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{FeatureGeometry, MapIndex, MapKind, map_kind};
+use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
     Class, Control, ControlCode, ControlDescription, ControlKind, Course, CourseKind, Event,
-    MapPoint, NumberPlacement, ProjectFile, SpecialObject,
+    MapPoint, NumberPlacement, ProjectError, ProjectFile, SpecialObject,
 };
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
@@ -174,6 +175,71 @@ fn resolve(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     Ok(resolved)
 }
 
+/// Whether `path` ends in one of `extensions`, ignoring case.
+fn has_extension(path: &std::path::Path, extensions: &[&str]) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|e| extensions.iter().any(|x| e.eq_ignore_ascii_case(x)))
+}
+
+/// A path the server opens: besides being absolute, it must carry one of `extensions`, so a
+/// misled assistant cannot point the server at other files (keys, settings) and read them
+/// through an error text (ruling R9).
+fn resolve_kind(
+    lang: &Lang,
+    path: &str,
+    extensions: &[&str],
+    refusal: &str,
+) -> Result<PathBuf, String> {
+    let resolved = resolve(lang, path)?;
+    if has_extension(&resolved, extensions) {
+        Ok(resolved)
+    } else {
+        Err(text(
+            lang,
+            refusal,
+            &[("path", FluentValue::from(path.trim().to_owned()))],
+        ))
+    }
+}
+
+fn resolve_project(lang: &Lang, path: &str) -> Result<PathBuf, String> {
+    resolve_kind(lang, path, &["toml"], "mcp-error-not-toml")
+}
+
+fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
+    resolve_kind(lang, path, &["omap", "xmap"], "mcp-error-not-map")
+}
+
+/// A project error as text for the assistant. Parser errors quote the offending line of the
+/// file; only the kind, line and column stay.
+fn project_error(lang: &Lang, error: ProjectError) -> String {
+    match error {
+        ProjectError::Parse { path, message } => ProjectError::Parse {
+            path,
+            message: strip_quoted_source(&message),
+        }
+        .localize(lang),
+        other => other.localize(lang),
+    }
+}
+
+/// Drops the source lines and caret lines of a toml_edit error ("1 | text", "  |   ^").
+fn strip_quoted_source(message: &str) -> String {
+    let quoted = |line: &str| {
+        let t = line.trim_start();
+        t.starts_with('|')
+            || t.split_once('|').is_some_and(|(n, _)| {
+                !n.trim().is_empty() && n.trim().chars().all(|c| c.is_ascii_digit())
+            })
+    };
+    message
+        .lines()
+        .filter(|l| !quoted(l))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn flag(value: Option<bool>) -> bool {
     value.unwrap_or(false)
 }
@@ -206,11 +272,28 @@ impl CoursePlanServer {
     }
 
     fn load(&self, project: &str) -> Result<ProjectFile, String> {
-        let path = resolve(&self.lang, project)?;
-        edit_cmd::load(&self.lang, &path).map_err(Failure::into_message)
+        let path = resolve_project(&self.lang, project)?;
+        ProjectFile::load(&path).map_err(|e| project_error(&self.lang, e))
+    }
+
+    /// The project's map, if it is an OOM file.
+    fn read_map(&self, file: &ProjectFile) -> Result<MapDocument, String> {
+        let path = file.map_path();
+        if !has_extension(&path, &["omap", "xmap"]) {
+            return Err(text(
+                &self.lang,
+                "mcp-error-not-map",
+                &[("path", FluentValue::from(path.display().to_string()))],
+            ));
+        }
+        edit_cmd::read_map(&self.lang, file).map_err(Failure::into_message)
     }
 
     /// Loads the project, applies `change`, and saves when it succeeded.
+    ///
+    /// Single flight: the handlers contain no `.await` and the server runs on a current-thread
+    /// runtime, so one call finishes before the next starts and load, apply and save are atomic
+    /// within this process. Two processes editing the same file can still race.
     fn edit<T>(
         &self,
         project: &str,
@@ -218,7 +301,7 @@ impl CoursePlanServer {
     ) -> Result<T, String> {
         let mut file = self.load(project)?;
         let out = change(&mut file)?;
-        edit_cmd::save(&self.lang, &mut file).map_err(Failure::into_message)?;
+        file.save().map_err(|e| project_error(&self.lang, e))?;
         Ok(out)
     }
 
@@ -227,7 +310,7 @@ impl CoursePlanServer {
     }
 
     fn extent(&self, file: &ProjectFile) -> Result<Option<(MapPoint, MapPoint)>, String> {
-        edit_cmd::map_extent(&self.lang, file).map_err(Failure::into_message)
+        Ok(MapIndex::from_document(&self.read_map(file)?).extent())
     }
 
     #[tool(description = "Summary of the event")]
@@ -237,7 +320,7 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
             let file = self.load(&req.project)?;
-            let doc = edit_cmd::read_map(&self.lang, &file).map_err(Failure::into_message)?;
+            let doc = self.read_map(&file)?;
             let scale = doc.georef.scale_denominator;
             let extent = MapIndex::from_document(&doc).extent();
             let event = &file.event;
@@ -280,7 +363,7 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
             let file = self.load(&req.project)?;
-            let doc = edit_cmd::read_map(&self.lang, &file).map_err(Failure::into_message)?;
+            let doc = self.read_map(&file)?;
             let scale = doc.georef.scale_denominator;
             let courses = file
                 .event
@@ -669,7 +752,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<PlaceNumbers>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
-            let doc = edit_cmd::read_map(&self.lang, file).map_err(Failure::into_message)?;
+            let doc = self.read_map(file)?;
             let placed = freemapper_courseplan::numbers::place_numbers(
                 &mut file.event,
                 &req.name,
@@ -689,7 +772,7 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
             let file = self.load(&req.project)?;
-            let doc = edit_cmd::read_map(&self.lang, &file).map_err(Failure::into_message)?;
+            let doc = self.read_map(&file)?;
             let index = MapIndex::from_document(&doc);
             let limit = req
                 .limit
@@ -725,7 +808,7 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
             let file = self.load(&req.project)?;
-            let doc = edit_cmd::read_map(&self.lang, &file).map_err(Failure::into_message)?;
+            let doc = self.read_map(&file)?;
             Ok(json!({
                 "extent": extent_json(MapIndex::from_document(&doc).extent()),
                 "scale": doc.georef.scale_denominator,
@@ -740,9 +823,9 @@ impl CoursePlanServer {
         Parameters(req): Parameters<InitEvent>,
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
-            let map = resolve(&self.lang, &req.map)?;
+            let map = resolve_map(&self.lang, &req.map)?;
             let project = match &req.project {
-                Some(p) => resolve(&self.lang, p)?,
+                Some(p) => resolve_project(&self.lang, p)?,
                 None => crate::default_project_path(&map),
             };
             let created = init_project(&map, &project, req.title.clone())
@@ -804,7 +887,8 @@ impl ServerHandler for CoursePlanServer {
     }
 }
 
-/// Serves MCP on stdin and stdout until the client disconnects.
+/// Serves MCP on stdin and stdout until the client disconnects. The current-thread runtime is
+/// part of the single-flight rule described at `CoursePlanServer::edit`.
 pub fn run(lang: Lang) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()

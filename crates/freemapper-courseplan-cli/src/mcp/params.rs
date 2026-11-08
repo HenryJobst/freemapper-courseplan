@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 /// A position on the map in millimetres at map scale, y pointing down.
 #[derive(Deserialize, JsonSchema, Clone, Copy)]
+#[serde(deny_unknown_fields)]
 pub(super) struct Point {
     pub(super) x: f64,
     pub(super) y: f64,
@@ -26,11 +27,13 @@ pub(super) fn map_points(points: Vec<Point>) -> Vec<MapPoint> {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ProjectOnly {
     pub(super) project: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddControl {
     pub(super) project: String,
     pub(super) at: Point,
@@ -39,6 +42,7 @@ pub(super) struct AddControl {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct MoveControl {
     pub(super) project: String,
     pub(super) code: String,
@@ -46,12 +50,14 @@ pub(super) struct MoveControl {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ControlRef {
     pub(super) project: String,
     pub(super) code: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct DescribeControl {
     pub(super) project: String,
     pub(super) code: String,
@@ -65,6 +71,7 @@ pub(super) struct DescribeControl {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct SetControlNumber {
     pub(super) project: String,
     pub(super) code: String,
@@ -110,6 +117,7 @@ impl SpecialKindArg {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddSpecial {
     pub(super) project: String,
     pub(super) kind: SpecialKindArg,
@@ -120,12 +128,14 @@ pub(super) struct AddSpecial {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RemoveSpecial {
     pub(super) project: String,
     pub(super) id: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddClass {
     pub(super) project: String,
     pub(super) name: String,
@@ -134,12 +144,14 @@ pub(super) struct AddClass {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RemoveClass {
     pub(super) project: String,
     pub(super) name: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddCourse {
     pub(super) project: String,
     pub(super) name: String,
@@ -152,12 +164,14 @@ pub(super) struct AddCourse {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct CourseRef {
     pub(super) project: String,
     pub(super) name: String,
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct SetCourseControls {
     pub(super) project: String,
     pub(super) name: String,
@@ -165,6 +179,7 @@ pub(super) struct SetCourseControls {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct SetLeg {
     pub(super) project: String,
     pub(super) name: String,
@@ -175,6 +190,7 @@ pub(super) struct SetLeg {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct SetCourseDetails {
     pub(super) project: String,
     pub(super) name: String,
@@ -186,6 +202,7 @@ pub(super) struct SetCourseDetails {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct PlaceNumbers {
     pub(super) project: String,
     pub(super) name: String,
@@ -193,6 +210,7 @@ pub(super) struct PlaceNumbers {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct FeaturesNear {
     pub(super) project: String,
     pub(super) x: f64,
@@ -202,6 +220,7 @@ pub(super) struct FeaturesNear {
 }
 
 #[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct InitEvent {
     pub(super) map: String,
     pub(super) project: Option<String>,

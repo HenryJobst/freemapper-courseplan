@@ -245,6 +245,8 @@ mcp-instructions =
     event_info, um die Länge zu lesen. Jeder Aufruf speichert seine Änderung. Eine abgelehnte Änderung lässt die
     Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten und messen.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
+mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
+mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
 mcp-error-no-home = Dieses System hat keinen Home-Ordner. Gib einen absoluten Pfad an
 mcp-error-kind-needs-at = { $kind } ist ein einzelner Punkt. Gib at an und lass points weg
 mcp-error-kind-needs-points = { $kind } wird durch Punkte gezeichnet. Gib points an und lass at weg

@@ -88,6 +88,11 @@ impl Session {
     }
 
     fn request(&mut self, method: &str, params: Value) -> Value {
+        self.request_full(method, params)["result"].clone()
+    }
+
+    /// The whole response, so a test can see a JSON-RPC `error` too.
+    fn request_full(&mut self, method: &str, params: Value) -> Value {
         let id = self.next_id;
         self.next_id += 1;
         self.send(json!({ "jsonrpc": "2.0", "id": id, "method": method, "params": params }));
@@ -99,7 +104,7 @@ impl Session {
             );
             let message: Value = serde_json::from_str(&line).unwrap();
             if message["id"] == id {
-                return message["result"].clone();
+                return message;
             }
         }
     }
@@ -456,4 +461,79 @@ fn map_features_near_limit_is_capped() {
     assert_eq!(all["features"].as_array().unwrap().len(), 200, "{all}");
     let default = session.ok("map_features_near", args(Value::Null));
     assert_eq!(default["features"].as_array().unwrap().len(), 20);
+}
+
+#[test]
+fn non_toml_project_is_refused() {
+    let dir = tempfile::tempdir().unwrap();
+    let secret = dir.path().join("notes.txt");
+    std::fs::write(&secret, "api_key = hunter2-secret\n").unwrap();
+    let mut session = Session::start();
+    for tool in ["event_info", "list_controls", "map_extent"] {
+        let (error, text) = session.call(tool, json!({ "project": secret }));
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains(".toml"), "{text}");
+        assert!(!text.contains("hunter2"), "{text}");
+    }
+    let (error, text) = session.call("add_class", json!({ "project": secret, "name": "H10" }));
+    assert!(error && !text.contains("hunter2"), "{text}");
+    assert_eq!(
+        std::fs::read_to_string(&secret).unwrap(),
+        "api_key = hunter2-secret\n"
+    );
+}
+
+#[test]
+fn parse_errors_do_not_quote_the_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let broken = dir.path().join("broken.toml");
+    std::fs::write(&broken, "password = hunter2-secret = oops\n").unwrap();
+    let mut session = Session::start();
+    let (error, text) = session.call("event_info", json!({ "project": broken }));
+    assert!(error, "{text}");
+    assert!(text.contains("line 1"), "{text}");
+    assert!(
+        !text.contains("hunter2") && !text.contains("password"),
+        "{text}"
+    );
+    assert!(!text.contains('^'), "{text}");
+}
+
+#[test]
+fn init_event_refuses_non_map_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let not_a_map = dir.path().join("secret.txt");
+    std::fs::write(&not_a_map, "hunter2").unwrap();
+    let mut session = Session::start();
+    let (error, text) = session.call("init_event", json!({ "map": not_a_map }));
+    assert!(error, "{text}");
+    assert!(
+        text.contains(".omap") && !text.contains("hunter2"),
+        "{text}"
+    );
+    let (_work, map, _project) = workspace();
+    let (error, text) = session.call(
+        "init_event",
+        json!({ "map": map, "project": dir.path().join("out.txt") }),
+    );
+    assert!(error && text.contains(".toml"), "{text}");
+    assert!(!dir.path().join("out.txt").exists());
+}
+
+#[test]
+fn misspelt_parameter_is_refused() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let before = std::fs::read_to_string(&project).unwrap();
+    let message = session.request_full(
+        "tools/call",
+        json!({ "name": "set_leg", "arguments": {
+            "project": project, "name": "A", "from_start": true, "bend": [{ "x": 1.0, "y": 2.0 }]
+        } }),
+    );
+    let refused = message.get("error").is_some() || message["result"]["isError"] == true;
+    assert!(refused, "{message}");
+    assert!(message.to_string().contains("bend"), "{message}");
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
 }
