@@ -150,7 +150,13 @@ fn init_refuses_existing_project() {
         &["init", map.to_str().unwrap(), "--title", "Other"],
     );
     assert_eq!(second.status.code(), Some(1));
-    assert!(stderr(&second).starts_with("error: "));
+    assert_eq!(
+        stderr(&second),
+        format!(
+            "error: {} already exists; choose another project file or remove it\n",
+            project.display()
+        )
+    );
     assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
 }
 

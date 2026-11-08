@@ -79,9 +79,11 @@ fn parse_error_names_file() {
 }
 
 #[test]
-fn missing_file_is_io_error() {
+fn missing_file_is_read_error() {
     let err = ProjectFile::load(&fixture("nope.toml")).unwrap_err();
-    assert!(matches!(err, ProjectError::Io { .. }));
+    assert!(matches!(err, ProjectError::Read { .. }), "{err:?}");
+    assert!(err.to_string().starts_with("cannot read "), "{err}");
+    assert!(err.to_string().contains("nope.toml"), "{err}");
 }
 
 #[test]
@@ -220,10 +222,17 @@ fn create_refuses_existing_file() {
     let mut created = ProjectFile::create(&file, event.clone()).unwrap();
     let before = std::fs::read_to_string(&file).unwrap();
     let err = ProjectFile::create(&file, event.clone()).unwrap_err();
-    let ProjectError::Io { source, .. } = &err else {
+    let ProjectError::AlreadyExists { path } = &err else {
         panic!("unexpected error {err:?}");
     };
-    assert_eq!(source.kind(), std::io::ErrorKind::AlreadyExists);
+    assert_eq!(path, &file);
+    assert_eq!(
+        err.to_string(),
+        format!(
+            "{} already exists; choose another project file or remove it",
+            file.display()
+        )
+    );
     assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
     assert_eq!(ProjectFile::load(&file).unwrap().event, event);
     created.event.event.title = "Other".to_owned();
@@ -366,7 +375,8 @@ fn failed_save_keeps_original_and_removes_tmp() {
     std::fs::create_dir(&file).unwrap();
     std::fs::write(file.join("keep"), "x").unwrap();
     let err = project.save().unwrap_err();
-    assert!(matches!(err, ProjectError::Io { .. }), "{err:?}");
+    assert!(matches!(err, ProjectError::Write { .. }), "{err:?}");
+    assert!(err.to_string().starts_with("cannot write "), "{err}");
     assert!(!dir.path().join("event.toml.tmp").exists());
     assert_eq!(std::fs::read_to_string(file.join("keep")).unwrap(), "x");
 }

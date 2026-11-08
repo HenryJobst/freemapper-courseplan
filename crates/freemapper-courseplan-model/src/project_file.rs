@@ -60,14 +60,22 @@ fn list_errors(errors: &[ModelError]) -> String {
         .collect::<String>()
 }
 
-/// Why a project file could not be loaded.
+/// Why a project file could not be loaded, created or saved.
 #[derive(Debug, Error)]
 pub enum ProjectError {
     #[error("cannot read {}: {source}", path.display())]
-    Io {
+    Read {
         path: PathBuf,
         source: std::io::Error,
     },
+    #[error("cannot write {}: {source}", path.display())]
+    Write {
+        path: PathBuf,
+        source: std::io::Error,
+    },
+    /// `create` does not overwrite a file.
+    #[error("{} already exists; choose another project file or remove it", path.display())]
+    AlreadyExists { path: PathBuf },
     /// `message` already names the file.
     #[error("{message}")]
     Parse { path: PathBuf, message: String },
@@ -90,7 +98,7 @@ pub struct ProjectFile {
 impl ProjectFile {
     /// Reads, parses and validates the project file at `path`.
     pub fn load(path: &Path) -> Result<ProjectFile, ProjectError> {
-        let text = std::fs::read_to_string(path).map_err(|source| ProjectError::Io {
+        let text = std::fs::read_to_string(path).map_err(|source| ProjectError::Read {
             path: path.to_owned(),
             source,
         })?;
@@ -133,10 +141,9 @@ impl ProjectFile {
         check(path, &event)?;
         let document = fresh_document(path, &event)?;
         if path.exists() {
-            return Err(io_error(
-                path,
-                std::io::Error::from(std::io::ErrorKind::AlreadyExists),
-            ));
+            return Err(ProjectError::AlreadyExists {
+                path: path.to_owned(),
+            });
         }
         write_atomic(path, &document.to_string())?;
         Ok(ProjectFile {
@@ -167,13 +174,6 @@ impl ProjectFile {
     pub fn map_path(&self) -> PathBuf {
         let folder = self.path.parent().unwrap_or_else(|| Path::new(""));
         folder.join(&self.event.sources.map)
-    }
-}
-
-fn io_error(path: &Path, source: std::io::Error) -> ProjectError {
-    ProjectError::Io {
-        path: path.to_owned(),
-        source,
     }
 }
 
@@ -337,7 +337,10 @@ fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
     let result = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
     if let Err(source) = result {
         let _ = std::fs::remove_file(&tmp);
-        return Err(io_error(path, source));
+        return Err(ProjectError::Write {
+            path: path.to_owned(),
+            source,
+        });
     }
     Ok(())
 }
