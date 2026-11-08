@@ -65,6 +65,16 @@ error-course-not-supported = Bahn { $course } ist eine { $kind }. Bisher werden 
 error-course-unknown-course = Bahn { $course } gibt es nicht
 error-course-unknown-reference = Bahn { $course } nennt { $id }, das die Veranstaltung nicht definiert
 
+## Regelprofile (RulesError)
+
+error-rules-unknown-profile = Regelprofil { $id } gibt es nicht; verfügbar: { $list }
+error-rules-not-a-base = Regelprofil { $id } ist ein Aufsatz, kein Basisprofil
+error-rules-not-an-overlay = Regelprofil { $id } ist ein Basisprofil, kein Aufsatz
+error-rules-overlay-for-another-base = Aufsatz { $id } ergänzt { $other }, nicht { $name }
+error-rules-malformed = Regelprofil { $id } ist fehlerhaft: { $message }
+error-rules-unknown-key = Prüfregel { $name } in Regelprofil { $id } hat den unbekannten Schlüssel { $key }
+error-rules-unknown-rule = Aufsatz { $id } schaltet Prüfregel { $name } ab, die das Basisprofil nicht hat
+
 ## Bearbeiten (EditError)
 
 error-edit-invalid = Mit der Änderung wäre die Veranstaltung widersprüchlich: { $errors }

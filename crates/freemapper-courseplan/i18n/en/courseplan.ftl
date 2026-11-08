@@ -65,6 +65,16 @@ error-course-not-supported = course { $course } is a { $kind } course; only indi
 error-course-unknown-course = course { $course } does not exist
 error-course-unknown-reference = course { $course } refers to { $id }, which the event does not define
 
+## Rule profiles (RulesError)
+
+error-rules-unknown-profile = unknown rule profile { $id }; available: { $list }
+error-rules-not-a-base = rule profile { $id } is an overlay, not a base profile
+error-rules-not-an-overlay = rule profile { $id } is a base profile, not an overlay
+error-rules-overlay-for-another-base = overlay { $id } extends { $other }, not { $name }
+error-rules-malformed = rule profile { $id } is malformed: { $message }
+error-rules-unknown-key = rule { $name } in profile { $id } has the unknown key { $key }
+error-rules-unknown-rule = overlay { $id } switches off rule { $name }, which the base profile does not have
+
 ## Editing (EditError)
 
 error-edit-invalid = the change would make the event inconsistent: { $errors }

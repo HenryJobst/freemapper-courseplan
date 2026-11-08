@@ -1,0 +1,418 @@
+# Rule profile: German competition rules for orienteering (WKB), 37th amendment, 1 March 2026.
+# Format: ADR 0025 and rules/README.md. Document keys follow
+# docs/research/2026-11-08-bahnlegung-kriterien.md, section 1.
+#
+# Value names carry their unit: metres, mm, degrees, percent, factor. Values without a unit are
+# texts, lists of texts (symbol codes) or one of these documented tables (rules::TABLE_VALUES):
+#
+#   code_range     range       = [min, max]                 lowest and highest code, both included
+#   code_pairs     pairs       = [[a, b], ...]              codes that must not both be used
+#   length_table   courses     = [{ course, printed, categories, he_length_percent = [min, max] }, ...]
+#                                one row per course of WKB Anlage 5; "printed" is the row's category
+#                                cell as the PDF prints it, "categories" the same as rule categories
+#   difficulty_mix levels      = { category = level, ... }  technical difficulty 1 to 5
+#                  easy_levels = [level, ...]               never on one course with hard_levels
+#                  hard_levels = [level, ...]
+#
+# Rule categories are written without spaces, a trailing "-" of an age class is dropped, and a
+# "D/H" cell becomes one D and one H category: "D -20" -> "D-20", "H 35-" -> "H35",
+# "D 19- A" -> "D19A", "H 21- A" -> "H21A", "D/H -12b" -> "D-12b", "H-12b". "Dir.." direct
+# courses keep their names.
+
+format = 1
+
+[profile]
+id = "wkb-2026"
+kind = "base"
+name = { de = "Wettkampfbestimmungen OL 2026", en = "German competition rules 2026" }
+valid_from = 2026-03-01
+
+[sources.WKB26]
+title = "Wettkampfbestimmungen Orientierungslauf, 37. Änderung (AGO), Stand 01.03.2026"
+url = "https://o-sport.de/assets/dokumente/allgemein/wettkampfwesen/wkb2026.pdf"
+
+[sources.IOF-R]
+title = "Competition Rules for IOF Foot Orienteering Events, valid from 1 January 2026"
+url = "https://orienteering.sport/orienteering/competition-rules/"
+
+[sources.IOF-SG]
+title = "IOF Guidelines for Course Planning, Sprint (2020, updated 2022)"
+url = "https://metodika.ceskyorientak.cz/upload/2025/04/Course-planning-guidelines-Sprint-2020-upd-2022.pdf"
+
+[sources.BOF]
+title = "British Orienteering Rules, Appendix B Course Planning, v3.13 Rev 1, 1 January 2026"
+url = "https://www.britishorienteering.org.uk/doc/rules/2026/2026-rules-clean"
+
+[sources.BL02]
+title = "Grundlagen der Bahnlegung (U. Dresel, 2002)"
+url = "https://o-sport.de/assets/dokumente/allgemein/lehrwesen/vortrag-grundlagen-bahnlegung2002.pdf"
+
+[sources.BL12]
+title = "Grundlagen der Bahnlegung (A. Spengler, LTV Sachsen-Anhalt, 2012)"
+url = "https://o-sport.de/assets/dokumente/allgemein/lehrwesen/grundlagen-bahnlegung2012.pdf"
+
+[sources.TD11]
+title = "Postenstandorte und Postenbeschreibungen (S. Lösch, TD-Tagung 2011)"
+url = "https://o-sport.de/assets/dokumente/allgemein/protokolle/td-tagung2011postenstandorte.pdf"
+
+[sources.SOFT]
+title = "Tävlingsregler för orienteringslöpning (Svensk Orientering), 2023-07-01"
+url = "https://www.orientering.se/media/urfbqdk0/t%C3%A4vlingsregler-och-anvisningar-f%C3%B6r-orienteringsl%C3%B6pning-20230701-%C3%B6verg%C3%A5ngsperiod-fram-till-2023-12-31.pdf"
+
+[sources.claude]
+title = "Values chosen in plan M2b (docs/superpowers/plans/2026-11-09-m2b-check-rules.md) where no source gives a number"
+
+# ---------------------------------------------------------------------------------------------
+# Distances between controls (plan M2b, Task 4)
+
+[[rules]]
+id = "wkb2026.distance.min"
+key = "min_distance"
+severity = "error"
+map_kinds = ["forest"]
+values = { metres = 30.0 }
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "Die Startflagge zählt als Posten (Lesart wie IOF-R 19.4).", en = "The start flag counts as a control (read as in IOF-R 19.4)." }
+
+[[rules]]
+id = "wkb2026.distance.min_sprint"
+key = "min_distance"
+severity = "error"
+map_kinds = ["sprint", "schoolyard"]
+values = { metres = 15.0 }
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "Die WKB halbieren die Abstände bei 1:3000 und 1:4000; das Profil wendet das auf Sprint- und Schulhofkarten an. Die Startflagge zählt als Posten.", en = "The WKB halve the distances at 1:3000 and 1:4000; this profile applies that to sprint and schoolyard maps. The start flag counts as a control." }
+
+[[rules]]
+id = "wkb2026.distance.similar"
+key = "similar_features"
+severity = "warning"
+map_kinds = ["forest"]
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISOM-2017-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; Zaun und verfallener Zaun; Wege und Schneisen. Gleiche Symbole sind immer ähnlich. Sporn und Rinne haben kein eigenes Symbol und fehlen.", en = "Similar features after BOF B6.1.3 to B6.1.4, as ISOM 2017-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; fence and ruined fence; paths and rides. Identical symbols are always similar. Spur and re-entrant have no symbol of their own and are left out." }
+
+[rules.values]
+metres = 60.0
+# The control feature is the map feature nearest to the control centre within this distance
+# (plan M2b, Task 4).
+feature_search_mm = 1.0
+# ISOM 2017-2: 304 crossable watercourse, 305 small crossable watercourse, 306 minor/seasonal
+# water channel, 309 narrow marsh | 111 small depression, 112 pit | 109 small knoll, 110 small
+# elongated knoll | 516 fence, 517 ruined fence | 505 footpath, 506 small footpath, 507 less
+# distinct small footpath, 508 narrow ride or linear trace.
+groups = [
+  ["304", "305", "306", "309"],
+  ["111", "112"],
+  ["109", "110"],
+  ["516", "517"],
+  ["505", "506", "507", "508"],
+]
+
+[[rules]]
+id = "wkb2026.distance.similar_sprint"
+key = "similar_features"
+severity = "warning"
+map_kinds = ["sprint", "schoolyard"]
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISSprOM-2019-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; passierbarer und unpassierbarer Zaun (ISSprOM kennt keinen verfallenen Zaun); Wege und Schneisen. Gleiche Symbole sind immer ähnlich.", en = "Similar features after BOF B6.1.3 to B6.1.4, as ISSprOM 2019-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; passable and uncrossable fence (ISSprOM has no ruined fence); paths and rides. Identical symbols are always similar." }
+
+[rules.values]
+metres = 30.0
+feature_search_mm = 1.0
+# ISSprOM 2019-2 (checked against tests/fixtures/maps/luebeck.omap): 305 small crossable
+# watercourse, 306 minor/seasonal watercourse, 309 narrow marsh | 111 small depression, 112 pit
+# or hole | 109 small knoll, 110 small elongated knoll | 516 passable fence or railing, 518
+# uncrossable fence or railing | 505 unpaved footpath or track, 506 small unpaved footpath or
+# track, 507 less distinct small path, 508 narrow ride.
+groups = [
+  ["305", "306", "309"],
+  ["111", "112"],
+  ["109", "110"],
+  ["516", "518"],
+  ["505", "506", "507", "508"],
+]
+
+[[rules]]
+id = "wkb2026.map.edge"
+key = "map_edge"
+severity = "warning"
+values = { metres = 10.0 }
+source = { doc = "claude", section = "M2b plan, Task 4" }
+note = { de = "BL02 (S. 10) nennt Posten zu nah am Kartenrand als Fehler, aber ohne Zahl; die 10 m sind ein Vorschlag.", en = "BL02 (p. 10) lists controls too close to the map edge as a mistake but gives no number; the 10 m are a proposal." }
+
+[[rules]]
+id = "wkb2026.leg.through_control"
+key = "leg_through_control"
+severity = "warning"
+source = { doc = "BL02", section = "Mögliche Fehler bei der Bahnlegung (p. 10)" }
+note = { de = "Abstand ist der Radius des Postenkreises im Bahnaufdruck.", en = "The distance is the radius of the control circle in the course overprint." }
+
+[[rules]]
+id = "wkb2026.leg.through_forbidden"
+key = "leg_through_forbidden"
+severity = "error"
+map_kinds = ["forest"]
+source = { doc = "WKB26", section = "B 7.2.6" }
+note = { de = "Unpassierbare Symbole nach IOF-R 17.2 (Wald). Eine Pflichtstrecke darf hindurchführen.", en = "Uncrossable symbols after IOF-R 17.2 (forest). A marked route may lead through." }
+
+[rules.values]
+# IOF-R 17.2, forest: ISOM 520 area that shall not be entered, 708 out-of-bounds boundary,
+# 709 out-of-bounds area, 711 out-of-bounds route.
+impassable = ["520", "708", "709", "711"]
+# IOF-R 17.2: competitors may cross an out-of-bounds route (711) directly.
+crossing_allowed = ["711"]
+
+[[rules]]
+id = "wkb2026.leg.through_forbidden_sprint"
+key = "leg_through_forbidden"
+severity = "error"
+map_kinds = ["sprint", "schoolyard"]
+source = { doc = "WKB26", section = "B 7.2.6" }
+note = { de = "Unpassierbare Symbole nach IOF-R 17.2 (Sprint). Eine Pflichtstrecke darf hindurchführen.", en = "Uncrossable symbols after IOF-R 17.2 (sprint). A marked route may lead through." }
+
+[rules.values]
+# IOF-R 17.2, sprint: ISSprOM 201 uncrossable cliff, 301 uncrossable body of water, 307
+# uncrossable marsh, 411 uncrossable vegetation, 512.1 bridge or tunnel entrance (pass under
+# only), 515 uncrossable wall, 518 uncrossable fence or railing, 520 area that shall not be
+# entered, 521 building, 529 prominent uncrossable line feature, 708 out-of-bounds boundary,
+# 709 out-of-bounds area, 714 temporary construction or closed area.
+impassable = ["201", "301", "307", "411", "512.1", "515", "518", "520", "521", "529", "708", "709", "714"]
+
+# ---------------------------------------------------------------------------------------------
+# Leg shapes (plan M2b, Task 5)
+
+[[rules]]
+id = "wkb2026.leg.acute_angle"
+key = "acute_angle"
+severity = "warning"
+values = { degrees = 45.0 }
+source = { doc = "claude", section = "M2b plan, Task 5" }
+note = { de = "Spitze Winkel lassen Läufer auf dem Hinweg den Abgehenden begegnen (BL12 Abschnitt 5; SOA: Hundeknochen). Die 45° sind ein Vorschlag.", en = "Acute angles make runners meet those leaving the control (BL12 section 5; SOA: dog-legs). The 45° are a proposal." }
+
+[[rules]]
+id = "wkb2026.leg.acute_angle_hint"
+key = "acute_angle"
+severity = "hint"
+values = { degrees = 90.0 }
+source = { doc = "BL12", section = "5. Bahnkonzeption" }
+
+[[rules]]
+id = "wkb2026.leg.opposing"
+key = "opposing_legs"
+severity = "warning"
+values = { metres = 10.0, min_length_metres = 30.0, min_angle_degrees = 135.0 }
+source = { doc = "claude", section = "M2b plan, Task 5" }
+note = { de = "WKB B 7.2.6: längere gegenläufige Teilstrecken vermeiden. Die WKB nennen keine Zahlen; 10 m Abstand, 30 m Länge und 135° sind Vorschläge.", en = "WKB B 7.2.6: avoid longer stretches run in opposite directions. The WKB give no numbers; 10 m apart, 30 m long and 135° are proposals." }
+
+# ---------------------------------------------------------------------------------------------
+# Control codes (plan M2b, Task 6)
+
+[[rules]]
+id = "wkb2026.code.range"
+key = "code_range"
+severity = "error"
+# Codes greater than 30 and less than 600. A code that is no number gets non_numeric_severity.
+values = { range = [31, 599], non_numeric_severity = "warning" }
+source = { doc = "WKB26", section = "B 7.2.10" }
+
+[[rules]]
+id = "wkb2026.code.pairs"
+key = "code_pairs"
+severity = "error"
+values = { pairs = [[66, 99], [68, 89], [86, 98]] }
+source = { doc = "WKB26", section = "B 7.2.10" }
+
+[[rules]]
+id = "wkb2026.code.confusable_next"
+key = "code_confusable_next"
+severity = "warning"
+source = { doc = "IOF-SG", section = "Finalising the course design" }
+note = { de = "Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden, verwechseln Läufer leicht (auch SOA, BOF 21.3).", en = "Runners easily mix up codes that look alike upside down or differ only by 6 and 9 (also SOA, BOF 21.3)." }
+
+[[rules]]
+id = "wkb2026.code.same_objects_in_circle"
+key = "same_objects_in_circle"
+severity = "warning"
+source = { doc = "TD11", section = "Beispiele aus Bundesveranstaltungen 2010 (pp. 1-3)" }
+note = { de = "Mehrere gleiche Objekte im Postenkreis brauchen eine Angabe in Spalte C der Postenbeschreibung.", en = "Several identical features in the control circle need an entry in column C of the control descriptions." }
+
+# ---------------------------------------------------------------------------------------------
+# Start (plan M2b, Task 7)
+
+[[rules]]
+id = "wkb2026.start.capacity"
+key = "start_capacity"
+severity = "warning"
+source = { doc = "SOFT", section = "7.4.4" }
+note = { de = "Bahnen, die in derselben Minute starten, brauchen verschiedene erste Posten (Kriterium des Nutzers, 2026-11-08; SOFT 7.4.4).", en = "Courses starting in the same minute need different first controls (user's criterion, 2026-11-08; SOFT 7.4.4)." }
+
+[[rules]]
+id = "wkb2026.start.first_leg_angle"
+key = "first_leg_angle"
+severity = "hint"
+values = { degrees = 30.0 }
+source = { doc = "claude", section = "M2b plan, Task 7" }
+note = { de = "SOFT 7.4.4 verlangt verschiedene erste Posten; die Regel prüft zusätzlich die Richtung. Die 30° sind ein Vorschlag.", en = "SOFT 7.4.4 asks for different first controls; this rule also looks at the direction. The 30° are a proposal." }
+
+# ---------------------------------------------------------------------------------------------
+# Course length in percent of the HE course, WKB Anlage 5 Nr. 3 to 5 (plan M2b, Task 8).
+# Copied from the PDF pages 50 and 51 (pdftotext text checked against the rendered pages).
+
+[[rules]]
+id = "wkb2026.length.long"
+key = "length_table"
+severity = "warning"
+disciplines = ["long"]
+source = { doc = "WKB26", section = "Anlage 5 Nr. 3, PDF p. 50" }
+note = { de = "Zeile 10 der Tabelle schreibt \"H 55\" ohne Bindestrich; gelesen als H55.", en = "Row 10 of the table prints \"H 55\" without a dash; read as H55." }
+
+[rules.values]
+reference_category = "HE"
+courses = [
+  { course = 1, printed = "HE", categories = ["HE"], he_length_percent = [100, 100] },
+  { course = 2, printed = "H -20", categories = ["H-20"], he_length_percent = [67, 76] },
+  { course = 3, printed = "DE, H 35-, H 21- A", categories = ["DE", "H35", "H21A"], he_length_percent = [63, 67] },
+  { course = 4, printed = "H -18, H 40-", categories = ["H-18", "H40"], he_length_percent = [50, 55] },
+  { course = 5, printed = "D -20, H 45-", categories = ["D-20", "H45"], he_length_percent = [44, 51] },
+  { course = 6, printed = "H 50-", categories = ["H50"], he_length_percent = [38, 44] },
+  { course = 7, printed = "DirLS", categories = ["DirLS"], he_length_percent = [38, 44] },
+  { course = 8, printed = "H -16", categories = ["H-16"], he_length_percent = [35, 42] },
+  { course = 9, printed = "D -18, D 35-", categories = ["D-18", "D35"], he_length_percent = [34, 41] },
+  { course = 10, printed = "D 40-, H 60-, H 55, D 19- A", categories = ["D40", "H60", "H55", "D19A"], he_length_percent = [31, 35] },
+  { course = 11, printed = "DirMS", categories = ["DirMS"], he_length_percent = [31, 35] },
+  { course = 12, printed = "D -16, D 45-", categories = ["D-16", "D45"], he_length_percent = [26, 28] },
+  { course = 13, printed = "H 65-", categories = ["H65"], he_length_percent = [26, 28] },
+  { course = 14, printed = "DirKS", categories = ["DirKS"], he_length_percent = [26, 28] },
+  { course = 15, printed = "D 55-, D 50-, H 70-", categories = ["D55", "D50", "H70"], he_length_percent = [22, 25] },
+  { course = 16, printed = "D 65-, D 60-, H 75-", categories = ["D65", "D60", "H75"], he_length_percent = [18, 21] },
+  { course = 17, printed = "D 70-", categories = ["D70"], he_length_percent = [13, 14] },
+  { course = 18, printed = "DirLL", categories = ["DirLL"], he_length_percent = [44, 51] },
+  { course = 19, printed = "D -14, H -14", categories = ["D-14", "H-14"], he_length_percent = [21, 25] },
+  { course = 20, printed = "D -12, H -12", categories = ["D-12", "H-12"], he_length_percent = [13, 16] },
+  { course = 21, printed = "DirML", categories = ["DirML"], he_length_percent = [13, 16] },
+  { course = 22, printed = "D -10, H -10, D/H -12b", categories = ["D-10", "H-10", "D-12b", "H-12b"], he_length_percent = [8, 11] },
+  { course = 23, printed = "DirKL", categories = ["DirKL"], he_length_percent = [8, 11] },
+]
+
+[[rules]]
+id = "wkb2026.length.middle"
+key = "length_table"
+severity = "warning"
+disciplines = ["middle"]
+source = { doc = "WKB26", section = "Anlage 5 Nr. 4, PDF p. 51" }
+
+[rules.values]
+reference_category = "HE"
+courses = [
+  { course = 1, printed = "HE", categories = ["HE"], he_length_percent = [100, 100] },
+  { course = 2, printed = "DE, H -20, H 35-, H 21- A", categories = ["DE", "H-20", "H35", "H21A"], he_length_percent = [83, 92] },
+  { course = 3, printed = "D -20, H -18, H 40-", categories = ["D-20", "H-18", "H40"], he_length_percent = [62, 70] },
+  { course = 4, printed = "H 45-,", categories = ["H45"], he_length_percent = [59, 68] },
+  { course = 5, printed = "D 19- A, H 50-", categories = ["D19A", "H50"], he_length_percent = [55, 65] },
+  { course = 6, printed = "DirLS", categories = ["DirLS"], he_length_percent = [55, 65] },
+  { course = 7, printed = "D -18, D 35-, H -16", categories = ["D-18", "D35", "H-16"], he_length_percent = [50, 56] },
+  { course = 8, printed = "D -16, D 40-, H 55-, H 60-", categories = ["D-16", "D40", "H55", "H60"], he_length_percent = [40, 47] },
+  { course = 9, printed = "DirMS", categories = ["DirMS"], he_length_percent = [40, 47] },
+  { course = 10, printed = "D 45-, D 50-, H 65-, H 70-", categories = ["D45", "D50", "H65", "H70"], he_length_percent = [34, 38] },
+  { course = 11, printed = "DirKS", categories = ["DirKS"], he_length_percent = [34, 38] },
+  { course = 12, printed = "D -14, H -14", categories = ["D-14", "H-14"], he_length_percent = [36, 42] },
+  { course = 13, printed = "D 55-, H 75-", categories = ["D55", "H75"], he_length_percent = [29, 36] },
+  { course = 14, printed = "D 60-, D 65-", categories = ["D60", "D65"], he_length_percent = [27, 31] },
+  { course = 15, printed = "D 70-", categories = ["D70"], he_length_percent = [22, 24] },
+  { course = 16, printed = "DirLL", categories = ["DirLL"], he_length_percent = [60, 65] },
+  { course = 17, printed = "D -12, H -12", categories = ["D-12", "H-12"], he_length_percent = [36, 40] },
+  { course = 18, printed = "DirML", categories = ["DirML"], he_length_percent = [36, 40] },
+  { course = 19, printed = "D -10, H -10, D/H -12b", categories = ["D-10", "H-10", "D-12b", "H-12b"], he_length_percent = [23, 31] },
+  { course = 20, printed = "DirKL", categories = ["DirKL"], he_length_percent = [23, 31] },
+]
+
+[[rules]]
+id = "wkb2026.length.ultralong"
+key = "length_table"
+severity = "warning"
+disciplines = ["ultralong"]
+source = { doc = "WKB26", section = "Anlage 5 Nr. 5, PDF p. 51" }
+
+[rules.values]
+reference_category = "HE"
+courses = [
+  { course = 1, printed = "HE", categories = ["HE"], he_length_percent = [100, 100] },
+  { course = 2, printed = "H -20", categories = ["H-20"], he_length_percent = [73, 81] },
+  { course = 3, printed = "DE, H 35-", categories = ["DE", "H35"], he_length_percent = [63, 68] },
+  { course = 4, printed = "H -18, H 40-", categories = ["H-18", "H40"], he_length_percent = [56, 59] },
+  { course = 5, printed = "D -20, H 45-, H 50-, H 21- A", categories = ["D-20", "H45", "H50", "H21A"], he_length_percent = [50, 52] },
+  { course = 6, printed = "D 35-, H -16", categories = ["D35", "H-16"], he_length_percent = [38, 46] },
+  { course = 7, printed = "D -18, D 40-, H 55-", categories = ["D-18", "D40", "H55"], he_length_percent = [36, 40] },
+  { course = 8, printed = "D -16, D 45-, D 19- A, H 60-, H 65-", categories = ["D-16", "D45", "D19A", "H60", "H65"], he_length_percent = [29, 33] },
+  { course = 9, printed = "D 50-, D 55-, H 70-", categories = ["D50", "D55", "H70"], he_length_percent = [22, 26] },
+  { course = 10, printed = "DirLS", categories = ["DirLS"], he_length_percent = [22, 26] },
+  { course = 11, printed = "D 60-, D 65-, H 75-", categories = ["D60", "D65", "H75"], he_length_percent = [19, 21] },
+  { course = 12, printed = "DirMS", categories = ["DirMS"], he_length_percent = [19, 21] },
+  { course = 13, printed = "D 70-", categories = ["D70"], he_length_percent = [12, 14] },
+  { course = 14, printed = "DirKS", categories = ["DirKS"], he_length_percent = [12, 14] },
+  { course = 15, printed = "D -14, H -14", categories = ["D-14", "H-14"], he_length_percent = [14, 16] },
+  { course = 16, printed = "DirLL", categories = ["DirLL"], he_length_percent = [14, 16] },
+  { course = 17, printed = "D -12, H -12,", categories = ["D-12", "H-12"], he_length_percent = [8, 10] },
+  { course = 18, printed = "DirML", categories = ["DirML"], he_length_percent = [8, 10] },
+  { course = 19, printed = "D -10, H -10, D/H -12b", categories = ["D-10", "H-10", "D-12b", "H-12b"], he_length_percent = [5, 7] },
+  { course = 20, printed = "DirKL", categories = ["DirKL"], he_length_percent = [5, 7] },
+]
+
+# ---------------------------------------------------------------------------------------------
+# Technical difficulty per category, WKB Anlage 5 Nr. 1 and Nr. 2 I (a), PDF p. 49
+# (individual races except sprint). Read from the rendered page: the pdftotext layout puts the
+# merged cells on the wrong rows.
+
+[[rules]]
+id = "wkb2026.difficulty.mix"
+key = "difficulty_mix"
+severity = "error"
+disciplines = ["middle", "long", "ultralong"]
+source = { doc = "WKB26", section = "Anlage 5 Nr. 1 and Nr. 2 I (a), PDF p. 49" }
+note = { de = "Kategorien der Schwierigkeit 1 und 2 nie auf einer Bahn der Schwierigkeit 3, 4 oder 5. Die Seniorenkategorien ab 50 tragen in der Tabelle 4* (Kartenmaßstab und Belaufbarkeit beachten); ältere Seniorenkategorien in Fünfjahresschritten gelten wie D/H 75 (Fußnote **).", en = "Categories of difficulty 1 and 2 never on a course of difficulty 3, 4 or 5. The senior categories from 50 carry 4* in the table (mind the map scale and how runnable the terrain is); older senior categories in five-year steps count like D/H 75 (footnote **)." }
+
+[rules.values]
+easy_levels = [1, 2]
+hard_levels = [3, 4, 5]
+
+[rules.values.levels]
+"D-10" = 1
+"H-10" = 1
+"D-12" = 2
+"H-12" = 2
+"D-14" = 3
+"H-14" = 3
+"D-16" = 4
+"H-16" = 4
+"D-18" = 4
+"H-18" = 4
+"D-20" = 4
+"H-20" = 4
+"DE" = 5
+"HE" = 5
+"D19A" = 4
+"H21A" = 4
+"D35" = 4
+"H35" = 4
+"D40" = 4
+"H40" = 4
+"D45" = 4
+"H45" = 4
+"D50" = 4
+"H50" = 4
+"D55" = 4
+"H55" = 4
+"D60" = 4
+"H60" = 4
+"D65" = 4
+"H65" = 4
+"D70" = 4
+"H70" = 4
+"D75" = 4
+"H75" = 4
+"DirKL" = 1
+"DirML" = 2
+"DirLL" = 3
+"DirKS" = 4
+"DirMS" = 4
+"DirLS" = 4

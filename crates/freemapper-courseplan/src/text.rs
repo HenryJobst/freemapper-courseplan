@@ -44,6 +44,7 @@ use crate::course::CourseError;
 use crate::edit::EditError;
 use crate::init::InitError;
 use crate::omap::OmapError;
+use crate::rules::RulesError;
 
 /// A language of the program texts, identified by its language part (`en`, `de`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -483,6 +484,46 @@ impl Localize for EditError {
                 lang,
                 "error-edit-start-or-finish-has-no-courses",
                 &[("id", v(id))],
+            ),
+        }
+    }
+}
+
+impl Localize for RulesError {
+    fn localize(&self, lang: &Lang) -> String {
+        match self {
+            RulesError::UnknownProfile { id, available } => text(
+                lang,
+                "error-rules-unknown-profile",
+                &[("id", v(id)), ("list", v(available))],
+            ),
+            RulesError::NotABase(id) => text(lang, "error-rules-not-a-base", &[("id", v(id))]),
+            RulesError::NotAnOverlay(id) => {
+                text(lang, "error-rules-not-an-overlay", &[("id", v(id))])
+            }
+            RulesError::OverlayForAnotherBase {
+                overlay,
+                extends,
+                base,
+            } => text(
+                lang,
+                "error-rules-overlay-for-another-base",
+                &[("id", v(overlay)), ("other", v(extends)), ("name", v(base))],
+            ),
+            RulesError::Malformed { profile, message } => text(
+                lang,
+                "error-rules-malformed",
+                &[("id", v(profile)), ("message", v(message))],
+            ),
+            RulesError::UnknownKey { profile, rule, key } => text(
+                lang,
+                "error-rules-unknown-key",
+                &[("id", v(profile)), ("name", v(rule)), ("key", v(key))],
+            ),
+            RulesError::UnknownRule { overlay, rule } => text(
+                lang,
+                "error-rules-unknown-rule",
+                &[("id", v(overlay)), ("name", v(rule))],
             ),
         }
     }
@@ -983,6 +1024,34 @@ mod tests {
         }
         for e in &edits {
             check(e);
+        }
+        for e in [
+            RulesError::UnknownProfile {
+                id: s("wkb-2025"),
+                available: s("wkb-2026, nor-bb-2021"),
+            },
+            RulesError::NotABase(s("nor-bb-2021")),
+            RulesError::NotAnOverlay(s("wkb-2026")),
+            RulesError::OverlayForAnotherBase {
+                overlay: s("nor-bb-2021"),
+                extends: s("wkb-2026"),
+                base: s("iof-2026"),
+            },
+            RulesError::Malformed {
+                profile: s("wkb-2026"),
+                message: s("format = 1 is missing"),
+            },
+            RulesError::UnknownKey {
+                profile: s("wkb-2026"),
+                rule: s("wkb2026.x.y"),
+                key: s("no_such_check"),
+            },
+            RulesError::UnknownRule {
+                overlay: s("nor-bb-2021"),
+                rule: s("wkb2026.x.y"),
+            },
+        ] {
+            check(&e);
         }
     }
 
