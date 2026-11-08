@@ -1041,3 +1041,67 @@ fn changed_legs_lose_their_bends_and_say_so() {
         format!("course A: 2 controls, {km} km, climb \u{2013} m")
     );
 }
+
+fn special_courses_of(project: &Path, id: &str) -> Vec<String> {
+    let file = freemapper_courseplan_model::ProjectFile::load(project).unwrap();
+    let special = file.event.specials.iter().find(|s| s.id() == id).unwrap();
+    special.courses().to_vec()
+}
+
+#[test]
+fn special_courses_assign_and_widen() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    for name in ["A", "B"] {
+        ok(
+            d,
+            &["course", "add", p, name, "--start", "S1", "--finish", "F1"],
+        );
+    }
+    ok(
+        d,
+        &[
+            "special", "add", p, "--kind", "water", "--id", "W1", "--at", "20,5",
+        ],
+    );
+    assert_eq!(
+        ok(d, &["special", "courses", p, "W1", "A, B"]),
+        "special object W1 now belongs to A, B"
+    );
+    assert_eq!(special_courses_of(&project, "W1"), ["A", "B"]);
+    ok(d, &["special", "courses", p, "W1", "A"]);
+    let before = std::fs::read(&project).unwrap();
+    let out = run_lang(d, "de", &["course", "remove", p, "A"]);
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(
+        stderr(&out).trim_end(),
+        "Fehler: Bahn A ist die einzige Bahn von W1; ohne sie gälte W1 für alle Bahnen. \
+         Ordne W1 zuerst einer anderen Bahn zu oder lösche es"
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+    for args in [
+        vec!["special", "courses", p, "W1"],
+        vec!["special", "courses", p, "W1", "A", "--all"],
+        vec!["special", "courses", p, "W1", " , "],
+    ] {
+        let out = run(d, &args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}: {}", stderr(&out));
+    }
+    for args in [
+        vec!["special", "courses", p, "S1", "A"],
+        vec!["special", "courses", p, "W1", "A,A"],
+        vec!["special", "courses", p, "W1", "Z"],
+    ] {
+        let out = run(d, &args);
+        assert_eq!(out.status.code(), Some(1), "{args:?}: {}", stderr(&out));
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+    assert_eq!(
+        ok(d, &["special", "courses", p, "W1", "--all"]),
+        "special object W1 now applies to all courses"
+    );
+    assert!(special_courses_of(&project, "W1").is_empty());
+    ok(d, &["course", "remove", p, "A"]);
+}

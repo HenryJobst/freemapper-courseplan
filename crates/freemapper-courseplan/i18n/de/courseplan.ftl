@@ -74,6 +74,11 @@ error-edit-outside-map = Der Punkt ({ $x }, { $y }) liegt außerhalb der Karte, 
 error-edit-in-use = { $id } wird noch von { $courses } verwendet. Ändere zuerst diese Bahnen
 error-edit-not-supported = Bahn { $course } ist keine Einzelbahn. Bisher lassen sich nur Einzelbahnen bearbeiten
 error-edit-bad-index = Bahn { $course } hat keinen Posten an Index { $index }
+error-edit-special-would-cover-all-courses = { $count ->
+    [one] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälte { $specials } für alle Bahnen. Ordne { $specials } zuerst einer anderen Bahn zu oder lösche es
+   *[other] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälten diese Sonderobjekte für alle Bahnen. Ordne sie zuerst einer anderen Bahn zu oder lösche sie
+}
+error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start oder Ziel; jede Bahn nennt ihren Start und ihr Ziel selbst
 
 ## OOM-Karten lesen (OmapError)
 
@@ -136,6 +141,9 @@ cli-edit-special-added-points = { $count ->
    *[other] { $kind } { $id } mit { $count } Punkten angelegt
 }
 cli-edit-special-removed = Sonderobjekt { $id } entfernt
+cli-edit-special-courses = Sonderobjekt { $id } gehört jetzt zu { $courses }
+cli-edit-special-all-courses = Sonderobjekt { $id } gilt jetzt für alle Bahnen
+cli-edit-no-course-names = Gib mindestens einen Bahnnamen an, oder --all für alle Bahnen
 cli-edit-class-added = Kategorie { $name } angelegt
 cli-edit-class-removed = Kategorie { $name } entfernt
 cli-edit-bad-point = { $value } ist kein Punkt. Schreibe X,Y in Kartenmillimetern, mit Punkt als Dezimaltrenner, zum Beispiel 12.5,-30
@@ -157,7 +165,7 @@ word-special-first-aid = Erste-Hilfe-Stelle
 word-special-water = Verpflegungsstelle
 
 cli-help-control = Posten anlegen, verschieben, beschreiben, nummerieren und entfernen
-cli-help-special = Sonderobjekte anlegen und entfernen (Start, Ziel, Pflichtstrecken, Flächen, Erste-Hilfe- und Verpflegungsstellen)
+cli-help-special = Sonderobjekte anlegen, Bahnen zuordnen und entfernen (Start, Ziel, Pflichtstrecken, Flächen, Erste-Hilfe- und Verpflegungsstellen)
 cli-help-class = Kategorien anlegen und entfernen
 cli-help-control-add = Einen Posten anlegen
 cli-help-control-move = Einen Posten verschieben
@@ -166,6 +174,7 @@ cli-help-control-describe = Die Beschreibungssymbole eines Postens setzen
 cli-help-control-number = Den Platz der Postennummer setzen oder zurücksetzen
 cli-help-special-add = Ein Sonderobjekt anlegen
 cli-help-special-remove = Ein Sonderobjekt entfernen
+cli-help-special-courses = Festlegen, zu welchen Bahnen ein Sonderobjekt gehört
 cli-help-class-add = Eine Kategorie anlegen
 cli-help-class-remove = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen
 
@@ -190,6 +199,9 @@ cli-arg-special-add-at = Ort einer Einzelpunkt-Art (Start, Ziel, Erste-Hilfe-Ste
 cli-arg-special-add-point = Ein Punkt einer Linien- oder Flächenart: X,Y in Kartenmillimetern; die Option je Punkt wiederholen, in der Reihenfolge
 cli-arg-special-add-courses = Das Objekt auf diese Bahnen beschränken, durch Kommas getrennt [Standard: alle Bahnen]
 cli-arg-special-remove-id = ID des Sonderobjekts
+cli-arg-special-courses-id = ID des Sonderobjekts; kein Start und kein Ziel
+cli-arg-special-courses-courses = Die Bahnen, durch Kommas getrennt
+cli-arg-special-courses-all = Das Objekt für alle Bahnen gelten lassen
 cli-arg-class-add-name = Name der Kategorie
 cli-arg-class-add-rule-category = Regelkategorie der Kategorie
 cli-arg-class-add-starters = Erwartete Zahl der Starter
@@ -276,6 +288,7 @@ mcp-error-leg-target = Gib entweder from_start oder after an, nicht beides und n
 mcp-error-no-change = Nichts zu ändern. Gib mindestens eines von classes, climb_m, no_climb, print_scale und no_print_scale an
 mcp-error-number-args = Gib direction und gap_mm zusammen an, oder clear
 mcp-error-bad-gap = gap_mm { $value } liegt außerhalb des Bereichs. Gib mehr als 0 und höchstens { $max } Druckmillimeter an
+mcp-error-special-courses-args = Gib entweder courses mit mindestens einem Bahnnamen an oder all mit true
 
 mcp-tool-event-info = Überblick über die Veranstaltung: Titel, Karte und Kartenart, Kartenausdehnung, die Zahl der Posten, Sonderobjekte, Kategorien und Bahnen, und je Bahn die Posten, die Länge in km, den Anstieg und wie viele Postennummern gesetzt sind.
 mcp-tool-list-controls = Die Posten auflisten, mit Code, Art, Position in Kartenmillimetern, Beschreibungssymbolen und Nummernlage.
@@ -289,6 +302,7 @@ mcp-tool-describe-control = Die Beschreibungssymbole eines Postens setzen, Spalt
 mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zum Kreis in Druckmillimetern. clear stellt den Standardplatz wieder her.
 mcp-tool-add-special = Ein Sonderobjekt anlegen. Start, Ziel, Erste-Hilfe-Stelle und Verpflegungsstelle sind ein einzelner Punkt (at). Pflichtstrecke, verbotene Route, Sperrgebiet und Gefahrenbereich werden durch Punkte gezeichnet (points). Die id muss neu sein.
 mcp-tool-remove-special = Ein Sonderobjekt anhand seiner id entfernen. Ein Start oder Ziel, den eine Bahn nutzt, lässt sich nicht entfernen.
+mcp-tool-set-special-courses = Festlegen, zu welchen Bahnen ein Sonderobjekt gehört: eine Liste von Bahnnamen oder all mit true für alle Bahnen. Nicht für Start und Ziel. remove_course entfernt die einzige Bahn eines Sonderobjekts nicht, also hier zuerst erweitern oder umhängen.
 mcp-tool-add-class = Eine Kategorie anlegen.
 mcp-tool-remove-class = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen.
 mcp-tool-add-course = Eine Einzelbahn aus Start, Ziel und den Postencodes in Laufreihenfolge anlegen. Start und Ziel sind IDs von Sonderobjekten.
@@ -327,6 +341,9 @@ mcp-param-kind = Was das Objekt ist: start, finish, marked_route, out_of_bounds,
 mcp-param-id = ID des Objekts, eindeutig unter den Sonderobjekten
 mcp-param-points = Die Punkte von marked_route, forbidden_route, out_of_bounds oder dangerous_area in Reihenfolge; jeder ist ein Objekt mit x und y in Kartenmillimetern
 mcp-param-courses = Das Objekt auf diese Bahnen beschränken [Standard: alle Bahnen]; nicht für start und finish
+mcp-param-set-special-courses-courses = Die Bahnen, zu denen das Objekt gehört, mindestens ein Name; weglassen, wenn all true ist
+mcp-param-all = Das Objekt für alle Bahnen gelten lassen; dann courses weglassen [Standard: false]
+mcp-param-set-special-courses-id = ID des Sonderobjekts; kein Start und kein Ziel
 mcp-param-name = Name der Bahn
 mcp-param-add-class-name = Name der Kategorie
 mcp-param-remove-class-name = Name der Kategorie

@@ -74,6 +74,11 @@ error-edit-outside-map = point ({ $x }, { $y }) is outside the map, which spans 
 error-edit-in-use = { $id } is still used by { $courses }; change those first
 error-edit-not-supported = course { $course } is not an individual course; only individual courses can be edited yet
 error-edit-bad-index = course { $course } has no control at index { $index }
+error-edit-special-would-cover-all-courses = { $count ->
+    [one] course { $course } is the only course of { $specials }; without it, { $specials } would apply to all courses. Assign { $specials } to another course first or remove it
+   *[other] course { $course } is the only course of { $specials }; without it, they would apply to all courses. Assign them to another course first or remove them
+}
+error-edit-start-or-finish-has-no-courses = special object { $id } is a start or finish; each course names its start and finish itself
 
 ## Reading OOM maps (OmapError)
 
@@ -136,6 +141,9 @@ cli-edit-special-added-points = { $count ->
    *[other] added { $kind } { $id } with { $count } points
 }
 cli-edit-special-removed = removed special object { $id }
+cli-edit-special-courses = special object { $id } now belongs to { $courses }
+cli-edit-special-all-courses = special object { $id } now applies to all courses
+cli-edit-no-course-names = give at least one course name, or --all for all courses
 cli-edit-class-added = added class { $name }
 cli-edit-class-removed = removed class { $name }
 cli-edit-bad-point = { $value } is not a point; write X,Y in map millimetres with a dot as decimal separator, for example 12.5,-30
@@ -157,7 +165,7 @@ word-special-first-aid = first aid post
 word-special-water = water point
 
 cli-help-control = Add, move, describe, number and remove controls
-cli-help-special = Add and remove special objects (start, finish, marked routes, areas, first aid, water)
+cli-help-special = Add, assign and remove special objects (start, finish, marked routes, areas, first aid, water)
 cli-help-class = Add and remove classes
 cli-help-control-add = Add a control
 cli-help-control-move = Move a control
@@ -166,6 +174,7 @@ cli-help-control-describe = Set the description symbols of a control
 cli-help-control-number = Set or clear where the number of a control is drawn
 cli-help-special-add = Add a special object
 cli-help-special-remove = Remove a special object
+cli-help-special-courses = Set the courses a special object belongs to
 cli-help-class-add = Add a class
 cli-help-class-remove = Remove a class and its name from every course
 
@@ -190,6 +199,9 @@ cli-arg-special-add-at = Place of a single-point kind (start, finish, first aid,
 cli-arg-special-add-point = A point of a line or area kind: X,Y in map millimetres; repeat the option for each point, in order
 cli-arg-special-add-courses = Limit the object to these courses, separated by commas [default: all courses]
 cli-arg-special-remove-id = Id of the special object
+cli-arg-special-courses-id = Id of the special object; not a start or finish
+cli-arg-special-courses-courses = The courses, separated by commas
+cli-arg-special-courses-all = Let the object apply to all courses
 cli-arg-class-add-name = Name of the class
 cli-arg-class-add-rule-category = Rule category of the class
 cli-arg-class-add-starters = Expected number of starters
@@ -278,6 +290,7 @@ mcp-error-leg-target = give either from_start or after, not both and not neither
 mcp-error-no-change = nothing to change; give at least one of classes, climb_m, no_climb, print_scale and no_print_scale
 mcp-error-number-args = give direction and gap_mm together, or clear
 mcp-error-bad-gap = gap_mm { $value } is out of range; give more than 0 and at most { $max } print millimetres
+mcp-error-special-courses-args = give either courses with at least one course name, or all as true
 
 mcp-tool-event-info = Summary of the event: title, map and map kind, map extent, the numbers of controls, special objects, classes and courses, and per course the controls, the length in km, the climb and how many control numbers are placed.
 mcp-tool-list-controls = List the controls with code, kind, position in map mm, description symbols and number placement.
@@ -291,6 +304,7 @@ mcp-tool-describe-control = Set the description symbols of a control, column C t
 mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap to the circle in print mm. clear goes back to the default placement.
 mcp-tool-add-special = Add a special object. A start, finish, first aid post or water point is a single point (at). A marked route, forbidden route, out-of-bounds area or dangerous area is drawn through points. Its id must be new.
 mcp-tool-remove-special = Remove a special object by id. A start or finish that a course uses cannot be removed.
+mcp-tool-set-special-courses = Set the courses a special object belongs to: a list of course names, or all as true for all courses. Not for start and finish. remove_course refuses to remove the only course of a special object, so widen or reassign it here first.
 mcp-tool-add-class = Add a class.
 mcp-tool-remove-class = Remove a class and its name in all courses.
 mcp-tool-add-course = Add an individual course from a start, a finish and the control codes in running order. The start and finish are ids of special objects.
@@ -329,6 +343,9 @@ mcp-param-kind = What the object is: start, finish, marked_route, out_of_bounds,
 mcp-param-id = Id of the object, unique among special objects
 mcp-param-points = The points of a marked_route, forbidden_route, out_of_bounds or dangerous_area, in order; each is an object with x and y in map millimetres
 mcp-param-courses = Limit the object to these courses [default: all courses]; not for start and finish
+mcp-param-set-special-courses-courses = The courses the object belongs to, at least one name; leave out when all is true
+mcp-param-all = Let the object apply to all courses; leave out courses then [default: false]
+mcp-param-set-special-courses-id = Id of the special object; not a start or finish
 mcp-param-name = Name of the course
 mcp-param-add-class-name = Name of the class
 mcp-param-remove-class-name = Name of the class

@@ -706,6 +706,29 @@ impl CoursePlanServer {
         }))
     }
 
+    #[tool(description = "Set the courses of a special object")]
+    async fn set_special_courses(
+        &self,
+        Parameters(req): Parameters<SetSpecialCourses>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.edit(&req.project, |file| {
+            let courses = match (req.courses, flag(req.all)) {
+                (Some(list), false) => {
+                    let names = edit_cmd::codes(list);
+                    if names.is_empty() {
+                        return Err(text(&self.lang, "mcp-error-special-courses-args", &[]));
+                    }
+                    names
+                }
+                (None, true) => Vec::new(),
+                _ => return Err(text(&self.lang, "mcp-error-special-courses-args", &[])),
+            };
+            edit::set_special_courses(&mut file.event, &req.id, courses.clone())
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({ "id": req.id, "courses": courses }))
+        }))
+    }
+
     #[tool(description = "Add a class")]
     async fn add_class(
         &self,
@@ -1081,7 +1104,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 24);
+            assert_eq!(tools.len(), 25);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

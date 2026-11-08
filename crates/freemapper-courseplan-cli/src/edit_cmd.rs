@@ -121,6 +121,18 @@ pub enum SpecialCmd {
     },
     /// Remove a special object
     Remove { project: PathBuf, id: String },
+    /// Set the courses a special object belongs to
+    #[command(group(
+        ArgGroup::new("target").required(true).args(["courses", "all"])
+    ))]
+    Courses {
+        project: PathBuf,
+        id: String,
+        #[arg(value_name = "A,B")]
+        courses: Option<String>,
+        #[arg(long)]
+        all: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -648,6 +660,36 @@ pub fn special(lang: &Lang, cmd: SpecialCmd) -> Outcome {
             save(lang, &mut file)?;
             say(lang, "cli-edit-special-removed", &[("id", v(id))]);
         }
+        SpecialCmd::Courses {
+            project,
+            id,
+            courses,
+            all,
+        } => {
+            let courses = match courses {
+                Some(list) if !all => {
+                    let names = split_list(&list);
+                    if names.is_empty() {
+                        return Err(Failure::Usage(text(lang, "cli-edit-no-course-names", &[])));
+                    }
+                    names
+                }
+                _ => Vec::new(),
+            };
+            let mut file = load(lang, &project)?;
+            edit::set_special_courses(&mut file.event, &id, courses.clone())
+                .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            if courses.is_empty() {
+                say(lang, "cli-edit-special-all-courses", &[("id", v(id))]);
+            } else {
+                say(
+                    lang,
+                    "cli-edit-special-courses",
+                    &[("id", v(id)), ("courses", v(courses.join(", ")))],
+                );
+            }
+        }
     }
     Ok(())
 }
@@ -694,6 +736,12 @@ pub fn course_control(code: String) -> CourseControl {
         bends: vec![],
         taped: false,
     }
+}
+
+/// The items of a comma-separated list, each without surrounding white space; empty items are
+/// left out.
+pub fn split_list(list: &str) -> Vec<String> {
+    codes(list.split(',').map(|c| c.trim().to_owned()))
 }
 
 /// Codes from a comma-separated list; empty items are left out.

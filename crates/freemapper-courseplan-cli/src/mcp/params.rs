@@ -136,6 +136,15 @@ pub(super) struct RemoveSpecial {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetSpecialCourses {
+    pub(super) project: String,
+    pub(super) id: String,
+    pub(super) courses: Option<Vec<String>>,
+    pub(super) all: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddClass {
     pub(super) project: String,
     pub(super) name: String,

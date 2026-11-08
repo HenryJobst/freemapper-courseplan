@@ -470,6 +470,20 @@ impl Localize for EditError {
                 "error-edit-bad-index",
                 &[("course", v(course)), ("index", v(index))],
             ),
+            EditError::SpecialWouldCoverAllCourses { course, specials } => text(
+                lang,
+                "error-edit-special-would-cover-all-courses",
+                &[
+                    ("course", v(course)),
+                    ("specials", v(specials.join(", "))),
+                    ("count", FluentValue::from(specials.len())),
+                ],
+            ),
+            EditError::StartOrFinishHasNoCourses(id) => text(
+                lang,
+                "error-edit-start-or-finish-has-no-courses",
+                &[("id", v(id))],
+            ),
         }
     }
 }
@@ -594,6 +608,7 @@ mod tests {
             "column",
             "needed",
             "max",
+            "specials",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -945,6 +960,15 @@ mod tests {
                 course: s("A"),
                 index: 9,
             },
+            EditError::SpecialWouldCoverAllCourses {
+                course: s("A"),
+                specials: vec![s("W1")],
+            },
+            EditError::SpecialWouldCoverAllCourses {
+                course: s("A"),
+                specials: vec![s("W1"), s("M2")],
+            },
+            EditError::StartOrFinishHasNoCourses(s("S1")),
         ];
         for what in [
             "control",
@@ -972,6 +996,29 @@ mod tests {
             kind: "team",
         };
         assert!(e.localize(&de()).contains("Mannschaftsbahn"));
+    }
+
+    #[test]
+    fn a_special_that_would_cover_all_courses_is_named_in_german() {
+        let one = EditError::SpecialWouldCoverAllCourses {
+            course: s("A"),
+            specials: vec![s("W1")],
+        };
+        assert_eq!(
+            one.localize(&de()),
+            "Bahn A ist die einzige Bahn von W1; ohne sie gälte W1 für alle Bahnen. Ordne W1 \
+             zuerst einer anderen Bahn zu oder lösche es"
+        );
+        let two = EditError::SpecialWouldCoverAllCourses {
+            course: s("A"),
+            specials: vec![s("W1"), s("M2")],
+        };
+        assert!(
+            two.localize(&de()).contains("W1, M2"),
+            "{}",
+            two.localize(&de())
+        );
+        assert!(!two.localize(&de()).contains("gälte "));
     }
 
     /// The German catalog uses the glossary terms (ruling R13), not the older wording.

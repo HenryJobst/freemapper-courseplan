@@ -45,6 +45,33 @@ pub enum EditError {
     /// The index is beyond the controls of the course.
     #[error("course {course} has no control at index {index}")]
     BadIndex { course: String, index: usize },
+    /// Removing the course would empty the course list of these special objects, and an empty
+    /// list means all courses (ruling R5, amended).
+    #[error("{}", cover_all_text(course, specials))]
+    SpecialWouldCoverAllCourses {
+        course: String,
+        specials: Vec<String>,
+    },
+    /// Start and finish have no course list; each course names its own.
+    #[error(
+        "special object {0} is a start or finish; each course names its start and finish itself"
+    )]
+    StartOrFinishHasNoCourses(String),
+}
+
+fn cover_all_text(course: &str, specials: &[String]) -> String {
+    let list = specials.join(", ");
+    if specials.len() == 1 {
+        format!(
+            "course {course} is the only course of {list}; without it, {list} would apply to all \
+             courses. Assign {list} to another course first or remove it"
+        )
+    } else {
+        format!(
+            "course {course} is the only course of {list}; without it, they would apply to all \
+             courses. Assign them to another course first or remove them"
+        )
+    }
 }
 
 fn join_errors(errors: &[ModelError]) -> String {
@@ -389,6 +416,26 @@ pub fn remove_special(event: &mut Event, id: &str) -> Result<(), EditError> {
     })
 }
 
+/// Sets the courses a special object belongs to; an empty list means all courses. Start and
+/// finish have no course list. Unknown and repeated course names make the event inconsistent.
+pub fn set_special_courses(
+    event: &mut Event,
+    id: &str,
+    courses: Vec<String>,
+) -> Result<(), EditError> {
+    apply(event, |e| {
+        let special = e
+            .specials
+            .iter_mut()
+            .find(|s| s.id() == id)
+            .ok_or_else(|| not_found("special object", id))?;
+        let list = special_courses_mut(special)
+            .ok_or_else(|| EditError::StartOrFinishHasNoCourses(id.to_owned()))?;
+        *list = courses;
+        Ok(())
+    })
+}
+
 /// Adds an individual course.
 pub fn add_course(event: &mut Event, course: Course) -> Result<(), EditError> {
     apply(event, |e| {
@@ -410,13 +457,13 @@ pub fn remove_course(event: &mut Event, name: &str) -> Result<(), EditError> {
         let widened: Vec<String> = e
             .specials
             .iter()
-            .filter(|s| s.courses().len() == 1 && s.courses()[0] == name)
+            .filter(|s| !s.courses().is_empty() && s.courses().iter().all(|c| c == name))
             .map(|s| s.id().to_owned())
             .collect();
         if !widened.is_empty() {
-            return Err(EditError::InUse {
-                id: name.to_owned(),
-                courses: widened,
+            return Err(EditError::SpecialWouldCoverAllCourses {
+                course: name.to_owned(),
+                specials: widened,
             });
         }
         for special in &mut e.specials {

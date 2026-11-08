@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 24] = [
+const TOOLS: [&str; 25] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -19,6 +19,7 @@ const TOOLS: [&str; 24] = [
     "set_control_number",
     "add_special",
     "remove_special",
+    "set_special_courses",
     "add_class",
     "remove_class",
     "add_course",
@@ -738,4 +739,41 @@ fn changed_legs_are_reported() {
         json!([{ "course": "A", "after": 1 }]),
         "{removed}"
     );
+}
+
+#[test]
+fn set_special_courses_assigns_and_widens() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let extent = course_a(&mut session, &project);
+    session.ok(
+        "add_special",
+        json!({ "project": project, "kind": "water", "id": "W1", "at": point(&extent, 0.5, 0.5) }),
+    );
+    let set = session.ok(
+        "set_special_courses",
+        json!({ "project": project, "id": "W1", "courses": ["A"] }),
+    );
+    assert_eq!(set["courses"], json!(["A"]), "{set}");
+    let before = std::fs::read_to_string(&project).unwrap();
+    let (error, text) = session.call("remove_course", json!({ "project": project, "name": "A" }));
+    assert!(error && text.contains("W1"), "{text}");
+    for args in [
+        json!({ "project": project, "id": "W1" }),
+        json!({ "project": project, "id": "W1", "courses": ["A"], "all": true }),
+        json!({ "project": project, "id": "W1", "courses": [] }),
+        json!({ "project": project, "id": "W1", "courses": ["A", "A"] }),
+        json!({ "project": project, "id": "S", "courses": ["A"] }),
+    ] {
+        let (error, text) = session.call("set_special_courses", args.clone());
+        assert!(error, "{args}: {text}");
+    }
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    let set = session.ok(
+        "set_special_courses",
+        json!({ "project": project, "id": "W1", "all": true }),
+    );
+    assert_eq!(set["courses"], json!([]), "{set}");
+    session.ok("remove_course", json!({ "project": project, "name": "A" }));
 }

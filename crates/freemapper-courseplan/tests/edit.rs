@@ -501,12 +501,50 @@ fn remove_course_refuses_when_a_special_would_lose_its_only_course() {
     let before = e.clone();
     assert_eq!(
         remove_course(&mut e, "A"),
-        Err(EditError::InUse {
-            id: "A".to_owned(),
-            courses: vec!["w1".to_owned()]
+        Err(EditError::SpecialWouldCoverAllCourses {
+            course: "A".to_owned(),
+            specials: vec!["w1".to_owned()]
         })
     );
     assert_eq!(e, before);
+}
+
+#[test]
+fn set_special_courses_assigns_checks_and_widens() {
+    let mut e = event();
+    e.specials.push(water(&[]));
+    set_special_courses(&mut e, "w1", vec!["B".to_owned(), "A".to_owned()]).unwrap();
+    assert_eq!(e.specials[2].courses(), ["B", "A"]);
+    let before = e.clone();
+    assert_eq!(
+        set_special_courses(&mut e, "w1", vec!["A".to_owned(), "A".to_owned()]),
+        Err(EditError::Invalid(vec![
+            freemapper_courseplan_model::ModelError::DuplicateCourseInSpecial {
+                id: "w1".to_owned(),
+                course: "A".to_owned()
+            }
+        ]))
+    );
+    assert!(matches!(
+        set_special_courses(&mut e, "w1", vec!["Z".to_owned()]),
+        Err(EditError::Invalid(_))
+    ));
+    assert_eq!(
+        set_special_courses(&mut e, "S1", vec!["A".to_owned()]),
+        Err(EditError::StartOrFinishHasNoCourses("S1".to_owned()))
+    );
+    assert!(matches!(
+        set_special_courses(&mut e, "nope", vec![]),
+        Err(EditError::NotFound {
+            what: "special object",
+            ..
+        })
+    ));
+    assert_eq!(e, before);
+    // An empty list means all courses; after that, removing a course needs nothing more.
+    set_special_courses(&mut e, "w1", vec![]).unwrap();
+    assert!(e.specials[2].courses().is_empty());
+    remove_course(&mut e, "A").unwrap();
 }
 
 #[test]
