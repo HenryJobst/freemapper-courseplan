@@ -1,37 +1,42 @@
-# Rule profiles
+# Regelprofile
 
-The `check` command tests courses against a rule profile. A profile is a TOML file in this folder.
-The program embeds the files at build time, so a new or changed profile needs a new build. ADR 0025
-fixes the format; `src/rules.rs` reads it.
+Deutsch | [English](README.en.md)
 
-There are two kinds of profile:
+Der Befehl `check` prüft Bahnen gegen ein Regelprofil. Ein Regelprofil ist eine TOML-Datei in
+diesem Ordner. Das Programm bettet die Dateien beim Bauen ein; ein neues oder geändertes Profil
+braucht also einen neuen Build. ADR 0025 legt das Format fest, `src/rules.rs` liest es.
 
-- A **base profile** holds a full rule set, for example `wkb-2026.toml` (German competition rules,
-  WKB 2026).
-- An **overlay** extends one base profile, for example `nor-bb-2021.toml` (course recommendations
-  for Berlin and Brandenburg). It adds rules, replaces base rules or switches them off.
+Es gibt zwei Arten von Regelprofilen:
 
-An event names one base profile in `rule_profile` and any number of overlays in `rule_overlays`.
-The overlays apply in the order listed.
+- Ein **Basisprofil** enthält einen vollständigen Satz Prüfregeln, zum Beispiel `wkb-2026.toml`
+  (Wettkampfbestimmungen OL 2026).
+- Ein **Aufsatz** ergänzt genau ein Basisprofil, zum Beispiel `nor-bb-2021.toml`
+  (Bahnempfehlungen Berlin/Brandenburg). Er fügt Prüfregeln hinzu, ersetzt Regeln des
+  Basisprofils oder schaltet sie ab.
 
-## Adding a profile
+Eine Veranstaltung nennt ein Basisprofil in `rule_profile` und beliebig viele Aufsätze in
+`rule_overlays`. Die Aufsätze gelten in der angegebenen Reihenfolge.
 
-1. Copy the smaller of the two files and rename it. The file name without `.toml` is the profile
-   id, such as `iof-2026` or `by-2025`. Use lower case, digits and dashes.
-2. Fill in `[profile]`, `[sources]` and the rules as described below.
-3. Add the file to `EMBEDDED` in `src/rules.rs`.
-4. Run `cargo test -p freemapper-courseplan rules`. The tests parse every embedded file and refuse
-   unknown keys, values without a unit, rules without a source and typos in field names.
+## Ein Regelprofil hinzufügen
 
-## File layout
+1. Die kleinere der beiden Dateien kopieren und umbenennen. Der Dateiname ohne `.toml` ist die
+   Kennung des Profils, etwa `iof-2026` oder `by-2025`. Erlaubt sind Kleinbuchstaben, Ziffern und
+   Bindestriche.
+2. `[profile]`, `[sources]` und die Prüfregeln ausfüllen, wie unten beschrieben.
+3. Die Datei in `EMBEDDED` in `src/rules.rs` eintragen.
+4. `cargo test -p freemapper-courseplan rules` ausführen. Die Tests lesen jede eingebettete Datei
+   und lehnen unbekannte Schlüssel, Werte ohne Einheit, Regeln ohne Quelle und Tippfehler in
+   Feldnamen ab.
+
+## Aufbau der Datei
 
 ```toml
 format = 1
 
 [profile]
-id = "wkb-2026"            # the file name without .toml
-kind = "base"              # "base" or "overlay"
-# base = "wkb-2026"        # overlays only: the base profile they extend
+id = "wkb-2026"            # der Dateiname ohne .toml
+kind = "base"              # "base" (Basisprofil) oder "overlay" (Aufsatz)
+# base = "wkb-2026"        # nur bei Aufsätzen: das Basisprofil, das sie ergänzen
 name = { de = "Wettkampfbestimmungen OL 2026", en = "German competition rules 2026" }
 valid_from = 2026-03-01    # optional
 
@@ -40,137 +45,147 @@ title = "Wettkampfbestimmungen Orientierungslauf, 37. Änderung"
 url = "https://o-sport.de/assets/dokumente/allgemein/wettkampfwesen/wkb2026.pdf"   # optional
 
 [[rules]]
-id = "wkb2026.distance.min_sprint"
+id = "wkb2026.distance.min_half"
 key = "min_distance"
 severity = "error"
-enabled = true                       # optional, default true
-map_kinds = ["sprint", "schoolyard"] # optional filter
-disciplines = []                     # optional filter
-print_scales = []                    # optional filter
+enabled = true                       # optional, Vorgabe true
+map_kinds = []                       # optionaler Filter
+disciplines = []                     # optionaler Filter
+print_scales = [1000, 2000, 3000, 4000]   # optionaler Filter
 values = { metres = 15.0 }
 source = { doc = "WKB26", section = "B 7.2.1" }
 note = { de = "...", en = "..." }    # optional
 ```
 
-A file without `format = 1`, or with a higher format, is refused. So is any field name the format
-does not have. A misspelt `map_kind` is an error and does not silently mean "all map kinds".
+Eine Datei ohne `format = 1` oder mit einem höheren Format wird abgelehnt, ebenso jeder Feldname,
+den das Format nicht kennt. Ein vertipptes `map_kind` ist also ein Fehler und bedeutet nicht still
+"alle Kartenarten".
 
-## Rule fields
+## Felder einer Prüfregel
 
-`id` is stable, dotted and lower case: `<profile>.<family>.<name>`, with the profile id written
-without dashes (`wkb2026.code.pairs`). Accepted findings point to the id. If you rename a rule,
-the findings that were accepted for it are reported again.
+`id` ist stabil, mit Punkten gegliedert und kleingeschrieben: `<profil>.<familie>.<name>`, die
+Profilkennung ohne Bindestriche (`wkb2026.code.pairs`). Akzeptierte Befunde verweisen auf die
+`id`. Wer eine Regel umbenennt, bekommt die für sie akzeptierten Befunde wieder gemeldet.
 
-`key` names the check that runs the rule. The program knows these keys:
+`key` (Prüfregel-Schlüssel) nennt die Prüfung, die die Regel ausführt. Das Programm kennt diese
+Schlüssel:
 
-| Key | What it checks |
+| Schlüssel | Was geprüft wird |
 |---|---|
-| `min_distance` | Two controls of the event closer than `metres` |
-| `similar_features` | Two controls on similar features closer than `metres` |
-| `map_edge` | A control, start or finish closer than `metres` to the map edge |
-| `leg_through_control` | A leg passing through another control of the same course |
-| `leg_through_forbidden` | A leg crossing a forbidden area or an uncrossable feature |
-| `acute_angle` | The angle between the legs at a control below `degrees` |
-| `opposing_legs` | Two legs of a course running close to each other in opposite directions |
-| `code_range` | A control code outside `range` |
-| `code_pairs` | Both codes of a forbidden pair used in one event |
-| `code_confusable_next` | Consecutive codes that read alike upside down |
-| `same_objects_in_circle` | Identical features in the control circle without column C |
-| `start_capacity` | Too few different first controls for the starters per minute |
-| `first_leg_angle` | First legs from one start in nearly the same direction |
-| `length_table` | Course length in percent of the HE course |
-| `difficulty_mix` | Easy and hard categories on one course |
-| `nor_lkm` | Performance kilometres against the NOR recommendation |
+| `min_distance` | Zwei Posten der Veranstaltung näher als `metres` |
+| `similar_features` | Zwei Posten auf ähnlichen Objekten näher als `metres` |
+| `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
+| `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
+| `leg_through_forbidden` | Eine Strecke quert ein Sperrgebiet oder ein unpassierbares Objekt |
+| `acute_angle` | Winkel zwischen den Strecken an einem Posten unter `degrees` |
+| `opposing_legs` | Zwei Strecken einer Bahn laufen dicht nebeneinander gegeneinander |
+| `code_range` | Ein Postencode außerhalb von `range` |
+| `code_pairs` | Beide Codes eines verbotenen Paars in einer Veranstaltung |
+| `code_confusable_next` | Aufeinanderfolgende Codes, die auf dem Kopf gleich aussehen |
+| `same_objects_in_circle` | Gleiche Objekte im Postenkreis ohne Angabe in Spalte C |
+| `start_capacity` | Zu wenige verschiedene erste Posten für die Starter pro Minute |
+| `first_leg_angle` | Erste Strecken eines Starts in fast gleicher Richtung |
+| `length_table` | Bahnlänge in Prozent der HE-Bahn |
+| `difficulty_mix` | Leichte und schwere Kategorien auf einer Bahn |
+| `nor_lkm` | Leistungskilometer gegen die NOR-Empfehlung |
 
-A rule with any other key is refused. A new key needs code in `src/check/` and an entry in
-`KNOWN_KEYS` in `src/rules.rs`.
+Eine Regel mit einem anderen Schlüssel wird abgelehnt. Ein neuer Schlüssel braucht Code in
+`src/check/` und einen Eintrag in `KNOWN_KEYS` in `src/rules.rs`.
 
-`severity` is `error`, `warning` or `hint`.
+`severity` ist `error`, `warning` oder `hint`.
 
-`note` is shown with every finding of the rule. Write it in German and English; English is
-required.
+`note` erscheint bei jedem Befund der Regel. Bitte deutsch und englisch schreiben; der englische
+Text ist Pflicht.
 
-## Filters
+## Filter
 
 `map_kinds` (`sprint`, `schoolyard`, `forest`), `disciplines` (`sprint`, `middle`, `long`,
-`ultralong`, `training`) and `print_scales` (scale denominators such as `4000`) limit where a rule
-applies. An empty or missing filter means all. A course's print scale is its
-`planned_print_scale`, or the map scale if the course has none.
+`ultralong`, `training`) und `print_scales` (Maßstabszahlen wie `4000`) schränken ein, wo eine
+Regel gilt. Ein leerer oder fehlender Filter bedeutet: überall. Der Druckmaßstab einer Bahn ist ihr
+`planned_print_scale`, sonst der Kartenmaßstab.
 
-When a rule has different values for different maps, write one rule per case with its own id and
-filter. `wkb-2026.toml` does this for the minimum distance: 30 m on forest maps, 15 m on sprint and
-schoolyard maps.
+Hat eine Regel für verschiedene Karten verschiedene Werte, schreibt man eine Regel je Fall, jede
+mit eigener `id` und eigenem Filter. `wkb-2026.toml` macht das beim Mindestabstand: 30 m bei
+1:5000 bis 1:15000, 15 m bei 1:1000 bis 1:4000, weil WKB B 7.2.1 die Abstände bei 1:3000 und
+1:4000 halbiert. Dass auch 1:1000 und 1:2000 (Schulhofkarten) halbiert zählen, ist ein Vorschlag
+aus Plan M2b. Eine Bahn in einem Maßstab, den keine Regel nennt, prüfen diese Regeln nicht. Die
+Regeln für ähnliche Objekte filtern zusätzlich nach Kartenart, weil Waldkarten ISOM-Symbole und
+Sprintkarten ISSprOM-Symbole haben.
 
-## Values and units
+## Werte und Einheiten
 
-`values` holds what the check reads. A number carries its unit in its name: the name is a unit or
-ends in `_<unit>`. The units are `metres`, `mm`, `degrees`, `percent` and `factor`. Examples:
-`metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`, `feature_search_mm = 1.0`.
-A name like `distance = 30` is refused, because nobody can tell whether it means metres on the
-ground or millimetres on the map.
+`values` enthält, was die Prüfung liest. Eine Zahl trägt ihre Einheit im Namen: Der Name ist eine
+Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees`, `percent` und
+`factor`. Beispiele: `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`,
+`feature_search_mm = 1.0`. Ein Name wie `distance = 30` wird abgelehnt, weil niemand sieht, ob
+Meter im Gelände oder Millimeter auf der Karte gemeint sind.
 
-Texts, true/false and lists of texts need no unit. Symbol codes are texts: `impassable = ["520",
-"708"]`.
+Texte, true/false und Listen von Texten brauchen keine Einheit. Symbolnummern sind Texte:
+`impassable = ["520", "708"]`.
 
-Tables and lists of rows have no single unit. Each one is listed with its shape in
-`TABLE_VALUES` in `src/rules.rs`, and the profile file describes its tables in a comment at the
-top. The current tables are `range` and `pairs` (codes), `courses` of `length_table` and of
-`nor_lkm`, and `levels`, `easy_levels` and `hard_levels` of `difficulty_mix`.
+Tabellen und Zeilenlisten haben keine einzelne Einheit. Jede steht mit ihrer Form in
+`TABLE_VALUES` in `src/rules.rs`, und die Profildatei beschreibt ihre Tabellen in einem Kommentar
+am Anfang. Zurzeit sind das `range` und `pairs` (Codes), `courses` von `length_table` und von
+`nor_lkm` sowie `levels`, `easy_levels` und `hard_levels` von `difficulty_mix`.
 
-Rule categories in tables are written without spaces. A trailing `-` of an age class is dropped,
-and a `D/H` cell becomes one D and one H category: `H 35-` becomes `H35`, `D 19- A` becomes
-`D19A`, `D/H -12b` becomes `D-12b` and `H-12b`. Rows of `length_table` also keep the cell as the
-source prints it, in `printed`, so you can compare the row with the PDF.
+WKB-Kategorien in Tabellen stehen ohne Leerzeichen. Der nachgestellte `-` einer Altersklasse
+entfällt, und eine `D/H`-Zelle wird zu einer D- und einer H-Kategorie: aus `H 35-` wird `H35`,
+aus `D 19- A` wird `D19A`, aus `D/H -12b` werden `D-12b` und `H-12b`. Die Zeilen von
+`length_table` behalten die Zelle außerdem so, wie die Quelle sie druckt, in `printed`. So lässt
+sich jede Zeile mit dem PDF vergleichen.
 
-## Sources
+## Quellen
 
-Every rule cites a document: `source = { doc, section }`. `doc` is a key of the file's own
-`[sources]` table; the tests refuse a rule whose document is not listed there. Use the document
-keys of `docs/research/2026-11-08-bahnlegung-kriterien.md` (WKB26, IOF-R, IOF-SG, BOF, SOA, BL02,
-BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14) and give the section, and the PDF page for tables.
+Jede Prüfregel nennt ein Dokument: `source = { doc, section }`. `doc` ist ein Schlüssel aus der
+eigenen `[sources]`-Tabelle der Datei; die Tests lehnen eine Regel ab, deren Dokument dort fehlt.
+Als Schlüssel dienen die Kürzel aus `docs/research/2026-11-08-bahnlegung-kriterien.md` (WKB26,
+IOF-R, IOF-SG, BOF, SOA, BL02, BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14). Dazu kommt der Abschnitt,
+bei Tabellen auch die PDF-Seite.
 
-Some values have no number in any source. They cite `doc = "claude"` with the plan as section,
-and their `note` says what the sources say and that the number is a proposal.
+Für manche Werte nennt keine Quelle eine Zahl. Sie verweisen auf `doc = "claude"` mit dem Plan als
+Abschnitt, und ihre `note` sagt, was die Quellen sagen und dass die Zahl ein Vorschlag ist.
 
-## Overlays
+## Aufsätze
 
-An overlay names its base in `[profile] base`. An event can only use overlays for its own base
-profile. Each rule of an overlay does one of three things:
+Ein Aufsatz nennt sein Basisprofil in `[profile] base`. Eine Veranstaltung kann nur Aufsätze für
+ihr eigenes Basisprofil nutzen. Jede Regel eines Aufsatzes bewirkt eines von drei Dingen:
 
-- A rule with a new `id` is added after the base rules.
-- A rule with the `id` of a base rule replaces it. The finding then names the overlay and the
-  overlay's source.
-- A rule with the `id` of a base rule and `enabled = false` switches the base rule off. Copy the
-  whole base rule, set `enabled = false` and cite the document that allows it. `check --all`
-  lists rules that are switched off. Switching off an id the base does not have is an error.
+- Eine Regel mit neuer `id` kommt nach den Regeln des Basisprofils dazu.
+- Eine Regel mit der `id` einer Basisregel ersetzt diese. Der Befund nennt dann den Aufsatz und
+  dessen Quelle.
+- Eine Regel mit der `id` einer Basisregel und `enabled = false` schaltet die Basisregel ab. Dazu
+  die ganze Basisregel kopieren, `enabled = false` setzen und das Dokument nennen, das die
+  Ausnahme erlaubt. `check --all` listet abgeschaltete Regeln. Eine `id` abzuschalten, die das
+  Basisprofil nicht hat, ist ein Fehler.
 
-Overlay rules cite the overlay's own `[sources]`.
+Regeln eines Aufsatzes verweisen auf die `[sources]` des Aufsatzes.
 
-## Values to verify against the PDF
+## Werte, die am PDF zu prüfen sind
 
-The tables were copied from `pdftotext -layout` output and compared with the rendered PDF pages.
-These cells need a second look by someone with the printed rules:
+Die Tabellen stammen aus der Ausgabe von `pdftotext -layout` und wurden mit den gerenderten
+PDF-Seiten verglichen. Diese Zellen sollte jemand mit den gedruckten Regeln noch einmal ansehen:
 
-- WKB 2026 Anlage 5 Nr. 1 (PDF p. 49), difficulty per category. The text output puts the numbers
-  of merged cells on the wrong rows. Read from the rendered page: D/H -16, -18 and -20 have
-  difficulty 4, DE/HE 5, D/H 35- to 45- 4, D/H 50- to 75- "4*". The research notes
-  (section 3.4) say D/H -20 is 5; the page says 4.
-- WKB 2026 Anlage 5 Nr. 3 (PDF p. 50), Lang row 10, prints "H 55" without the dash of the other
-  age classes. The profile reads it as H55.
-- WKB 2026 Anlage 5 Nr. 4 and 5 (PDF p. 51) print "H 45-," (Mittel row 4) and "D -12, H -12,"
-  (Ultralang row 17) with a trailing comma. The profile reads no further category in these cells.
-- WKB 2026 Anlage 5 Nr. 1 footnote **: senior categories continue in five-year steps beyond 75.
-  The profile lists categories up to D/H 75 only.
-- BB-Lkm21: course D (D/H-14, 2.6 Lkm) is shorter than course C (D/H-12, 3.9 Lkm) in all three
-  tables, and Mittel A to D equal Lang A to D. Probably a transcription error in the source; ask
-  the regional committee (LFA) before relying on these rows.
+- WKB 2026 Anlage 5 Nr. 1 (PDF S. 49), Schwierigkeit je Kategorie. Die Textausgabe setzt die
+  Zahlen verbundener Zellen in falsche Zeilen. Von der gerenderten Seite gelesen: D/H -16, -18 und
+  -20 haben Schwierigkeit 4, DE/HE 5, D/H 35- bis 45- 4, D/H 50- bis 75- "4*". Die Recherche
+  (Abschnitt 3.4) gibt D/H -20 mit 5 an; die Seite zeigt 4.
+- WKB 2026 Anlage 5 Nr. 3 (PDF S. 50), Lang Zeile 10, druckt "H 55" ohne den Bindestrich der
+  anderen Altersklassen. Das Profil liest H55.
+- WKB 2026 Anlage 5 Nr. 4 und 5 (PDF S. 51) drucken "H 45-," (Mittel Zeile 4) und "D -12, H -12,"
+  (Ultralang Zeile 17) mit einem Komma am Ende. Das Profil liest in diesen Zellen keine weitere
+  Kategorie.
+- WKB 2026 Anlage 5 Nr. 1, Fußnote **: Seniorenkategorien gehen über 75 hinaus in
+  Fünfjahresschritten weiter. Das Profil listet Kategorien nur bis D/H 75.
+- BB-Lkm21: Bahn D (D/H-14, 2,6 Lkm) ist in allen drei Tabellen kürzer als Bahn C (D/H-12,
+  3,9 Lkm), und Mittel A bis D gleichen Lang A bis D. Vermutlich ein Übertragungsfehler in der
+  Quelle; vor der Nutzung dieser Zeilen beim LFA nachfragen.
 
-## Symbol codes to verify
+## Symbolnummern, die zu prüfen sind
 
-The similar-feature groups and uncrossable symbols use ISSprOM 2019-2 codes on sprint and
-schoolyard maps and ISOM 2017-2 codes on forest maps. The ISSprOM codes were checked against the
-symbol set of `tests/fixtures/maps/luebeck.omap` and the ISSprOM text. The ISOM codes come from
-the ISOM 2017-2 text and have no test map yet:
+Die Gruppen ähnlicher Objekte und die unpassierbaren Symbole nutzen auf Sprint- und Schulhofkarten
+ISSprOM-2019-2-Nummern und auf Waldkarten ISOM-2017-2-Nummern. Die ISSprOM-Nummern sind mit dem
+Symbolsatz von `tests/fixtures/maps/luebeck.omap` und dem ISSprOM-Text abgeglichen. Die
+ISOM-Nummern stammen aus dem ISOM-2017-2-Text; eine Testkarte dafür gibt es noch nicht:
 
 - 304 crossable watercourse, 305 small crossable watercourse, 306 minor/seasonal water channel,
   309 narrow marsh
@@ -182,6 +197,6 @@ the ISOM 2017-2 text and have no test map yet:
 - 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area,
   711 out-of-bounds route (IOF-R 17.2)
 
-The Lübeck map draws uncrossable vegetation with 410, while ISSprOM 2019-2 and IOF-R 17.2 use 411.
-Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their own, so no
-group contains them.
+Die Lübeck-Karte zeichnet unpassierbare Vegetation mit 410, ISSprOM 2019-2 und IOF-R 17.2 nennen
+411. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben kein eigenes Symbol; keine
+Gruppe enthält sie.

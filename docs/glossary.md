@@ -69,7 +69,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Deutsch | English | Definition | Code |
 |---|---|---|---|
 | Regelprofil | rule profile | Satz von Prüfregeln aus einem Regelwerk, zuerst WKB 2026. | `RuleProfile` |
-| Prüfregel | check rule | Eine Regel mit Kennung, Werten und Quelle (Dokument und Abschnitt), als Daten gespeichert. | `CheckRule` |
+| Prüfregel | check rule | Eine Regel mit Kennung, Werten und Quelle (Dokument und Abschnitt), als Daten gespeichert. | `Rule` |
 | Prüfregel-Schlüssel | rule key | Name der Prüfung, die eine Prüfregel ausführt, etwa `min_distance` oder `length_table`. Das Programm kennt eine feste Liste; ein Regelprofil mit einem anderen Schlüssel wird abgelehnt. | `key` |
 | Regelprofil-Aufsatz | rule overlay | Regelprofil, das ein Basisprofil ergänzt oder einzelne Regeln ersetzt, zum Beispiel für ein Landesregelwerk; der Veranstaltung zugeordnet über `rule_overlays`. | `rule_overlays` |
 | Befund | finding | Ergebnis einer Prüfregel an einem Posten, einer Strecke oder einer Bahn. | `Finding` |

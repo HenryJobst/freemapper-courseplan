@@ -1169,6 +1169,72 @@ title = "Other rules"
         assert_eq!(levels["HE"].as_integer(), Some(5));
     }
 
+    /// Ids of the active rules with `key` that select a course at `print_scale` on a map of `kind`.
+    fn applying(set: &RuleSet, key: &str, kind: MapKind, print_scale: u32) -> Vec<String> {
+        set.rules
+            .iter()
+            .filter(|r| r.rule.key == key && r.rule.applies(kind, Discipline::Long, print_scale))
+            .map(|r| r.rule.id.clone())
+            .collect()
+    }
+
+    #[test]
+    fn distance_rules_follow_the_print_scale() {
+        // Ruling R4: WKB26 B 7.2.1 halves the distances at 1:3000 and 1:4000.
+        let set = load_rule_set("wkb-2026", &[]).unwrap();
+        let metres = |id: &str| set.rule(id).unwrap().rule.values["metres"].as_float();
+        for kind in [MapKind::Sprint, MapKind::Forest] {
+            assert_eq!(
+                applying(&set, "min_distance", kind, 4000),
+                ["wkb2026.distance.min_half"]
+            );
+            assert_eq!(
+                applying(&set, "min_distance", kind, 10000),
+                ["wkb2026.distance.min"]
+            );
+        }
+        assert_eq!(metres("wkb2026.distance.min_half"), Some(15.0));
+        assert_eq!(metres("wkb2026.distance.min"), Some(30.0));
+        let similar = [
+            (
+                MapKind::Sprint,
+                4000,
+                "wkb2026.distance.similar_sprint",
+                30.0,
+            ),
+            (
+                MapKind::Sprint,
+                10000,
+                "wkb2026.distance.similar_sprint_full",
+                60.0,
+            ),
+            (MapKind::Forest, 4000, "wkb2026.distance.similar_half", 30.0),
+            (MapKind::Forest, 10000, "wkb2026.distance.similar", 60.0),
+        ];
+        for (kind, scale, id, expected) in similar {
+            assert_eq!(applying(&set, "similar_features", kind, scale), [id]);
+            assert_eq!(metres(id), Some(expected), "{id}");
+        }
+        // A course printed at 1:4000 from a 1:10000 map gets the halved rule.
+        let course = Course {
+            name: s("A"),
+            classes: vec![],
+            start: s("S1"),
+            finish: s("F1"),
+            start_bends: vec![],
+            start_taped: false,
+            print_area: None,
+            climb_m: None,
+            planned_print_scale: Some(4000),
+            kind: CourseKind::Individual { controls: vec![] },
+        };
+        let scale = print_scale_of(&course, 10000);
+        assert_eq!(
+            applying(&set, "min_distance", MapKind::Forest, scale),
+            ["wkb2026.distance.min_half"]
+        );
+    }
+
     #[test]
     fn value_names_carry_units() {
         for id in available() {

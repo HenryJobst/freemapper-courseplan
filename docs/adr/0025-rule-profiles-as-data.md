@@ -12,7 +12,8 @@ Course rules differ by country and year and change often. Rules in code need a r
 - A rule has `id`, `key` (the implementation key, such as `min_distance`), `severity` (`error`, `warning`, `hint`),
   `values`, `source = { doc, section }` and an optional `note`. The filters `map_kinds`, `disciplines` and
   `print_scales` mean all when empty. A course's print scale is its `planned_print_scale`, else the map scale.
-- Keys in `values` carry their unit: `metres`, `mm`, `degrees`, `percent`, `factor`. A key without one is invalid.
+- A number in `values` names its unit, alone or as suffix: `metres`, `mm`, `degrees`, `percent`, `factor`. Texts,
+  lists of texts and the tables documented per rule `key` in `rules.rs` are exempt; any other value key is invalid.
 - An event names one base profile (`rule_profile`) and any overlays (`rule_overlays`, omitted when empty). An
   overlay rule with an existing `id` replaces the base rule; `enabled = false` (default `true`) switches it off.
 - Rule ids are stable and dotted: `<profile>.<family>.<name>`. If an id changes, accepted findings come back.
@@ -23,7 +24,6 @@ Course rules differ by country and year and change often. Rules in code need a r
 - freemapper-print will reuse this format for print rules (not before its M3); `freemapper-rules` may be extracted.
 
 ## Consequences
-
 Rule changes are file edits, and every value names its source. Format 1 stays provisional (ADR 0019), so
 `rule_overlays` and `legs` need no bump. Cost if wrong: renaming keys in the embedded files.
 

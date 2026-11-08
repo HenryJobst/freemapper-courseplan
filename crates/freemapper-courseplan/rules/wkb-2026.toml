@@ -63,31 +63,35 @@ url = "https://www.orientering.se/media/urfbqdk0/t%C3%A4vlingsregler-och-anvisni
 title = "Values chosen in plan M2b (docs/superpowers/plans/2026-11-09-m2b-check-rules.md) where no source gives a number"
 
 # ---------------------------------------------------------------------------------------------
-# Distances between controls (plan M2b, Task 4)
+# Distances between controls (plan M2b, Task 4). WKB26 B 7.2.1 sets 30 m and 60 m and halves
+# them at map scale 1:3000 or 1:4000 (ruling R4: the filter is the print scale). The similar
+# features rules also filter by map kind, because the symbol codes differ between ISOM (forest)
+# and ISSprOM (sprint, schoolyard).
 
 [[rules]]
 id = "wkb2026.distance.min"
 key = "min_distance"
 severity = "error"
-map_kinds = ["forest"]
+print_scales = [5000, 7500, 10000, 15000]
 values = { metres = 30.0 }
 source = { doc = "WKB26", section = "B 7.2.1" }
 note = { de = "Die Startflagge zählt als Posten (Lesart wie IOF-R 19.4).", en = "The start flag counts as a control (read as in IOF-R 19.4)." }
 
 [[rules]]
-id = "wkb2026.distance.min_sprint"
+id = "wkb2026.distance.min_half"
 key = "min_distance"
 severity = "error"
-map_kinds = ["sprint", "schoolyard"]
+print_scales = [1000, 2000, 3000, 4000]
 values = { metres = 15.0 }
 source = { doc = "WKB26", section = "B 7.2.1" }
-note = { de = "Die WKB halbieren die Abstände bei 1:3000 und 1:4000; das Profil wendet das auf Sprint- und Schulhofkarten an. Die Startflagge zählt als Posten.", en = "The WKB halve the distances at 1:3000 and 1:4000; this profile applies that to sprint and schoolyard maps. The start flag counts as a control." }
+note = { de = "WKB26 B 7.2.1: bei 1:3.000/1:4.000 die Hälfte. Dass das auch für 1:1.000 und 1:2.000 (Schulhofkarten) gilt, ist ein Vorschlag (Claude's call, Plan M2b). Die Startflagge zählt als Posten (Lesart wie IOF-R 19.4).", en = "WKB26 B 7.2.1: half at 1:3,000/1:4,000. Applying this to 1:1,000 and 1:2,000 (schoolyard maps) as well is a proposal (Claude's call, plan M2b). The start flag counts as a control (read as in IOF-R 19.4)." }
 
 [[rules]]
 id = "wkb2026.distance.similar"
 key = "similar_features"
 severity = "warning"
 map_kinds = ["forest"]
+print_scales = [5000, 7500, 10000, 15000]
 source = { doc = "WKB26", section = "B 7.2.1" }
 note = { de = "Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISOM-2017-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; Zaun und verfallener Zaun; Wege und Schneisen. Gleiche Symbole sind immer ähnlich. Sporn und Rinne haben kein eigenes Symbol und fehlen.", en = "Similar features after BOF B6.1.3 to B6.1.4, as ISOM 2017-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; fence and ruined fence; paths and rides. Identical symbols are always similar. Spur and re-entrant have no symbol of their own and are left out." }
 
@@ -109,21 +113,68 @@ groups = [
 ]
 
 [[rules]]
+id = "wkb2026.distance.similar_half"
+key = "similar_features"
+severity = "warning"
+map_kinds = ["forest"]
+print_scales = [1000, 2000, 3000, 4000]
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "WKB26 B 7.2.1: bei 1:3.000/1:4.000 die Hälfte. Dass das auch für 1:1.000 und 1:2.000 (Schulhofkarten) gilt, ist ein Vorschlag (Claude's call, Plan M2b). Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISOM-2017-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; Zaun und verfallener Zaun; Wege und Schneisen. Gleiche Symbole sind immer ähnlich. Sporn und Rinne haben kein eigenes Symbol und fehlen.", en = "WKB26 B 7.2.1: half at 1:3,000/1:4,000. Applying this to 1:1,000 and 1:2,000 (schoolyard maps) as well is a proposal (Claude's call, plan M2b). Similar features after BOF B6.1.3 to B6.1.4, as ISOM 2017-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; fence and ruined fence; paths and rides. Identical symbols are always similar. Spur and re-entrant have no symbol of their own and are left out." }
+
+[rules.values]
+metres = 30.0
+# The control feature is the map feature nearest to the control centre within this distance
+# (plan M2b, Task 4).
+feature_search_mm = 1.0
+groups = [
+  ["304", "305", "306", "309"],
+  ["111", "112"],
+  ["109", "110"],
+  ["516", "517"],
+  ["505", "506", "507", "508"],
+]
+
+[[rules]]
 id = "wkb2026.distance.similar_sprint"
 key = "similar_features"
 severity = "warning"
 map_kinds = ["sprint", "schoolyard"]
+print_scales = [1000, 2000, 3000, 4000]
 source = { doc = "WKB26", section = "B 7.2.1" }
-note = { de = "Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISSprOM-2019-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; passierbarer und unpassierbarer Zaun (ISSprOM kennt keinen verfallenen Zaun); Wege und Schneisen. Gleiche Symbole sind immer ähnlich.", en = "Similar features after BOF B6.1.3 to B6.1.4, as ISSprOM 2019-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; passable and uncrossable fence (ISSprOM has no ruined fence); paths and rides. Identical symbols are always similar." }
+note = { de = "WKB26 B 7.2.1: bei 1:3.000/1:4.000 die Hälfte. Dass das auch für 1:1.000 und 1:2.000 (Schulhofkarten) gilt, ist ein Vorschlag (Claude's call, Plan M2b). Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISSprOM-2019-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; passierbarer und unpassierbarer Zaun (ISSprOM kennt keinen verfallenen Zaun); Wege und Schneisen. Gleiche Symbole sind immer ähnlich.", en = "WKB26 B 7.2.1: half at 1:3,000/1:4,000. Applying this to 1:1,000 and 1:2,000 (schoolyard maps) as well is a proposal (Claude's call, plan M2b). Similar features after BOF B6.1.3 to B6.1.4, as ISSprOM 2019-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; passable and uncrossable fence (ISSprOM has no ruined fence); paths and rides. Identical symbols are always similar." }
 
 [rules.values]
 metres = 30.0
+# The control feature is the map feature nearest to the control centre within this distance
+# (plan M2b, Task 4).
 feature_search_mm = 1.0
 # ISSprOM 2019-2 (checked against tests/fixtures/maps/luebeck.omap): 305 small crossable
 # watercourse, 306 minor/seasonal watercourse, 309 narrow marsh | 111 small depression, 112 pit
 # or hole | 109 small knoll, 110 small elongated knoll | 516 passable fence or railing, 518
 # uncrossable fence or railing | 505 unpaved footpath or track, 506 small unpaved footpath or
 # track, 507 less distinct small path, 508 narrow ride.
+groups = [
+  ["305", "306", "309"],
+  ["111", "112"],
+  ["109", "110"],
+  ["516", "518"],
+  ["505", "506", "507", "508"],
+]
+
+[[rules]]
+id = "wkb2026.distance.similar_sprint_full"
+key = "similar_features"
+severity = "warning"
+map_kinds = ["sprint", "schoolyard"]
+print_scales = [5000, 7500, 10000, 15000]
+source = { doc = "WKB26", section = "B 7.2.1" }
+note = { de = "Ähnliche Objekte nach BOF B6.1.3 bis B6.1.4, als ISSprOM-2019-2-Symbole: Bach, Graben und schmaler Sumpf; Senke und Loch; Kuppen; passierbarer und unpassierbarer Zaun (ISSprOM kennt keinen verfallenen Zaun); Wege und Schneisen. Gleiche Symbole sind immer ähnlich.", en = "Similar features after BOF B6.1.3 to B6.1.4, as ISSprOM 2019-2 symbols: stream, ditch and narrow marsh; depression and pit; knolls; passable and uncrossable fence (ISSprOM has no ruined fence); paths and rides. Identical symbols are always similar." }
+
+[rules.values]
+metres = 60.0
+# The control feature is the map feature nearest to the control centre within this distance
+# (plan M2b, Task 4).
+feature_search_mm = 1.0
 groups = [
   ["305", "306", "309"],
   ["111", "112"],
