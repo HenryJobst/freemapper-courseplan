@@ -928,3 +928,13 @@ fn adding_a_special_keeps_comments_on_the_others() {
         "{saved}"
     );
 }
+
+#[test]
+fn crossing_point_special_is_rejected() {
+    let specials = "\n[[specials]]\nkind = \"crossing_point\"\nid = \"x1\"\nmap_mm = [1.0, 2.0]\n";
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), &event_text(specials, "", ""));
+    let err = ProjectFile::load(&file).unwrap_err();
+    assert!(matches!(err, ProjectError::Parse { .. }), "{err:?}");
+    assert!(err.to_string().contains("crossing_point"), "{err}");
+}
