@@ -123,7 +123,10 @@ cli-edit-control-described = Beschreibung von Posten { $code }: { $columns }
 cli-edit-number-set = Nummer von Posten { $code }: Richtung { $direction } Grad, Abstand { $gap } mm
 cli-edit-number-cleared = Nummernplatz von Posten { $code } zurückgesetzt
 cli-edit-special-added-at = { $kind } { $id } bei { $x },{ $y } angelegt
-cli-edit-special-added-points = { $kind } { $id } mit { $count } Punkten angelegt
+cli-edit-special-added-points = { $count ->
+    [one] { $kind } { $id } mit 1 Punkt angelegt
+   *[other] { $kind } { $id } mit { $count } Punkten angelegt
+}
 cli-edit-special-removed = Sonderobjekt { $id } entfernt
 cli-edit-class-added = Kategorie { $name } angelegt
 cli-edit-class-removed = Kategorie { $name } entfernt
@@ -194,7 +197,10 @@ cli-edit-course-added = Bahn { $name } angelegt
 cli-edit-course-removed = Bahn { $name } entfernt
 cli-edit-course-controls = Bahn { $name } führt jetzt über { $codes }
 cli-edit-course-set = Bahn { $name } geändert
-cli-edit-course-numbers = { $count } Postennummern auf Bahn { $name } gesetzt
+cli-edit-course-numbers = { $count ->
+    [one] 1 Postennummer auf Bahn { $name } gesetzt
+   *[other] { $count } Postennummern auf Bahn { $name } gesetzt
+}
 cli-edit-course-leg-start = Teilstrecke vom Start der Bahn { $name } gesetzt: Knicke { $bends }, { $taped }
 cli-edit-course-leg-after = Teilstrecke nach Position { $index } der Bahn { $name } gesetzt: Knicke { $bends }, { $taped }
 

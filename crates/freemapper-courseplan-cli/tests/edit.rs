@@ -654,13 +654,98 @@ fn course_errors_are_localized() {
         ],
     );
     let out = run_lang(d, "de", &["course", "numbers", p, "A"]);
-    assert_eq!(
-        stdout(&out).trim_end(),
-        "1 Postennummern auf Bahn A gesetzt"
-    );
+    assert_eq!(stdout(&out).trim_end(), "1 Postennummer auf Bahn A gesetzt");
     let out = run_lang(d, "de", &["course", "remove", p, "B"]);
     assert_eq!(out.status.code(), Some(1));
     assert!(stderr(&out).starts_with("Fehler: "), "{}", stderr(&out));
     let out = run_lang(d, "de", &["course", "--help"]);
     assert!(stdout(&out).contains("Befehle:"), "{}", stdout(&out));
+}
+
+#[test]
+fn counts_use_plural_forms_and_german_decimal_comma() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &[
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31",
+        ],
+    );
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A"]),
+        "placed 1 control number on course A"
+    );
+    assert_eq!(
+        info_line(d, &project, "course A"),
+        "course A: 1 control, 0.4 km, climb \u{2013} m"
+    );
+    ok(d, &["course", "controls", p, "A", "31,32,33"]);
+    assert_eq!(
+        ok(d, &["course", "numbers", p, "A", "--overwrite"]),
+        "placed 3 control numbers on course A"
+    );
+    assert!(info_line(d, &project, "course A").starts_with("course A: 3 controls, "));
+    let out = run_lang(d, "de", &["info", p]);
+    let line = stdout(&out)
+        .lines()
+        .find(|l| l.starts_with("Bahn A"))
+        .unwrap()
+        .to_owned();
+    assert!(
+        line.starts_with("Bahn A: 3 Posten, 0,") && line.ends_with(" km, Anstieg \u{2013} m"),
+        "{line}"
+    );
+    let out = run_lang(d, "de", &["course", "numbers", p, "A", "--overwrite"]);
+    assert_eq!(
+        stdout(&out).trim_end(),
+        "3 Postennummern auf Bahn A gesetzt"
+    );
+    assert_eq!(
+        ok(
+            d,
+            &[
+                "special",
+                "add",
+                p,
+                "--kind",
+                "marked-route",
+                "--id",
+                "M1",
+                "--point",
+                "1,1"
+            ]
+        ),
+        "added marked route M1 with 1 point"
+    );
+    assert_eq!(
+        ok(
+            d,
+            &[
+                "special",
+                "add",
+                p,
+                "--kind",
+                "marked-route",
+                "--id",
+                "M2",
+                "--point",
+                "1,1",
+                "--point",
+                "2,2"
+            ]
+        ),
+        "added marked route M2 with 2 points"
+    );
 }

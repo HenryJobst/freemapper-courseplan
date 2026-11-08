@@ -9,9 +9,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 ### Added
 
 - Commands for courses: `course add`, `course controls`, `course leg`, `course set`, `course numbers` and
-  `course remove` (individual courses). `course leg --after INDEX` counts from 1 as on the map, crossing points
+  `course remove`. Adding and changing work for individual courses only. `course leg --after INDEX` counts from 1 as on the map, crossing points
   included. Give bends with a repeated `--bend X,Y`; without `--bend` the leg loses its bends, and without
-  `--taped` it loses the marked-route flag. `course numbers` places the control numbers clear of legs and circles.
+  `--taped` it loses the marked-route flag. `course numbers` places the control numbers clear of legs and circles. Output uses the decimal comma in German, while input keeps the dot.
 - `info` prints one line per course with the number of controls, the length in kilometres and the climb. Crossing
   points do not count as controls. The length follows WKB B 7.2.5: straight lines, detours as bends, marked routes
   along their bends. Team, relay and score courses show no length yet.
@@ -23,6 +23,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   course at a map scale and the numbers of the controls (crossing points get none). It places a number beside the
   circle without touching legs, circles or other numbers. Overprint sizes follow the map kind and stay the same size
   on the map for enlarged prints.
+- Map index: the program looks up each map symbol once per symbol instead of once per object. This speeds up
+  checking points against the map; results are unchanged.
 - Data model: crossing points, ids for special objects, bends and marked-route flag for the leg from the start,
   and a print area per course.
 - Program texts come from Fluent files, one per language (`crates/freemapper-courseplan/i18n/`). German and

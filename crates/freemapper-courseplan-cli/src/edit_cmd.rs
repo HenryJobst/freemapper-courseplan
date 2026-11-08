@@ -598,7 +598,7 @@ pub fn special(lang: &Lang, cmd: SpecialCmd) -> Outcome {
                 say(lang, "cli-edit-special-added-at", &args);
             } else {
                 let mut args = common.to_vec();
-                args.push(("count", v(count.to_string())));
+                args.push(("count", FluentValue::from(count)));
                 say(lang, "cli-edit-special-added-points", &args);
             }
         }
@@ -824,7 +824,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             say(
                 lang,
                 "cli-edit-course-numbers",
-                &[("count", v(placed.to_string())), ("name", v(name))],
+                &[("count", FluentValue::from(placed)), ("name", v(name))],
             );
         }
     }

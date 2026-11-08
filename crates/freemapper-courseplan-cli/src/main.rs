@@ -371,12 +371,12 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     let count = |f: fn(&CourseKind) -> bool| event.courses.iter().filter(|c| f(&c.kind)).count();
     let line = |id: &str, args: &[(&str, FluentValue)]| println!("{}", text(lang, id, args));
     let value = |id: &str, v: String| line(id, &[("value", FluentValue::from(v))]);
-    let number = |id: &str, n: usize| line(id, &[("count", FluentValue::from(n.to_string()))]);
+    let number = |id: &str, n: usize| line(id, &[("count", FluentValue::from(n))]);
     value("cli-info-title", event.event.title.clone());
     value("cli-info-map", event.sources.map.display().to_string());
     value("cli-info-map-kind", text(lang, kind, &[]));
     number("cli-info-controls", event.controls.len());
-    let n = |n: usize| FluentValue::from(n.to_string());
+    let n = |n: usize| FluentValue::from(n);
     line(
         "cli-info-courses",
         &[

@@ -123,7 +123,10 @@ cli-edit-control-described = description of control { $code }: { $columns }
 cli-edit-number-set = control { $code } number: direction { $direction } degrees, gap { $gap } mm
 cli-edit-number-cleared = control { $code } number placement cleared
 cli-edit-special-added-at = added { $kind } { $id } at { $x },{ $y }
-cli-edit-special-added-points = added { $kind } { $id } with { $count } points
+cli-edit-special-added-points = { $count ->
+    [one] added { $kind } { $id } with 1 point
+   *[other] added { $kind } { $id } with { $count } points
+}
 cli-edit-special-removed = removed special object { $id }
 cli-edit-class-added = added class { $name }
 cli-edit-class-removed = removed class { $name }
@@ -185,7 +188,10 @@ cli-arg-class-remove-name = Name of the class
 
 ## Course commands
 
-cli-info-course = course { $name }: { $controls } controls, { $km } km, climb { $climb } m
+cli-info-course = course { $name }: { $controls ->
+    [one] 1 control
+   *[other] { $controls } controls
+}, { $km } km, climb { $climb } m
 cli-info-course-unmeasured = course { $name }: { $kind }, length not supported yet
 word-decimal-point = .
 word-taped = taped
@@ -194,7 +200,10 @@ cli-edit-course-added = added course { $name }
 cli-edit-course-removed = removed course { $name }
 cli-edit-course-controls = course { $name } now visits { $codes }
 cli-edit-course-set = changed course { $name }
-cli-edit-course-numbers = placed { $count } control numbers on course { $name }
+cli-edit-course-numbers = { $count ->
+    [one] placed 1 control number on course { $name }
+   *[other] placed { $count } control numbers on course { $name }
+}
 cli-edit-course-leg-start = set the leg from the start of course { $name }: bends { $bends }, { $taped }
 cli-edit-course-leg-after = set the leg after position { $index } of course { $name }: bends { $bends }, { $taped }
 
