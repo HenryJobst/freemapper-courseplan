@@ -59,3 +59,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0013](0013-one-renderer-in-the-suite.md) | One renderer in the suite, taken from freemapper-print | Accepted | 2026-11-08 |
 | [0014](0014-course-content-here-presentation-in-freemapper-print.md) | Course content here, sheet presentation in freemapper-print | Accepted | 2026-11-08 |
 | [0015](0015-ai-for-judgment-only-and-tested.md) | AI for judgment only, and only after testing | Accepted | 2026-11-08 |
+| [0016](0016-ai-features-optional.md) | AI features are optional and need a configured model | Accepted | 2026-11-08 |

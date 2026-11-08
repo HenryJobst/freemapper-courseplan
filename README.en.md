@@ -46,6 +46,6 @@ cargo build --release
 `rust-toolchain.toml` fixes the Rust version; `rustup` installs it on the first build. Before each commit,
 [lefthook](https://github.com/evilmartians/lefthook) checks formatting and clippy (`lefthook install`).
 
-## Licence and credit
+## Licence
 
 freemapper-courseplan is licensed [GPL-3.0-or-later](LICENSE), like freemapper and freemapper-print (ADR 0002).

@@ -371,6 +371,10 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 
 ## 6. AI support
 
+- **Optional** *(user, 2026-11-08, for the whole suite)*: AI features inside the application are active only
+  when a model is configured. Without one, every feature of the program works; AI findings and proposals are
+  simply absent. Nothing in the editor, CLI or checks waits for or requires a model. The MCP server is not an
+  AI feature in this sense: there an external assistant drives the program, and the program calls no model.
 - Hard rules stay code (§5.6). Optimisation problems (team split, control-placer tours, route search) stay
   algorithms. AI is for judgment: route choice quality, difficulty for a class, whether a control site is
   unambiguous, and proposals *(Claude's call, consistent with the user's "test first")*.
