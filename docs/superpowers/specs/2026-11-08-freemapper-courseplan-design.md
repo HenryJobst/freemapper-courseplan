@@ -125,7 +125,7 @@ uniform)*.
 | Number position | direction in degrees (0 = east, counter-clockwise) and gap in print mm | agreed with freemapper-print |
 | Coordinates | OOM map coordinates (mm at map scale, y down), as freemapper-print | agreed with freemapper-print |
 | Rule source | WKB 2026 in the first version; an IOF profile later, the rule data is shaped for it | Claude's call, narrowed after the review |
-| Program language | German and English for every user-facing text (editor, CLI, findings, MCP texts); chosen by `--lang`, `FREEMAPPER_LANG` or the system locale; more languages later | user, 2026-11-08; ADR 0021 |
+| Program language | German and English for every user-facing text (editor, CLI, findings, MCP texts), in Fluent files so further languages can be added; chosen by `--lang`, `FREEMAPPER_LANG` or the system locale | user, 2026-11-08; ADR 0021, 0022 |
 | AI judgments | through the `typesafe-ai` skill's approach (TypeSafe), per the user's CLAUDE.md | user's standing instruction |
 
 ## 4. Concepts

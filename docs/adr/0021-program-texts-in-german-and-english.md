@@ -1,7 +1,7 @@
 # 0021. Program texts in German and English
 
 Date: 2026-11-08
-Status: Accepted
+Status: Superseded by 0022
 
 ## Context
 

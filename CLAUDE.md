@@ -11,9 +11,9 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   (ADR 0001).
 - Source code (identifiers, comments) is English. Specs, plans and ADRs are English. READMEs, manual, examples
   README and changelog are bilingual, German and English (ADR 0003). With the user, speak German.
-- Program texts (CLI messages and help, findings, editor, MCP texts) exist in German and English through the
-  catalog in `crates/freemapper-courseplan/src/text.rs` (ADR 0021). A new message gets both texts in the same
-  commit; `Display` of error types stays English.
+- Program texts (CLI messages and help, findings, editor, MCP texts) live in Fluent files, one per language,
+  under `i18n/<language>/courseplan.ftl` (ADR 0022). English is the reference; a new message gets its text in
+  every language the project has, in the same commit. `Display` of error types stays English.
 - Glossary first: a new domain term gets its row in `docs/glossary.md` before or with its code. Terms that
   freemapper's or freemapper-print's glossary defines keep their names and code identifiers (`Course`,
   `Control`, `ControlCode`, `NumberPlacement`, `MarkedRoute` …).

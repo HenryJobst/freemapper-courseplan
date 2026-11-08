@@ -14,8 +14,8 @@ special-object ids, legs from the start, print area). The library crate gets pur
 geometry and length (`course.rs`), edit operations that never leave an invalid event (`edit.rs`) and number
 placement (`numbers.rs`). The CLI and a new MCP server are thin wrappers that load, call, save.
 
-**Tech Stack:** Rust 1.99.1, serde, toml_edit `=0.25.17`, clap 4.6.7, rmcp `=3.6.0`, schemars 1.2.3, tokio
-1.54.1, serde_json 1.0.154.
+**Tech Stack:** Rust 1.99.1, serde, toml_edit `=0.25.17`, clap 4.6.7, fluent-bundle `=0.16.0`, rmcp `=3.6.0`,
+schemars 1.2.3, tokio 1.54.1, serde_json 1.0.154.
 
 **Spec:** `docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md` (§2 first version, §4, §5.3,
 §5.4, §5.8, §8 M2). Split: design milestone M2 is planned as M2a (this plan) and M2b (the `check` rules of §5.6,
@@ -42,8 +42,8 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   "not supported yet" error.
 - No AI in the program (ADR 0016). The MCP server lets an external agent drive it.
 - Project file format stays `format = 1` (provisional until the first release, ADR 0019).
-- Program texts in German and English (ADR 0021): every user-facing message, CLI help text and MCP text
-  exists in both languages through the catalog of Task 6; the language comes from `--lang de|en`, else
+- Program texts in Fluent files, one per language (ADR 0022; German and English now): every user-facing
+  message, CLI help text and MCP text comes from the catalog of Task 6; the language comes from `--lang`, else
   `FREEMAPPER_LANG`, else the system locale (`LC_ALL`, `LC_MESSAGES`, `LANG`), else English. Code, identifiers,
   logs and `Display` of error types stay English. Texts longer than a short phrase follow unslop/humanizer in
   both languages. Changelog entries in both changelogs.
@@ -269,45 +269,63 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 - [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy.
 - [ ] **Step 5: Commit** `feat(numbers): place control numbers clear of legs and circles`.
 
-### Task 6: Program texts in German and English
+### Task 6: Program texts in Fluent files
 
 **Files:**
-- Create: `crates/freemapper-courseplan/src/text.rs` (language detection and the message catalog)
-- Modify: `crates/freemapper-courseplan/src/lib.rs`, `crates/freemapper-courseplan/src/init.rs`,
+- Create: `crates/freemapper-courseplan/src/text.rs` (language detection, embedded Fluent bundles, `Localize`),
+  `crates/freemapper-courseplan/i18n/en/courseplan.ftl`, `crates/freemapper-courseplan/i18n/de/courseplan.ftl`
+- Modify: `crates/freemapper-courseplan/src/lib.rs`, `src/init.rs`, `Cargo.toml` files,
   `crates/freemapper-courseplan-cli/src/main.rs`, `docs/glossary.md` (row Sprache / language `Lang`)
 - Test: unit tests in `text.rs`, `crates/freemapper-courseplan-cli/tests/cli.rs`
 
 **Interfaces:**
 - Consumes: the error types `ProjectError`, `ModelError` (model crate), `InitError`, `CourseError`,
   `EditError`, `OmapError`.
+- Dependencies (ADR 0022; all releases older than two weeks; pin exactly): `fluent-bundle = "=0.16.0"`,
+  `fluent-syntax = "=0.12.0"` (only if used directly), `unic-langid = "=0.9.6"`, `fluent-langneg = "=0.14.2"`;
+  `intl_pluralrules` 7.0.2 comes in transitively. Check every transitive crate's release date (crates.io API)
+  and list them in the report.
 - Produces:
-  - `enum Lang { De, En }`; `fn detect_lang(arg: Option<&str>, env: &dyn Fn(&str) -> Option<String>) -> Lang`
-    (order as in the Global Constraints). `--lang` accepts only `de` or `en`, case-insensitive (clap reports
-    other values). The environment values are read leniently: a value starting with `de`, case-insensitive,
-    gives `De` (`de-DE`, `de_DE.UTF-8`, `de_AT`); any other value gives `En` (`C`, `POSIX`); an empty or unset
-    variable passes on to the next one. Agreed with freemapper and freemapper-print, which copy this module.
+  - `struct Lang(unic_langid::LanguageIdentifier)` with `Lang::english()`; `fn available() -> Vec<Lang>` (the
+    embedded languages, `en` and `de` now).
+  - `fn detect_lang(arg: Option<&str>, env: &dyn Fn(&str) -> Option<String>) -> Lang`: sources in the order of
+    the Global Constraints. `--lang` must name an available language, case-insensitive, by its language part
+    (`de`, `en`); an unknown value is a usage error listing the available ones. Environment values are read
+    leniently: the language part of `de-DE`, `de_DE.UTF-8`, `de_AT` is `de`; `C`, `POSIX` and unknown languages
+    pass to the next source; an empty or unset variable passes on. Nothing matched → English. Agreed with
+    freemapper and freemapper-print, which copy this module.
+  - `fn text(lang: &Lang, id: &str, args: &[(&str, FluentValue)]) -> String`: looks the message up in the
+    language's bundle, falls back to English, and as a last resort returns the id. Bundles are built once
+    (`std::sync::OnceLock`) with `fluent_bundle::concurrent::FluentBundle`; Unicode isolation marks are
+    switched off (`set_use_isolating(false)`) so terminal output stays clean.
+  - `trait Localize { fn localize(&self, lang: &Lang) -> String; }`, implemented for every error type above
+    through `text`.
+  - CLI: global option `--lang`; help texts of all commands from the catalog (build the clap command at start-up
+    and set `about`/`help` with `Command::mut_subcommand`/`mut_arg`); `info` labels localized (German:
+    `Titel`, `Karte`, `Kartenart`, `Posten`, `Bahnen (einzeln …, Mannschaft …, Staffel …, Score …)`,
+    `Kategorien`); error prefix from the catalog (`error:` / `Fehler:`). The M1 messages move into the files.
   - MCP: tool, parameter and JSON field names stay English; tool and parameter descriptions, the server
-    instructions and error texts in results are localized once at server start.
-  - `trait Localize { fn localize(&self, lang: Lang) -> String; }`, implemented for every error type above;
-    the English text equals the type's `Display`. No new crate: the catalog is Rust code (a `match` per
-    message), so a missing translation is a compile error. A later move to translation files for more
-    languages is left open.
-  - CLI: global option `--lang de|en`; help texts of all commands in both languages (build the clap command
-    at start-up and set `about`/`help` from the catalog, e.g. with `Command::mut_subcommand`/`mut_arg`);
-    `info` labels stay as in M1 in English and get German labels (`Titel`, `Karte`, `Kartenart`, `Posten`,
-    `Bahnen (einzeln …, Mannschaft …, Staffel …, Score …)`, `Kategorien`) when the language is German.
-  - The M1 messages (init, info, project file errors) are translated.
+    instructions and error texts in results come from the catalog, localized once at server start.
+  - A short `i18n/README.md` (English) says how to add a language: copy `en/courseplan.ftl`, translate,
+    run the tests.
 
 - [ ] **Step 1: Write the failing tests**:
   - `detects_language_in_order`: `--lang` wins over `FREEMAPPER_LANG`, which wins over `LANG=de_DE.UTF-8`;
-    `LANG=C` → English.
-  - `every_error_has_both_languages`: for one value of each error variant, `localize(De)` is non-empty and
-    differs from `localize(En)`, and `localize(En) == to_string()`.
-  - CLI: `init_refuses_forest_map_in_german` (`--lang de` → German stderr), `help_in_german`
-    (`--lang de init --help` contains a German phrase), and the existing English tests run with `--lang en`
-    or `LANG=C` so they do not depend on the machine.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy.
-- [ ] **Step 5: Commit** `feat(text): program texts in German and English`.
+    `LANG=C` → English; `FREEMAPPER_LANG=fr` with `LANG=de_DE.UTF-8` → German (French not available, next
+    source).
+  - `unknown_lang_argument_is_refused`.
+  - `every_language_has_every_message`: parse each embedded file; the set of message ids of every language
+    equals the English set; every message formats without errors with sample arguments.
+  - `every_error_has_both_languages`: for one value of each error variant, `localize(de)` is non-empty and
+    differs from `localize(en)`, and `localize(en) == to_string()`.
+  - `missing_message_falls_back_to_english`: a bundle built in the test without the id returns the English
+    text.
+  - CLI: `init_refuses_forest_map_in_german` (`--lang de` → German stderr starting with `Fehler:`),
+    `help_in_german` (`--lang de init --help` contains a German phrase); the existing English tests run with
+    `--lang en` and `LANG=C`.
+- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; fmt, clippy; check
+  `git diff Cargo.lock`.
+- [ ] **Step 5: Commit** `feat(text): program texts in Fluent files for German and English`.
 
 ### Task 7: CLI for controls, special objects and classes
 
