@@ -8,7 +8,7 @@ use freemapper_courseplan_model::MapPoint;
 mod geometry;
 
 use crate::omap::{MapDocument, MapObjectKind};
-use geometry::{feature_distance, push_area, sub_paths, to_point};
+use geometry::{feature_distance, push_area, push_lines, sub_paths, to_point};
 
 /// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,20 +90,15 @@ impl MapIndex {
                             push(FeatureGeometry::Point(to_point(first)));
                         }
                     }
-                    2 => {
-                        for (points, _) in paths {
-                            push(FeatureGeometry::Line(points));
-                        }
-                    }
+                    2 => push_lines(paths, &mut push),
                     4 => push_area(paths, &mut push),
+                    // Combined symbols: decided per path. Closed paths form one area (first
+                    // ring outer, the rest holes); open paths are lines, one feature each.
                     16 => {
-                        if paths.first().is_some_and(|(_, closed)| *closed) {
-                            push_area(paths, &mut push);
-                        } else {
-                            for (points, _) in paths {
-                                push(FeatureGeometry::Line(points));
-                            }
-                        }
+                        let (closed, open): (Vec<_>, Vec<_>) =
+                            paths.into_iter().partition(|(_, closed)| *closed);
+                        push_area(closed, &mut push);
+                        push_lines(open, &mut push);
                     }
                     _ => {}
                 }
@@ -331,6 +326,22 @@ mod tests {
             index.features[1].geometry,
             FeatureGeometry::Area(_)
         ));
+    }
+
+    #[test]
+    fn closed_line_measures_closing_edge() {
+        // Square 0..10 mm; the closing edge runs from (0, 10) back to (0, 0).
+        let index = MapIndex::from_document(&document(
+            4000,
+            "X",
+            vec![path(1, square(0, 0, 10_000, 10_000))],
+        ));
+        assert!(matches!(
+            index.features[0].geometry,
+            FeatureGeometry::Line(_)
+        ));
+        let near = index.features_near(p(-0.5, 5.0), 5.0);
+        assert!((near[0].1 - 0.5).abs() < 1e-9, "{}", near[0].1);
     }
 
     #[test]

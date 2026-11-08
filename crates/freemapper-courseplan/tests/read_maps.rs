@@ -20,6 +20,12 @@ fn objects_in_parts(path: &str) -> usize {
     xml[start..end].matches("<object ").count()
 }
 
+fn is_sheet(o: &freemapper_courseplan::omap::MapObject) -> bool {
+    o.tags
+        .iter()
+        .any(|(k, v)| k == "freemapper:source" && v == "sheet")
+}
+
 #[test]
 fn luebeck_reads() {
     let path = fixture("luebeck.omap");
@@ -29,6 +35,13 @@ fn luebeck_reads() {
     assert_eq!(doc.georef.scale_denominator, 4000);
     assert_eq!(doc.georef.crs_spec.as_deref(), Some("+init=epsg:25832"));
     assert!(doc.georef.ref_projected.is_some());
+    let sheet = doc
+        .parts
+        .iter()
+        .find(|p| p.name == "peripheral information")
+        .expect("part peripheral information");
+    assert!(!sheet.objects.is_empty());
+    assert!(sheet.objects.iter().all(is_sheet));
 }
 
 #[test]
@@ -58,11 +71,21 @@ fn luebeck_index_skips_sheet_objects() {
     assert!(index.len() < objects, "{} of {objects}", index.len());
     let (min, max) = index.extent().unwrap();
     assert!(max.x > min.x && max.y > min.y);
+    let sheet_objects = doc
+        .parts
+        .iter()
+        .flat_map(|p| &p.objects)
+        .filter(|o| is_sheet(o))
+        .count();
+    assert!(sheet_objects > 0);
+    assert!(index.len() <= objects - sheet_objects);
     let centre = freemapper_courseplan_model::MapPoint {
         x: (min.x + max.x) / 2.0,
         y: (min.y + max.y) / 2.0,
     };
-    let near = index.features_near(centre, 30.0);
-    assert!(near.iter().all(|(f, _)| f.part != "peripheral information"));
-    assert!(near.windows(2).all(|w| w[0].1 <= w[1].1));
+    let diagonal = (max.x - min.x).hypot(max.y - min.y);
+    let all = index.features_near(centre, diagonal + 1.0);
+    assert_eq!(all.len(), index.len());
+    assert!(all.iter().all(|(f, _)| f.part != "peripheral information"));
+    assert!(all.windows(2).all(|w| w[0].1 <= w[1].1));
 }

@@ -20,6 +20,20 @@ pub(super) fn push_area(paths: Vec<(Vec<MapPoint>, bool)>, push: &mut impl FnMut
     }
 }
 
+/// One line feature per path; a closed path ends with its first point again, so the closing
+/// edge is part of the polyline.
+pub(super) fn push_lines(
+    paths: Vec<(Vec<MapPoint>, bool)>,
+    push: &mut impl FnMut(FeatureGeometry),
+) {
+    for (mut points, closed) in paths {
+        if closed && let Some(first) = points.first().cloned() {
+            points.push(first);
+        }
+        push(FeatureGeometry::Line(points));
+    }
+}
+
 pub(super) fn to_point(c: &MapCoord) -> MapPoint {
     MapPoint {
         x: f64::from(c.x) / 1000.0,
