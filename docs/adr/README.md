@@ -66,3 +66,5 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0020](0020-format-1-crossing-points-special-ids-start-legs.md) | Format 1: crossing points, special-object ids, start legs | Accepted | 2026-11-08 |
 | [0021](0021-program-texts-in-german-and-english.md) | Program texts in German and English | Superseded by 0022 | 2026-11-08 |
 | [0022](0022-program-texts-in-fluent-files.md) | Program texts in Fluent files, one per language | Accepted | 2026-11-08 |
+| [0023](0023-mcp-server-file-checks-and-redaction.md) | MCP server: localized tool texts, file checks and redacted errors | Accepted | 2026-11-08 |
+| [0024](0024-cli-editing-conventions.md) | CLI editing conventions | Accepted | 2026-11-08 |
