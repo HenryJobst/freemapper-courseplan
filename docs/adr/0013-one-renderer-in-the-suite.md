@@ -1,7 +1,7 @@
 # 0013. One renderer in the suite, taken from freemapper-print
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

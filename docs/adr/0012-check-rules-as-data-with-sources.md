@@ -1,7 +1,7 @@
 # 0012. Check rules as data with sources, WKB 2026 first
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

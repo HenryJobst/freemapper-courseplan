@@ -1,7 +1,7 @@
 # 0001. Rust with a pure-Rust core
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

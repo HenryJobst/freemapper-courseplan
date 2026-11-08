@@ -1,7 +1,7 @@
 # 0004. MCP over stdio as a primary interface
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

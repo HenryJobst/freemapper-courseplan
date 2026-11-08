@@ -1,7 +1,7 @@
 # 0006. Dependencies at least two weeks old
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

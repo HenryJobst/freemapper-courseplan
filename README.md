@@ -29,8 +29,8 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 ## Status
 
-freemapper-courseplan ist in der Planung. Es gibt noch kein lauffähiges Programm, nur das Projektgerüst, den
-Entwurf des [Designs](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), das
+freemapper-courseplan ist in der Planung. Es gibt noch kein lauffähiges Programm, nur das Projektgerüst, das
+[Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), das
 [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine
 [Sammlung der Regeln zur Bahnlegung](docs/research/2026-11-08-bahnlegung-kriterien.md).
 

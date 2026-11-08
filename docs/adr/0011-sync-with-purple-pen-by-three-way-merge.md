@@ -1,7 +1,7 @@
 # 0011. Sync with Purple Pen by three-way merge
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

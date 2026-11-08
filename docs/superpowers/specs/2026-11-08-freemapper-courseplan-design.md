@@ -1,6 +1,6 @@
 # freemapper-courseplan – Design
 
-Status: draft for review · Date: 2026-11-08
+Status: approved 2026-11-08 · Date: 2026-11-08
 
 Statements marked *(user)* were decided by the user in the brainstorming on 2026-11-08. Statements marked
 *(Claude's call)* are proposals the user has not confirmed yet. Statements marked *(agreed with

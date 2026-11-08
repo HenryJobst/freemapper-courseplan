@@ -1,7 +1,7 @@
 # 0003. Glossary first, English code, bilingual user docs
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

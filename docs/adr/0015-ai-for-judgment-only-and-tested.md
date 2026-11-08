@@ -1,7 +1,7 @@
 # 0015. AI for judgment only, and only after testing
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

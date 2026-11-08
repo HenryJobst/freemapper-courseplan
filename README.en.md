@@ -30,7 +30,7 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 ## Status
 
-freemapper-courseplan is being planned. There is no working program yet, only the project skeleton, the draft
+freemapper-courseplan is being planned. There is no working program yet, only the project skeleton, the
 [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the [glossary](docs/glossary.md),
 the [architecture decisions](docs/adr/README.md) and a
 [collection of course-setting rules](docs/research/2026-11-08-bahnlegung-kriterien.md) (German).

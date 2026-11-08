@@ -1,7 +1,7 @@
 # 0009. Data model for all course kinds, individual courses first
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 

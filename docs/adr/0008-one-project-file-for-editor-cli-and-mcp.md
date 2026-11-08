@@ -1,7 +1,7 @@
 # 0008. One project file for editor, CLI and MCP
 
 Date: 2026-11-08
-Status: Proposed
+Status: Accepted
 
 ## Context
 
