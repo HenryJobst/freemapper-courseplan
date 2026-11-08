@@ -547,6 +547,9 @@ mod tests {
             "arg",
             "args",
             "other",
+            "columns",
+            "direction",
+            "gap",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

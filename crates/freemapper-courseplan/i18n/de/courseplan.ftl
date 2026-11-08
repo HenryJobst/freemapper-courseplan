@@ -112,3 +112,73 @@ cli-parse-invalid-subcommand = Unbekannter Befehl { $value }
 cli-parse-missing-subcommand = Ein Befehl ist nötig
 cli-parse-too-many-values = Unerwarteter Wert { $value } für { $arg }
 cli-parse-argument-conflict = { $arg } lässt sich nicht zusammen mit { $other } verwenden
+
+## Bearbeiten
+
+cli-edit-control-added = Posten { $code } bei { $x },{ $y } angelegt
+cli-edit-control-moved = Posten { $code } nach { $x },{ $y } verschoben
+cli-edit-control-removed = Posten { $code } entfernt
+cli-edit-control-removed-from = Posten { $code } und seine Besuche in { $courses } entfernt
+cli-edit-control-described = Beschreibung von Posten { $code }: { $columns }
+cli-edit-number-set = Nummer von Posten { $code }: Richtung { $direction } Grad, Abstand { $gap } mm
+cli-edit-number-cleared = Nummernplatz von Posten { $code } zurückgesetzt
+cli-edit-special-added-at = { $kind } { $id } bei { $x },{ $y } angelegt
+cli-edit-special-added-points = { $kind } { $id } mit { $count } Punkten angelegt
+cli-edit-special-removed = Sonderobjekt { $id } entfernt
+cli-edit-class-added = Kategorie { $name } angelegt
+cli-edit-class-removed = Kategorie { $name } entfernt
+cli-edit-bad-point = { $value } ist kein Punkt. Schreibe X,Y in Kartenmillimetern, mit Punkt als Dezimaltrenner, zum Beispiel 12.5,-30
+cli-edit-bad-number = { $value } ist keine Zahl. Nimm einen Punkt als Dezimaltrenner, zum Beispiel 0.5
+cli-edit-bad-count = { $value } ist keine ganze Zahl
+cli-edit-kind-needs-at = { $kind } ist ein einzelner Punkt. Gib --at X,Y an und kein --points
+cli-edit-kind-needs-points = { $kind } wird durch Punkte gezeichnet. Gib --points X,Y X,Y ... an und kein --at
+cli-edit-no-courses-for-kind = { $kind } gilt für alle Bahnen. Lass --courses weg
+
+word-empty = leer
+word-special-start = Start
+word-special-finish = Ziel
+word-special-marked-route = Markierte Strecke
+word-special-out-of-bounds = Sperrgebiet
+word-special-forbidden-route = Verbotene Strecke
+word-special-dangerous-area = Gefahrenbereich
+word-special-first-aid = Erste-Hilfe-Posten
+word-special-water = Verpflegungsstelle
+
+cli-help-control = Posten anlegen, verschieben, beschreiben, nummerieren und entfernen
+cli-help-special = Sonderobjekte anlegen und entfernen (Start, Ziel, markierte Strecken, Flächen, Erste Hilfe, Wasser)
+cli-help-class = Kategorien anlegen und entfernen
+cli-help-control-add = Einen Posten anlegen
+cli-help-control-move = Einen Posten verschieben
+cli-help-control-remove = Einen Posten und seine Besuche in Einzelbahnen entfernen
+cli-help-control-describe = Die Beschreibungssymbole eines Postens setzen
+cli-help-control-number = Den Platz der Postennummer setzen oder zurücksetzen
+cli-help-special-add = Ein Sonderobjekt anlegen
+cli-help-special-remove = Ein Sonderobjekt entfernen
+cli-help-class-add = Eine Kategorie anlegen
+cli-help-class-remove = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen
+
+cli-arg-edit-code = Code des Postens
+cli-arg-control-add-at = Wohin der Posten kommt: X,Y in Kartenmillimetern
+cli-arg-control-add-code = Code des neuen Postens [Standard: die niedrigste freie Zahl ab 31]
+cli-arg-control-add-crossing-point = Einen Querungspunkt anlegen, der keine Nummer bekommt
+cli-arg-control-move-at = Der neue Ort: X,Y in Kartenmillimetern
+cli-arg-control-describe-c = Symbol für Spalte C (IOF-Symbol-ID)
+cli-arg-control-describe-d = Symbol für Spalte D (IOF-Symbol-ID)
+cli-arg-control-describe-e = Symbol für Spalte E (IOF-Symbol-ID)
+cli-arg-control-describe-f = Symbol für Spalte F (IOF-Symbol-ID)
+cli-arg-control-describe-g = Symbol für Spalte G (IOF-Symbol-ID)
+cli-arg-control-describe-h = Symbol für Spalte H (IOF-Symbol-ID)
+cli-arg-control-describe-clear = Zuerst alle Spalten leeren; Spalten im selben Aufruf werden danach gesetzt
+cli-arg-control-number-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn
+cli-arg-control-number-gap = Abstand zum Kreis in Druckmillimetern
+cli-arg-control-number-clear = Zum Standardplatz zurückkehren
+cli-arg-special-add-kind = Was das Objekt ist
+cli-arg-special-add-id = ID des Objekts, eindeutig unter den Sonderobjekten
+cli-arg-special-add-at = Ort einer Einzelpunkt-Art (Start, Ziel, Erste Hilfe, Wasser): X,Y in Kartenmillimetern
+cli-arg-special-add-points = Punkte einer Linien- oder Flächenart, als einzelne Argumente: X,Y X,Y ... (diese Option zuletzt angeben, damit negative Werte nicht als Optionen gelten)
+cli-arg-special-add-courses = Das Objekt auf diese Bahnen beschränken, durch Kommas getrennt [Standard: alle Bahnen]
+cli-arg-special-remove-id = ID des Sonderobjekts
+cli-arg-class-add-name = Name der Kategorie
+cli-arg-class-add-rule-category = Regelkategorie der Kategorie
+cli-arg-class-add-starters = Erwartete Zahl der Starter
+cli-arg-class-remove-name = Name der Kategorie

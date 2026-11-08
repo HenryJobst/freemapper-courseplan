@@ -112,3 +112,73 @@ cli-parse-invalid-subcommand = unknown command { $value }
 cli-parse-missing-subcommand = a command is required
 cli-parse-too-many-values = unexpected value { $value } for { $arg }
 cli-parse-argument-conflict = { $arg } cannot be used together with { $other }
+
+## Edit commands
+
+cli-edit-control-added = added control { $code } at { $x },{ $y }
+cli-edit-control-moved = moved control { $code } to { $x },{ $y }
+cli-edit-control-removed = removed control { $code }
+cli-edit-control-removed-from = removed control { $code } and its visits in { $courses }
+cli-edit-control-described = description of control { $code }: { $columns }
+cli-edit-number-set = control { $code } number: direction { $direction } degrees, gap { $gap } mm
+cli-edit-number-cleared = control { $code } number placement cleared
+cli-edit-special-added-at = added { $kind } { $id } at { $x },{ $y }
+cli-edit-special-added-points = added { $kind } { $id } with { $count } points
+cli-edit-special-removed = removed special object { $id }
+cli-edit-class-added = added class { $name }
+cli-edit-class-removed = removed class { $name }
+cli-edit-bad-point = { $value } is not a point; write X,Y in map millimetres with a dot as decimal separator, for example 12.5,-30
+cli-edit-bad-number = { $value } is not a number; use a dot as decimal separator, for example 0.5
+cli-edit-bad-count = { $value } is not a whole number
+cli-edit-kind-needs-at = a { $kind } is a single point; give --at X,Y and no --points
+cli-edit-kind-needs-points = a { $kind } is drawn through points; give --points X,Y X,Y ... and no --at
+cli-edit-no-courses-for-kind = a { $kind } applies to every course; leave out --courses
+
+word-empty = none
+word-special-start = start
+word-special-finish = finish
+word-special-marked-route = marked route
+word-special-out-of-bounds = out-of-bounds area
+word-special-forbidden-route = forbidden route
+word-special-dangerous-area = dangerous area
+word-special-first-aid = first aid post
+word-special-water = water point
+
+cli-help-control = Add, move, describe, number and remove controls
+cli-help-special = Add and remove special objects (start, finish, marked routes, areas, first aid, water)
+cli-help-class = Add and remove classes
+cli-help-control-add = Add a control
+cli-help-control-move = Move a control
+cli-help-control-remove = Remove a control and its visits in individual courses
+cli-help-control-describe = Set the description symbols of a control
+cli-help-control-number = Set or clear where the number of a control is drawn
+cli-help-special-add = Add a special object
+cli-help-special-remove = Remove a special object
+cli-help-class-add = Add a class
+cli-help-class-remove = Remove a class and its name from every course
+
+cli-arg-edit-code = Code of the control
+cli-arg-control-add-at = Where the control goes: X,Y in map millimetres
+cli-arg-control-add-code = Code of the new control [default: the lowest free number from 31]
+cli-arg-control-add-crossing-point = Add a crossing point, which gets no number
+cli-arg-control-move-at = The new place: X,Y in map millimetres
+cli-arg-control-describe-c = Column C symbol (IOF symbol id)
+cli-arg-control-describe-d = Column D symbol (IOF symbol id)
+cli-arg-control-describe-e = Column E symbol (IOF symbol id)
+cli-arg-control-describe-f = Column F symbol (IOF symbol id)
+cli-arg-control-describe-g = Column G symbol (IOF symbol id)
+cli-arg-control-describe-h = Column H symbol (IOF symbol id)
+cli-arg-control-describe-clear = Empty all columns first; columns given in the same call are set afterwards
+cli-arg-control-number-direction = Degrees, 0 = east, counter-clockwise
+cli-arg-control-number-gap = Gap to the circle in print millimetres
+cli-arg-control-number-clear = Go back to the default placement
+cli-arg-special-add-kind = What the object is
+cli-arg-special-add-id = Id of the object, unique among special objects
+cli-arg-special-add-at = Place of a single-point kind (start, finish, first aid, water): X,Y in map millimetres
+cli-arg-special-add-points = Points of a line or area kind, as separate arguments: X,Y X,Y ... (write this option last, so that negative values are not mistaken for options)
+cli-arg-special-add-courses = Limit the object to these courses, separated by commas [default: all courses]
+cli-arg-special-remove-id = Id of the special object
+cli-arg-class-add-name = Name of the class
+cli-arg-class-add-rule-category = Rule category of the class
+cli-arg-class-add-starters = Expected number of starters
+cli-arg-class-remove-name = Name of the class

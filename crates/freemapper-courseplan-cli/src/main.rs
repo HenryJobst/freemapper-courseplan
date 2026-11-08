@@ -1,12 +1,15 @@
 //! The `freemapper-courseplan` binary. Commands come with the milestones in the design
 //! (`docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md`).
 
+mod edit_cmd;
+
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Arg, ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
+use edit_cmd::{ClassCmd, ControlCmd, Failure, SpecialCmd};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{MapKind, map_kind};
 use freemapper_courseplan::omap::read::read_map_file;
@@ -44,6 +47,21 @@ enum Command {
     Info {
         /// The project file
         project: PathBuf,
+    },
+    /// Add, move, describe, number and remove controls
+    Control {
+        #[command(subcommand)]
+        action: ControlCmd,
+    },
+    /// Add and remove special objects
+    Special {
+        #[command(subcommand)]
+        action: SpecialCmd,
+    },
+    /// Add and remove classes
+    Class {
+        #[command(subcommand)]
+        action: ClassCmd,
     },
     /// Show the help of a command
     Help {
@@ -135,15 +153,21 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .action(clap::ArgAction::Version)
                 .help(t("cli-arg-version")),
         );
-    let mut root = style(root);
-    let names: Vec<String> = root
+    let root = edit_cmd::localize_groups(root, lang);
+    style_tree(root, &style)
+}
+
+/// Applies `style` to the command and, below it, to every subcommand.
+fn style_tree(cmd: clap::Command, style: &dyn Fn(clap::Command) -> clap::Command) -> clap::Command {
+    let mut cmd = style(cmd);
+    let names: Vec<String> = cmd
         .get_subcommands()
         .map(|c| c.get_name().to_owned())
         .collect();
     for name in names {
-        root = root.mut_subcommand(name, style);
+        cmd = cmd.mut_subcommand(name, |s| style_tree(s, style));
     }
-    root
+    cmd
 }
 
 /// Text of a context value (an argument name, a value, a list of them).
@@ -269,8 +293,11 @@ fn main() -> ExitCode {
             map,
             project,
             title,
-        } => init(&lang, &map, project, title),
-        Command::Info { project } => info(&lang, &project),
+        } => init(&lang, &map, project, title).map_err(Failure::Error),
+        Command::Info { project } => info(&lang, &project).map_err(Failure::Error),
+        Command::Control { action } => edit_cmd::control(&lang, action),
+        Command::Special { action } => edit_cmd::special(&lang, action),
+        Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Help { command: name } => {
             command.build();
             let target = name
@@ -286,9 +313,13 @@ fn main() -> ExitCode {
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
-        Err(message) => {
+        Err(Failure::Error(message)) => {
             print_error(&lang, &message);
             ExitCode::from(1)
+        }
+        Err(Failure::Usage(message)) => {
+            print_error(&lang, &message);
+            ExitCode::from(2)
         }
     }
 }
@@ -395,19 +426,17 @@ mod tests {
 
     #[test]
     fn ids_used_in_the_cli_exist() {
-        let code = include_str!("main.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .unwrap();
-        let ids: Vec<&str> = code
-            .split('"')
-            .skip(1)
-            .step_by(2)
+        let sources = [include_str!("main.rs"), include_str!("edit_cmd.rs")];
+        let ids: Vec<&str> = sources
+            .iter()
+            .filter_map(|s| s.split("#[cfg(test)]").next())
+            .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
                 ["error-", "cli-", "word-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
+                    && !lit.ends_with('-')
             })
             .collect();
         assert!(ids.len() > 25, "scanner found only {}", ids.len());
@@ -417,6 +446,44 @@ mod tests {
                 assert_ne!(&out, id, "{}: {id} is missing", lang.code());
                 assert!(!out.contains(['\u{2068}', '\u{2069}']), "{id}");
             }
+        }
+    }
+
+    /// Every command and argument of the edit groups has a catalog text in every language.
+    #[test]
+    fn edit_commands_have_help_texts() {
+        fn walk(cmd: &clap::Command, path: &str, seen: &mut usize) {
+            for sub in cmd.get_subcommands() {
+                let path = format!("{path} {}", sub.get_name());
+                let about = sub.get_about().map(ToString::to_string).unwrap_or_default();
+                assert!(
+                    !about.is_empty() && !about.starts_with("cli-"),
+                    "{path}: {about}"
+                );
+                for arg in sub.get_arguments() {
+                    let help = arg.get_help().map(ToString::to_string).unwrap_or_default();
+                    assert!(
+                        !help.is_empty() && !help.starts_with("cli-"),
+                        "{path} {}: {help}",
+                        arg.get_id()
+                    );
+                    *seen += 1;
+                }
+                walk(sub, &path, seen);
+            }
+        }
+        for lang in available() {
+            let command = localized_command(&lang);
+            let mut seen = 0;
+            for group in ["control", "special", "class"] {
+                walk(
+                    &clap::Command::new("x")
+                        .subcommand(command.find_subcommand(group).unwrap().clone()),
+                    "",
+                    &mut seen,
+                );
+            }
+            assert!(seen > 30, "only {seen} arguments");
         }
     }
 
