@@ -18,6 +18,7 @@ word-name-control-code = Postencode
 word-name-special-object-id = Sonderobjekt-ID
 word-name-course-name = Bahnname
 word-name-class-name = Kategoriename
+word-name-note = Begründung
 word-map-sprint = Sprintkarte
 word-map-schoolyard = Schulhofkarte
 word-map-forest = Waldkarte

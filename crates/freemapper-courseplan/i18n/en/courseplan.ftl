@@ -18,6 +18,7 @@ word-name-control-code = control code
 word-name-special-object-id = special object id
 word-name-course-name = course name
 word-name-class-name = class name
+word-name-note = note
 word-map-sprint = sprint
 word-map-schoolyard = schoolyard
 word-map-forest = forest

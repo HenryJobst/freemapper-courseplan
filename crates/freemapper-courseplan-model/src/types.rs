@@ -336,7 +336,18 @@ pub struct AcceptedFinding {
     pub controls: Vec<ControlCode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub course: Option<String>,
+    /// Legs the finding sits on; part of its key together with `rule` and `controls`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub legs: Vec<LegRef>,
     pub note: String,
+}
+
+/// A leg of a course: the leg that leaves control number `after` (1-based, as in the CLI;
+/// 0 is the leg from the start).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct LegRef {
+    pub course: String,
+    pub after: u32,
 }
 
 /// The rule profile of an event whose file names none.
@@ -356,6 +367,9 @@ pub struct EventMeta {
     pub discipline: Discipline,
     #[serde(default = "default_rule_profile")]
     pub rule_profile: String,
+    /// Overlay profiles applied on top of `rule_profile`, in order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rule_overlays: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_window_min: Option<u32>,
 }
@@ -443,6 +457,7 @@ mod tests {
                 date: Some("2026-11-14".parse().unwrap()),
                 discipline: Discipline::Sprint,
                 rule_profile: "wkb-2026".to_owned(),
+                rule_overlays: vec!["nor-bb-2021".to_owned()],
                 start_window_min: Some(90),
             },
             sources: Sources {
@@ -544,6 +559,10 @@ mod tests {
                 rule: "wkb26.b7.2.1.min_distance".to_owned(),
                 controls: vec![code("31"), code("44")],
                 course: None,
+                legs: vec![LegRef {
+                    course: "A".to_owned(),
+                    after: 3,
+                }],
                 note: "Checked on site.".to_owned(),
             }],
         };

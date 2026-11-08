@@ -68,3 +68,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0022](0022-program-texts-in-fluent-files.md) | Program texts in Fluent files, one per language | Accepted | 2026-11-08 |
 | [0023](0023-mcp-server-file-checks-and-redaction.md) | MCP server: localized tool texts, file checks and redacted errors | Accepted | 2026-11-08 |
 | [0024](0024-cli-editing-conventions.md) | CLI editing conventions | Accepted | 2026-11-08 |
+| [0025](0025-rule-profiles-as-data.md) | Rule profiles as data files | Accepted | 2026-11-09 |

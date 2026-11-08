@@ -67,6 +67,7 @@ pub fn new_event(
             date: None,
             discipline: Discipline::Training,
             rule_profile: "wkb-2026".to_owned(),
+            rule_overlays: Vec::new(),
             start_window_min: None,
         },
         sources: Sources {

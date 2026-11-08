@@ -938,3 +938,38 @@ fn crossing_point_special_is_rejected() {
     assert!(matches!(err, ProjectError::Parse { .. }), "{err:?}");
     assert!(err.to_string().contains("crossing_point"), "{err}");
 }
+
+#[test]
+fn overlays_and_leg_keys_are_known_and_kept_byte_for_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(
+        dir.path(),
+        "[event]\n",
+        "[event]\nrule_overlays = [\"nor-bb-2021\"]\n",
+    );
+    let text = std::fs::read_to_string(&file).unwrap();
+    let text = format!(
+        "{text}\n[[accepted_findings]]\nrule = \"r\"\nlegs = [{{ course = \"A\", after = 3 }}, {{ course = \"A\", after = 0 }}]\nnote = \"n\"\n"
+    );
+    std::fs::write(&file, &text).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(project.event.event.rule_overlays, vec!["nor-bb-2021"]);
+    assert_eq!(project.event.accepted_findings[0].legs.len(), 2);
+    assert_eq!(project.event.accepted_findings[0].legs[0].after, 3);
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}
+
+#[test]
+fn empty_overlays_and_legs_are_known_and_not_written() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(dir.path(), "[event]\n", "[event]\nrule_overlays = []\n");
+    let text = format!(
+        "{}\n[[accepted_findings]]\nrule = \"r\"\nlegs = []\nnote = \"n\"\n",
+        std::fs::read_to_string(&file).unwrap()
+    );
+    std::fs::write(&file, &text).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}

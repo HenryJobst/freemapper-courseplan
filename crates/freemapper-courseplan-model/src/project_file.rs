@@ -342,7 +342,8 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
         "classes" | "start_bends" | "start_taped" => element_of("courses"),
         "description" | "kind" => element_of("controls"),
         "courses" => element_of("specials"),
-        "controls" => element_of("accepted_findings"),
+        "controls" | "legs" => element_of("accepted_findings"),
+        "rule_overlays" => path == "event",
         "bends" | "taped" => {
             path.starts_with("courses[") && path.contains('.') && path.ends_with(']')
         }

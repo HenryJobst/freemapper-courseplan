@@ -70,8 +70,10 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 |---|---|---|---|
 | Regelprofil | rule profile | Satz von Prüfregeln aus einem Regelwerk, zuerst WKB 2026. | `RuleProfile` |
 | Prüfregel | check rule | Eine Regel mit Kennung, Werten und Quelle (Dokument und Abschnitt), als Daten gespeichert. | `CheckRule` |
+| Regelprofil-Aufsatz | rule overlay | Regelprofil, das ein Basisprofil ergänzt oder einzelne Regeln ersetzt, zum Beispiel für ein Landesregelwerk; der Veranstaltung zugeordnet über `rule_overlays`. | `rule_overlays` |
 | Befund | finding | Ergebnis einer Prüfregel an einem Posten, einer Strecke oder einer Bahn. | `Finding` |
 | akzeptierter Befund | accepted finding | Befund, den der Bahnleger mit Begründung als gewollte Ausnahme markiert hat; wird nicht mehr gemeldet. | `AcceptedFinding` |
+| Strecken-Bezug | leg reference | Verweis auf eine Strecke einer Bahn: Bahnname und Nummer des Postens, von dem die Strecke abgeht (ab 1; 0 ist die Strecke vom Start). | `LegRef` |
 | ähnliche Objekte | similar features | Postenobjekte, die im Gelände oder auf der Karte verwechselbar sind (WKB B 7.2.1). | `similar_features` |
 
 ## Austausch / exchange
