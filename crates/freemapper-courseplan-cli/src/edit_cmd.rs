@@ -21,15 +21,6 @@ pub enum Failure {
     Error(String),
 }
 
-impl Failure {
-    /// The message, whatever the kind of failure.
-    pub fn into_message(self) -> String {
-        match self {
-            Self::Usage(m) | Self::Error(m) => m,
-        }
-    }
-}
-
 type Outcome = Result<(), Failure>;
 
 // The help texts come from the catalog (see `localize_groups`), not from doc comments.

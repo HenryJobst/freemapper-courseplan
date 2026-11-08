@@ -11,7 +11,9 @@ use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, LegStart};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{FeatureGeometry, MapIndex, MapKind, map_kind};
+use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
+use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
     Class, Control, ControlCode, ControlDescription, ControlKind, Course, CourseKind, Event,
@@ -22,7 +24,7 @@ use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabiliti
 use rmcp::{ErrorData as McpError, ServerHandler, ServiceExt, tool, tool_handler, tool_router};
 use serde_json::{Map, Value, json};
 
-use crate::edit_cmd::{self, Failure};
+use crate::edit_cmd;
 
 mod params;
 use params::*;
@@ -175,7 +177,8 @@ fn resolve(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     Ok(resolved)
 }
 
-/// Whether `path` ends in one of `extensions`, ignoring case.
+/// Whether `path` ends in one of `extensions`, ignoring case. The check is lexical: a symlink
+/// named `*.toml` is not resolved. The second layer is that errors never quote file content.
 fn has_extension(path: &std::path::Path, extensions: &[&str]) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
@@ -211,33 +214,72 @@ fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     resolve_kind(lang, path, &["omap", "xmap"], "mcp-error-not-map")
 }
 
-/// A project error as text for the assistant. Parser errors quote the offending line of the
-/// file; only the kind, line and column stay.
+/// A project error as text for the assistant. Parser and schema errors can quote the file (a
+/// source line, a value, a field name), so only the position stays, with a fixed reason from
+/// the catalog. Read errors keep the OS text.
 fn project_error(lang: &Lang, error: ProjectError) -> String {
-    match error {
-        ProjectError::Parse { path, message } => ProjectError::Parse {
-            path,
-            message: strip_quoted_source(&message),
+    let (path, message) = match error {
+        ProjectError::Parse { path, message } => (path, message),
+        // The detail lists keys, codes and names from the file: only for a courseplan project.
+        ProjectError::Invalid { ref path, .. } if !is_courseplan_project(path) => {
+            let path = FluentValue::from(path.display().to_string());
+            return text(lang, "mcp-error-project-parse-nopos", &[("path", path)]);
         }
-        .localize(lang),
-        other => other.localize(lang),
+        other => return other.localize(lang),
+    };
+    let path = FluentValue::from(path.display().to_string());
+    match error_position(&message) {
+        Some((line, column)) => text(
+            lang,
+            "mcp-error-project-parse",
+            &[
+                ("path", path),
+                ("line", FluentValue::from(line)),
+                ("column", FluentValue::from(column)),
+            ],
+        ),
+        None => text(lang, "mcp-error-project-parse-nopos", &[("path", path)]),
     }
 }
 
-/// Drops the source lines and caret lines of a toml_edit error ("1 | text", "  |   ^").
-fn strip_quoted_source(message: &str) -> String {
-    let quoted = |line: &str| {
-        let t = line.trim_start();
-        t.starts_with('|')
-            || t.split_once('|').is_some_and(|(n, _)| {
-                !n.trim().is_empty() && n.trim().chars().all(|c| c.is_ascii_digit())
-            })
+/// Whether the file has a top-level integer `format` and an `[event]` table.
+fn is_courseplan_project(path: &std::path::Path) -> bool {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|t| t.parse::<toml::Table>().ok())
+        .is_some_and(|t| {
+            t.get("format").is_some_and(toml::Value::is_integer)
+                && t.get("event").is_some_and(toml::Value::is_table)
+        })
+}
+
+/// "line N, column M" of a toml_edit error text.
+fn error_position(message: &str) -> Option<(u64, u64)> {
+    let rest = &message[message.find("line ")? + 5..];
+    let (line, rest) = rest.split_once(", column ")?;
+    let column: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    Some((line.parse().ok()?, column.parse().ok()?))
+}
+
+/// A map error as text for the assistant: read errors keep the OS text, format errors get a
+/// fixed reason, because XML errors can quote the file.
+fn map_error(lang: &Lang, path: &std::path::Path, error: OmapError) -> String {
+    let source = match error {
+        OmapError::Io(_) | OmapError::MissingElement(_) => error.localize(lang),
+        _ => text(
+            lang,
+            "mcp-error-map-invalid",
+            &[("path", FluentValue::from(path.display().to_string()))],
+        ),
     };
-    message
-        .lines()
-        .filter(|l| !quoted(l))
-        .collect::<Vec<_>>()
-        .join("\n")
+    text(
+        lang,
+        "error-init-map",
+        &[
+            ("path", FluentValue::from(path.display().to_string())),
+            ("source", FluentValue::from(source)),
+        ],
+    )
 }
 
 fn flag(value: Option<bool>) -> bool {
@@ -286,7 +328,7 @@ impl CoursePlanServer {
                 &[("path", FluentValue::from(path.display().to_string()))],
             ));
         }
-        edit_cmd::read_map(&self.lang, file).map_err(Failure::into_message)
+        read_map_file(&path).map_err(|e| map_error(&self.lang, &path, e))
     }
 
     /// Loads the project, applies `change`, and saves when it succeeded.

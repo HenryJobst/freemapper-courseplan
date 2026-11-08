@@ -556,6 +556,8 @@ mod tests {
             "km",
             "controls",
             "climb",
+            "line",
+            "column",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

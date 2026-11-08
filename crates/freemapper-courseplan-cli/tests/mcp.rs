@@ -537,3 +537,41 @@ fn misspelt_parameter_is_refused() {
     assert!(message.to_string().contains("bend"), "{message}");
     assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
 }
+
+#[test]
+fn schema_errors_do_not_quote_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("creds.toml");
+    std::fs::write(&file, "format = \"hunter2\"\nuser = \"hunter2\"\n").unwrap();
+    let mut session = Session::start();
+    let (error, text) = session.call("event_info", json!({ "project": file }));
+    assert!(error, "{text}");
+    assert!(!text.contains("hunter2"), "{text}");
+}
+
+#[test]
+fn map_errors_do_not_quote_the_file() {
+    let (dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    std::fs::write(&map, "<map><barrier hunter2 =\n").unwrap();
+    for tool in ["map_extent", "event_info"] {
+        let (error, text) = session.call(tool, json!({ "project": project }));
+        assert!(error, "{tool}: {text}");
+        assert!(!text.contains("hunter2"), "{text}");
+    }
+    drop(dir);
+}
+
+#[test]
+fn unknown_keys_of_a_foreign_toml_are_not_listed() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("settings.toml");
+    std::fs::write(&file, "api_token = 1\npassword = 2\n[server]\nhost = 3\n").unwrap();
+    let mut session = Session::start();
+    let (error, text) = session.call("event_info", json!({ "project": file }));
+    assert!(error, "{text}");
+    for name in ["api_token", "password", "server"] {
+        assert!(!text.contains(name), "{text}");
+    }
+}
