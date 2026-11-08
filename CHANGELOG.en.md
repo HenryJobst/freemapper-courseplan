@@ -8,6 +8,15 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- MCP server: `freemapper-courseplan mcp` serves course setting to AI assistants over MCP (stdin and stdout).
+  23 tools read and change a project: `event_info`, `list_controls|courses|specials|classes`, `add_control`,
+  `move_control`, `remove_control`, `describe_control`, `set_control_number`, `add_special`, `remove_special`,
+  `add_class`, `remove_class`, `add_course`, `remove_course`, `set_course_controls`, `set_leg`,
+  `set_course_details`, `place_numbers`, `map_features_near`, `map_extent` and `init_event`. Positions are objects
+  with `x` and `y` in map millimetres. Each call loads the project file, applies one change and saves only on
+  success. The server refuses relative paths. Descriptions, hints for the assistant and error texts come from the
+  catalog in the language of `--lang`, `FREEMAPPER_LANG` or the system; tool and field names stay English. The
+  manual covers this in chapter 3.
 - Commands for courses: `course add`, `course controls`, `course leg`, `course set`, `course numbers` and
   `course remove`. Adding and changing work for individual courses only. `course leg --after INDEX` counts from 1 as on the map, crossing points
   included. Give bends with a repeated `--bend X,Y`; without `--bend` the leg loses its bends, and without

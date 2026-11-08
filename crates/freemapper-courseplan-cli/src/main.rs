@@ -2,6 +2,7 @@
 //! (`docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md`).
 
 mod edit_cmd;
+mod mcp;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -69,6 +70,8 @@ enum Command {
         #[command(subcommand)]
         action: CourseCmd,
     },
+    /// Serve course setting to AI assistants over MCP on stdin and stdout
+    Mcp,
     /// Show the help of a command
     Help {
         /// The command
@@ -145,6 +148,7 @@ fn localized_command(lang: &Lang) -> clap::Command {
             s.about(t("cli-help-info"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
         })
+        .mut_subcommand("mcp", |s| s.about(t("cli-help-mcp")))
         .mut_subcommand("help", |s| {
             s.about(t("cli-help-help"))
                 .mut_arg("command", |a| with_help(a, "cli-arg-help-command"))
@@ -305,6 +309,7 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
+        Command::Mcp => mcp::run(lang.clone()).map_err(Failure::Error),
         Command::Help { command: name } => {
             command.build();
             let target = name
@@ -471,13 +476,17 @@ mod tests {
 
     #[test]
     fn ids_used_in_the_cli_exist() {
-        let sources = [include_str!("main.rs"), include_str!("edit_cmd.rs")];
+        let sources = [
+            include_str!("main.rs"),
+            include_str!("edit_cmd.rs"),
+            include_str!("mcp.rs"),
+        ];
         let ids: Vec<&str> = sources
             .iter()
             .filter_map(|s| s.split("#[cfg(test)]").next())
             .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
-                ["error-", "cli-", "word-"]
+                ["error-", "cli-", "word-", "mcp-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')

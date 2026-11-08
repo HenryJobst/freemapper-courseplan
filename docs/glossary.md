@@ -90,3 +90,10 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Laufgeschwindigkeit | symbol speed | Geschwindigkeitsfaktor eines Kartensymbols in der Kostenfläche. | `symbol_speed` |
 | Postensetzer | control placer | Helfer, der Posten ausbringt oder einsammelt. | `ControlPlacer` |
 | Tour | control-placer tour | Geordnete Postenliste eines Postensetzers mit Start- und Endpunkt; gedruckt von freemapper-print. | `Tour` |
+
+## Assistenten / assistants
+
+| Deutsch | English | Definition | Code |
+|---|---|---|---|
+| MCP-Server | MCP server | Teil des Programms, der KI-Assistenten über das Model Context Protocol auf stdin und stdout Werkzeuge zum Lesen und Ändern eines Projekts anbietet. Das Programm selbst enthält keine KI (ADR 0016). | `mcp::CoursePlanServer` |
+| Werkzeug | tool | Eine Funktion des MCP-Servers mit englischem Namen, zum Beispiel `add_control`. Beschreibung und Parametertexte stehen im Katalog. | `#[tool]` |

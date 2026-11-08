@@ -661,7 +661,7 @@ mod tests {
             .skip(1)
             .step_by(2)
             .filter(|lit| {
-                ["error-", "cli-", "word-"]
+                ["error-", "cli-", "word-", "mcp-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')

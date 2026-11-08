@@ -230,3 +230,96 @@ cli-arg-course-set-no-climb = Den Anstieg entfernen
 cli-arg-course-set-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
 cli-arg-course-set-no-print-scale = Den geplanten Druckmaßstab entfernen
 cli-arg-course-numbers-overwrite = Schon gesetzte Nummern ersetzen [Standard: behalten]
+
+## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
+
+cli-help-mcp = Das Bahnlegen über MCP auf stdin und stdout für KI-Assistenten anbieten
+
+mcp-instructions =
+    freemapper-courseplan legt Orientierungslauf-Bahnen auf einer OOM-Karte: Posten, Start und Ziel, Kategorien,
+    Bahnen und die Postennummern. Jedes Werkzeug nimmt project, die Projektdatei der Veranstaltung, als absoluten
+    Pfad oder mit ~ am Anfang. init_event macht aus einer Karte eine Projektdatei. Positionen stehen in
+    Kartenmillimetern im Kartenmaßstab, y zeigt nach unten, und werden als Objekte mit den Zahlen x und y
+    geschrieben. Ablauf: event_info, dann map_extent und map_features_near, um Positionen zu finden, dann
+    add_special für Start und Ziel, add_control für jeden Posten, add_course, place_numbers und noch einmal
+    event_info, um die Länge zu lesen. Jeder Aufruf speichert seine Änderung. Eine abgelehnte Änderung lässt die
+    Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten und messen.
+mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
+mcp-error-no-home = Dieses System hat keinen Home-Ordner. Gib einen absoluten Pfad an
+mcp-error-kind-needs-at = { $kind } ist ein einzelner Punkt. Gib at an und lass points weg
+mcp-error-kind-needs-points = { $kind } wird durch Punkte gezeichnet. Gib points an und lass at weg
+mcp-error-no-courses-for-kind = { $kind } gilt für jede Bahn. Lass courses weg
+mcp-error-leg-target = Gib entweder from_start oder after an, nicht beides und nicht keins
+mcp-error-no-change = Nichts zu ändern. Gib mindestens eines von classes, climb_m, no_climb, print_scale und no_print_scale an
+mcp-error-number-args = Gib direction und gap_mm zusammen an, oder clear
+
+mcp-tool-event-info = Überblick über die Veranstaltung: Titel, Karte und Kartenart, Kartenausdehnung, die Zahl der Posten, Sonderobjekte, Kategorien und Bahnen, und je Bahn die Posten, die Länge in km, den Anstieg und wie viele Postennummern gesetzt sind.
+mcp-tool-list-controls = Die Posten auflisten, mit Code, Art, Position in Kartenmillimetern, Beschreibungssymbolen und Nummernlage.
+mcp-tool-list-courses = Die Bahnen auflisten, mit Name, Art, Start, Ziel, Posten in Laufreihenfolge, Kategorien, Anstieg, geplantem Druckmaßstab und Länge in km.
+mcp-tool-list-specials = Die Sonderobjekte auflisten (Start, Ziel, markierte Strecken, Sperrgebiete, verbotene Strecken, Gefahrenstellen, Erste-Hilfe-Punkte, Verpflegungsstellen), mit Geometrie und Bahnen.
+mcp-tool-list-classes = Die Kategorien auflisten, mit Regelkategorie und erwarteten Startern.
+mcp-tool-add-control = Einen Posten an einer Position in Kartenmillimetern anlegen. Ohne code gilt der niedrigste freie Code ab 31. Die Position muss auf der Karte liegen. Gibt den Code zurück.
+mcp-tool-move-control = Einen Posten an eine neue Position in Kartenmillimetern setzen. Die Position muss auf der Karte liegen.
+mcp-tool-remove-control = Einen Posten samt seinen Besuchen in Einzelbahnen entfernen. Das Ergebnis nennt die Bahnen, die er verlassen hat.
+mcp-tool-describe-control = Die Beschreibungssymbole eines Postens setzen, Spalte C bis H, als IOF-Symbol-IDs. Spalten, die du weglässt, behalten ihr Symbol. clear leert zuerst alle Spalten.
+mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zum Kreis in Druckmillimetern. clear stellt den Standardplatz wieder her.
+mcp-tool-add-special = Ein Sonderobjekt anlegen. Start, Ziel, Erste-Hilfe-Punkt und Verpflegungsstelle sind ein einzelner Punkt (at). markierte Strecke, verbotene Strecke, Sperrgebiet und Gefahrenstelle werden durch Punkte gezeichnet (points). Die id muss neu sein.
+mcp-tool-remove-special = Ein Sonderobjekt anhand seiner id entfernen. Ein Start oder Ziel, den eine Bahn nutzt, lässt sich nicht entfernen.
+mcp-tool-add-class = Eine Kategorie anlegen.
+mcp-tool-remove-class = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen.
+mcp-tool-add-course = Eine Einzelbahn aus Start, Ziel und den Postencodes in Laufreihenfolge anlegen. Start und Ziel sind IDs von Sonderobjekten.
+mcp-tool-remove-course = Eine Bahn samt ihrem Namen bei den Sonderobjekten entfernen.
+mcp-tool-set-course-controls = Die Posten einer Bahn ersetzen. Der n-te Besuch eines Codes behält Knicke, Markierung und Nummernlage des n-ten Besuchs davor.
+mcp-tool-set-leg = Knicke und Markierung einer Teilstrecke einer Einzelbahn setzen: die Teilstrecke ab dem Start (from_start) oder die nach einer Position (after, ab 1 gezählt wie auf der Karte, Querungspunkte eingeschlossen). Ohne bends verliert die Teilstrecke ihre Knicke.
+mcp-tool-set-course-details = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern. Parameter, die du weglässt, bleiben, wie sie sind.
+mcp-tool-place-numbers = Die Postennummern einer Bahn so setzen, dass sie Strecken, Kreise und andere Nummern frei lassen. Gibt zurück, wie viele Nummern es gesetzt hat. Schon gesetzte Nummern bleiben, außer overwrite ist true.
+mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
+mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
+mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
+
+mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
+mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
+mcp-param-map = Die OOM-Karte (Sprint oder Schulhof), ein absoluter Pfad oder einer mit ~ am Anfang
+mcp-param-title = Titel der Veranstaltung [Standard: der Titel in freemapper.toml neben der Karte, sonst der Kartenname]
+mcp-param-code = Code des Postens
+mcp-param-add-control-code = Code des neuen Postens [Standard: die niedrigste freie Zahl ab 31]
+mcp-param-at = Position in Kartenmillimetern, y zeigt nach unten
+mcp-param-add-special-at = Position einer Einzelpunkt-Art (start, finish, first_aid, water)
+mcp-param-x = X in Kartenmillimetern
+mcp-param-y = Y in Kartenmillimetern, zeigt nach unten
+mcp-param-crossing-point = Einen Querungspunkt anlegen, der keine Nummer bekommt [Standard: false]
+mcp-param-c = Symbol für Spalte C (IOF-Symbol-ID)
+mcp-param-d = Symbol für Spalte D (IOF-Symbol-ID)
+mcp-param-e = Symbol für Spalte E (IOF-Symbol-ID)
+mcp-param-f = Symbol für Spalte F (IOF-Symbol-ID)
+mcp-param-g = Symbol für Spalte G (IOF-Symbol-ID)
+mcp-param-h = Symbol für Spalte H (IOF-Symbol-ID)
+mcp-param-set-control-number-clear = Zum Standardplatz zurückkehren; dann direction und gap_mm weglassen [Standard: false]
+mcp-param-describe-control-clear = Zuerst alle Spalten leeren; Spalten im selben Aufruf werden danach gesetzt [Standard: false]
+mcp-param-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn
+mcp-param-gap-mm = Abstand zum Kreis in Druckmillimetern
+mcp-param-kind = Was das Objekt ist: start, finish, marked_route, out_of_bounds, forbidden_route, dangerous_area, first_aid oder water
+mcp-param-id = ID des Objekts, eindeutig unter den Sonderobjekten
+mcp-param-points = Die Punkte von marked_route, forbidden_route, out_of_bounds oder dangerous_area in Reihenfolge; jeder ist ein Objekt mit x und y in Kartenmillimetern
+mcp-param-courses = Das Objekt auf diese Bahnen beschränken [Standard: alle Bahnen]; nicht für start und finish
+mcp-param-name = Name der Bahn
+mcp-param-add-class-name = Name der Kategorie
+mcp-param-remove-class-name = Name der Kategorie
+mcp-param-rule-category = Regelkategorie der Kategorie
+mcp-param-expected-starters = Erwartete Zahl der Starter
+mcp-param-start = ID des Sonderobjekts, das den Start bildet
+mcp-param-finish = ID des Sonderobjekts, das das Ziel bildet
+mcp-param-controls = Codes der Posten in Laufreihenfolge; ein Querungspunkt zählt als Position [Standard: keine]
+mcp-param-classes = Kategorien, die die Bahn laufen
+mcp-param-climb-m = Anstieg in Metern
+mcp-param-print-scale = Geplanter Druckmaßstab, zum Beispiel 10000 für 1:10000
+mcp-param-codes = Codes in Laufreihenfolge; eine leere Liste entfernt alle Posten
+mcp-param-from-start = Die Teilstrecke vom Start zum ersten Posten bearbeiten [Standard: false]
+mcp-param-after = Die Teilstrecke nach dieser Position bearbeiten, ab 1 gezählt wie auf der Karte; Querungspunkte zählen als Positionen
+mcp-param-bends = Die Knicke der Teilstrecke in Reihenfolge, jeder ein Objekt mit x und y in Kartenmillimetern [Standard: keine, die Teilstrecke verliert ihre Knicke]
+mcp-param-taped = Die Teilstrecke als markierte Strecke kennzeichnen [Standard: false, die Markierung wird gelöscht]
+mcp-param-no-climb = Den Anstieg entfernen [Standard: false]
+mcp-param-no-print-scale = Den geplanten Druckmaßstab entfernen [Standard: false]
+mcp-param-overwrite = Schon gesetzte Nummern ersetzen [Standard: false]
+mcp-param-radius-mm = Suchradius in Kartenmillimetern
+mcp-param-limit = Höchstzahl der Objekte [Standard: 20, höchstens 200]

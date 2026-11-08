@@ -21,6 +21,15 @@ pub enum Failure {
     Error(String),
 }
 
+impl Failure {
+    /// The message, whatever the kind of failure.
+    pub fn into_message(self) -> String {
+        match self {
+            Self::Usage(m) | Self::Error(m) => m,
+        }
+    }
+}
+
 type Outcome = Result<(), Failure>;
 
 // The help texts come from the catalog (see `localize_groups`), not from doc comments.
@@ -316,16 +325,16 @@ fn parse_point(lang: &Lang, value: &str) -> Result<MapPoint, Failure> {
     parsed.ok_or_else(|| Failure::Usage(text(lang, "cli-edit-bad-point", &[("value", v(value))])))
 }
 
-fn load(lang: &Lang, path: &Path) -> Result<ProjectFile, Failure> {
+pub fn load(lang: &Lang, path: &Path) -> Result<ProjectFile, Failure> {
     ProjectFile::load(path).map_err(|e| Failure::Error(e.localize(lang)))
 }
 
-fn save(lang: &Lang, project: &mut ProjectFile) -> Outcome {
+pub fn save(lang: &Lang, project: &mut ProjectFile) -> Outcome {
     project.save().map_err(|e| Failure::Error(e.localize(lang)))
 }
 
 /// The project's map.
-fn read_map(lang: &Lang, project: &ProjectFile) -> Result<MapDocument, Failure> {
+pub fn read_map(lang: &Lang, project: &ProjectFile) -> Result<MapDocument, Failure> {
     let map_path = project.map_path();
     read_map_file(&map_path).map_err(|e| {
         Failure::Error(text(
@@ -340,7 +349,10 @@ fn read_map(lang: &Lang, project: &ProjectFile) -> Result<MapDocument, Failure> 
 }
 
 /// The extent of the project's map, for checking points against it.
-fn map_extent(lang: &Lang, project: &ProjectFile) -> Result<Option<(MapPoint, MapPoint)>, Failure> {
+pub fn map_extent(
+    lang: &Lang,
+    project: &ProjectFile,
+) -> Result<Option<(MapPoint, MapPoint)>, Failure> {
     Ok(MapIndex::from_document(&read_map(lang, project)?).extent())
 }
 
@@ -647,7 +659,7 @@ pub fn class(lang: &Lang, cmd: ClassCmd) -> Outcome {
     Ok(())
 }
 
-fn course_control(code: String) -> CourseControl {
+pub fn course_control(code: String) -> CourseControl {
     CourseControl {
         code: ControlCode(code),
         number: None,
@@ -657,7 +669,7 @@ fn course_control(code: String) -> CourseControl {
 }
 
 /// Codes from a comma-separated list; empty items are left out.
-fn codes(list: impl IntoIterator<Item = String>) -> Vec<String> {
+pub fn codes(list: impl IntoIterator<Item = String>) -> Vec<String> {
     list.into_iter().filter(|c| !c.is_empty()).collect()
 }
 

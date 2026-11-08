@@ -8,6 +8,15 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- MCP-Server: `freemapper-courseplan mcp` bietet KI-Assistenten das Bahnlegen über MCP an (stdin und stdout).
+  23 Werkzeuge lesen und ändern ein Projekt: `event_info`, `list_controls|courses|specials|classes`,
+  `add_control`, `move_control`, `remove_control`, `describe_control`, `set_control_number`, `add_special`,
+  `remove_special`, `add_class`, `remove_class`, `add_course`, `remove_course`, `set_course_controls`, `set_leg`,
+  `set_course_details`, `place_numbers`, `map_features_near`, `map_extent` und `init_event`. Positionen sind
+  Objekte mit `x` und `y` in Kartenmillimetern. Jeder Aufruf lädt die Projektdatei, wendet eine Änderung an und
+  speichert nur bei Erfolg. Relative Pfade lehnt der Server ab. Beschreibungen, Hinweise für den Assistenten und
+  Fehlertexte kommen aus dem Katalog in der Sprache von `--lang`, `FREEMAPPER_LANG` oder dem System; Werkzeug- und
+  Feldnamen bleiben Englisch. Das Handbuch hat dazu das Kapitel 3.
 - Befehle für Bahnen: `course add`, `course controls`, `course leg`, `course set`, `course numbers` und
   `course remove`. Anlegen und ändern geht nur für Einzelbahnen. `course leg --after INDEX` zählt ab 1 wie auf der Karte, Querungspunkte
   eingeschlossen. Knicke gibst du mit wiederholtem `--bend X,Y` an; ohne `--bend` verliert die Teilstrecke ihre

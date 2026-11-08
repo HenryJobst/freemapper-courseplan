@@ -233,3 +233,95 @@ cli-arg-course-set-no-climb = Remove the climb
 cli-arg-course-set-print-scale = Planned print scale, for example 10000 for 1:10000
 cli-arg-course-set-no-print-scale = Remove the planned print scale
 cli-arg-course-numbers-overwrite = Replace numbers that are already placed [default: keep them]
+
+## MCP server (tool names, parameter names and JSON fields stay English)
+
+cli-help-mcp = Serve course setting to AI assistants over MCP on stdin and stdout
+
+mcp-instructions =
+    freemapper-courseplan sets orienteering courses on an OOM map: controls, start and finish, classes, courses and
+    the control numbers. Every tool takes project, the project file of the event, as an absolute path or one
+    starting with ~. init_event makes a project file from a map. Positions are in map millimetres at map scale,
+    with y pointing down, written as objects with the numbers x and y. Workflow: event_info, then map_extent and
+    map_features_near to find positions, then add_special for the start and the finish, add_control for each
+    control, add_course, place_numbers and event_info again to read the length. Each call saves its change. A
+    refused change leaves the file as it was. Only individual courses can be edited and measured yet.
+mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
+mcp-error-no-home = this system has no home folder; use an absolute path
+mcp-error-kind-needs-at = a { $kind } is a single point; give at and leave out points
+mcp-error-kind-needs-points = a { $kind } is drawn through points; give points and leave out at
+mcp-error-no-courses-for-kind = a { $kind } applies to every course; leave out courses
+mcp-error-leg-target = give either from_start or after, not both and not neither
+mcp-error-no-change = nothing to change; give at least one of classes, climb_m, no_climb, print_scale and no_print_scale
+mcp-error-number-args = give direction and gap_mm together, or clear
+
+mcp-tool-event-info = Summary of the event: title, map and map kind, map extent, the numbers of controls, special objects, classes and courses, and per course the controls, the length in km, the climb and how many control numbers are placed.
+mcp-tool-list-controls = List the controls with code, kind, position in map mm, description symbols and number placement.
+mcp-tool-list-courses = List the courses with name, kind, start, finish, controls in running order, classes, climb, planned print scale and length in km.
+mcp-tool-list-specials = List the special objects (start, finish, marked routes, out-of-bounds areas, forbidden routes, dangerous areas, first aid posts, water points) with their geometry and courses.
+mcp-tool-list-classes = List the classes with rule category and expected starters.
+mcp-tool-add-control = Add a control at a position in map mm. Without code the lowest free code from 31 up is used. The position must lie on the map. Returns the code.
+mcp-tool-move-control = Move a control to a new position in map mm. The position must lie on the map.
+mcp-tool-remove-control = Remove a control and its visits in individual courses. The result lists the courses it left.
+mcp-tool-describe-control = Set the description symbols of a control, column C to H, as IOF symbol ids. Columns you leave out keep their symbol. clear empties all columns first.
+mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap to the circle in print mm. clear goes back to the default placement.
+mcp-tool-add-special = Add a special object. A start, finish, first aid post or water point is a single point (at). A marked route, forbidden route, out-of-bounds area or dangerous area is drawn through points. Its id must be new.
+mcp-tool-remove-special = Remove a special object by id. A start or finish that a course uses cannot be removed.
+mcp-tool-add-class = Add a class.
+mcp-tool-remove-class = Remove a class and its name in all courses.
+mcp-tool-add-course = Add an individual course from a start, a finish and the control codes in running order. The start and finish are ids of special objects.
+mcp-tool-remove-course = Remove a course and its name from the special objects.
+mcp-tool-set-course-controls = Replace the controls of a course. The n-th visit of a code keeps the bends, marked-route flag and number placement of the n-th visit before.
+mcp-tool-set-leg = Set the bends and the marked-route flag of one leg of an individual course: the leg from the start (from_start) or the leg after a position (after, counted from 1 as on the map, crossing points included). Without bends the leg loses its bends.
+mcp-tool-set-course-details = Change the classes, the climb or the planned print scale of a course. Parameters you leave out stay as they are.
+mcp-tool-place-numbers = Place the control numbers of a course clear of legs, circles and other numbers. Returns how many numbers it placed. Numbers already placed stay unless overwrite is true.
+mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
+mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
+mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
+
+mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
+mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
+mcp-param-map = The OOM map (sprint or schoolyard), an absolute path or one starting with ~
+mcp-param-title = Event title [default: the title in freemapper.toml next to the map, else the map name]
+mcp-param-code = Code of the control
+mcp-param-add-control-code = Code of the new control [default: the lowest free number from 31 up]
+mcp-param-at = Position in map millimetres, y pointing down
+mcp-param-add-special-at = Position of a single-point kind (start, finish, first_aid, water)
+mcp-param-x = X in map millimetres
+mcp-param-y = Y in map millimetres, pointing down
+mcp-param-crossing-point = Add a crossing point, which gets no number [default: false]
+mcp-param-c = Symbol for column C (IOF symbol id)
+mcp-param-d = Symbol for column D (IOF symbol id)
+mcp-param-e = Symbol for column E (IOF symbol id)
+mcp-param-f = Symbol for column F (IOF symbol id)
+mcp-param-g = Symbol for column G (IOF symbol id)
+mcp-param-h = Symbol for column H (IOF symbol id)
+mcp-param-set-control-number-clear = Go back to the default placement; then leave out direction and gap_mm [default: false]
+mcp-param-describe-control-clear = Empty all columns first; columns given in the same call are set afterwards [default: false]
+mcp-param-direction = Degrees, 0 = east, counter-clockwise
+mcp-param-gap-mm = Gap to the circle in print millimetres
+mcp-param-kind = What the object is: start, finish, marked_route, out_of_bounds, forbidden_route, dangerous_area, first_aid or water
+mcp-param-id = Id of the object, unique among special objects
+mcp-param-points = The points of a marked_route, forbidden_route, out_of_bounds or dangerous_area, in order; each is an object with x and y in map millimetres
+mcp-param-courses = Limit the object to these courses [default: all courses]; not for start and finish
+mcp-param-name = Name of the course
+mcp-param-add-class-name = Name of the class
+mcp-param-remove-class-name = Name of the class
+mcp-param-rule-category = Rule category of the class
+mcp-param-expected-starters = Expected number of starters
+mcp-param-start = Id of the start special object
+mcp-param-finish = Id of the finish special object
+mcp-param-controls = Codes of the controls in running order; a crossing point counts as a position [default: none]
+mcp-param-classes = Classes that run the course
+mcp-param-climb-m = Climb in metres
+mcp-param-print-scale = Planned print scale, for example 10000 for 1:10000
+mcp-param-codes = Codes in running order; an empty list removes all controls
+mcp-param-from-start = Edit the leg from the start to the first control [default: false]
+mcp-param-after = Edit the leg after this position, counted from 1 as on the map; crossing points count as positions
+mcp-param-bends = The bends of the leg in order, each an object with x and y in map millimetres [default: none, the leg loses its bends]
+mcp-param-taped = Mark the leg as a marked route [default: false, the flag is cleared]
+mcp-param-no-climb = Remove the climb [default: false]
+mcp-param-no-print-scale = Remove the planned print scale [default: false]
+mcp-param-overwrite = Replace numbers that are already placed [default: false]
+mcp-param-radius-mm = Search radius in map millimetres
+mcp-param-limit = Most features to return [default: 20, at most 200]

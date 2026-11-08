@@ -18,6 +18,12 @@ toml_edit = { version = "=0.25.17", features = ["serde"] }
 thiserror = "2.0.21"
 tempfile = "3.27.0"
 clap = { version = "4.6.7", features = ["derive"] }
+dirs = "7.0.0"
+# Pinned: newer releases are younger than two weeks (ADR 0006). Build with --locked.
+rmcp = { version = "=3.6.0", features = ["server", "transport-io", "macros"] }
+schemars = "1.2.3"
+serde_json = "1.0.154"
+tokio = { version = "1.54.1", features = ["macros", "rt", "io-std"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
