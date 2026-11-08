@@ -210,7 +210,9 @@ Workspace with three crates *(Claude's call)*:
   `RenderedPage { primitives, clip, page_mm, colours }` in page millimetres; the PDF writer consumes only that,
   so an SVG or tile backend builds on it without touching the drawing code. freemapper-print builds the
   browser backend by its M6 at the latest and moves it forward if this project's M4 comes first; tell that
-  session in time. Texts use the embedded font Arimo (freemapper-print ADR 0016); an SVG backend ships it via
+  session in time. Shared crate names *(agreed with freemapper-print)*: `freemapper-render` (renderer and
+  `.omap` reader) and `freemapper-placement` (number placement, freemapper-print M3); until extraction they
+  live in `crates/freemapper-print/src/{omap,render}`. Texts use the embedded font Arimo (freemapper-print ADR 0016); an SVG backend ships it via
   `@font-face`, so preview and print match.
 - Consequence for the order: M1–M3 need no map rendering (model, reader, checks, exports work on data). The
   map display arrives with the editor in M4.
