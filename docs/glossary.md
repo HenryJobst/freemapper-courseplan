@@ -36,6 +36,8 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenstelle, Erste Hilfe, Verpflegung. | `SpecialObject` |
 | Querungsstelle | crossing point | Pflichtübergang, etwa über eine Straße oder durch einen Zaun. Ein Posten, den die Bahn in ihrer Folge führt, der aber keine Nummer bekommt. | `ControlKind::CrossingPoint` |
 | markierte Strecke | taped leg | Strecke, die als Pflichtstrecke markiert ist; am Bahnposten oder, ab dem Start, an der Bahn. | `taped`, `start_taped` |
+| Streckengeometrie | leg geometry | Linienzug einer Strecke vom einen Bahnpunkt zum nächsten (Start, Posten, Querungsstelle, Ziel) über die Knickpunkte, mit Länge in Kartenmillimetern und Kennzeichen markierte Strecke. | `LegGeometry` |
+| Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), markierte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
 | Druckbereich | print area | Rechteck der Karte, das das Blatt einer Bahn zeigt, in Millimetern auf der Karte. | `PrintArea` |
 | Staffelteil | relay part | Gemeinsamer Teil oder Gabelung einer Staffelbahn. | `RelayPart` |
 | Score-Posten | score control | Posten einer Score-Bahn mit seinem Wert. | `ScoreControl` |
