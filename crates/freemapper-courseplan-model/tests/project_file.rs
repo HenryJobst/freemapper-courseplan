@@ -173,3 +173,103 @@ fn duplicate_course_is_reported() {
 fn duplicate_special_id_is_reported() {
     assert!(errors_of("structure.toml").contains(&ModelError::DuplicateSpecialId("S1".into())));
 }
+
+fn copy_fixture(dir: &Path, name: &str) -> PathBuf {
+    let file = dir.join("event.toml");
+    std::fs::copy(fixture(name), &file).unwrap();
+    file
+}
+
+#[test]
+fn save_keeps_comments_outside_changed_values() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.event.title = "Quay".to_owned();
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains("# Training at the old harbour, drawn by hand."),
+        "{text}"
+    );
+    assert!(text.contains("# The event itself.\n[event]"), "{text}");
+    assert!(text.contains("code = 31 # the boat shed"), "{text}");
+    assert!(text.contains("\"Quay\""), "{text}");
+    assert!(!text.contains("Harbour\""), "{text}");
+    assert!(!dir.path().join("event.toml.tmp").exists());
+    assert_eq!(ProjectFile::load(&file).unwrap().event, project.event);
+}
+
+#[test]
+fn save_after_removing_course_drops_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.courses.clear();
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(text.contains("# The event itself.\n[event]"), "{text}");
+    assert!(ProjectFile::load(&file).unwrap().event.courses.is_empty());
+}
+
+#[test]
+fn create_refuses_existing_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("event.toml");
+    let event = ProjectFile::load(&fixture("minimal.toml")).unwrap().event;
+    let mut created = ProjectFile::create(&file, event.clone()).unwrap();
+    let before = std::fs::read_to_string(&file).unwrap();
+    let err = ProjectFile::create(&file, event.clone()).unwrap_err();
+    let ProjectError::Io { source, .. } = &err else {
+        panic!("unexpected error {err:?}");
+    };
+    assert_eq!(source.kind(), std::io::ErrorKind::AlreadyExists);
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+    assert_eq!(ProjectFile::load(&file).unwrap().event, event);
+    created.event.event.title = "Other".to_owned();
+    created.save().unwrap();
+    assert_eq!(ProjectFile::load(&file).unwrap().event.event.title, "Other");
+}
+
+#[test]
+fn save_refuses_invalid_event() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    let mut course = project.event.courses[0].clone();
+    course.name = "B".to_owned();
+    match &mut course.kind {
+        CourseKind::Individual { controls } => controls[0].code = code("99"),
+        other => panic!("unexpected kind {other:?}"),
+    }
+    project.event.courses.push(course);
+    let before = std::fs::read_to_string(&file).unwrap();
+    let err = project.save().unwrap_err();
+    assert!(matches!(err, ProjectError::Invalid { .. }), "{err:?}");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+}
+
+#[test]
+fn save_after_adding_course_and_control_round_trips() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    let mut control = project.event.controls[0].clone();
+    control.code = code("33");
+    project.event.controls.push(control);
+    let mut course = project.event.courses[0].clone();
+    course.name = "B".to_owned();
+    match &mut course.kind {
+        CourseKind::Individual { controls } => controls[0].code = code("33"),
+        other => panic!("unexpected kind {other:?}"),
+    }
+    project.event.courses.push(course);
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(text.contains("# The event itself.\n[event]"), "{text}");
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{text}"
+    );
+}

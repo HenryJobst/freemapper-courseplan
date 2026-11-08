@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
+use toml_edit::{DocumentMut, Item, Table, Value};
+
 use crate::{Event, validate};
 
 /// An inconsistency inside an event.
@@ -66,8 +68,7 @@ pub struct ProjectFile {
     pub path: PathBuf,
     pub event: Event,
     /// Kept for writing changes back without losing comments and layout.
-    #[allow(dead_code)]
-    document: toml_edit::DocumentMut,
+    document: DocumentMut,
 }
 
 impl ProjectFile {
@@ -82,7 +83,7 @@ impl ProjectFile {
             message: format!("cannot parse {}: {message}", path.display()),
         };
         let document = text
-            .parse::<toml_edit::DocumentMut>()
+            .parse::<DocumentMut>()
             .map_err(|e| parse_error(e.to_string()))?;
         let event: Event = toml_edit::de::from_document(document.clone())
             .map_err(|e| parse_error(e.to_string()))?;
@@ -100,9 +101,186 @@ impl ProjectFile {
         })
     }
 
+    /// Writes a new project file for `event`. Refuses an inconsistent event and an existing file.
+    pub fn create(path: &Path, event: Event) -> Result<ProjectFile, ProjectError> {
+        check(path, &event)?;
+        let document = fresh_document(path, &event)?;
+        if path.exists() {
+            return Err(io_error(
+                path,
+                std::io::Error::from(std::io::ErrorKind::AlreadyExists),
+            ));
+        }
+        write_atomic(path, &document.to_string())?;
+        Ok(ProjectFile {
+            path: path.to_owned(),
+            event,
+            document,
+        })
+    }
+
+    /// Validates the event and writes it back, keeping the comments and layout of the values
+    /// that did not change.
+    pub fn save(&mut self) -> Result<(), ProjectError> {
+        check(&self.path, &self.event)?;
+        let fresh = fresh_document(&self.path, &self.event)?;
+        let mut merged = self.document.clone();
+        merge_tables(merged.as_table_mut(), fresh.into_table());
+        write_atomic(&self.path, &merged.to_string())?;
+        self.document = merged;
+        Ok(())
+    }
+
     /// The map file: `sources.map`, relative to the folder of the project file unless absolute.
     pub fn map_path(&self) -> PathBuf {
         let folder = self.path.parent().unwrap_or_else(|| Path::new(""));
         folder.join(&self.event.sources.map)
+    }
+}
+
+fn io_error(path: &Path, source: std::io::Error) -> ProjectError {
+    ProjectError::Io {
+        path: path.to_owned(),
+        source,
+    }
+}
+
+fn check(path: &Path, event: &Event) -> Result<(), ProjectError> {
+    let errors = validate(event);
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ProjectError::Invalid {
+            path: path.to_owned(),
+            errors,
+        })
+    }
+}
+
+fn fresh_document(path: &Path, event: &Event) -> Result<DocumentMut, ProjectError> {
+    // The `toml` serialiser lays tables out as `[table]` sections, the way people write them;
+    // `toml_edit`'s own serialiser would make inline tables of everything.
+    let error = |e: String| ProjectError::Parse {
+        path: path.to_owned(),
+        message: format!("cannot serialise {}: {e}", path.display()),
+    };
+    let text = toml::to_string(event).map_err(|e| error(e.to_string()))?;
+    let mut document = text
+        .parse::<DocumentMut>()
+        .map_err(|e| error(e.to_string()))?;
+    tidy(document.as_table_mut());
+    Ok(document)
+}
+
+/// Drops empty tables, which the reader would assume anyway, and the positions of the fresh
+/// text, which mean nothing next to the positions of the kept document.
+fn tidy(table: &mut Table) {
+    table.set_position(None);
+    let empty: Vec<String> = table
+        .iter()
+        .filter(|(_, item)| matches!(item, Item::Table(t) if t.is_empty()))
+        .map(|(k, _)| k.to_owned())
+        .collect();
+    for key in empty {
+        table.remove(&key);
+    }
+    for (_, item) in table.iter_mut() {
+        match item {
+            Item::Table(t) => tidy(t),
+            Item::ArrayOfTables(a) => a.iter_mut().for_each(tidy),
+            _ => {}
+        }
+    }
+}
+
+/// Writes next to the target and renames over it, so a failed write leaves the old file.
+fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
+    let mut tmp = path.as_os_str().to_owned();
+    tmp.push(".tmp");
+    let tmp = PathBuf::from(tmp);
+    let result = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
+    if let Err(source) = result {
+        let _ = std::fs::remove_file(&tmp);
+        return Err(io_error(path, source));
+    }
+    Ok(())
+}
+
+/// Brings `old` to the content of `new`, keeping order, comments and formatting of what is equal.
+fn merge_tables(old: &mut Table, new: Table) {
+    let stale: Vec<String> = old
+        .iter()
+        .map(|(k, _)| k.to_owned())
+        .filter(|k| !new.contains_key(k))
+        .collect();
+    for key in stale {
+        old.remove(&key);
+    }
+    for (key, item) in new {
+        match old.get_mut(&key) {
+            Some(slot) => merge_item(slot, item),
+            None => {
+                old.insert(&key, item);
+            }
+        }
+    }
+}
+
+fn merge_item(old: &mut Item, mut new: Item) {
+    // The serialiser writes arrays of tables as `[[sections]]`; the file may keep them inline.
+    if matches!(old, Item::Value(Value::Array(_))) && matches!(new, Item::ArrayOfTables(_)) {
+        new = Item::Value(new.into_value().expect("array of tables is a value"));
+    }
+    match (&mut *old, new) {
+        (Item::Table(o), Item::Table(n)) => merge_tables(o, n),
+        (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if o.len() == n.len() => {
+            for (o, n) in o.iter_mut().zip(n) {
+                merge_tables(o, n);
+            }
+        }
+        (Item::Value(o), Item::Value(n)) if same_data(o, &n) => {}
+        (_, mut new) => {
+            if let (Some(prefix), Some(table)) = (leading_decor(old), first_table_mut(&mut new)) {
+                table.decor_mut().set_prefix(prefix);
+            }
+            *old = new;
+        }
+    }
+}
+
+fn leading_decor(item: &Item) -> Option<toml_edit::RawString> {
+    let table = match item {
+        Item::Table(t) => t,
+        Item::ArrayOfTables(a) => a.get(0)?,
+        _ => return None,
+    };
+    table.decor().prefix().cloned()
+}
+
+fn first_table_mut(item: &mut Item) -> Option<&mut Table> {
+    match item {
+        Item::Table(t) => Some(t),
+        Item::ArrayOfTables(a) => a.get_mut(0),
+        _ => None,
+    }
+}
+
+/// Equal data, whatever the whitespace and comments around it.
+fn same_data(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::String(a), Value::String(b)) => a.value() == b.value(),
+        (Value::Integer(a), Value::Integer(b)) => a.value() == b.value(),
+        (Value::Float(a), Value::Float(b)) => a.value().to_bits() == b.value().to_bits(),
+        (Value::Boolean(a), Value::Boolean(b)) => a.value() == b.value(),
+        (Value::Datetime(a), Value::Datetime(b)) => a.value() == b.value(),
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b.iter()).all(|(a, b)| same_data(a, b))
+        }
+        (Value::InlineTable(a), Value::InlineTable(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(k, a)| b.get(k).is_some_and(|b| same_data(a, b)))
+        }
+        _ => false,
     }
 }

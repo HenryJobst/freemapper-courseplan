@@ -11,3 +11,4 @@ Every fixture file is listed here with its source, date and licence. Files made 
 | unicode.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
 | unknown_controls.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
 | structure.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
+| commented.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
