@@ -130,6 +130,24 @@ fn init_refuses_forest_map() {
 }
 
 #[test]
+fn init_refuses_binary_omap() {
+    let dir = tempfile::tempdir().unwrap();
+    // The magic of OOM's old binary format, as in the reader's `rejects_binary_omap`.
+    std::fs::write(dir.path().join("old.omap"), b"OMAP\0\0\0\x01rest").unwrap();
+    let out = run(dir.path(), &["init", "old.omap"]);
+    assert_eq!(out.status.code(), Some(1));
+    let err = stderr(&out);
+    assert!(
+        err.starts_with("error: cannot read map old.omap: "),
+        "{err}"
+    );
+    assert!(err.contains("old binary format"), "{err}");
+    assert!(err.contains("save it again"), "{err}");
+    assert!(stdout(&out).is_empty());
+    assert!(!dir.path().join("old.courseplan.toml").exists());
+}
+
+#[test]
 fn init_reports_missing_map() {
     let dir = tempfile::tempdir().unwrap();
     let out = run(dir.path(), &["init", "nowhere.omap"]);
