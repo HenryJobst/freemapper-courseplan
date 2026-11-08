@@ -2,8 +2,11 @@
 
 [English](README.en.md)
 
-Hier liegen fertige Veranstaltungen, gebaut auf Karten aus den
-[Beispielen von freemapper](https://github.com/HenryJobst/freemapper/tree/main/examples): Projektdatei, Export
-nach IOF-XML 3.0 für OE, Export nach Purple Pen (`.ppen`), die Prüfhinweise und, sobald freemapper-print Bahnen
-druckt, das Druck-PDF mit Vorschaubild. Das erste Beispiel wird ein Sprinttraining auf der Karte der Lübecker
-Altstadt. Es kommt mit der ersten Version, die Bahnen legen, prüfen und exportieren kann.
+Fertige Veranstaltungen auf Karten aus den
+[Beispielen von freemapper](https://github.com/HenryJobst/freemapper/tree/main/examples). Zu jeder gehören die
+Projektdatei, die Befehle, mit denen sie entstand, und ein Vorschaubild. Später kommen der Export nach IOF-XML 3.0
+für OE, der Export nach Purple Pen (`.ppen`), die Prüfhinweise und das Druck-PDF von freemapper-print dazu.
+
+| Beispiel | Karte | Vorschau |
+|---|---|---|
+| [Sprinttraining Lübecker Altstadt](luebeck-sprint/) | Lübeck, 1:4000 | <a href="luebeck-sprint/"><img src="luebeck-sprint/preview.jpg" width="160" alt=""></a> |

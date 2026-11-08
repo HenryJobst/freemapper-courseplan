@@ -438,3 +438,20 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
 Final whole-branch review on the most capable model, then merge `--no-ff` into `main`, run the checks on
 `main`, push to `origin` and `github`, watch CI, remove the worktree and run `cargo clean` there (CLAUDE.md).
 Next plan: M2b, the `check` rules of design §5.6.
+
+## Follow-ups after M2a (from the reviews)
+
+Carried into M2b/M3 planning; the SDD ledger is deleted after the merge.
+
+- `special courses` usage line shows the required group before PROJECT and ID (clap); the argument list is right.
+- English wording mixes "taped flag" and "marked-route flag"; use "taped leg" (glossary).
+- German output prints gaps and directions with a decimal point; lengths already use the comma.
+- MCP `event_info.counts.controls` includes crossing points (CLI separates them); `numbers_set` counts per-course
+  numbers only; `set_course_number` accepts a crossing-point position.
+- File-open errors embed the English OS text; rmcp's unknown-field error is English.
+- Automatic number placement stays on request; consider re-placing after leg edits.
+- From the task reviews (can wait): start and finish are no obstacles for numbers; `map_scale == 0` gives NaN
+  geometry; O(n²) leg cloning in placement; `is_default` key-agnostic in the stale-key filter; no tests for
+  removal/reorder of specials; `courses = []` accepted on start/finish; `next_free_code` accepts "031";
+  `Failure` lives in `edit_cmd.rs`; weak `contains` assertions in CLI tests; `is_courseplan_project` reads the
+  file twice; `error_position` searches the whole message; id scanners split on quotes.

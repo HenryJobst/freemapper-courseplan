@@ -89,3 +89,35 @@ fn luebeck_index_skips_sheet_objects() {
     assert!(all.iter().all(|(f, _)| f.part != "peripheral information"));
     assert!(all.windows(2).all(|w| w[0].1 <= w[1].1));
 }
+
+#[test]
+fn luebeck_index_builds_fast() {
+    let doc = read_map_file(Path::new(&fixture("luebeck.omap"))).unwrap();
+    let started = std::time::Instant::now();
+    let index = MapIndex::from_document(&doc);
+    let elapsed = started.elapsed();
+    eprintln!("from_document: {elapsed:?}, {} features", index.len());
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "from_document took {elapsed:?}"
+    );
+}
+
+#[test]
+fn luebeck_feature_set_is_pinned() {
+    use freemapper_courseplan::map::FeatureGeometry;
+    use freemapper_courseplan_model::MapPoint;
+    let doc = read_map_file(Path::new(&fixture("luebeck.omap"))).unwrap();
+    let index = MapIndex::from_document(&doc);
+    let all = index.features_near(MapPoint { x: 0.0, y: 0.0 }, f64::INFINITY);
+    let (mut points, mut lines, mut areas) = (0, 0, 0);
+    for (f, _) in &all {
+        match f.geometry {
+            FeatureGeometry::Point(_) => points += 1,
+            FeatureGeometry::Line(_) => lines += 1,
+            FeatureGeometry::Area(_) => areas += 1,
+        }
+    }
+    assert_eq!(index.len(), 2143);
+    assert_eq!((points, lines, areas), (0, 17, 2126));
+}

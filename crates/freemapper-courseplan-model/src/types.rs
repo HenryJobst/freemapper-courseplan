@@ -111,10 +111,28 @@ pub struct ControlDescription {
     pub h: Option<String>,
 }
 
+/// What a [`Control`] is. A crossing point is listed in the sequence of a course but gets no number
+/// (IOF XML `CrossingPoint`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ControlKind {
+    #[default]
+    Control,
+    CrossingPoint,
+}
+
+impl ControlKind {
+    fn is_control(&self) -> bool {
+        *self == ControlKind::Control
+    }
+}
+
 /// A control site with code and description, shared by all courses that use it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Control {
     pub code: ControlCode,
+    #[serde(default, skip_serializing_if = "ControlKind::is_control")]
+    pub kind: ControlKind,
     pub map_mm: MapPoint,
     #[serde(default)]
     pub description: ControlDescription,
@@ -122,19 +140,83 @@ pub struct Control {
     pub number: Option<NumberPlacement>,
 }
 
-/// A course object that is not a control.
+/// A course object that is not a control. `courses` names the courses the object belongs to; empty
+/// means all courses.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SpecialObject {
-    Start { id: String, map_mm: MapPoint },
-    Finish { id: String, map_mm: MapPoint },
-    MarkedRoute { points: Vec<MapPoint> },
-    CrossingPoint { map_mm: MapPoint },
-    OutOfBoundsArea { polygon: Vec<MapPoint> },
-    ForbiddenRoute { points: Vec<MapPoint> },
-    DangerousArea { polygon: Vec<MapPoint> },
-    FirstAid { map_mm: MapPoint },
-    Water { map_mm: MapPoint },
+    Start {
+        id: String,
+        map_mm: MapPoint,
+    },
+    Finish {
+        id: String,
+        map_mm: MapPoint,
+    },
+    MarkedRoute {
+        id: String,
+        points: Vec<MapPoint>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+    OutOfBoundsArea {
+        id: String,
+        polygon: Vec<MapPoint>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+    ForbiddenRoute {
+        id: String,
+        points: Vec<MapPoint>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+    DangerousArea {
+        id: String,
+        polygon: Vec<MapPoint>,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+    FirstAid {
+        id: String,
+        map_mm: MapPoint,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+    Water {
+        id: String,
+        map_mm: MapPoint,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        courses: Vec<String>,
+    },
+}
+
+impl SpecialObject {
+    pub fn id(&self) -> &str {
+        match self {
+            Self::Start { id, .. }
+            | Self::Finish { id, .. }
+            | Self::MarkedRoute { id, .. }
+            | Self::OutOfBoundsArea { id, .. }
+            | Self::ForbiddenRoute { id, .. }
+            | Self::DangerousArea { id, .. }
+            | Self::FirstAid { id, .. }
+            | Self::Water { id, .. } => id,
+        }
+    }
+
+    /// The courses the object is limited to; empty for all courses, and always empty for start and finish.
+    pub fn courses(&self) -> &[String] {
+        match self {
+            Self::Start { .. } | Self::Finish { .. } => &[],
+            Self::MarkedRoute { courses, .. }
+            | Self::OutOfBoundsArea { courses, .. }
+            | Self::ForbiddenRoute { courses, .. }
+            | Self::DangerousArea { courses, .. }
+            | Self::FirstAid { courses, .. }
+            | Self::Water { courses, .. } => courses,
+        }
+    }
 }
 
 /// A control as used in one course, with its own number placement and the bends of the leg
@@ -146,6 +228,13 @@ pub struct CourseControl {
     pub number: Option<NumberPlacement>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub bends: Vec<MapPoint>,
+    /// The leg leaving this control is a marked route.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub taped: bool,
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }
 
 /// A control of a score course with its value.
@@ -186,6 +275,13 @@ pub enum CourseKind {
     },
 }
 
+/// The part of the map a course sheet shows: corners in map millimetres, y down.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PrintArea {
+    pub min: MapPoint,
+    pub max: MapPoint,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Course {
     pub name: String,
@@ -195,6 +291,14 @@ pub struct Course {
     pub start: String,
     /// Id of the finish special object.
     pub finish: String,
+    /// Bends of the leg from the start to the first control.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub start_bends: Vec<MapPoint>,
+    /// The leg from the start to the first control is a marked route.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub start_taped: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub print_area: Option<PrintArea>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub climb_m: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -295,6 +399,7 @@ mod tests {
             code: code(s),
             number: None,
             bends: vec![],
+            taped: false,
         }
     }
 
@@ -324,6 +429,9 @@ mod tests {
             classes: vec!["H21".to_owned()],
             start: "S1".to_owned(),
             finish: "F1".to_owned(),
+            start_bends: vec![],
+            start_taped: false,
+            print_area: None,
             climb_m: Some(35),
             planned_print_scale: Some(4000),
             kind,
@@ -348,6 +456,7 @@ mod tests {
             }],
             controls: vec![Control {
                 code: code("31"),
+                kind: ControlKind::Control,
                 map_mm: MapPoint { x: 12.4, y: -33.1 },
                 description: ControlDescription {
                     d: Some("1.8".to_owned()),
@@ -365,13 +474,19 @@ mod tests {
                     map_mm: MapPoint { x: 0.0, y: 0.0 },
                 },
                 SpecialObject::MarkedRoute {
+                    id: "m1".to_owned(),
                     points: vec![MapPoint { x: 1.0, y: 2.0 }, MapPoint { x: 3.0, y: 4.0 }],
+                    courses: vec![],
                 },
                 SpecialObject::OutOfBoundsArea {
+                    id: "o1".to_owned(),
                     polygon: vec![MapPoint { x: 1.0, y: 2.0 }; 3],
+                    courses: vec![],
                 },
                 SpecialObject::Water {
+                    id: "w1".to_owned(),
                     map_mm: MapPoint { x: 5.0, y: 5.0 },
+                    courses: vec!["A".to_owned()],
                 },
             ],
             courses: vec![
@@ -380,6 +495,7 @@ mod tests {
                     CourseKind::Individual {
                         controls: vec![CourseControl {
                             bends: vec![MapPoint { x: 20.0, y: -30.0 }],
+                            taped: true,
                             ..cc("31")
                         }],
                     },
@@ -465,13 +581,36 @@ mod tests {
                     id: "F1".to_owned(),
                     map_mm: p(),
                 },
-                SpecialObject::MarkedRoute { points: vec![p()] },
-                SpecialObject::CrossingPoint { map_mm: p() },
-                SpecialObject::OutOfBoundsArea { polygon: vec![p()] },
-                SpecialObject::ForbiddenRoute { points: vec![p()] },
-                SpecialObject::DangerousArea { polygon: vec![p()] },
-                SpecialObject::FirstAid { map_mm: p() },
-                SpecialObject::Water { map_mm: p() },
+                SpecialObject::MarkedRoute {
+                    id: "m1".to_owned(),
+                    points: vec![p()],
+                    courses: vec![],
+                },
+                SpecialObject::OutOfBoundsArea {
+                    id: "o1".to_owned(),
+                    polygon: vec![p()],
+                    courses: vec![],
+                },
+                SpecialObject::ForbiddenRoute {
+                    id: "f1".to_owned(),
+                    points: vec![p()],
+                    courses: vec![],
+                },
+                SpecialObject::DangerousArea {
+                    id: "d1".to_owned(),
+                    polygon: vec![p()],
+                    courses: vec![],
+                },
+                SpecialObject::FirstAid {
+                    id: "a1".to_owned(),
+                    map_mm: p(),
+                    courses: vec![],
+                },
+                SpecialObject::Water {
+                    id: "w1".to_owned(),
+                    map_mm: p(),
+                    courses: vec![],
+                },
             ],
         };
         let text = toml::to_string(&specials).unwrap();
@@ -485,7 +624,6 @@ mod tests {
                 "\"start\"",
                 "\"finish\"",
                 "\"marked_route\"",
-                "\"crossing_point\"",
                 "\"out_of_bounds_area\"",
                 "\"forbidden_route\"",
                 "\"dangerous_area\"",
@@ -546,6 +684,9 @@ controls = [
             classes: vec!["H21".to_owned(), "D21".to_owned()],
             start: "S1".to_owned(),
             finish: "F1".to_owned(),
+            start_bends: vec![],
+            start_taped: false,
+            print_area: None,
             climb_m: Some(35),
             planned_print_scale: None,
             kind: CourseKind::Individual {
@@ -557,11 +698,13 @@ controls = [
                             gap_mm: 1.0,
                         }),
                         bends: vec![],
+                        taped: false,
                     },
                     CourseControl {
                         code: code("32"),
                         number: None,
                         bends: vec![MapPoint { x: 20.0, y: -30.0 }],
+                        taped: false,
                     },
                 ],
             },

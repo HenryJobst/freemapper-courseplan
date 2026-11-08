@@ -90,6 +90,25 @@ after that is Claude's call)*
    freemapper-print; user decision pending)*.
 8. Forest maps (ISOM 2017-2) with their rule values, symbol groups and test maps *(user: later)*. The
    position in this order is open.
+9. Indoor maps for gym training and indoor events *(user, 2026-11-08, agreed across the suite)*:
+   - freemapper makes the starter project with an OOM indoor symbol set after the IOF draft ISInOM 6.6 (OCAD's
+     "Gym" set cannot be copied) and the user's floor plan as template; the fixed gym map is drawn in OOM;
+   - stage 1: each apparatus setup is a copy of the gym map in OOM, and each event names its copy;
+   - courses and tape barriers (maze and labyrinth formats) belong here, as courses and special objects;
+   - here: a map kind "indoor" (scales 1:100 to 1:1000), its own rule profile (WKB distances do not apply),
+     overprint sizes after ISInOM as an assumption until it is final;
+   - stage 2, optional and after the editor: an "apparatus setup" layer in the editor, stored as map objects
+     with OOM symbol codes so freemapper-print draws them like map content.
+   - Agreed with freemapper (2026-11-08): `freemapper.toml` says `map_kind = "gym"` for gym maps (changed only
+     with notice), and course setting recognises `gym`; map parts `hall`, `courts`, `equipment`, one `.omap`
+     per apparatus setup; equipment objects carry stable codes 1900–1989 (freemapper's extension of ISInOM
+     6.6); column D descriptions for apparatus use ids `gym.<code>` with German and English names from
+     freemapper's published list; a set-up danger area is map content (1980, orange), run-specific barriers
+     and dangers are course-setting special objects (purple).
+   - Decided by the user (2026-11-08, via freemapper): course symbols ×1.5 like the map symbols; gym scales
+     1:100 to 1:700; the demo uses a sketch made from the ALKIS outline and DIN sizes; apparatus sizes come
+     from open manufacturer catalogues with a source per device, estimates are marked and can be corrected
+     by hand.
 
 **Non-goals**
 

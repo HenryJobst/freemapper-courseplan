@@ -1,7 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use freemapper_courseplan_model::{
-    ControlCode, CourseKind, Event, ModelError, ProjectError, ProjectFile,
+    ControlCode, ControlKind, CourseKind, Event, MapPoint, ModelError, PrintArea, ProjectError,
+    ProjectFile, SpecialObject,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -685,4 +686,255 @@ fn duplicate_class_is_reported() {
     };
     assert_eq!(errors, &vec![ModelError::DuplicateClass("H21".into())]);
     assert!(err.to_string().contains("class H21"), "{err}");
+}
+
+fn event_text(extra_specials: &str, extra_controls: &str, course_extra: &str) -> String {
+    format!(
+        r#"format = 1
+
+[event]
+title = "Crossing"
+
+[sources]
+map = "maps/m.omap"
+
+[[specials]]
+kind = "start"
+id = "S1"
+map_mm = [0.0, 0.0]
+
+[[specials]]
+kind = "finish"
+id = "F1"
+map_mm = [50.0, 50.0]
+{extra_specials}
+[[controls]]
+code = 31
+map_mm = [10.0, 10.0]
+
+[[controls]]
+code = 32
+map_mm = [20.0, 30.0]
+{extra_controls}
+[[courses]]
+name = "A"
+kind = "individual"
+start = "S1"
+finish = "F1"
+{course_extra}controls = [{{ code = 31 }}, {{ code = 32 }}]
+"#
+    )
+}
+
+fn write_event(dir: &Path, text: &str) -> PathBuf {
+    let file = dir.join("event.toml");
+    std::fs::write(&file, text).unwrap();
+    file
+}
+
+#[test]
+fn crossing_point_control_round_trips() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = event_text(
+        "",
+        "\n[[controls]]\ncode = \"X1\"\nkind = \"crossing_point\"\nmap_mm = [15.0, 15.0]\n",
+        "",
+    );
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(project.event.controls[0].kind, ControlKind::Control);
+    assert_eq!(project.event.controls[2].kind, ControlKind::CrossingPoint);
+    project.event.controls[0].map_mm.x = 11.0;
+    project.save().unwrap();
+    let saved = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(
+        saved.matches("kind = \"crossing_point\"").count(),
+        1,
+        "{saved}"
+    );
+    assert!(!saved.contains("kind = \"control\""), "{saved}");
+    assert_eq!(ProjectFile::load(&file).unwrap().event, project.event);
+}
+
+#[test]
+fn explicit_default_values_are_known_keys_and_survive_a_save() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = event_text(
+        "\n[[specials]]\nkind = \"water\"\nid = \"w1\"\nmap_mm = [1.0, 2.0]\ncourses = []\n",
+        "",
+        "start_bends = []\nstart_taped = false\n",
+    )
+    .replace("{ code = 31 }", "{ code = 31, taped = false }")
+    .replace("code = 31\n", "code = 31\nkind = \"control\"\n");
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}
+
+#[test]
+fn special_objects_have_ids_and_courses() {
+    let specials = r#"
+[[specials]]
+kind = "marked_route"
+id = "m1"
+points = [[1.0, 2.0], [3.0, 4.0]]
+
+[[specials]]
+kind = "out_of_bounds_area"
+id = "o1"
+polygon = [[1.0, 2.0], [3.0, 4.0], [5.0, 1.0]]
+
+[[specials]]
+kind = "forbidden_route"
+id = "f1"
+points = [[1.0, 2.0], [3.0, 4.0]]
+
+[[specials]]
+kind = "dangerous_area"
+id = "d1"
+polygon = [[1.0, 2.0], [3.0, 4.0], [5.0, 1.0]]
+
+[[specials]]
+kind = "first_aid"
+id = "a1"
+map_mm = [1.0, 2.0]
+
+[[specials]]
+kind = "water"
+id = "w1"
+map_mm = [1.0, 2.0]
+courses = ["A"]
+"#;
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), &event_text(specials, "", ""));
+    let mut project = ProjectFile::load(&file).unwrap();
+    let SpecialObject::Water { id, courses, .. } = &project.event.specials[7] else {
+        panic!("{:?}", project.event.specials);
+    };
+    assert_eq!(
+        (id.as_str(), courses.as_slice()),
+        ("w1", ["A".to_owned()].as_slice())
+    );
+    let SpecialObject::FirstAid { courses, .. } = &project.event.specials[6] else {
+        panic!("{:?}", project.event.specials);
+    };
+    assert!(courses.is_empty());
+    project.event.specials[6] = SpecialObject::FirstAid {
+        id: "a1".into(),
+        map_mm: MapPoint { x: 9.0, y: 9.0 },
+        courses: vec![],
+    };
+    project.save().unwrap();
+    let saved = std::fs::read_to_string(&file).unwrap();
+    assert_eq!(saved.matches("courses = ").count(), 1, "{saved}");
+    assert_eq!(ProjectFile::load(&file).unwrap().event, project.event);
+}
+
+#[test]
+fn start_leg_and_taped_leg_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = event_text(
+        "",
+        "",
+        "start_bends = [[5.0, 5.0], [6.0, 7.0]]\nstart_taped = true\nprint_area = { min = [0, 0], max = [180, 260] }\n",
+    )
+    .replace("{ code = 31 }", "{ code = 31, taped = true }");
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    let course = &project.event.courses[0];
+    assert_eq!(course.start_bends.len(), 2);
+    assert!(course.start_taped);
+    assert_eq!(
+        course.print_area,
+        Some(PrintArea {
+            min: MapPoint { x: 0.0, y: 0.0 },
+            max: MapPoint { x: 180.0, y: 260.0 },
+        })
+    );
+    let CourseKind::Individual { controls } = &course.kind else {
+        panic!("not individual");
+    };
+    assert!(controls[0].taped && !controls[1].taped);
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+    project.event.courses[0].start_taped = false;
+    project.event.courses[0].start_bends.clear();
+    project.save().unwrap();
+    let saved = std::fs::read_to_string(&file).unwrap();
+    assert!(!saved.contains("start_"), "{saved}");
+    assert_eq!(ProjectFile::load(&file).unwrap().event, project.event);
+}
+
+fn invalid_errors(text: &str) -> Vec<ModelError> {
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), text);
+    match ProjectFile::load(&file).unwrap_err() {
+        ProjectError::Invalid { errors, .. } => errors,
+        other => panic!("unexpected error {other:?}"),
+    }
+}
+
+#[test]
+fn special_with_unknown_course_is_reported() {
+    let specials = "\n[[specials]]\nkind = \"water\"\nid = \"w1\"\nmap_mm = [1.0, 2.0]\ncourses = [\"A\", \"Z\"]\n";
+    assert_eq!(
+        invalid_errors(&event_text(specials, "", "")),
+        [ModelError::UnknownCourseInSpecial {
+            id: "w1".into(),
+            course: "Z".into()
+        }]
+    );
+}
+
+#[test]
+fn duplicate_special_id_across_kinds_is_reported() {
+    let specials = "\n[[specials]]\nkind = \"water\"\nid = \"F1\"\nmap_mm = [1.0, 2.0]\n";
+    assert_eq!(
+        invalid_errors(&event_text(specials, "", "")),
+        [ModelError::DuplicateSpecialId("F1".into())]
+    );
+}
+
+#[test]
+fn adding_a_special_keeps_comments_on_the_others() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = event_text(
+        "\n[[specials]]\nkind = \"water\"\nid = \"w1\"\nmap_mm = [1.0, 2.0] # the fountain\n",
+        "",
+        "",
+    )
+    .replace("map_mm = [0.0, 0.0]", "map_mm = [0.0, 0.0] # the gate");
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.specials.insert(
+        0,
+        SpecialObject::FirstAid {
+            id: "a1".into(),
+            map_mm: MapPoint { x: 3.0, y: 3.0 },
+            courses: vec![],
+        },
+    );
+    project.save().unwrap();
+    let saved = std::fs::read_to_string(&file).unwrap();
+    assert!(saved.contains("map_mm = [0.0, 0.0] # the gate"), "{saved}");
+    assert!(
+        saved.contains("map_mm = [1.0, 2.0] # the fountain"),
+        "{saved}"
+    );
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{saved}"
+    );
+}
+
+#[test]
+fn crossing_point_special_is_rejected() {
+    let specials = "\n[[specials]]\nkind = \"crossing_point\"\nid = \"x1\"\nmap_mm = [1.0, 2.0]\n";
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), &event_text(specials, "", ""));
+    let err = ProjectFile::load(&file).unwrap_err();
+    assert!(matches!(err, ProjectError::Parse { .. }), "{err:?}");
+    assert!(err.to_string().contains("crossing_point"), "{err}");
 }

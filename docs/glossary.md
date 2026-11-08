@@ -33,8 +33,20 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Score-Bahn | score course | Menge von Posten mit Werten, Zeitlimit und Strafe; Reihenfolge frei. | `CourseKind::Score` |
 | Bahnposten | course control | Ein Posten in einer Bahn, mit eigener Nummernlage und eigenen Knickpunkten der folgenden Strecke. | `CourseControl` |
 | geplanter Druckmaßstab | planned print scale | Maßstab, für den die Bahn gelegt wird. Grundlage für maßstabsabhängige Prüfungen; für freemapper-print nur ein Vorgabewert. | `planned_print_scale` |
-| Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Querungsstelle, Sperrgebiet, verbotene Route, Gefahrenstelle, Erste Hilfe, Verpflegung. | `SpecialObject` |
-| Querungsstelle | crossing point | Pflichtübergang, etwa über eine Straße oder durch einen Zaun. | `CrossingPoint` |
+| Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenbereich, Erste-Hilfe-Stelle, Verpflegungsstelle. | `SpecialObject` |
+| Querungsstelle | crossing point | Pflichtübergang, etwa über eine Straße oder durch einen Zaun. Ein Posten, den die Bahn in ihrer Folge führt, der aber keine Nummer bekommt. | `ControlKind::CrossingPoint` |
+| abgeflaggte Strecke | taped leg | Strecke, die als Pflichtstrecke abgeflaggt ist; am Bahnposten oder, ab dem Start, an der Bahn. | `taped`, `start_taped` |
+| Streckengeometrie | leg geometry | Linienzug einer Strecke vom einen Bahnpunkt zum nächsten (Start, Posten, Querungsstelle, Ziel) über die Knickpunkte, mit Länge in Kartenmillimetern und Kennzeichen abgeflaggte Strecke. | `LegGeometry` |
+| Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), abgeflaggte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
+| Aufdruckgrößen | overprint sizes | Kreisdurchmesser, Linienbreite und Nummernhöhe des Bahnaufdrucks in Druckmillimetern beim Grundmaßstab der Kartenart: ISSprOM 2019-2 für Sprint und Schulhof, ISOM 2017-2 für Wald. | `OverprintSizes` |
+| Grundmaßstab | base scale | Maßstab, für den die Aufdruckgrößen gelten: Sprint 1:4000, Schulhof 1:1000, Wald 1:15000. Auf der Karte gilt `map_mm = print_mm × base_scale / map_scale`, auch bei vergrößertem Druck. | `base_scale` |
+| Druckbereich | print area | Rechteck der Karte, das das Blatt einer Bahn zeigt, in Millimetern auf der Karte. | `PrintArea` |
+| Staffelteil | relay part | Gemeinsamer Teil oder Gabelung einer Staffelbahn. | `RelayPart` |
+| Score-Posten | score control | Posten einer Score-Bahn mit seinem Wert. | `ScoreControl` |
+| Eingabedateien | sources | Karte und optional Purple-Pen-Projekt der Veranstaltung, Pfade relativ zur Projektdatei. | `Sources` |
+| Gefahrenbereich | dangerous area | Fläche, vor der der Bahnaufdruck mit violetter Markierung warnt (WKB B 7.2.1). | `SpecialObject::DangerousArea` |
+| Erste-Hilfe-Stelle | first aid | Ort der Ersten Hilfe, auf der Karte eingezeichnet. | `SpecialObject::FirstAid` |
+| Verpflegungsstelle | water | Ort mit Getränken für die Läufer, auf der Karte eingezeichnet. | `SpecialObject::Water` |
 | Sperrgebiet | out-of-bounds area | Fläche, die nicht betreten werden darf (ISOM/ISSprOM 709). | `OutOfBoundsArea` |
 | verbotene Route | forbidden route | Linie, die nicht begangen werden darf (ISOM/ISSprOM 711). | `ForbiddenRoute` |
 
@@ -50,6 +62,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Kartenobjekt für Abfragen | map feature | Ein Geländeobjekt im Kartenindex: Symbolnummer, Kartenteil und Geometrie (Punkt, Linie, Fläche). | `MapFeature` |
 | Startfenster | start window | Zeit vom ersten bis zum letzten Start. | `start_window` |
 | erster Posten | first control | Der erste Posten einer Bahn nach dem Start. | `first_control` |
+| Sprache | language | Sprache der Programmtexte: `de` oder `en`, gewählt mit `--lang`, `FREEMAPPER_LANG` oder der Systemsprache (ADR 0022). | `Lang` |
 
 ## Prüfen / checking
 
@@ -79,3 +92,10 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Laufgeschwindigkeit | symbol speed | Geschwindigkeitsfaktor eines Kartensymbols in der Kostenfläche. | `symbol_speed` |
 | Postensetzer | control placer | Helfer, der Posten ausbringt oder einsammelt. | `ControlPlacer` |
 | Tour | control-placer tour | Geordnete Postenliste eines Postensetzers mit Start- und Endpunkt; gedruckt von freemapper-print. | `Tour` |
+
+## Assistenten / assistants
+
+| Deutsch | English | Definition | Code |
+|---|---|---|---|
+| MCP-Server | MCP server | Teil des Programms, der KI-Assistenten über das Model Context Protocol auf stdin und stdout Werkzeuge zum Lesen und Ändern eines Projekts anbietet. Das Programm selbst enthält keine KI (ADR 0016). | `mcp::CoursePlanServer` |
+| Werkzeug | tool | Eine Funktion des MCP-Servers mit englischem Namen, zum Beispiel `add_control`. Beschreibung und Parametertexte stehen im Katalog. | `#[tool]` |

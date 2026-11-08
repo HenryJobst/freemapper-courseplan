@@ -22,6 +22,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut codes: HashSet<&ControlCode> = HashSet::new();
     let mut reported: HashSet<&ControlCode> = HashSet::new();
     for control in &event.controls {
+        check_name(&mut errors, "control code", &control.code.0);
         if !codes.insert(&control.code) && reported.insert(&control.code) {
             errors.push(ModelError::DuplicateControl(control.code.clone()));
         }
@@ -32,6 +33,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut reported_classes: HashSet<&str> = HashSet::new();
     for class in &event.classes {
         let name = class.name.as_str();
+        check_name(&mut errors, "class name", name);
         if !class_names.insert(name) && reported_classes.insert(name) {
             errors.push(ModelError::DuplicateClass(class.name.clone()));
         }
@@ -40,26 +42,66 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut starts: HashSet<&str> = HashSet::new();
     let mut finishes: HashSet<&str> = HashSet::new();
     let mut special_ids: HashSet<&str> = HashSet::new();
+    let mut reported_ids: HashSet<&str> = HashSet::new();
     for special in &event.specials {
-        let id = match special {
-            SpecialObject::Start { id, .. } => {
+        let id = special.id();
+        check_name(&mut errors, "special object id", id);
+        if let Some((kind, needed, have)) = shape(special)
+            && have < needed
+        {
+            errors.push(ModelError::TooFewPoints {
+                id: id.to_owned(),
+                kind,
+                needed,
+            });
+        }
+        let mut listed: HashSet<&str> = HashSet::new();
+        let mut doubled: HashSet<&str> = HashSet::new();
+        for course in special.courses() {
+            if !listed.insert(course) && doubled.insert(course) {
+                errors.push(ModelError::DuplicateCourseInSpecial {
+                    id: id.to_owned(),
+                    course: course.clone(),
+                });
+            }
+        }
+        match special {
+            SpecialObject::Start { .. } => {
                 starts.insert(id);
-                id
             }
-            SpecialObject::Finish { id, .. } => {
+            SpecialObject::Finish { .. } => {
                 finishes.insert(id);
-                id
             }
-            _ => continue,
-        };
-        if !special_ids.insert(id) {
-            errors.push(ModelError::DuplicateSpecialId(id.clone()));
+            _ => {}
+        }
+        if !special_ids.insert(id) && reported_ids.insert(id) {
+            errors.push(ModelError::DuplicateSpecialId(id.to_owned()));
+        }
+    }
+
+    let mut clashes: HashSet<&ControlCode> = HashSet::new();
+    for control in &event.controls {
+        if special_ids.contains(control.code.0.as_str()) && clashes.insert(&control.code) {
+            errors.push(ModelError::CodeClashesWithSpecial(control.code.clone()));
+        }
+    }
+
+    let known_courses: HashSet<&str> = event.courses.iter().map(|c| c.name.as_str()).collect();
+    for special in &event.specials {
+        for course in special.courses() {
+            if !known_courses.contains(course.as_str()) {
+                errors.push(ModelError::UnknownCourseInSpecial {
+                    id: special.id().to_owned(),
+                    course: course.clone(),
+                });
+            }
         }
     }
 
     let mut course_names: HashSet<&str> = HashSet::new();
     for course in &event.courses {
         let name = &course.name;
+        check_name(&mut errors, "course name", name);
         if !course_names.insert(name) {
             errors.push(ModelError::DuplicateCourse(name.clone()));
         }
@@ -130,4 +172,28 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     }
 
     errors
+}
+
+/// Reports a name that is empty or has white space at its start or end. Such names cannot be told
+/// apart on the command line or in a list.
+fn check_name(errors: &mut Vec<ModelError>, what: &'static str, value: &str) {
+    if value.is_empty() || value.trim() != value {
+        errors.push(ModelError::BlankName {
+            what,
+            value: value.to_owned(),
+        });
+    }
+}
+
+/// For a line or area kind: its English name, the fewest points it needs and the points it has.
+fn shape(special: &SpecialObject) -> Option<(&'static str, usize, usize)> {
+    match special {
+        SpecialObject::MarkedRoute { points, .. } => Some(("marked route", 2, points.len())),
+        SpecialObject::ForbiddenRoute { points, .. } => Some(("forbidden route", 2, points.len())),
+        SpecialObject::OutOfBoundsArea { polygon, .. } => {
+            Some(("out-of-bounds area", 3, polygon.len()))
+        }
+        SpecialObject::DangerousArea { polygon, .. } => Some(("dangerous area", 3, polygon.len())),
+        _ => None,
+    }
 }
