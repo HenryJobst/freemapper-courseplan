@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use toml_edit::{ArrayOfTables, DocumentMut, Item, Table, Value};
+use toml_edit::{ArrayOfTables, DocumentMut, InlineTable, Item, Table, TableLike, Value};
 
 use crate::{Event, validate};
 
@@ -119,8 +119,9 @@ impl ProjectFile {
         })
     }
 
-    /// Validates the event and writes it back, keeping the comments and layout of the values
-    /// that did not change.
+    /// Validates the event and writes it back. Values that did not change stay as written, with
+    /// their comments; a changed value keeps the comment next to it and stays inline if it was.
+    /// Saving an unchanged event leaves the file byte for byte as it was.
     pub fn save(&mut self) -> Result<(), ProjectError> {
         check(&self.path, &self.event)?;
         let fresh = fresh_document(&self.path, &self.event)?;
@@ -231,10 +232,18 @@ fn renumber(table: &mut Table, next: &mut isize) {
 /// Brings `old` to the content of `new`, keeping order, comments and formatting of what is equal.
 /// Sets `reordered` when an array of tables now holds kept elements in another order.
 fn merge_tables(old: &mut Table, new: Table, reordered: &mut bool) {
+    let entries = new.into_iter().map(|(k, v)| (k.to_string(), v)).collect();
+    merge_table_like(old, entries, reordered);
+}
+
+/// [`merge_tables`] for a table or an inline table.
+fn merge_table_like(old: &mut dyn TableLike, new: Vec<(String, Item)>, reordered: &mut bool) {
+    // A key the serialiser leaves out holds an empty list or table in the file, which means the
+    // same as no key. Keeping it keeps the file as the user wrote it.
     let stale: Vec<String> = old
         .iter()
+        .filter(|(k, item)| !new.iter().any(|(n, _)| n == k) && !is_empty(item))
         .map(|(k, _)| k.to_owned())
-        .filter(|k| !new.contains_key(k))
         .collect();
     for key in stale {
         old.remove(&key);
@@ -242,11 +251,32 @@ fn merge_tables(old: &mut Table, new: Table, reordered: &mut bool) {
     for (key, item) in new {
         match old.get_mut(&key) {
             Some(slot) => merge_item(slot, item, identity_key(&key), reordered),
+            None if left_out_default(&key, &item) => {}
             None => {
                 old.insert(&key, item);
             }
         }
     }
+}
+
+fn is_empty(item: &Item) -> bool {
+    match item {
+        Item::Table(t) => t.is_empty(),
+        Item::ArrayOfTables(a) => a.is_empty(),
+        Item::Value(Value::Array(a)) => a.is_empty(),
+        Item::Value(Value::InlineTable(t)) => t.is_empty(),
+        _ => false,
+    }
+}
+
+/// A key the file leaves out keeps being left out while the event holds its default.
+fn left_out_default(key: &str, item: &Item) -> bool {
+    let default = match key {
+        "discipline" => "training",
+        "rule_profile" => crate::types::DEFAULT_RULE_PROFILE,
+        _ => return false,
+    };
+    item.as_str() == Some(default)
 }
 
 /// The field that tells the elements of an array of tables apart, where the format has one.
@@ -286,11 +316,18 @@ fn merge_by_identity(old: &mut ArrayOfTables, new: ArrayOfTables, id: &str, reor
     }
 }
 
-fn merge_item(old: &mut Item, mut new: Item, identity: Option<&str>, reordered: &mut bool) {
-    // The serialiser writes arrays of tables as `[[sections]]`; the file may keep them inline.
-    if matches!(old, Item::Value(Value::Array(_))) && matches!(new, Item::ArrayOfTables(_)) {
-        new = Item::Value(new.into_value().expect("array of tables is a value"));
-    }
+fn merge_item(old: &mut Item, new: Item, identity: Option<&str>, reordered: &mut bool) {
+    // The serialiser writes `[section]`s and `[[sections]]`; the file may hold the same data
+    // inline, and then it stays inline.
+    let new = match (&*old, new) {
+        (Item::Value(Value::Array(_)), Item::ArrayOfTables(n)) => {
+            Item::Value(Value::Array(n.into_array()))
+        }
+        (Item::Value(Value::InlineTable(_)), Item::Table(n)) => {
+            Item::Value(Value::InlineTable(n.into_inline_table()))
+        }
+        (_, new) => new,
+    };
     match (&mut *old, new) {
         (Item::Table(o), Item::Table(n)) => merge_tables(o, n, reordered),
         (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if identity.is_some() => {
@@ -301,12 +338,72 @@ fn merge_item(old: &mut Item, mut new: Item, identity: Option<&str>, reordered: 
                 merge_tables(o, n, reordered);
             }
         }
-        (Item::Value(o), Item::Value(n)) if same_data(o, &n) => {}
+        (Item::Value(o), Item::Value(n)) => merge_value(o, n, reordered),
         (_, mut new) => {
             if let (Some(prefix), Some(table)) = (leading_decor(old), first_table_mut(&mut new)) {
                 table.decor_mut().set_prefix(prefix);
             }
             *old = new;
+        }
+    }
+}
+
+/// Brings an inline value to `new`. Equal data stays as written. A changed value keeps the
+/// whitespace and comment around it, an inline table keeps its keys' layout and an array of the
+/// same length is merged element by element.
+fn merge_value(old: &mut Value, new: Value, reordered: &mut bool) {
+    if same_data(old, &new) {
+        return;
+    }
+    match (&mut *old, new) {
+        (Value::InlineTable(o), Value::InlineTable(n)) => {
+            let entries = n
+                .into_iter()
+                .map(|(k, mut v)| {
+                    v.decor_mut().clear();
+                    (k.to_string(), Item::Value(v))
+                })
+                .collect();
+            // The space before `}` belongs to the last value; it moves when the last key changes.
+            let last = |t: &InlineTable| t.iter().last().map(|(k, _)| k.to_owned());
+            let last_before = last(o);
+            let tail = o
+                .iter()
+                .last()
+                .and_then(|(_, v)| v.decor().suffix().cloned());
+            merge_table_like(o, entries, reordered);
+            if last(o) != last_before {
+                if let Some(v) = last_before.and_then(|k| o.get_mut(&k)) {
+                    v.decor_mut().set_suffix("");
+                }
+                if let (Some((_, v)), Some(tail)) = (o.iter_mut().last(), tail) {
+                    v.decor_mut().set_suffix(tail);
+                }
+            }
+        }
+        (Value::Array(o), Value::Array(n)) => {
+            let old_len = o.len();
+            let new_len = n.len();
+            for (i, mut n) in n.into_iter().enumerate() {
+                if let Some(slot) = o.get_mut(i) {
+                    merge_value(slot, n, reordered);
+                } else {
+                    match o.get(old_len.saturating_sub(1)) {
+                        Some(last) => {
+                            *n.decor_mut() = last.decor().clone();
+                            o.push_formatted(n);
+                        }
+                        None => o.push(n),
+                    }
+                }
+            }
+            while o.len() > new_len {
+                o.remove(o.len() - 1);
+            }
+        }
+        (o, mut n) => {
+            *n.decor_mut() = o.decor().clone();
+            *o = n;
         }
     }
 }
@@ -328,12 +425,20 @@ fn first_table_mut(item: &mut Item) -> Option<&mut Table> {
     }
 }
 
-/// Equal data, whatever the whitespace and comments around it.
+/// Equal data, whatever the whitespace and comments around it. An integer equals a float of the
+/// same value (`10` and `10.0`), and a string equals an integer it spells (`"31"` and `31`): a
+/// control code may be written either way.
 fn same_data(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::String(a), Value::String(b)) => a.value() == b.value(),
         (Value::Integer(a), Value::Integer(b)) => a.value() == b.value(),
         (Value::Float(a), Value::Float(b)) => a.value().to_bits() == b.value().to_bits(),
+        (Value::Integer(i), Value::Float(f)) | (Value::Float(f), Value::Integer(i)) => {
+            (*i.value() as f64).to_bits() == f.value().to_bits()
+        }
+        (Value::String(s), Value::Integer(i)) | (Value::Integer(i), Value::String(s)) => {
+            *s.value() == i.value().to_string()
+        }
         (Value::Boolean(a), Value::Boolean(b)) => a.value() == b.value(),
         (Value::Datetime(a), Value::Datetime(b)) => a.value() == b.value(),
         (Value::Array(a), Value::Array(b)) => {

@@ -235,8 +235,11 @@ pub struct AcceptedFinding {
     pub note: String,
 }
 
+/// The rule profile of an event whose file names none.
+pub(crate) const DEFAULT_RULE_PROFILE: &str = "wkb-2026";
+
 fn default_rule_profile() -> String {
-    "wkb-2026".to_owned()
+    DEFAULT_RULE_PROFILE.to_owned()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

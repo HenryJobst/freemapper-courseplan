@@ -442,3 +442,96 @@ fn save_keeps_new_order_of_course_controls() {
     let codes: Vec<_> = controls.iter().map(|c| c.code.clone()).collect();
     assert_eq!(codes, vec![code("31"), code("32"), code("33")]);
 }
+
+#[test]
+fn unchanged_save_keeps_bytes() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "sketch.toml");
+    let before = std::fs::read_to_string(&file).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
+}
+
+#[test]
+fn changing_a_scalar_keeps_its_comment() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "sketch.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.courses[0].climb_m = Some(40);
+    project.event.controls[1].map_mm.x = 11.5;
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains("climb_m = 40                    # entered by hand\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("map_mm = [11.5, 20] # at the boat shed\n"),
+        "{text}"
+    );
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{text}"
+    );
+}
+
+#[test]
+fn changed_inline_values_stay_inline() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "sketch.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.controls[0].description.g = Some("11.3".to_owned());
+    project.event.controls[0].number.as_mut().unwrap().direction = 90.0;
+    match &mut project.event.courses[0].kind {
+        CourseKind::Individual { controls } => controls[2].bends.push([1.0, 2.0].into()),
+        other => panic!("unexpected kind {other:?}"),
+    }
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains(
+            "description = { d = \"1.8\", g = \"11.3\" }   # IOF 2024 symbol ids per column\n"
+        ),
+        "{text}"
+    );
+    assert!(text.contains("number = { direction = 90"), "{text}");
+    assert!(
+        text.contains("  { code = 31, number = { direction = 270, gap_mm = 1.0 } },\n"),
+        "{text}"
+    );
+    assert!(
+        text.contains("  { code = 33, bends = [[1.0, 2.0]] },\n"),
+        "{text}"
+    );
+    assert!(!text.contains("[controls.description]"), "{text}");
+    assert!(!text.contains("[[courses.controls]]"), "{text}");
+    assert!(text.contains("code = \"33\" # quoted by hand\n"), "{text}");
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{text}"
+    );
+}
+
+#[test]
+fn quoted_code_matches_integer_code() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "sketch.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.controls.swap(0, 2);
+    project.event.controls[0].map_mm.y = 41.0;
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains("code = \"33\" # quoted by hand\nmap_mm = [30, 41.0]\n"),
+        "{text}"
+    );
+    assert_eq!(text.matches("code = \"33\"").count(), 1, "{text}");
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{text}"
+    );
+}

@@ -12,3 +12,4 @@ Every fixture file is listed here with its source, date and licence. Files made 
 | unknown_controls.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
 | structure.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
 | commented.toml | hand-made for the tests | 2026-11-08 | GPL-3.0-or-later |
+| sketch.toml | hand-made for the tests, laid out like the sketch in design §5.7 | 2026-11-08 | GPL-3.0-or-later |
