@@ -13,6 +13,12 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
         errors.push(ModelError::UnsupportedFormat(event.format));
     }
 
+    if let Some(date) = &event.event.date
+        && (date.date.is_none() || date.time.is_some() || date.offset.is_some())
+    {
+        errors.push(ModelError::DateNotADate(date.to_string()));
+    }
+
     let mut codes: HashSet<&ControlCode> = HashSet::new();
     let mut reported: HashSet<&ControlCode> = HashSet::new();
     for control in &event.controls {

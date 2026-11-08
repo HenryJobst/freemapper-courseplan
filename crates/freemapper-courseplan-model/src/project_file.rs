@@ -33,6 +33,8 @@ pub enum ModelError {
         course: String,
         code: crate::ControlCode,
     },
+    #[error("event date {0} is not a date; write it as YYYY-MM-DD, without time or offset")]
+    DateNotADate(String),
     #[error("project file format {0} is newer than this program supports")]
     UnsupportedFormat(u32),
     /// `table` is a dotted path such as `courses[0]` or `controls[2].description`, empty for

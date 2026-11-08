@@ -632,3 +632,31 @@ fn newer_format_is_reported_before_unknown_course_kind() {
     std::fs::write(&file, text).unwrap();
     assert_eq!(load_errors(&file), vec![ModelError::UnsupportedFormat(2)]);
 }
+
+#[test]
+fn event_date_with_time_or_offset_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    for value in [
+        "2026-11-14T10:00:00",
+        "2026-11-14T10:00:00+01:00",
+        "10:00:00",
+    ] {
+        let file = edited_minimal(
+            dir.path(),
+            "title = \"Test\"\n",
+            &format!("title = \"Test\"\ndate = {value}\n"),
+        );
+        let err = ProjectFile::load(&file).unwrap_err();
+        let ProjectError::Invalid { errors, .. } = &err else {
+            panic!("unexpected error {err:?}");
+        };
+        assert_eq!(errors, &vec![ModelError::DateNotADate(value.to_owned())]);
+        assert!(err.to_string().contains(value), "{err}");
+    }
+    let file = edited_minimal(
+        dir.path(),
+        "title = \"Test\"\n",
+        "title = \"Test\"\ndate = 2026-11-14\n",
+    );
+    assert!(ProjectFile::load(&file).is_ok());
+}
