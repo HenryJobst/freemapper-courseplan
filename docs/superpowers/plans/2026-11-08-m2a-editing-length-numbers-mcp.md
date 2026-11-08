@@ -96,7 +96,7 @@ separate plan). Follow-ups from M1: end of `docs/superpowers/plans/2026-11-08-m1
   - ADR 0020 (10–30 lines): the additions above and why: IOF XML and Purple Pen put crossing points into the
     course sequence; ids let courses and the later `.ppen` export refer to special objects; the start leg needs a
     home for its bends. ADR 0019 errata: identity matching holds for tables, an inline course `controls = [...]`
-    array merges by index; "plain digits" means digits without a leading zero. Index rows for 0020.
+    array merges by index; "plain digits" means digits without a leading zero. Index row for 0020, inserted before the 0021 row.
   - Glossary rows: Querungsstelle as `ControlKind::CrossingPoint` (replace the old `CrossingPoint` row),
     markierte Strecke on a leg (`taped`), Druckbereich (`PrintArea`), and the M1 follow-up rows `RelayPart`,
     `ScoreControl`, `Sources`, `DangerousArea`, `FirstAid`, `Water`.
