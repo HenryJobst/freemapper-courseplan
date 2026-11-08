@@ -459,3 +459,70 @@ fn team_course_edit_is_not_supported() {
         Err(EditError::InUse { .. })
     ));
 }
+
+fn water(courses: &[&str]) -> SpecialObject {
+    SpecialObject::Water {
+        id: "w1".to_owned(),
+        map_mm: pt(0.0, 0.0),
+        courses: courses.iter().map(|c| (*c).to_owned()).collect(),
+    }
+}
+
+#[test]
+fn remove_course_drops_it_from_specials() {
+    let mut e = event();
+    e.specials.push(water(&["A", "B"]));
+    remove_course(&mut e, "A").unwrap();
+    assert_eq!(e.specials[2].courses(), ["B"]);
+    assert_eq!(e.courses.len(), 1);
+}
+
+#[test]
+fn remove_course_refuses_when_a_special_would_lose_its_only_course() {
+    let mut e = event();
+    e.specials.push(water(&["A"]));
+    let before = e.clone();
+    assert_eq!(
+        remove_course(&mut e, "A"),
+        Err(EditError::InUse {
+            id: "A".to_owned(),
+            courses: vec!["w1".to_owned()]
+        })
+    );
+    assert_eq!(e, before);
+}
+
+#[test]
+fn move_unknown_control_outside_map_is_not_found() {
+    let mut e = event();
+    assert!(matches!(
+        move_control(&mut e, extent(), &code("99"), pt(999.0, 0.0)),
+        Err(EditError::NotFound {
+            what: "control",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn set_controls_on_team_course_is_not_supported_even_with_unknown_codes() {
+    let mut e = event();
+    e.courses.push(course(
+        "T",
+        CourseKind::Team {
+            team_size: 2,
+            mandatory: vec![cc("31")],
+            free: vec![],
+        },
+    ));
+    assert_eq!(
+        set_course_controls(&mut e, "T", &[code("99")]),
+        Err(EditError::NotSupported {
+            course: "T".to_owned()
+        })
+    );
+    assert!(matches!(
+        set_course_controls(&mut e, "nope", &[code("99")]),
+        Err(EditError::NotFound { what: "course", .. })
+    ));
+}

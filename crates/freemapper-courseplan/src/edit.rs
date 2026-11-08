@@ -35,7 +35,7 @@ pub enum EditError {
         max: MapPoint,
     },
     /// Courses still use the object.
-    #[error("{id} is still used by {}", courses.join(", "))]
+    #[error("{id} is still used by {}; change those first", courses.join(", "))]
     InUse { id: String, courses: Vec<String> },
     /// The course kind cannot be edited yet.
     #[error(
@@ -136,6 +136,18 @@ fn special_points(special: &SpecialObject) -> Vec<&MapPoint> {
     }
 }
 
+fn special_courses_mut(special: &mut SpecialObject) -> Option<&mut Vec<String>> {
+    match special {
+        SpecialObject::Start { .. } | SpecialObject::Finish { .. } => None,
+        SpecialObject::MarkedRoute { courses, .. }
+        | SpecialObject::OutOfBoundsArea { courses, .. }
+        | SpecialObject::ForbiddenRoute { courses, .. }
+        | SpecialObject::DangerousArea { courses, .. }
+        | SpecialObject::FirstAid { courses, .. }
+        | SpecialObject::Water { courses, .. } => Some(courses),
+    }
+}
+
 /// The lowest integer code from 31 up that no control uses. Codes that are not numbers are ignored.
 pub fn next_free_code(event: &Event) -> ControlCode {
     let used: std::collections::HashSet<u64> = event
@@ -181,8 +193,9 @@ pub fn move_control(
     at: MapPoint,
 ) -> Result<(), EditError> {
     apply(event, |e| {
+        let control = control_mut(e, code)?;
         check_inside(&extent, &at)?;
-        control_mut(e, code)?.map_mm = at;
+        control.map_mm = at;
         Ok(())
     })
 }
@@ -311,10 +324,28 @@ pub fn add_course(event: &mut Event, course: Course) -> Result<(), EditError> {
     })
 }
 
-/// Removes a course of any kind.
+/// Removes a course of any kind and its name from the course lists of special objects. A special
+/// object that would be left with an empty list (meaning all courses) stays and refuses the removal.
 pub fn remove_course(event: &mut Event, name: &str) -> Result<(), EditError> {
     apply(event, |e| {
         course_mut(e, name)?;
+        let widened: Vec<String> = e
+            .specials
+            .iter()
+            .filter(|s| s.courses().len() == 1 && s.courses()[0] == name)
+            .map(|s| s.id().to_owned())
+            .collect();
+        if !widened.is_empty() {
+            return Err(EditError::InUse {
+                id: name.to_owned(),
+                courses: widened,
+            });
+        }
+        for special in &mut e.specials {
+            if let Some(list) = special_courses_mut(special) {
+                list.retain(|c| c != name);
+            }
+        }
         e.courses.retain(|c| c.name != name);
         Ok(())
     })
@@ -329,13 +360,11 @@ pub fn set_course_controls(
     codes: &[ControlCode],
 ) -> Result<(), EditError> {
     apply(event, |e| {
-        if let Some(unknown) = codes
-            .iter()
-            .find(|code| !e.controls.iter().any(|c| &c.code == *code))
-        {
+        let known: Vec<ControlCode> = e.controls.iter().map(|c| c.code.clone()).collect();
+        let controls = individual_mut(course_mut(e, name)?)?;
+        if let Some(unknown) = codes.iter().find(|code| !known.contains(code)) {
             return Err(not_found("control", unknown.0.clone()));
         }
-        let controls = individual_mut(course_mut(e, name)?)?;
         let old = std::mem::take(controls);
         let mut seen: std::collections::HashMap<&ControlCode, usize> = Default::default();
         for code in codes {
