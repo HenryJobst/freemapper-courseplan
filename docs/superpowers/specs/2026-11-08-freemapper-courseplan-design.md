@@ -104,8 +104,11 @@ after that is Claude's call)*
      per apparatus setup; equipment objects carry stable codes 1900–1989 (freemapper's extension of ISInOM
      6.6); column D descriptions for apparatus use ids `gym.<code>` with German and English names from
      freemapper's published list; a set-up danger area is map content (1980, orange), run-specific barriers
-     and dangers are course-setting special objects (purple). Open for the user: course symbol size ×1.5
-     (Claude's recommendation, as the map symbols) or ×1.0 (ISInOM size); apparatus dimensions.
+     and dangers are course-setting special objects (purple).
+   - Decided by the user (2026-11-08, via freemapper): course symbols ×1.5 like the map symbols; gym scales
+     1:100 to 1:700; the demo uses a sketch made from the ALKIS outline and DIN sizes; apparatus sizes come
+     from open manufacturer catalogues with a source per device, estimates are marked and can be corrected
+     by hand.
 
 **Non-goals**
 
