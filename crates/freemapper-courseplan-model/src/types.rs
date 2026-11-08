@@ -449,6 +449,84 @@ mod tests {
     }
 
     #[test]
+    fn special_object_kinds_are_spelt_in_snake_case() {
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        struct Specials {
+            specials: Vec<SpecialObject>,
+        }
+        let p = || MapPoint { x: 1.0, y: 2.0 };
+        let specials = Specials {
+            specials: vec![
+                SpecialObject::Start {
+                    id: "S1".to_owned(),
+                    map_mm: p(),
+                },
+                SpecialObject::Finish {
+                    id: "F1".to_owned(),
+                    map_mm: p(),
+                },
+                SpecialObject::MarkedRoute { points: vec![p()] },
+                SpecialObject::CrossingPoint { map_mm: p() },
+                SpecialObject::OutOfBoundsArea { polygon: vec![p()] },
+                SpecialObject::ForbiddenRoute { points: vec![p()] },
+                SpecialObject::DangerousArea { polygon: vec![p()] },
+                SpecialObject::FirstAid { map_mm: p() },
+                SpecialObject::Water { map_mm: p() },
+            ],
+        };
+        let text = toml::to_string(&specials).unwrap();
+        let kinds: Vec<&str> = text
+            .lines()
+            .filter_map(|l| l.strip_prefix("kind = "))
+            .collect();
+        assert_eq!(
+            kinds,
+            [
+                "\"start\"",
+                "\"finish\"",
+                "\"marked_route\"",
+                "\"crossing_point\"",
+                "\"out_of_bounds_area\"",
+                "\"forbidden_route\"",
+                "\"dangerous_area\"",
+                "\"first_aid\"",
+                "\"water\"",
+            ],
+            "{text}"
+        );
+        let back: Specials = toml::from_str(&text).unwrap();
+        assert_eq!(back, specials);
+    }
+
+    #[test]
+    fn omitted_rule_profile_and_discipline_take_their_defaults() {
+        let meta: EventMeta = toml::from_str("title = \"T\"\n").unwrap();
+        assert_eq!(meta.rule_profile, "wkb-2026");
+        assert_eq!(meta.discipline, Discipline::Training);
+        assert_eq!(
+            toml::to_string(&meta).unwrap(),
+            "title = \"T\"\ndiscipline = \"training\"\nrule_profile = \"wkb-2026\"\n"
+        );
+        let spelt = |text: &str| toml::from_str::<EventMeta>(text).unwrap().discipline;
+        assert_eq!(
+            spelt("title = \"T\"\ndiscipline = \"sprint\"\n"),
+            Discipline::Sprint
+        );
+        assert_eq!(
+            spelt("title = \"T\"\ndiscipline = \"middle\"\n"),
+            Discipline::Middle
+        );
+        assert_eq!(
+            spelt("title = \"T\"\ndiscipline = \"long\"\n"),
+            Discipline::Long
+        );
+        assert_eq!(
+            spelt("title = \"T\"\ndiscipline = \"ultralong\"\n"),
+            Discipline::Ultralong
+        );
+    }
+
+    #[test]
     fn individual_course_toml_shape() {
         let text = r#"
 name = "A"
