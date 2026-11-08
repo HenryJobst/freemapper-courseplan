@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use toml_edit::{DocumentMut, Item, Table, Value};
+use toml_edit::{ArrayOfTables, DocumentMut, Item, Table, Value};
 
 use crate::{Event, validate};
 
@@ -218,7 +218,7 @@ fn merge_tables(old: &mut Table, new: Table) {
     }
     for (key, item) in new {
         match old.get_mut(&key) {
-            Some(slot) => merge_item(slot, item),
+            Some(slot) => merge_item(slot, item, identity_key(&key)),
             None => {
                 old.insert(&key, item);
             }
@@ -226,13 +226,48 @@ fn merge_tables(old: &mut Table, new: Table) {
     }
 }
 
-fn merge_item(old: &mut Item, mut new: Item) {
+/// The field that tells the elements of an array of tables apart, where the format has one.
+fn identity_key(table_key: &str) -> Option<&'static str> {
+    match table_key {
+        "controls" => Some("code"),
+        "courses" | "classes" => Some("name"),
+        _ => None,
+    }
+}
+
+/// Merges each new element into the old element with the same identity; the new order wins.
+fn merge_by_identity(old: &mut ArrayOfTables, new: ArrayOfTables, id: &str) {
+    let mut pool: Vec<Option<Table>> = old.iter().cloned().map(Some).collect();
+    old.clear();
+    for fresh in new {
+        let wanted = fresh.get(id).and_then(Item::as_value);
+        let found = pool.iter_mut().find(|slot| {
+            let have = slot
+                .as_ref()
+                .and_then(|t| t.get(id))
+                .and_then(Item::as_value);
+            matches!((have, wanted), (Some(a), Some(b)) if same_data(a, b))
+        });
+        match found.and_then(Option::take) {
+            Some(mut kept) => {
+                merge_tables(&mut kept, fresh);
+                old.push(kept);
+            }
+            None => old.push(fresh),
+        }
+    }
+}
+
+fn merge_item(old: &mut Item, mut new: Item, identity: Option<&str>) {
     // The serialiser writes arrays of tables as `[[sections]]`; the file may keep them inline.
     if matches!(old, Item::Value(Value::Array(_))) && matches!(new, Item::ArrayOfTables(_)) {
         new = Item::Value(new.into_value().expect("array of tables is a value"));
     }
     match (&mut *old, new) {
         (Item::Table(o), Item::Table(n)) => merge_tables(o, n),
+        (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if identity.is_some() => {
+            merge_by_identity(o, n, identity.unwrap_or_default());
+        }
         (Item::ArrayOfTables(o), Item::ArrayOfTables(n)) if o.len() == n.len() => {
             for (o, n) in o.iter_mut().zip(n) {
                 merge_tables(o, n);

@@ -273,3 +273,100 @@ fn save_after_adding_course_and_control_round_trips() {
         "{text}"
     );
 }
+
+fn commented_with_two_controls(dir: &Path) -> PathBuf {
+    let file = dir.join("event.toml");
+    let text = std::fs::read_to_string(fixture("commented.toml"))
+        .unwrap()
+        .replace("code = 32\n", "code = 32 # the slipway\n");
+    std::fs::write(&file, text).unwrap();
+    file
+}
+
+#[test]
+fn adding_a_control_keeps_comments_on_the_others() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = commented_with_two_controls(dir.path());
+    let mut project = ProjectFile::load(&file).unwrap();
+    let mut control = project.event.controls[0].clone();
+    control.code = code("33");
+    project.event.controls.push(control);
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(text.contains("code = 31 # the boat shed"), "{text}");
+    assert!(text.contains("code = 32 # the slipway"), "{text}");
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event,
+        project.event,
+        "{text}"
+    );
+}
+
+#[test]
+fn removing_a_control_from_a_course_drops_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = commented_with_two_controls(dir.path());
+    let mut project = ProjectFile::load(&file).unwrap();
+    let mut control = project.event.controls[0].clone();
+    control.code = code("33");
+    project.event.controls.push(control);
+    match &mut project.event.courses[0].kind {
+        CourseKind::Individual { controls } => {
+            let mut extra = controls[0].clone();
+            extra.code = code("33");
+            controls.push(extra);
+        }
+        other => panic!("unexpected kind {other:?}"),
+    }
+    project.save().unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    match &mut project.event.courses[0].kind {
+        CourseKind::Individual { controls } => {
+            controls.remove(1);
+        }
+        other => panic!("unexpected kind {other:?}"),
+    }
+    project.save().unwrap();
+    let back = ProjectFile::load(&file).unwrap();
+    let CourseKind::Individual { controls } = &back.event.courses[0].kind else {
+        panic!("unexpected kind");
+    };
+    let codes: Vec<_> = controls.iter().map(|c| c.code.clone()).collect();
+    assert_eq!(codes, vec![code("31"), code("33")]);
+}
+
+#[test]
+fn clearing_an_optional_field_removes_its_key() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "minimal.toml");
+    let text = std::fs::read_to_string(&file)
+        .unwrap()
+        .replace("finish = \"F1\"\n", "finish = \"F1\"\nclimb_m = 35\n");
+    std::fs::write(&file, text).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(project.event.courses[0].climb_m, Some(35));
+    project.event.courses[0].climb_m = None;
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(!text.contains("climb_m"), "{text}");
+    assert_eq!(
+        ProjectFile::load(&file).unwrap().event.courses[0].climb_m,
+        None
+    );
+}
+
+#[test]
+fn failed_save_keeps_original_and_removes_tmp() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.event.title = "Quay".to_owned();
+    // A non-empty directory in place of the file makes the rename fail on every platform.
+    std::fs::remove_file(&file).unwrap();
+    std::fs::create_dir(&file).unwrap();
+    std::fs::write(file.join("keep"), "x").unwrap();
+    let err = project.save().unwrap_err();
+    assert!(matches!(err, ProjectError::Io { .. }), "{err:?}");
+    assert!(!dir.path().join("event.toml.tmp").exists());
+    assert_eq!(std::fs::read_to_string(file.join("keep")).unwrap(), "x");
+}
