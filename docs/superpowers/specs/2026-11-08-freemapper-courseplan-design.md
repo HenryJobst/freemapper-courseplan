@@ -99,6 +99,13 @@ after that is Claude's call)*
      overprint sizes after ISInOM as an assumption until it is final;
    - stage 2, optional and after the editor: an "apparatus setup" layer in the editor, stored as map objects
      with OOM symbol codes so freemapper-print draws them like map content.
+   - Agreed with freemapper (2026-11-08): `freemapper.toml` says `map_kind = "gym"` for gym maps (changed only
+     with notice), and course setting recognises `gym`; map parts `hall`, `courts`, `equipment`, one `.omap`
+     per apparatus setup; equipment objects carry stable codes 1900–1989 (freemapper's extension of ISInOM
+     6.6); column D descriptions for apparatus use ids `gym.<code>` with German and English names from
+     freemapper's published list; a set-up danger area is map content (1980, orange), run-specific barriers
+     and dangers are course-setting special objects (purple). Open for the user: course symbol size ×1.5
+     (Claude's recommendation, as the map symbols) or ×1.0 (ISInOM size); apparatus dimensions.
 
 **Non-goals**
 
