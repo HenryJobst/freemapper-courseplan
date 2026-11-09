@@ -1034,6 +1034,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             let placed = freemapper_courseplan::numbers::place_numbers(
                 &mut file.event,
                 &name,
+                &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
                 map_kind(&doc),
                 overwrite,

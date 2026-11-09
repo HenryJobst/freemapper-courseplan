@@ -16,7 +16,7 @@ use freemapper_courseplan_model::{CourseKind, Event, MapPoint, NumberPlacement};
 
 use crate::course::{CourseError, control_numbers, course_legs};
 use crate::edit::{EditError, apply, course_mut, individual_mut};
-use crate::map::MapKind;
+use crate::map::{FeatureGeometry, MapFeature, MapIndex, MapKind};
 
 /// Gap between circle and number box in print mm.
 const GAP_PRINT_MM: f64 = 0.5;
@@ -27,6 +27,12 @@ const DIGIT_WIDTH_FACTOR: f64 = 0.6;
 const CANDIDATE_STEP_DEG: f64 = 15.0;
 const CANDIDATE_STEPS: i32 = 12;
 const EPS: f64 = 1e-9;
+/// A point symbol is covered when the number box comes within this distance of its position
+/// (map mm; map symbols do not scale with the overprint factor).
+const POINT_SYMBOL_RADIUS_MM: f64 = 0.5;
+/// A line symbol is covered when a segment of it comes within this distance of the number box
+/// (map mm).
+const LINE_SYMBOL_HALF_WIDTH_MM: f64 = 0.15;
 
 /// Sizes of the course overprint in print mm at the base scale of the map kind.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -164,6 +170,18 @@ fn point_segment_distance(p: (f64, f64), a: (f64, f64), b: (f64, f64)) -> f64 {
     (p.0 - (a.0 + t * dx)).hypot(p.1 - (a.1 + t * dy))
 }
 
+/// Whether the box covers a point or line symbol of the map; areas, outlines included, never count.
+fn feature_covered(rect: &Rect, feature: &MapFeature) -> bool {
+    match &feature.geometry {
+        FeatureGeometry::Point(p) => rect.distance_to_point(p.x, p.y) <= POINT_SYMBOL_RADIUS_MM,
+        FeatureGeometry::Line(points) => points.windows(2).any(|w| {
+            rect.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y))
+                <= LINE_SYMBOL_HALF_WIDTH_MM
+        }),
+        FeatureGeometry::Area(_) => false,
+    }
+}
+
 fn digits(n: u32) -> usize {
     n.to_string().len()
 }
@@ -268,7 +286,8 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// box there touches the outgoing leg, or there is no incoming leg, it is the outer bisector
 /// (the middle of the larger area between the legs). Tried are the 24 directions
 /// `preferred + 15 * k` degrees. The one with the fewest hard conflicts wins (box on another
-/// circle, on a leg widened by half the line width, or on a number placed before), then the one
+/// circle, on a leg widened by half the line width, on a number placed before, or on a point or
+/// line symbol of the map, each symbol counting once; areas never count), then the one
 /// nearest to the preferred direction, then the one nearest to the outer bisector, then the
 /// lowest direction value: candidates are compared as (conflicts, distance to the preferred
 /// direction, distance to the outer bisector, direction).
@@ -286,6 +305,7 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 pub fn auto_place(
     event: &Event,
     course: &freemapper_courseplan_model::Course,
+    map: &MapIndex,
     map_scale: u32,
     kind: MapKind,
     keep_existing: bool,
@@ -389,13 +409,24 @@ pub fn auto_place(
                 behind.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y)) <= half_line
             })
         });
-        let preferred = preferred(incoming_dir, outgoing_dir, behind_blocked);
+        let preferred_dir = preferred(incoming_dir, outgoing_dir, behind_blocked);
+
+        // Point and line symbols near enough for any candidate box to cover them.
+        let box_h = sizes.number_height_mm * factor;
+        let box_w = DIGIT_WIDTH_FACTOR * box_h * digits(number) as f64;
+        let reach = radius
+            + half_line
+            + GAP_PRINT_MM * factor
+            + box_w.hypot(box_h)
+            + POINT_SYMBOL_RADIUS_MM;
+        let features = map.features_near(here.clone(), reach);
 
         // Best so far: (conflicts, distance to the preferred direction, distance to the outer
         // bisector, direction).
         let mut best: Option<(usize, f64, f64, f64)> = None;
         for step in -(CANDIDATE_STEPS - 1)..=CANDIDATE_STEPS {
-            let direction = (preferred + CANDIDATE_STEP_DEG * f64::from(step)).rem_euclid(360.0);
+            let direction =
+                (preferred_dir + CANDIDATE_STEP_DEG * f64::from(step)).rem_euclid(360.0);
             let rect = number_rect(here, direction, number, GAP_PRINT_MM, &sizes, factor);
             let mut conflicts = 0;
             for (j, pos) in positions.iter().enumerate() {
@@ -416,9 +447,13 @@ pub fn auto_place(
                     conflicts += 1;
                 }
             }
+            conflicts += features
+                .iter()
+                .filter(|(feature, _)| feature_covered(&rect, feature))
+                .count();
             conflicts += placed.iter().filter(|r| rect.overlaps(r)).count();
 
-            let off_preferred = angle_diff(direction, preferred);
+            let off_preferred = angle_diff(direction, preferred_dir);
             let off_outer = angle_diff(direction, outer);
             let better = match best {
                 None => true,
@@ -435,7 +470,7 @@ pub fn auto_place(
                 best = Some((conflicts, off_preferred, off_outer, direction));
             }
         }
-        let direction = best.map_or(preferred, |(_, _, _, d)| d);
+        let direction = best.map_or(preferred_dir, |(_, _, _, d)| d);
         placed.push(number_rect(
             here,
             direction,
@@ -464,6 +499,7 @@ pub fn auto_place(
 pub fn place_numbers(
     event: &mut Event,
     course_name: &str,
+    map: &MapIndex,
     map_scale: u32,
     kind: MapKind,
     overwrite: bool,
@@ -478,7 +514,7 @@ pub fn place_numbers(
                     what: "course",
                     id: course_name.to_owned(),
                 })?;
-            auto_place(e, course, map_scale, kind, !overwrite).map_err(|err| match err {
+            auto_place(e, course, map, map_scale, kind, !overwrite).map_err(|err| match err {
                 CourseError::NotSupported { course, .. } => EditError::NotSupported { course },
                 CourseError::UnknownCourse(id) => EditError::NotFound { what: "course", id },
                 CourseError::UnknownReference { id, .. } => EditError::NotFound {
@@ -531,6 +567,9 @@ pub fn place_numbers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::check::testing::{
+        AREA_520, LINE_502, POINT_113, area_object, line_object, map, point_object,
+    };
     use freemapper_courseplan_model::{
         Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl, EventMeta,
         FORMAT_VERSION, Sources, SpecialObject,
@@ -661,7 +700,21 @@ mod tests {
     }
 
     fn place(e: &Event, scale: u32) -> Vec<NumberPlacement> {
-        auto_place(e, &e.courses[0], scale, MapKind::Sprint, false).unwrap()
+        place_on(e, &MapIndex::default(), scale)
+    }
+
+    fn place_on(e: &Event, map: &MapIndex, scale: u32) -> Vec<NumberPlacement> {
+        auto_place(e, &e.courses[0], map, scale, MapKind::Sprint, false).unwrap()
+    }
+
+    fn sprint_rect(e: &Event, direction: f64) -> Rect {
+        let sizes = overprint_sizes(MapKind::Sprint);
+        number_rect(&e.controls[0].map_mm, direction, 1, 0.5, &sizes, 1.0)
+    }
+
+    /// The map index of a sprint map with the given objects.
+    fn index(objects: Vec<crate::omap::MapObject>) -> MapIndex {
+        MapIndex::from_document(&map(4000, objects))
     }
 
     #[test]
@@ -762,7 +815,14 @@ mod tests {
             controls[0].number = Some(kept.clone());
         }
         assert_eq!(
-            place_numbers(&mut e, "A", 4000, MapKind::Sprint, false),
+            place_numbers(
+                &mut e,
+                "A",
+                &MapIndex::default(),
+                4000,
+                MapKind::Sprint,
+                false
+            ),
             Ok(1)
         );
         let CourseKind::Individual { controls } = &e.courses[0].kind else {
@@ -805,7 +865,14 @@ mod tests {
             };
             e.controls[0].number = Some(central.clone());
             assert_eq!(
-                place_numbers(&mut e, "A", 4000, MapKind::Sprint, overwrite),
+                place_numbers(
+                    &mut e,
+                    "A",
+                    &MapIndex::default(),
+                    4000,
+                    MapKind::Sprint,
+                    overwrite
+                ),
                 Ok(1),
                 "overwrite {overwrite}"
             );
@@ -840,7 +907,14 @@ mod tests {
             controls[0].number = Some(own.clone());
         }
         assert_eq!(
-            place_numbers(&mut e, "A", 4000, MapKind::Sprint, true),
+            place_numbers(
+                &mut e,
+                "A",
+                &MapIndex::default(),
+                4000,
+                MapKind::Sprint,
+                true
+            ),
             Ok(1)
         );
         let numbers = numbers_of(&e);
@@ -1043,13 +1117,127 @@ mod tests {
         }
         assert_eq!(place(&without, 4000)[0].direction, baseline);
         assert_eq!(
-            place_numbers(&mut e, "A", 4000, MapKind::Sprint, true),
+            place_numbers(
+                &mut e,
+                "A",
+                &MapIndex::default(),
+                4000,
+                MapKind::Sprint,
+                true
+            ),
             Ok(2)
         );
         let CourseKind::Individual { controls } = &e.courses[0].kind else {
             unreachable!()
         };
         assert_eq!(controls[0].number.as_ref().unwrap().direction, baseline);
+
+        // With the existing number of 32 kept, it does matter for 31: the direction changes.
+        let mut kept = e.clone();
+        if let CourseKind::Individual { controls } = &mut kept.courses[0].kind {
+            controls[0].number = None;
+            controls[1].number = Some(NumberPlacement {
+                direction: 90.0,
+                gap_mm: 0.5,
+            });
+        }
+        let with_kept = auto_place(
+            &kept,
+            &kept.courses[0],
+            &MapIndex::default(),
+            4000,
+            MapKind::Sprint,
+            true,
+        )
+        .unwrap();
+        assert_ne!(with_kept[0].direction, baseline);
+    }
+
+    #[test]
+    fn point_and_line_symbols_are_hard_area_symbols_soft() {
+        // In from the west, out to the south; behind is east (0 degrees), and its box is free.
+        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
+        assert!(angle_diff(place(&e, 4000)[0].direction, 0.0) < 1e-9);
+        // The 0 degree box spans x 103.675..106.075 around y 100; 5.5 mm east is inside it.
+        // (a) A 113 point there: the number leaves 0 degrees.
+        let point = index(vec![point_object(POINT_113, 105.5, 100.0)]);
+        let d = place_on(&e, &point, 4000)[0].direction;
+        assert!(angle_diff(d, 0.0) >= 15.0, "direction {d}");
+        assert!(sprint_rect(&e, d).distance_to_point(105.5, 100.0) > POINT_SYMBOL_RADIUS_MM);
+        // (b) A 502 line running north-south there: the same.
+        let line = index(vec![line_object(
+            LINE_502,
+            &[(105.5, 90.0), (105.5, 110.0)],
+        )]);
+        let d = place_on(&e, &line, 4000)[0].direction;
+        assert!(angle_diff(d, 0.0) >= 15.0, "direction {d}");
+        assert!(
+            sprint_rect(&e, d).distance_to_segment((105.5, 90.0), (105.5, 110.0))
+                > LINE_SYMBOL_HALF_WIDTH_MM
+        );
+        // (c) A 520 area over the whole neighbourhood does not count: the number stays at 0.
+        let area = index(vec![area_object(
+            AREA_520,
+            &[(80.0, 80.0), (120.0, 80.0), (120.0, 120.0), (80.0, 120.0)],
+        )]);
+        assert!(angle_diff(place_on(&e, &area, 4000)[0].direction, 0.0) < 1e-9);
+    }
+
+    #[test]
+    fn point_symbol_counts_with_its_radius() {
+        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
+        let east = sprint_rect(&e, 0.0);
+        // 0.3 mm outside the box (less than the symbol radius): still covered.
+        let near = index(vec![point_object(POINT_113, east.max_x + 0.3, 100.0)]);
+        assert!(angle_diff(place_on(&e, &near, 4000)[0].direction, 0.0) >= 15.0);
+        // 0.7 mm outside: free.
+        let far = index(vec![point_object(POINT_113, east.max_x + 0.7, 100.0)]);
+        assert!(angle_diff(place_on(&e, &far, 4000)[0].direction, 0.0) < 1e-9);
+    }
+
+    #[test]
+    fn every_direction_covered_takes_the_fewest_conflicts() {
+        // In from the west, out to the south: preferred is 0, the legs touch 180 and 270.
+        // A ring of 502 line (radius 4.5) crosses every candidate box: one conflict each. A short
+        // 502 piece in the middle of every candidate box except the one at 90 makes the others
+        // cost two or more, so 90 wins although it is far from the preferred direction.
+        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
+        let mut objects = Vec::new();
+        let ring: Vec<(f64, f64)> = (0..=72)
+            .map(|i| {
+                let a = f64::from(i) * 5f64.to_radians();
+                (100.0 + 4.5 * a.cos(), 100.0 - 4.5 * a.sin())
+            })
+            .collect();
+        objects.push(line_object(LINE_502, &ring));
+        let target = 90.0;
+        for k in 0..24 {
+            let direction = f64::from(k) * 15.0;
+            if direction == target {
+                continue;
+            }
+            let r = sprint_rect(&e, direction);
+            let (cx, cy) = ((r.min_x + r.max_x) / 2.0, (r.min_y + r.max_y) / 2.0);
+            objects.push(line_object(LINE_502, &[(cx - 0.1, cy), (cx + 0.1, cy)]));
+        }
+        let map = index(objects);
+        // Count by hand: the target is the only candidate with exactly one covered feature.
+        let counts: Vec<usize> = (0..24)
+            .map(|k| {
+                let r = sprint_rect(&e, f64::from(k) * 15.0);
+                map.features_near(e.controls[0].map_mm.clone(), 20.0)
+                    .iter()
+                    .filter(|(f, _)| feature_covered(&r, f))
+                    .count()
+            })
+            .collect();
+        assert_eq!(counts[6], 1, "{counts:?}");
+        assert!(
+            counts.iter().enumerate().all(|(k, c)| k == 6 || *c >= 2),
+            "{counts:?}"
+        );
+        let placed = place_on(&e, &map, 4000);
+        assert!(angle_diff(placed[0].direction, target) < 1e-9);
     }
 
     #[test]
@@ -1094,7 +1282,15 @@ mod tests {
         if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
             controls[0].number = Some(old.clone());
         }
-        let set = place_numbers(&mut e, "A", 4000, MapKind::Sprint, false).unwrap();
+        let set = place_numbers(
+            &mut e,
+            "A",
+            &MapIndex::default(),
+            4000,
+            MapKind::Sprint,
+            false,
+        )
+        .unwrap();
         assert_eq!(set, 1);
         let CourseKind::Individual { controls } = &e.courses[0].kind else {
             unreachable!()
@@ -1102,7 +1298,15 @@ mod tests {
         assert_eq!(controls[0].number, Some(old));
         assert!(controls[1].number.is_some());
 
-        let set = place_numbers(&mut e, "A", 4000, MapKind::Sprint, true).unwrap();
+        let set = place_numbers(
+            &mut e,
+            "A",
+            &MapIndex::default(),
+            4000,
+            MapKind::Sprint,
+            true,
+        )
+        .unwrap();
         assert_eq!(set, 2);
         let CourseKind::Individual { controls } = &e.courses[0].kind else {
             unreachable!()
@@ -1110,7 +1314,14 @@ mod tests {
         assert_eq!(controls[0].number.as_ref().unwrap().gap_mm, 0.5);
 
         assert!(matches!(
-            place_numbers(&mut e, "Z", 4000, MapKind::Sprint, false),
+            place_numbers(
+                &mut e,
+                "Z",
+                &MapIndex::default(),
+                4000,
+                MapKind::Sprint,
+                false
+            ),
             Err(EditError::NotFound { .. })
         ));
     }
