@@ -482,7 +482,7 @@ export-iof-xml-written = { $count ->
     [one] 1 Bahn nach { $path } geschrieben
    *[other] { $count } Bahnen nach { $path } geschrieben
 }
-export-iof-xml-skipped = { $course } ausgelassen: { $kind }n werden nicht nach IOF XML exportiert
+export-iof-xml-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach IOF XML exportiert
 export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 

@@ -211,3 +211,27 @@ fn the_example_project_exports() {
     );
     assert!(result.status.success(), "{}", stderr(&result));
 }
+
+#[test]
+fn names_a_skipped_team_course_in_german() {
+    let (dir, project) = example(TEAM);
+    let out = dir.path().join("out.xml");
+    let result = run(
+        dir.path(),
+        "de",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            out.to_str().unwrap(),
+        ],
+    );
+    assert!(result.status.success(), "{}", stderr(&result));
+    let text = stdout(&result);
+    assert!(
+        text.contains(
+            "Team ausgelassen: Bahnart Mannschaftsbahn wird nicht nach IOF XML exportiert"
+        ),
+        "{text}"
+    );
+}
