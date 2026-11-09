@@ -40,6 +40,9 @@ pub enum ModelError {
     /// `what` is "control code", "special object id", "course name" or "class name".
     #[error("{what} \"{value}\" is empty or starts or ends with a space")]
     BlankName { what: &'static str, value: String },
+    /// An accepted finding needs a note; only an empty or blank one is refused.
+    #[error("the note of accepted finding {rule} is empty")]
+    BlankNote { rule: String },
     /// Courses name their start and finish by id, so a control code must not look like one.
     #[error("control code {0} is also the id of a special object")]
     CodeClashesWithSpecial(crate::ControlCode),
@@ -233,8 +236,16 @@ fn tidy(table: &mut Table) {
     for key in empty {
         table.remove(&key);
     }
-    for (_, item) in table.iter_mut() {
-        match item {
+    for (mut key, mut item) in table.iter_mut() {
+        // Leg references are short; the format writes them inline, as `{ course = "A", after = 3 }`.
+        if key.get() == "legs" && matches!(item, Item::ArrayOfTables(_)) {
+            item.make_value();
+            if let Some(value) = item.as_value_mut() {
+                value.decor_mut().set_prefix(" ");
+                key.leaf_decor_mut().set_suffix(" ");
+            }
+        }
+        match &mut item {
             Item::Table(t) => tidy(t),
             Item::ArrayOfTables(a) => a.iter_mut().for_each(tidy),
             _ => {}
@@ -342,7 +353,8 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
         "classes" | "start_bends" | "start_taped" => element_of("courses"),
         "description" | "kind" => element_of("controls"),
         "courses" => element_of("specials"),
-        "controls" => element_of("accepted_findings"),
+        "controls" | "legs" => element_of("accepted_findings"),
+        "rule_overlays" => path == "event",
         "bends" | "taped" => {
             path.starts_with("courses[") && path.contains('.') && path.ends_with(']')
         }

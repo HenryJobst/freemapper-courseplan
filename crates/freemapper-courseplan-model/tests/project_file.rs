@@ -1,8 +1,8 @@
 use std::path::{Path, PathBuf};
 
 use freemapper_courseplan_model::{
-    ControlCode, ControlKind, CourseKind, Event, MapPoint, ModelError, PrintArea, ProjectError,
-    ProjectFile, SpecialObject,
+    AcceptedFinding, ControlCode, ControlKind, CourseKind, Event, LegRef, MapPoint, ModelError,
+    PrintArea, ProjectError, ProjectFile, SpecialObject,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -937,4 +937,76 @@ fn crossing_point_special_is_rejected() {
     let err = ProjectFile::load(&file).unwrap_err();
     assert!(matches!(err, ProjectError::Parse { .. }), "{err:?}");
     assert!(err.to_string().contains("crossing_point"), "{err}");
+}
+
+#[test]
+fn overlays_and_leg_keys_are_known_and_kept_byte_for_byte() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(
+        dir.path(),
+        "[event]\n",
+        "[event]\nrule_overlays = [\"nor-bb-2021\"]\n",
+    );
+    let text = std::fs::read_to_string(&file).unwrap();
+    let text = format!(
+        "{text}\n[[accepted_findings]]\nrule = \"r\"\nlegs = [{{ course = \"A\", after = 3 }}, {{ course = \"A\", after = 0 }}]\nnote = \"n\"\n"
+    );
+    std::fs::write(&file, &text).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(project.event.event.rule_overlays, vec!["nor-bb-2021"]);
+    assert_eq!(project.event.accepted_findings[0].legs.len(), 2);
+    assert_eq!(project.event.accepted_findings[0].legs[0].after, 3);
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}
+
+#[test]
+fn empty_overlays_and_legs_are_known_and_not_written() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(dir.path(), "[event]\n", "[event]\nrule_overlays = []\n");
+    let text = format!(
+        "{}\n[[accepted_findings]]\nrule = \"r\"\nlegs = []\nnote = \"n\"\n",
+        std::fs::read_to_string(&file).unwrap()
+    );
+    std::fs::write(&file, &text).unwrap();
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.save().unwrap();
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), text);
+}
+
+#[test]
+fn a_new_finding_writes_legs_as_an_inline_array() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = edited_minimal(dir.path(), "[event]\n", "[event]\n");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.accepted_findings.push(AcceptedFinding {
+        rule: "r".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![
+            LegRef {
+                course: "A".to_owned(),
+                after: 3,
+                from: "33".to_owned(),
+                to: "34".to_owned(),
+            },
+            LegRef {
+                course: "A".to_owned(),
+                after: 0,
+                from: "S1".to_owned(),
+                to: "31".to_owned(),
+            },
+        ],
+        note: "n".to_owned(),
+    });
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(
+        text.contains(
+            "legs = [{ course = \"A\", after = 3, from = \"33\", to = \"34\" }, \
+             { course = \"A\", after = 0, from = \"S1\", to = \"31\" }]"
+        ),
+        "{text}"
+    );
+    assert!(ProjectFile::load(&file).is_ok());
 }

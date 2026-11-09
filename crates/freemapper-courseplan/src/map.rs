@@ -10,6 +10,7 @@ use freemapper_courseplan_model::MapPoint;
 mod geometry;
 
 use crate::omap::{MapDocument, MapObjectKind, SymbolSet};
+pub(crate) use geometry::{distance_to_polyline, inside_area};
 use geometry::{feature_distance, push_area, push_lines, sub_paths, to_point};
 
 /// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart).
@@ -18,6 +19,20 @@ pub enum MapKind {
     Sprint,
     Schoolyard,
     Forest,
+}
+
+impl MapKind {
+    /// Every map kind, in declaration order.
+    pub const ALL: [MapKind; 3] = [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest];
+
+    /// The name used in profile files and MCP results.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MapKind::Sprint => "sprint",
+            MapKind::Schoolyard => "schoolyard",
+            MapKind::Forest => "forest",
+        }
+    }
 }
 
 /// Geometry of one map feature in millimetres.
@@ -158,6 +173,11 @@ impl MapIndex {
             max.y = max.y.max(p.y);
         }
         Some((min, max))
+    }
+
+    /// Every feature, in map order.
+    pub fn features(&self) -> &[MapFeature] {
+        &self.features
     }
 
     pub fn len(&self) -> usize {

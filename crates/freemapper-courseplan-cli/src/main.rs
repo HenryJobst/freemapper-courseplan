@@ -1,6 +1,7 @@
 //! The `freemapper-courseplan` binary. Commands come with the milestones in the design
 //! (`docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md`).
 
+mod check_cmd;
 mod edit_cmd;
 mod mcp;
 
@@ -8,6 +9,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use check_cmd::{EventCmd, FindingCmd};
 use clap::error::{ContextKind, ContextValue, ErrorKind};
 use clap::{Arg, ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
 use edit_cmd::{ClassCmd, ControlCmd, CourseCmd, Failure, SpecialCmd};
@@ -70,6 +72,24 @@ enum Command {
         #[command(subcommand)]
         action: CourseCmd,
     },
+    /// Check the courses against the rule profile
+    Check {
+        /// The project file
+        project: PathBuf,
+        /// Also list accepted findings and skipped rules
+        #[arg(long)]
+        all: bool,
+    },
+    /// Accept findings as intended exceptions, or remove such an acceptance
+    Finding {
+        #[command(subcommand)]
+        action: FindingCmd,
+    },
+    /// Set event-wide settings: the rule profile
+    Event {
+        #[command(subcommand)]
+        action: EventCmd,
+    },
     /// Serve course setting to AI assistants over MCP on stdin and stdout
     Mcp,
     /// Show the help of a command
@@ -108,7 +128,7 @@ fn localized_command(lang: &Lang) -> clap::Command {
     let t = |id: &str| text(lang, id, &[]);
     let with_help = |arg: Arg, id: &str| arg.help(text(lang, id, &[]));
     let template = format!(
-        "{{about-with-newline}}\n{} {{usage}}\n\n{{all-args}}",
+        "{{about-with-newline}}\n{} {{usage}}\n\n{{all-args}}{{after-help}}",
         t("cli-heading-usage")
     );
     // Clap wants 'static headings; the program builds its command once, so leaking is harmless.
@@ -170,6 +190,12 @@ fn localized_command(lang: &Lang) -> clap::Command {
         .mut_subcommand("info", |s| {
             s.about(t("cli-help-info"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
+        })
+        .mut_subcommand("check", |s| {
+            s.about(t("cli-help-check"))
+                .after_help(t("cli-help-check-exit-codes"))
+                .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
+                .mut_arg("all", |a| with_help(a, "cli-arg-check-all"))
         })
         .mut_subcommand("mcp", |s| s.about(t("cli-help-mcp")))
         .mut_subcommand("help", |s| {
@@ -342,6 +368,9 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
+        Command::Check { project, all } => check_cmd::check(&lang, project, all),
+        Command::Finding { action } => check_cmd::finding(&lang, action),
+        Command::Event { action } => check_cmd::event(&lang, action),
         Command::Mcp => mcp::run(lang.clone()).map_err(Failure::Error),
         Command::Help { command: path } => {
             command.build();
@@ -380,6 +409,7 @@ fn main() -> ExitCode {
             print_error(&lang, &message);
             ExitCode::from(2)
         }
+        Err(Failure::Findings) => ExitCode::from(1),
     }
 }
 
@@ -427,6 +457,17 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     value("cli-info-title", event.event.title.clone());
     value("cli-info-map", event.sources.map.display().to_string());
     value("cli-info-map-kind", text(lang, kind, &[]));
+    let profile = FluentValue::from(event.event.rule_profile.clone());
+    if event.event.rule_overlays.is_empty() {
+        line("cli-info-rule-profile", &[("value", profile)]);
+    } else {
+        let list = FluentValue::from(event.event.rule_overlays.join(", "));
+        let count = FluentValue::from(event.event.rule_overlays.len());
+        line(
+            "cli-info-rule-profile-overlays",
+            &[("value", profile), ("list", list), ("count", count)],
+        );
+    }
     // Crossing points get no number, so they are not counted as controls, as in the course lines.
     let crossings = event
         .controls
@@ -533,25 +574,63 @@ mod tests {
         }
     }
 
+    /// The CLI source files that the id scanner reads, by path below `src/`.
+    const SCANNED_SOURCES: &[(&str, &str)] = &[
+        ("main.rs", include_str!("main.rs")),
+        ("edit_cmd.rs", include_str!("edit_cmd.rs")),
+        ("check_cmd.rs", include_str!("check_cmd.rs")),
+        ("mcp.rs", include_str!("mcp.rs")),
+        ("mcp/params.rs", include_str!("mcp/params.rs")),
+    ];
+
+    #[test]
+    fn every_cli_module_is_scanned_for_message_ids() {
+        fn walk(dir: &std::path::Path, root: &std::path::Path, out: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    walk(&path, root, out);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    let rel = path.strip_prefix(root).unwrap();
+                    out.push(rel.to_string_lossy().replace('\\', "/"));
+                }
+            }
+        }
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        walk(&root, &root, &mut files);
+        let missing: Vec<&String> = files
+            .iter()
+            .filter(|f| {
+                let name = f.rsplit('/').next().unwrap_or(f);
+                !(name == "tests.rs" || name.ends_with("_tests.rs"))
+                    && !SCANNED_SOURCES.iter().any(|(n, _)| n == f)
+            })
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "add to SCANNED_SOURCES in main.rs: {missing:?}"
+        );
+    }
+
     #[test]
     fn ids_used_in_the_cli_exist() {
-        let sources = [
-            include_str!("main.rs"),
-            include_str!("edit_cmd.rs"),
-            include_str!("mcp.rs"),
-        ];
-        let ids: Vec<&str> = sources
+        let ids: Vec<&str> = SCANNED_SOURCES
             .iter()
-            .filter_map(|s| s.split("#[cfg(test)]").next())
+            .filter_map(|(_, s)| s.split("#[cfg(test)]").next())
             .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-"]
+                ["error-", "cli-", "word-", "mcp-", "check-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
                     && !lit.ends_with('-')
             })
             .collect();
+        assert!(
+            ids.contains(&"cli-check-summary"),
+            "the scanner sees check_cmd.rs"
+        );
         assert!(ids.len() > 25, "scanner found only {}", ids.len());
         for lang in available() {
             for id in &ids {
@@ -588,7 +667,7 @@ mod tests {
         for lang in available() {
             let command = localized_command(&lang);
             let mut seen = 0;
-            for group in ["control", "special", "class", "course"] {
+            for group in edit_cmd::GROUPS {
                 walk(
                     &clap::Command::new("x")
                         .subcommand(command.find_subcommand(group).unwrap().clone()),

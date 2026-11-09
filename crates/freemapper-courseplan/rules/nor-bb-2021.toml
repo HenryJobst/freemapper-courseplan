@@ -1,0 +1,120 @@
+# Rule overlay: course recommendations of the NOR region (Berlin and Brandenburg), on top of
+# wkb-2026. Format: ADR 0025 and rules/README.md. Research: docs/research/2026-11-08-bahnlegung-kriterien.md
+# section 3.3a.
+#
+# nor_lkm reads:
+#   climb_factor      Lkm = length_km + climb_km * climb_factor; with 10, 100 m of climb count as
+#                     1 km ("Luftlinie plus Hm*10", BB-Kombi14 pp. 2-4)
+#   tolerance_percent allowed deviation from the target Lkm, both ways (BB-Kombi14 p. 1)
+#   courses           documented table (rules::TABLE_VALUES):
+#                     [{ course, lkm, o_value, categories }, ...], one row per course of the
+#                     BB-Lkm21 table; lkm is the target in performance kilometres, o_value the
+#                     orienteering difficulty 1 to 4, categories as the source writes them
+#
+# The tables are copied from BB-Lkm21 (one page; the pdftotext output matches research §3.3a).
+
+format = 1
+
+[profile]
+id = "nor-bb-2021"
+kind = "overlay"
+base = "wkb-2026"
+name = { de = "Bahnempfehlungen Berlin/Brandenburg 2021", en = "Course recommendations Berlin/Brandenburg 2021" }
+
+[sources.BB-Lkm21]
+title = "Empfohlene Bahnwerte in Leistungskilometer [Lkm] und Kategoriekombination für 2021 (G. Brettschneider), NOR-Bereich Berlin/Brandenburg"
+url = "https://olberlin.de/wp-content/uploads/2020/01/bahnempfehlungen2021.pdf"
+
+[sources.BB-Kombi14]
+title = "Empfohlene Bahnkombinationen und Leistungskilometer 2014 ff., mit Vorwort zur Toleranz"
+url = "https://olberlin.de/wp-content/uploads/2020/01/Bahnkombi2014.pdf"
+
+[[rules]]
+id = "norbb2021.lkm.long"
+key = "nor_lkm"
+severity = "warning"
+disciplines = ["long"]
+source = { doc = "BB-Lkm21", section = "Vorgaben Lang-OL (p. 1)" }
+note = { de = "Lkm-Formel und Toleranz ±6 % aus BB-Kombi14. Bahn D (D/H-14, 2,6 Lkm) ist in allen drei Tabellen kürzer als Bahn C (D/H-12, 3,9 Lkm); vermutlich ein Übertragungsfehler in der Quelle.", en = "Lkm formula and tolerance ±6 % from BB-Kombi14. Course D (D/H-14, 2.6 Lkm) is shorter than course C (D/H-12, 3.9 Lkm) in all three tables; probably a transcription error in the source." }
+
+[rules.values]
+climb_factor = 10
+tolerance_percent = 6
+courses = [
+  { course = "A", lkm = 2.1, o_value = 1, categories = ["D-10"] },
+  { course = "B", lkm = 3.1, o_value = 1, categories = ["H-10"] },
+  { course = "C", lkm = 3.9, o_value = 2, categories = ["D-12", "H-12"] },
+  { course = "D", lkm = 2.6, o_value = 3, categories = ["D-14", "H-14"] },
+  { course = "E", lkm = 5.9, o_value = 4, categories = ["D-16", "D19K", "D50", "H70"] },
+  { course = "F", lkm = 7.1, o_value = 4, categories = ["D-18", "D35", "D40", "D45", "H-16", "H-18", "H19K", "H55", "H60", "H65"] },
+  { course = "G", lkm = 8.8, o_value = 4, categories = ["D19L", "H45", "H50"] },
+  { course = "H", lkm = 4.5, o_value = 4, categories = ["D55", "D60"] },
+  { course = "I", lkm = 3.0, o_value = 4, categories = ["D65", "D70", "D75"] },
+  { course = "K", lkm = 4.0, o_value = 4, categories = ["H75", "H80"] },
+  { course = "L", lkm = 13.5, o_value = 4, categories = ["H19L"] },
+  { course = "M", lkm = 11.3, o_value = 4, categories = ["H35"] },
+  { course = "N", lkm = 10.3, o_value = 4, categories = ["H40"] },
+  { course = "O", lkm = 2.7, o_value = 1, categories = ["BK"] },
+  { course = "P", lkm = 4.9, o_value = 1, categories = ["BL"] },
+]
+
+[[rules]]
+id = "norbb2021.lkm.middle"
+key = "nor_lkm"
+severity = "warning"
+disciplines = ["middle"]
+source = { doc = "BB-Lkm21", section = "Vorgaben Mittel-OL (p. 1)" }
+note = { de = "Lkm-Formel und Toleranz ±6 % aus BB-Kombi14. Bahn D (D/H-14, 2,6 Lkm) ist kürzer als Bahn C (D/H-12, 3,9 Lkm), und die Bahnen A bis D gleichen denen des Lang-OL; vermutlich ein Übertragungsfehler in der Quelle.", en = "Lkm formula and tolerance ±6 % from BB-Kombi14. Course D (D/H-14, 2.6 Lkm) is shorter than course C (D/H-12, 3.9 Lkm), and courses A to D equal those of the long distance; probably a transcription error in the source." }
+
+[rules.values]
+climb_factor = 10
+tolerance_percent = 6
+courses = [
+  { course = "A", lkm = 2.1, o_value = 1, categories = ["D-10"] },
+  { course = "B", lkm = 3.1, o_value = 1, categories = ["H-10"] },
+  { course = "C", lkm = 3.9, o_value = 2, categories = ["D-12", "H-12"] },
+  { course = "D", lkm = 2.6, o_value = 3, categories = ["D-14", "H-14"] },
+  { course = "E", lkm = 2.6, o_value = 4, categories = ["D-16", "D19K", "D55", "D60"] },
+  { course = "F", lkm = 3.5, o_value = 4, categories = ["D-18", "D35", "D40", "D45", "D50", "H19K"] },
+  { course = "G", lkm = 4.3, o_value = 4, categories = ["D19L", "H45", "H50", "H55", "H60"] },
+  { course = "H", lkm = 1.9, o_value = 4, categories = ["D65", "D70", "D75"] },
+  { course = "I", lkm = 2.3, o_value = 4, categories = ["H75", "H80"] },
+  { course = "K", lkm = 5.9, o_value = 4, categories = ["H19L"] },
+  { course = "L", lkm = 5.2, o_value = 4, categories = ["H35", "H40"] },
+  { course = "M", lkm = 3.1, o_value = 4, categories = ["H-16", "H-18"] },
+  { course = "N", lkm = 3.5, o_value = 4, categories = ["H65", "H70"] },
+  { course = "O", lkm = 2.7, o_value = 1, categories = ["BK"] },
+  { course = "P", lkm = 4.9, o_value = 1, categories = ["BL"] },
+]
+
+[[rules]]
+id = "norbb2021.lkm.ultralong"
+key = "nor_lkm"
+severity = "warning"
+disciplines = ["ultralong"]
+source = { doc = "BB-Lkm21", section = "Vorgaben Ultralang-OL (p. 1)" }
+note = { de = "Lkm-Formel und Toleranz ±6 % aus BB-Kombi14. Bahn D (D/H-14, 2,6 Lkm) ist kürzer als Bahn C (D/H-12, 3,9 Lkm); vermutlich ein Übertragungsfehler in der Quelle.", en = "Lkm formula and tolerance ±6 % from BB-Kombi14. Course D (D/H-14, 2.6 Lkm) is shorter than course C (D/H-12, 3.9 Lkm); probably a transcription error in the source." }
+
+[rules.values]
+climb_factor = 10
+tolerance_percent = 6
+courses = [
+  { course = "A", lkm = 2.1, o_value = 1, categories = ["D-10"] },
+  { course = "B", lkm = 3.1, o_value = 1, categories = ["H-10"] },
+  { course = "C", lkm = 3.9, o_value = 2, categories = ["D-12", "H-12"] },
+  { course = "D", lkm = 2.6, o_value = 3, categories = ["D-14", "H-14"] },
+  { course = "E", lkm = 7.5, o_value = 4, categories = ["D-16", "D50", "H70"] },
+  { course = "F", lkm = 10.0, o_value = 4, categories = ["D-18", "D35", "D40", "H-16", "H-18", "H19K", "H65"] },
+  { course = "G", lkm = 11.1, o_value = 4, categories = ["D19L", "H55", "H60"] },
+  { course = "H", lkm = 6.3, o_value = 4, categories = ["D19K"] },
+  { course = "I", lkm = 5.8, o_value = 4, categories = ["D55", "D60"] },
+  { course = "K", lkm = 4.0, o_value = 4, categories = ["D65", "D70", "D75"] },
+  { course = "L", lkm = 21.0, o_value = 4, categories = ["H19L"] },
+  { course = "M", lkm = 16.5, o_value = 4, categories = ["H35"] },
+  { course = "N", lkm = 15.4, o_value = 4, categories = ["H40"] },
+  { course = "O", lkm = 2.7, o_value = 1, categories = ["BK"] },
+  { course = "P", lkm = 4.9, o_value = 1, categories = ["BL"] },
+  { course = "Q", lkm = 8.6, o_value = 4, categories = ["D45"] },
+  { course = "R", lkm = 14.5, o_value = 4, categories = ["H45", "H50"] },
+  { course = "S", lkm = 4.6, o_value = 4, categories = ["H75", "H80"] },
+]

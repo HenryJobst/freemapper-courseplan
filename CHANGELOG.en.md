@@ -6,6 +6,91 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `check <PROJECT>` checks the individual courses against the rule profile of the event and its overlays. The
+  findings are grouped by course, each with severity, place, explanation, rule id and source, followed by a
+  summary. `--all` also lists the accepted findings with their notes and the skipped rules with the reason. A
+  rule whose filters (discipline, map kind, print scale) do not fit counts as skipped and is reported as such.
+  Team, relay and score courses are not checked yet. The exit code is 0 without an error finding, 1 with one or
+  when the check is refused, and 2 for a wrong call.
+- `finding accept <PROJECT> <RULE> --note TEXT` accepts a finding as an intended exception. Give its place with
+  `--controls 31,32`, `--leg A:3` or `--course A`, or none of them for a finding of the whole event. Accepting
+  the same finding again replaces the note. `finding remove` takes it back and refuses an accepted finding that
+  does not exist.
+- `event profile <PROJECT> <BASE> [--overlay ID …]` sets the rule profile and the overlays after loading them.
+  `info` shows both.
+- MCP: the tools `check`, `accept_finding`, `remove_accepted_finding` and `set_rule_profile`. `check` returns
+  findings, accepted findings and skipped rules as JSON, with machine fields and the text in the server's
+  language. `event_info` names the rule profile and the overlays.
+- `check` now measures distances on the map: controls closer together than the minimum distance (the start and
+  crossing points count), controls at similar features too close together, controls, start and finish near the
+  map edge, legs that pass through another control of the same course, and straight legs through an out-of-bounds
+  area, as a warning that the best route may lead through it. Taped legs may lead through out-of-bounds areas.
+  Buildings, walls, fences and water wait for the later route analysis. Each finding gives the measured value and
+  the limit, such as "control 31 and control 32 are 12 m apart, at least 15 m required". A pair or a control is
+  reported once, even when several courses use it. Start and finish can be the place of a finding: `finding
+  accept … --controls 31,S1`.
+- `finding accept` refuses a place where the rule never reports a finding, such as `--course A` for the minimum
+  distance, which always concerns two controls.
+- `check` now looks at the shape of legs. Where the incoming and the outgoing leg meet at a control or crossing
+  point at an acute angle, it reports a warning below 45° and a hint below 90°, but only the stricter of the
+  two. Two legs of one course that run in opposite directions at most 10 m apart for 30 m or more give a
+  warning that names both legs. The first 10 m around a control where both meet do not count, also at the
+  centre of a butterfly loop. Accept such a finding with both legs: `finding accept … --leg A:2 --leg A:5`.
+- `check` now looks at control codes: a numeric code outside 31 to 599 is an error and a code that is no number
+  a warning; both codes of a forbidden pair (66 and 99, 68 and 89, 86 and 98) used anywhere in the event are an
+  error, also in different courses; two consecutive controls whose codes look alike upside down or differ only
+  by 6 and 9 give a warning. Crossing points, start and finish have no code and are left out, and a crossing
+  point between two controls does not break their pair. A control at a point symbol that occurs again within
+  its circle gives a warning when column C of the control description is empty; lines and areas are not
+  compared. Each code or pair is reported once, even when several courses use it.
+- `check` now looks at the start. Courses use the same start minute only at the same start. For each start, the
+  expected starters of the classes on its courses, divided by the start window, give the number of different
+  first controls needed per minute; if the courses have fewer, a warning at the start names the first controls
+  shared by several courses. Without a start window the rule is skipped, and a start with a class that has no
+  expected starters is skipped with the class names. As a hint, two courses at one start with different first
+  controls whose first legs differ in direction by less than 30° are reported once per pair of first controls.
+  The direction runs to the first start bend, or else to the first stop.
+- `check` now looks at the course tables. At long, middle and ultralong distances, a course whose length is
+  outside the range of its category row, as a percentage of the HE course, gives a warning (WKB Anlage 5);
+  without an HE course, or with one of length 0, the rule is skipped, and with two the first serves as the
+  reference and a hint says so. A course with easy and hard categories (levels 1 and 2 against 3 to 5) is an
+  error that names both sides. With the NOR overlay, the performance kilometres (length plus climb ×
+  10 / 1000) outside the target of the category row ±6 % give a warning, shown with up to two decimals; a
+  course without climb is skipped. A category in no row of the table skips the course for that category, in
+  the length table and in the NOR table alike. A course whose categories hit several rows gets one finding
+  that names every violated row. A class without rule category skips the course and is named.
+- User manual, chapter 8 "Checking: reading findings, giving reasons for exceptions": how to read a line of
+  `check`, what severity, exit code and skipped rules mean, how to accept and take back exceptions, and how to
+  choose the profile and overlays. The Lübeck example shows the output of `check` and one accepted hint in
+  `check.en.txt` and `check.de.txt`; the project file holds it.
+- `event start-window <PROJECT> <MINUTES>` sets the start window that the start capacity check needs; 0 is
+  refused. `class set <PROJECT> <CLASS> [--rule-category C] [--starters N]` changes the rule category and the
+  expected starters of a class, and `--no-rule-category` and `--no-starters` remove them. Over MCP the tools are
+  `set_start_window` and `set_class`. When one of these values is missing, `check --all` names the command that
+  sets it in the skipped rule.
+- `check --all` lists under "not matched" the accepted findings that match no finding any more, for example
+  because a control or a course was removed, with their notes and a pointer to `finding remove`. The summary
+  counts them; they do not change the exit code. MCP `check` returns them in `unmatched`.
+- A rule that an overlay switches off is listed among the skipped rules by `check --all`, with a reason that
+  names the overlay: "rule profile nor-bb-2021 switches the rule off".
+- `check --all` prints the note of each finding's rule in the chosen language below it. A value the program
+  proposes because no source gives a number names its source as "proposal of freemapper-courseplan".
+
+### Changed
+
+- Output names a leg by its ends: "leg 36–37", "leg start–31", "leg 37–finish", and two legs as "legs 31–32
+  and 35–36". As places, start and finish read "start S1" and "finish F1". Within a course the course comes
+  first, then its legs in running order. Input stays `--leg A:6`, the leg from position 6 of the course with
+  crossing points counted; the help says so.
+- An accepted finding on a leg stores the leg's ends (`from`, `to`). When the leg later runs between other
+  controls, `check` reports the finding again. `finding remove --leg A:6` removes the exception for the leg as it
+  runs now; if there is none, it removes the older ones at that position.
+- Texts: limits read "at least 15 m required", and a leg over a control "the leg runs over control 31" instead of
+  "passes 0 m from control 31". Start and table findings no longer repeat their place in the text. An empty
+  note is refused with a message of its own.
+
 ## [0.1.0] - 2026-11-09
 
 ### Added

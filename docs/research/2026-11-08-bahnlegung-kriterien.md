@@ -171,7 +171,7 @@ Nutzers, 2026-11-08). Die neueste Empfehlung ist BB-Lkm21; Neueres ist dort nich
 
 | Regel | Werte | Quelle | Kl. |
 |---|---|---|---|
-| DE 5 Stufen: 1 = N (Leitlinie, max. 1 Abzweig) … 3 = B (Posten hinter Auffanglinie) … 5 = E | -10 → 1, -12 → 2, -14 → 3, -16/-18 → 4, -20/E → 5, Senioren 4 | WKB26 Anlage 5 | A teilweise (Abzweige zählen, Sichtlinie), sonst B |
+| DE 5 Stufen: 1 = N (Leitlinie, max. 1 Abzweig) … 3 = B (Posten hinter Auffanglinie) … 5 = E | -10 → 1, -12 → 2, -14 → 3, -16/-18/-20 → 4, E → 5, Senioren 4 (WKB26 S. 49; korrigiert 2026-11-09) | WKB26 Anlage 5 | A teilweise (Abzweige zählen, Sichtlinie), sonst B |
 | Kategorien der Stufen 1–2 nie auf Bahnen der Stufen 3–5 | – | WKB26 Anlage 5 | A |
 | Schwierigkeit der Bahn = schwerstes Element | – | BOF 18.2 | A |
 | BOF TD1: nur Wege, Posten ≤ 200 m, Posten an jedem Entscheidungspunkt · TD2: Linienobjekte, ≤ 350 m, max. 2 Entscheidungen je Schenkel | – | BOF B2.3.6 | A |

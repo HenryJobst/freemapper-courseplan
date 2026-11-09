@@ -17,6 +17,7 @@ es Bahnen aus einer `.ppen` drucken kann; dann ersetzt das Druck-PDF diese Skizz
 
 - `luebeck-sprint.courseplan.toml`: die Projektdatei
 - `transcript.de.txt`, `transcript.en.txt`: die Befehle und ihre Ausgaben
+- `check.de.txt`, `check.en.txt`: die Prüfung der Bahn, mit einem akzeptierten Hinweis
 - `preview.jpg`, `make-preview.py`: die Skizze und das Skript dazu
 
 ## So entstand die Bahn
@@ -65,6 +66,7 @@ $ freemapper-courseplan info luebeck-sprint.courseplan.toml
 Titel: Sprinttraining Lübecker Altstadt
 Karte: ../../tests/fixtures/maps/luebeck.omap
 Kartenart: Sprintkarte
+Regelprofil: wkb-2026
 Posten: 7, Querungsstellen: 0
 Bahnen: 1 (einzeln 1, Mannschaft 0, Staffel 0, Score 0)
 Kategorien: 1
@@ -72,6 +74,29 @@ Bahn A: 7 Posten, 1,3 km, Anstieg 5 m
 ```
 
 Die Koordinaten sind Kartenmillimeter, y zeigt nach unten. Die Postennummern hat `course numbers` platziert.
+
+## Prüfen
+
+`check` findet auf der Bahn genau einen Hinweis. Am Posten 37 bilden die Strecken einen Winkel von 85°, der
+Richtwert liegt bei 90°. Weil die Bahn ein Training ist, gilt der Winkel hier als gewollt, und `finding accept`
+trägt ihn mit Begründung in die Projektdatei ein.
+
+```text
+$ freemapper-courseplan check luebeck-sprint.courseplan.toml
+Bahn A:
+  Hinweis Bahn A, Strecke 36–37: Die Strecken am Posten 37 bilden einen Winkel von 85°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert, 5 übersprungen
+
+$ freemapper-courseplan finding accept luebeck-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:6 --note "Training: Der Winkel von 85° am letzten Posten ist gewollt."
+Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke 36–37 akzeptiert
+```
+
+`--leg A:6` nennt die Strecke, die von der sechsten Position der Bahn abgeht, also von Posten 36 zu Posten 37. In
+der Projektdatei steht die Ausnahme mit beiden Enden der Strecke. Danach meldet `check` nichts mehr. Die fünf
+übersprungenen Prüfregeln sind Längen- und Schwierigkeitsregeln des Wettkampfs, die beim Training nicht gelten,
+und die Startkapazität, weil die Veranstaltung kein Startfenster hat. Alle Befehle und die Ausgabe von
+`check --all` stehen in [`check.de.txt`](check.de.txt) und [`check.en.txt`](check.en.txt). Die englische Datei
+zeigt eine englische Begründung; in der Projektdatei steht die deutsche.
 
 ## Skizze neu erzeugen
 

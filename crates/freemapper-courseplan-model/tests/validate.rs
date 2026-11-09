@@ -198,3 +198,20 @@ fn new_errors_read_well_in_english() {
         "out-of-bounds area O1 needs at least 3 points"
     );
 }
+
+#[test]
+fn a_blank_accepted_finding_note_is_refused() {
+    for note in ["", "  \t"] {
+        let e = event(&format!(
+            "\n[[accepted_findings]]\nrule = \"r\"\nnote = {note:?}\n"
+        ));
+        assert_eq!(
+            validate(&e),
+            vec![ModelError::BlankNote {
+                rule: "r".to_owned()
+            }]
+        );
+    }
+    let e = event("\n[[accepted_findings]]\nrule = \"r\"\nnote = \"ok\"\n");
+    assert_eq!(validate(&e), vec![]);
+}

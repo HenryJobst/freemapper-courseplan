@@ -19,6 +19,14 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
         errors.push(ModelError::DateNotADate(date.to_string()));
     }
 
+    for finding in &event.accepted_findings {
+        if finding.note.trim().is_empty() {
+            errors.push(ModelError::BlankNote {
+                rule: finding.rule.clone(),
+            });
+        }
+    }
+
     let mut codes: HashSet<&ControlCode> = HashSet::new();
     let mut reported: HashSet<&ControlCode> = HashSet::new();
     for control in &event.controls {

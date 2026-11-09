@@ -1,10 +1,11 @@
 //! Tests of the edit operations.
 
+use freemapper_courseplan::check::Place;
 use freemapper_courseplan::edit::*;
 use freemapper_courseplan_model::{
-    Class, Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
-    CourseKind, Event, EventMeta, FORMAT_VERSION, MapPoint, NumberPlacement, ScoreControl, Sources,
-    SpecialObject,
+    AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
+    CourseControl, CourseKind, Event, EventMeta, FORMAT_VERSION, LegRef, MapPoint, NumberPlacement,
+    ScoreControl, Sources, SpecialObject,
 };
 
 fn code(s: &str) -> ControlCode {
@@ -63,6 +64,7 @@ fn event() -> Event {
             date: None,
             discipline: Default::default(),
             rule_profile: "wkb-2026".to_owned(),
+            rule_overlays: Vec::new(),
             start_window_min: None,
         },
         sources: Sources {
@@ -710,4 +712,382 @@ fn removal_clears_the_previous_leg_and_the_length_is_the_straight_sum() {
     set_leg(&mut e, "A", LegStart::After(1), vec![], false).unwrap();
     let metres = freemapper_courseplan::course::course_length_m(&e, &e.courses[0], 1000).unwrap();
     assert!((metres - 40.0).abs() < 1e-9, "{metres}");
+}
+
+// ---------------------------------------------------------------------------------------------
+// Accepted findings and the rule profile
+
+fn wkb() -> freemapper_courseplan::rules::RuleSet {
+    freemapper_courseplan::rules::load_rule_set("wkb-2026", &[]).unwrap()
+}
+
+fn acceptance(rule: &str, controls: &[&str], note: &str) -> AcceptedFinding {
+    AcceptedFinding {
+        rule: rule.to_owned(),
+        controls: controls.iter().map(|c| code(c)).collect(),
+        course: None,
+        legs: vec![],
+        note: note.to_owned(),
+    }
+}
+
+#[test]
+fn accepting_a_finding_twice_replaces_its_note() {
+    let mut e = event();
+    let rules = wkb();
+    let first = acceptance("wkb2026.distance.min", &["32", "31", "32"], "on purpose");
+    assert_eq!(
+        accept_finding(&mut e, &rules, first).unwrap().0,
+        Accepted::Added
+    );
+    // Stored with the key's order, so the file reads the same way as the check output.
+    assert_eq!(e.accepted_findings[0].controls, [code("31"), code("32")]);
+    let again = acceptance("wkb2026.distance.min", &["31", "32"], "still on purpose");
+    assert_eq!(
+        accept_finding(&mut e, &rules, again).unwrap().0,
+        Accepted::NoteReplaced
+    );
+    assert_eq!(e.accepted_findings.len(), 1);
+    assert_eq!(e.accepted_findings[0].note, "still on purpose");
+}
+
+#[test]
+fn accepting_needs_a_known_rule_and_a_place_that_exists() {
+    let mut e = event();
+    let before = e.clone();
+    let rules = wkb();
+    let refused = |e: &mut Event, a: AcceptedFinding| accept_finding(e, &rules, a).unwrap_err();
+
+    let unknown = refused(&mut e, acceptance("wkb2026.no.such", &["31"], "n"));
+    assert!(
+        matches!(unknown, EditError::UnknownRule { .. }),
+        "{unknown:?}"
+    );
+    let missing = refused(
+        &mut e,
+        acceptance("wkb2026.distance.min", &["31", "99"], "n"),
+    );
+    assert_eq!(
+        missing,
+        EditError::NotFound {
+            what: "control",
+            id: "99".to_owned()
+        }
+    );
+    // A distance finding never sits at the event as a whole.
+    let nowhere = refused(&mut e, acceptance("wkb2026.distance.min", &[], "n"));
+    assert!(
+        matches!(nowhere, EditError::FindingNeedsPlace { .. }),
+        "{nowhere:?}"
+    );
+    // A finding has one place: a course, controls or one leg.
+    let mut mixed = acceptance("wkb2026.distance.min", &["31"], "n");
+    mixed.course = Some("A".to_owned());
+    let mixed = refused(&mut e, mixed);
+    assert!(
+        matches!(mixed, EditError::FindingHasOnePlace { .. }),
+        "{mixed:?}"
+    );
+    // Several legs are one place only inside one course, and only for a rule whose findings
+    // name two legs.
+    let mut two_courses = acceptance("wkb2026.leg.opposing", &[], "n");
+    two_courses.legs = vec![leg_ref("A", 1), leg_ref("B", 2)];
+    let two_courses = refused(&mut e, two_courses);
+    assert!(
+        matches!(two_courses, EditError::FindingHasOnePlace { .. }),
+        "{two_courses:?}"
+    );
+    let mut two_legs = acceptance("wkb2026.leg.through_control", &[], "n");
+    two_legs.legs = vec![leg_ref("A", 1), leg_ref("A", 2)];
+    assert_eq!(
+        refused(&mut e, two_legs),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.leg.through_control".to_owned(),
+            place: Place::Legs,
+            places: vec![Place::Leg],
+        }
+    );
+    let mut one_leg = acceptance("wkb2026.leg.opposing", &[], "n");
+    one_leg.legs = vec![leg_ref("A", 1)];
+    assert_eq!(
+        refused(&mut e, one_leg),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.leg.opposing".to_owned(),
+            place: Place::Leg,
+            places: vec![Place::Legs],
+        }
+    );
+    let mut opposing_beyond = acceptance("wkb2026.leg.opposing", &[], "n");
+    opposing_beyond.legs = vec![leg_ref("A", 0), leg_ref("A", 3)];
+    assert!(matches!(
+        refused(&mut e, opposing_beyond),
+        EditError::BadIndex { index: 3, .. }
+    ));
+    let mut beyond = acceptance("wkb2026.leg.through_control", &[], "n");
+    beyond.legs = vec![leg_ref("A", 3)];
+    assert_eq!(
+        refused(&mut e, beyond),
+        EditError::BadIndex {
+            course: "A".to_owned(),
+            index: 3
+        }
+    );
+    let mut no_course = acceptance("wkb2026.length.long", &[], "n");
+    no_course.course = Some("Z".to_owned());
+    assert!(matches!(
+        refused(&mut e, no_course),
+        EditError::NotFound { what: "course", .. }
+    ));
+    // Each key reports at its own kind of place: a distance finding at two controls, a map
+    // edge finding at one, a leg finding at a leg.
+    let mut at_course = acceptance("wkb2026.distance.min", &[], "n");
+    at_course.course = Some("A".to_owned());
+    assert_eq!(
+        refused(&mut e, at_course),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.distance.min".to_owned(),
+            place: Place::Course,
+            places: vec![Place::Controls],
+        }
+    );
+    let one = refused(&mut e, acceptance("wkb2026.distance.min", &["31"], "n"));
+    assert!(
+        matches!(
+            one,
+            EditError::FindingWrongPlace {
+                place: Place::Control,
+                ..
+            }
+        ),
+        "{one:?}"
+    );
+    let two = refused(&mut e, acceptance("wkb2026.map.edge", &["31", "32"], "n"));
+    assert!(
+        matches!(two, EditError::FindingWrongPlace { .. }),
+        "{two:?}"
+    );
+    let at_controls = refused(
+        &mut e,
+        acceptance("wkb2026.leg.through_forbidden_sprint", &["31", "32"], "n"),
+    );
+    assert!(
+        matches!(
+            at_controls,
+            EditError::FindingWrongPlace {
+                place: Place::Controls,
+                ..
+            }
+        ),
+        "{at_controls:?}"
+    );
+    let blank = refused(
+        &mut e,
+        acceptance("wkb2026.distance.min", &["31", "32"], "  "),
+    );
+    assert!(matches!(blank, EditError::Invalid(_)), "{blank:?}");
+    assert_eq!(e, before, "refused edits leave the event as it was");
+
+    // The last leg (after the last control, to the finish) and the start leg exist.
+    for after in [0, 2] {
+        let mut ok = acceptance("wkb2026.leg.through_control", &[], "n");
+        ok.legs = vec![leg_ref("A", after)];
+        accept_finding(&mut e, &rules, ok).unwrap();
+    }
+    // A start or finish is a place of a distance or map edge finding.
+    accept_finding(
+        &mut e,
+        &rules,
+        acceptance("wkb2026.distance.min", &["31", "S1"], "n"),
+    )
+    .unwrap();
+    accept_finding(&mut e, &rules, acceptance("wkb2026.map.edge", &["F1"], "n")).unwrap();
+    // An acute angle sits at the incoming leg, opposing legs at both legs, stored in key order.
+    let mut angle = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    angle.legs = vec![leg_ref("A", 1)];
+    accept_finding(&mut e, &rules, angle).unwrap();
+    let mut opposing = acceptance("wkb2026.leg.opposing", &[], "n");
+    opposing.legs = vec![leg_ref("A", 2), leg_ref("A", 0)];
+    accept_finding(&mut e, &rules, opposing).unwrap();
+    let stored = e.accepted_findings.last().unwrap();
+    let ends = |after, from: &str, to: &str| LegRef {
+        from: from.to_owned(),
+        to: to.to_owned(),
+        ..leg_ref("A", after)
+    };
+    // The ends come from the course as it is now (ruling R24).
+    assert_eq!(stored.legs, [ends(0, "S1", "31"), ends(2, "32", "F1")]);
+    // A start-capacity finding sits at its start.
+    accept_finding(
+        &mut e,
+        &rules,
+        acceptance("wkb2026.start.capacity", &["S1"], "n"),
+    )
+    .unwrap();
+    assert_eq!(e.accepted_findings.len(), 7);
+}
+
+fn leg_ref(course: &str, after: u32) -> LegRef {
+    LegRef::at(course, after)
+}
+
+#[test]
+fn removing_an_accepted_finding_needs_its_key() {
+    let mut e = event();
+    let rules = wkb();
+    accept_finding(
+        &mut e,
+        &rules,
+        acceptance("wkb2026.distance.min", &["31", "32"], "n"),
+    )
+    .unwrap();
+    let key = acceptance("wkb2026.distance.min", &["32", "31"], "").key();
+    let other = acceptance("wkb2026.distance.min", &["31"], "").key();
+    assert_eq!(
+        remove_accepted_finding(&mut e, &other).unwrap_err(),
+        EditError::AcceptedNotFound {
+            rule: "wkb2026.distance.min".to_owned()
+        }
+    );
+    remove_accepted_finding(&mut e, &key).unwrap();
+    assert!(e.accepted_findings.is_empty());
+    assert!(remove_accepted_finding(&mut e, &key).is_err());
+}
+
+#[test]
+fn a_leg_acceptance_stores_the_ends_and_is_removed_by_position() {
+    let mut e = event();
+    let rules = wkb();
+    let mut angle = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    // Ends given by the caller are replaced with the ends in the course.
+    angle.legs = vec![LegRef {
+        from: "x".to_owned(),
+        to: "y".to_owned(),
+        ..leg_ref("A", 1)
+    }];
+    accept_finding(&mut e, &rules, angle).unwrap();
+    let stored = &e.accepted_findings[0].legs[0];
+    assert_eq!((stored.from.as_str(), stored.to.as_str()), ("31", "32"));
+    // The leg now runs 31–33; the acceptance still names 31–32 and is removed by position.
+    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    assert_eq!(e.accepted_findings[0].legs[0].to, "32");
+    let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
+    named.legs = vec![leg_ref("A", 1)];
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 1);
+    assert_eq!(removed[0].legs[0].to, "32");
+    assert!(e.accepted_findings.is_empty());
+    // A leg of a course that is gone can be removed too.
+    let mut gone = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    gone.legs = vec![LegRef {
+        from: "31".to_owned(),
+        to: "32".to_owned(),
+        ..leg_ref("Z", 1)
+    }];
+    e.accepted_findings.push(gone);
+    let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
+    named.legs = vec![leg_ref("Z", 1)];
+    remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert!(e.accepted_findings.is_empty());
+}
+
+#[test]
+fn an_exact_leg_acceptance_wins_over_a_stale_one_at_the_same_position() {
+    let mut e = event();
+    let rules = wkb();
+    let angle = |note: &str| AcceptedFinding {
+        legs: vec![leg_ref("A", 1)],
+        ..acceptance("wkb2026.leg.acute_angle", &[], note)
+    };
+    accept_finding(&mut e, &rules, angle("old leg")).unwrap();
+    // Leg A:1 now runs 31–33; accepting it again stores a second entry and returns that one.
+    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    let (done, stored) = accept_finding(&mut e, &rules, angle("new leg")).unwrap();
+    assert_eq!(done, Accepted::Added);
+    assert_eq!(
+        (stored.legs[0].to.as_str(), stored.note.as_str()),
+        ("33", "new leg")
+    );
+    assert_eq!(e.accepted_findings.len(), 2);
+    // Removing A:1 takes only the entry whose ends match the course now.
+    let named = AcceptedFinding {
+        legs: vec![leg_ref("A", 1)],
+        ..acceptance("wkb2026.leg.acute_angle", &[], "")
+    };
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 1);
+    assert_eq!(removed[0].legs[0].to, "33");
+    assert_eq!(e.accepted_findings[0].note, "old leg");
+    // Without an exact match the position fallback removes every stale entry there.
+    e.accepted_findings.push(AcceptedFinding {
+        legs: vec![LegRef {
+            from: "31".to_owned(),
+            to: "39".to_owned(),
+            ..leg_ref("A", 1)
+        }],
+        ..acceptance("wkb2026.leg.acute_angle", &[], "older leg")
+    });
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 2);
+    assert!(e.accepted_findings.is_empty());
+}
+
+#[test]
+fn the_start_window_is_at_least_one_minute() {
+    let mut e = event();
+    set_start_window(&mut e, 90).unwrap();
+    assert_eq!(e.event.start_window_min, Some(90));
+    let before = e.clone();
+    assert_eq!(
+        set_start_window(&mut e, 0).unwrap_err(),
+        EditError::StartWindowZero
+    );
+    assert_eq!(e, before);
+}
+
+#[test]
+fn a_class_gets_and_loses_its_category_and_starters() {
+    let mut e = event();
+    set_class(
+        &mut e,
+        "H21",
+        Some(Some(" H21 ".to_owned())),
+        Some(Some(40)),
+    )
+    .unwrap();
+    assert_eq!(e.classes[0].rule_category.as_deref(), Some("H21"));
+    assert_eq!(e.classes[0].expected_starters, Some(40));
+    // None keeps a value; Some(None) clears it.
+    set_class(&mut e, "H21", None, Some(None)).unwrap();
+    assert_eq!(e.classes[0].rule_category.as_deref(), Some("H21"));
+    assert_eq!(e.classes[0].expected_starters, None);
+    set_class(&mut e, "H21", Some(None), None).unwrap();
+    assert_eq!(e.classes[0].rule_category, None);
+    let before = e.clone();
+    assert_eq!(
+        set_class(&mut e, "H21", Some(Some("  ".to_owned())), None).unwrap_err(),
+        EditError::BlankRuleCategory {
+            class: "H21".to_owned()
+        }
+    );
+    assert!(matches!(
+        set_class(&mut e, "D21", None, Some(Some(3))).unwrap_err(),
+        EditError::NotFound { what: "class", .. }
+    ));
+    assert_eq!(e, before);
+}
+
+#[test]
+fn rule_profile_is_validated_before_it_is_set() {
+    let mut e = event();
+    let set = set_rule_profile(&mut e, "wkb-2026", &["nor-bb-2021".to_owned()]).unwrap();
+    assert_eq!(set.overlays, ["nor-bb-2021"]);
+    assert_eq!(e.event.rule_overlays, ["nor-bb-2021"]);
+    let before = e.clone();
+    let unknown = set_rule_profile(&mut e, "xyz", &[]).unwrap_err();
+    assert!(unknown.to_string().contains("wkb-2026"), "{unknown}");
+    assert!(set_rule_profile(&mut e, "nor-bb-2021", &[]).is_err());
+    assert!(set_rule_profile(&mut e, "wkb-2026", &["wkb-2026".to_owned()]).is_err());
+    assert_eq!(e, before);
+    set_rule_profile(&mut e, "wkb-2026", &[]).unwrap();
+    assert!(e.event.rule_overlays.is_empty());
 }

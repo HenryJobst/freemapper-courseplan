@@ -36,3 +36,32 @@ clap's option parsing.
 - Cost if wrong: a later editor may want other conventions; the library operations do not depend on these.
 
 Source: plan M2a Tasks 4, 7, 8; rulings R5 (amended), R8, R11, R12; final review of M2a, 2026-11-08.
+
+## Amendment 2026-11-09: checking and accepted findings
+
+- `check` exits with 0 when no finding of severity `error` is left after the accepted ones are taken out, with
+  1 when one is left or when the check is refused (project file, map or rule profile cannot be loaded), and
+  with 2 for usage errors. The help of `check` states this. Warnings and hints never change the exit code.
+- `finding accept` and `finding remove` name a finding by rule id and place: `--controls 31,32`, one
+  `--leg COURSE:N` (the leg after position N, 0 the leg from the start, as in `course leg`) or `--course NAME`.
+  Without any of them the finding is one of the whole event. A refused acceptance or removal exits with 1 and
+  leaves the file byte-identical, like every other edit.
+- The rule profile is set with `event profile <PROJECT> <BASE> [--overlay ID …]`; there is no `project set`.
+
+Source: plan M2b Task 3; controller rulings for Task 3, 2026-11-09.
+
+## Amendment 2026-11-09: start window and class settings
+
+- `event start-window <PROJECT> <MINUTES>` sets the start window; 0 is refused, since the start capacity check
+  reads 0 as no window. `class set <PROJECT> <CLASS> [--rule-category C] [--no-rule-category] [--starters N]
+  [--no-starters]` changes a class and needs at least one option. A `--no-…` flag clears a value, as
+  `--no-climb` does for `course set`, and an empty category is refused. The option is called
+  `--rule-category` as in `class add`. MCP has the same as `set_start_window` and `set_class`
+  (`no_rule_category`, `no_expected_starters`), with the checks of ADR 0023 (ruling R29).
+- The skip reasons for a missing start window, missing expected starters and a class without rule category
+  name these commands.
+- In `finding accept --leg COURSE:N`, N is the position the leg leaves in the course's list of controls,
+  counted from 1 with crossing points included, and 0 is the start. It is not the number printed on the map,
+  and the help says so.
+
+Source: final review of plan M2b; controller ruling R29, 2026-11-09.

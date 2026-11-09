@@ -3,8 +3,8 @@
 [Deutsch](README.md)
 
 Finished events on maps from [freemapper's examples](https://github.com/HenryJobst/freemapper/tree/main/examples).
-Each one comes with its project file, the commands that made it and a preview image. The IOF XML 3.0 export for
-OE, the Purple Pen export (`.ppen`), the check findings and the print PDF from freemapper-print follow later.
+Each one comes with its project file, the commands that made it and a preview image. The output of `check` is part of it. The IOF XML 3.0
+export for OE, the Purple Pen export (`.ppen`) and the print PDF from freemapper-print follow later.
 
 | Example | Map | Preview |
 |---|---|---|

@@ -5,9 +5,13 @@
 //! edited in M2a. Terms follow `docs/glossary.md`.
 
 use freemapper_courseplan_model::{
-    Class, Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
-    CourseKind, Event, MapPoint, ModelError, NumberPlacement, SpecialObject, validate,
+    AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
+    CourseControl, CourseKind, Event, FindingKey, LegRef, MapPoint, ModelError, NumberPlacement,
+    SpecialObject, validate,
 };
+
+use crate::check::{Place, check_of};
+use crate::rules::{RuleSet, RulesError, load_rule_set};
 
 /// Why an edit was refused.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -58,6 +62,41 @@ pub enum EditError {
         "special object {0} is a start or finish; each course names its start and finish itself"
     )]
     StartOrFinishHasNoCourses(String),
+    /// The rule is not active in the event's rule profile and overlays.
+    #[error("rule {rule} is not an active rule of rule profile {profile}")]
+    UnknownRule { rule: String, profile: String },
+    /// An accepted finding without course, controls and legs is a finding of the whole event,
+    /// which this rule never reports.
+    #[error(
+        "findings of rule {rule} sit at {}; name that place",
+        place_list(places)
+    )]
+    FindingNeedsPlace { rule: String, places: Vec<Place> },
+    /// A finding sits at one place, so its key names at most one of course, controls and legs,
+    /// and its legs belong to one course.
+    #[error(
+        "a finding of rule {rule} has one place: give a course, controls or legs of one course"
+    )]
+    FindingHasOnePlace { rule: String },
+    /// The rule's findings never sit at this kind of place, so the acceptance could never match.
+    #[error("findings of rule {rule} sit at {}, never at {}", place_list(places), place_words(*place))]
+    FindingWrongPlace {
+        rule: String,
+        place: Place,
+        places: Vec<Place>,
+    },
+    /// No accepted finding has this key.
+    #[error("there is no accepted finding of rule {rule} at this place")]
+    AcceptedNotFound { rule: String },
+    /// A start window of 0 minutes means no window; the start capacity check needs at least 1.
+    #[error("the start window must be at least 1 minute")]
+    StartWindowZero,
+    /// A rule category must not be empty; clear it instead.
+    #[error("the rule category of class {class} is empty; give a category or clear it")]
+    BlankRuleCategory { class: String },
+    /// The rule profile or an overlay cannot be loaded.
+    #[error(transparent)]
+    Rules(#[from] RulesError),
 }
 
 fn cover_all_text(course: &str, specials: &[String]) -> String {
@@ -180,6 +219,25 @@ fn check_inside(extent: &Option<(MapPoint, MapPoint)>, at: &MapPoint) -> Result<
         });
     }
     Ok(())
+}
+
+fn place_words(place: Place) -> &'static str {
+    match place {
+        Place::Event => "the event as a whole",
+        Place::Course => "a course",
+        Place::Control => "one control",
+        Place::Controls => "two or more controls",
+        Place::Leg => "a leg",
+        Place::Legs => "two or more legs of one course",
+    }
+}
+
+fn place_list(places: &[Place]) -> String {
+    let words: Vec<&str> = places.iter().map(|p| place_words(*p)).collect();
+    match words.split_last() {
+        Some((last, rest)) if !rest.is_empty() => format!("{} or {last}", rest.join(", ")),
+        _ => words.join(""),
+    }
 }
 
 fn not_found(what: &'static str, id: impl Into<String>) -> EditError {
@@ -620,4 +678,234 @@ pub fn remove_class(event: &mut Event, name: &str) -> Result<(), EditError> {
         }
         Ok(())
     })
+}
+
+/// Sets the start window of the event: the minutes from the first to the last start, at least 1.
+pub fn set_start_window(event: &mut Event, minutes: u32) -> Result<(), EditError> {
+    if minutes == 0 {
+        return Err(EditError::StartWindowZero);
+    }
+    apply(event, |e| {
+        e.event.start_window_min = Some(minutes);
+        Ok(())
+    })
+}
+
+/// Changes the rule category or the expected number of starters of a class. `None` leaves a
+/// value as it is; `Some(None)` clears it. A category is trimmed, and an empty one is refused.
+pub fn set_class(
+    event: &mut Event,
+    name: &str,
+    rule_category: Option<Option<String>>,
+    expected_starters: Option<Option<u32>>,
+) -> Result<(), EditError> {
+    apply(event, |e| {
+        let class = e
+            .classes
+            .iter_mut()
+            .find(|c| c.name == name)
+            .ok_or_else(|| not_found("class", name))?;
+        if let Some(category) = rule_category {
+            let category = category.map(|c| c.trim().to_owned());
+            if category.as_deref() == Some("") {
+                return Err(EditError::BlankRuleCategory {
+                    class: name.to_owned(),
+                });
+            }
+            class.rule_category = category;
+        }
+        if let Some(starters) = expected_starters {
+            class.expected_starters = starters;
+        }
+        Ok(())
+    })
+}
+
+/// Sets `from` and `to` of each leg to the ends the leg has in its course now (ruling R24).
+fn fill_leg_ends(event: &Event, legs: &mut [LegRef]) -> Result<(), EditError> {
+    for leg in legs {
+        let course = event
+            .courses
+            .iter()
+            .find(|c| c.name == leg.course)
+            .ok_or_else(|| not_found("course", leg.course.clone()))?;
+        let CourseKind::Individual { controls } = &course.kind else {
+            return Err(EditError::NotSupported {
+                course: course.name.clone(),
+            });
+        };
+        let after = leg.after as usize;
+        if after > controls.len() {
+            return Err(EditError::BadIndex {
+                course: leg.course.clone(),
+                index: after,
+            });
+        }
+        leg.from = match after {
+            0 => course.start.clone(),
+            n => controls[n - 1].code.0.clone(),
+        };
+        leg.to = controls
+            .get(after)
+            .map_or_else(|| course.finish.clone(), |c| c.code.0.clone());
+    }
+    Ok(())
+}
+
+/// What [`accept_finding`] did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Accepted {
+    Added,
+    /// An accepted finding with the same key existed; its note is replaced.
+    NoteReplaced,
+}
+
+/// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
+/// controls and legs must exist. The key names one place: nothing for a finding of the whole
+/// event (only for rules whose findings can sit there), a course, one control, several controls,
+/// one leg or several legs of one course. A place kind the rule's check never reports is refused
+/// (`Check::places`, ADR 0026). A control may also be a start or finish id, for every rule.
+/// A leg is named by course and position; its ends (`LegRef::from`, `to`) are taken from the
+/// course as it is now, whatever the caller passed (ruling R24). Controls and legs are stored in
+/// the order of their key. Accepting a key again replaces the note. Returns what it did and the
+/// stored entry, whose legs carry the ends; an older entry at the same position with other ends
+/// is a different key and stays as it is.
+pub fn accept_finding(
+    event: &mut Event,
+    rules: &RuleSet,
+    mut finding: AcceptedFinding,
+) -> Result<(Accepted, AcceptedFinding), EditError> {
+    let Some(set_rule) = rules.rule(&finding.rule) else {
+        let mut profile = vec![rules.base.as_str()];
+        profile.extend(rules.overlays.iter().map(String::as_str));
+        return Err(EditError::UnknownRule {
+            rule: finding.rule,
+            profile: profile.join(" + "),
+        });
+    };
+    let places = usize::from(finding.course.is_some())
+        + usize::from(!finding.controls.is_empty())
+        + usize::from(!finding.legs.is_empty());
+    let one_place = || EditError::FindingHasOnePlace {
+        rule: finding.rule.clone(),
+    };
+    let leg_courses = finding.legs.iter().map(|l| &l.course);
+    let mixed_courses = leg_courses
+        .clone()
+        .zip(leg_courses.skip(1))
+        .any(|(a, b)| a != b);
+    if places > 1 || mixed_courses {
+        return Err(one_place());
+    }
+    fill_leg_ends(event, &mut finding.legs)?;
+    let key = finding.key();
+    if let Some(check) = check_of(&set_rule.rule.key) {
+        let place = Place::of_key(&key);
+        if place == Place::Event && !check.reports_at(place) {
+            return Err(EditError::FindingNeedsPlace {
+                rule: finding.rule,
+                places: check.places.to_vec(),
+            });
+        }
+        if !check.reports_at(place) {
+            return Err(EditError::FindingWrongPlace {
+                rule: finding.rule,
+                place,
+                places: check.places.to_vec(),
+            });
+        }
+    }
+    apply(event, |e| {
+        if let Some(name) = &key.course {
+            course_mut(e, name)?;
+        }
+        for code in &key.controls {
+            // A start or finish can be one of the places of a distance finding.
+            let stop = e.specials.iter().any(|s| {
+                matches!(
+                    s,
+                    SpecialObject::Start { .. } | SpecialObject::Finish { .. }
+                ) && s.id() == code.0
+            });
+            if !stop {
+                control_mut(e, code)?;
+            }
+        }
+        if let Some(existing) = e.accepted_findings.iter_mut().find(|a| a.key() == key) {
+            existing.note = finding.note;
+            return Ok((Accepted::NoteReplaced, existing.clone()));
+        }
+        let stored = AcceptedFinding {
+            rule: key.rule.clone(),
+            controls: key.controls.clone(),
+            course: key.course.clone(),
+            legs: key.legs.clone(),
+            note: finding.note,
+        };
+        e.accepted_findings.push(stored.clone());
+        Ok((Accepted::Added, stored))
+    })
+}
+
+/// Removes the accepted findings with this key, so the finding is reported again, and returns
+/// them. Legs are named by course and position. The entry whose leg ends are the leg's ends in
+/// the course now is removed if there is one. Only without such an exact match do legs compare
+/// by course and position ([`FindingKey::by_position`]), so an acceptance whose leg now runs
+/// between other stops, or whose course is gone, can still be removed; if that finds several
+/// stale entries, all of them go, since none of them matches the course as it is.
+pub fn remove_accepted_finding(
+    event: &mut Event,
+    key: &FindingKey,
+) -> Result<Vec<AcceptedFinding>, EditError> {
+    let mut legs = key.legs.clone();
+    let exact = fill_leg_ends(event, &mut legs).ok().map(|()| {
+        AcceptedFinding {
+            rule: key.rule.clone(),
+            controls: key.controls.clone(),
+            course: key.course.clone(),
+            legs,
+            note: String::new(),
+        }
+        .key()
+    });
+    let exact = exact.filter(|k| event.accepted_findings.iter().any(|a| &a.key() == k));
+    let wanted = key.by_position();
+    apply(event, |e| {
+        let (removed, kept): (Vec<AcceptedFinding>, Vec<AcceptedFinding>) =
+            std::mem::take(&mut e.accepted_findings)
+                .into_iter()
+                .partition(|a| match &exact {
+                    Some(k) => &a.key() == k,
+                    None => a.key().by_position() == wanted,
+                });
+        e.accepted_findings = kept;
+        if removed.is_empty() {
+            return Err(EditError::AcceptedNotFound {
+                rule: key.rule.clone(),
+            });
+        }
+        Ok(removed)
+    })
+}
+
+/// Sets the base rule profile and the overlays of the event, after loading them together with
+/// [`load_rule_set`]. An overlay named twice counts once. Returns the loaded rule set.
+pub fn set_rule_profile(
+    event: &mut Event,
+    base: &str,
+    overlays: &[String],
+) -> Result<RuleSet, EditError> {
+    let mut unique: Vec<String> = Vec::new();
+    for overlay in overlays {
+        if !unique.contains(overlay) {
+            unique.push(overlay.clone());
+        }
+    }
+    let set = load_rule_set(base, &unique)?;
+    apply(event, |e| {
+        e.event.rule_profile = base.to_owned();
+        e.event.rule_overlays = unique;
+        Ok(())
+    })?;
+    Ok(set)
 }

@@ -40,10 +40,12 @@ use unic_langid::LanguageIdentifier;
 
 use freemapper_courseplan_model::{ModelError, ProjectError};
 
+use crate::check::Place;
 use crate::course::CourseError;
 use crate::edit::EditError;
 use crate::init::InitError;
 use crate::omap::OmapError;
+use crate::rules::RulesError;
 
 /// A language of the program texts, identified by its language part (`en`, `de`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -263,6 +265,9 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::BlankNote { rule } => {
+                text(lang, "error-model-blank-note", &[("name", v(rule))])
+            }
             ModelError::CodeClashesWithSpecial(code) => text(
                 lang,
                 "error-model-code-clashes-with-special",
@@ -427,6 +432,22 @@ impl Localize for CourseError {
     }
 }
 
+fn place_word(lang: &Lang, place: &Place) -> String {
+    text(lang, &format!("word-place-{}", place.as_str()), &[])
+}
+
+/// "a, b or c" of place kinds.
+fn place_list(lang: &Lang, places: &[Place]) -> String {
+    let words: Vec<String> = places.iter().map(|p| place_word(lang, p)).collect();
+    match words.split_last() {
+        Some((last, rest)) if !rest.is_empty() => {
+            let or = text(lang, "word-or", &[]);
+            format!("{} {or} {last}", rest.join(", "))
+        }
+        _ => words.concat(),
+    }
+}
+
 impl Localize for EditError {
     fn localize(&self, lang: &Lang) -> String {
         match self {
@@ -483,6 +504,84 @@ impl Localize for EditError {
                 lang,
                 "error-edit-start-or-finish-has-no-courses",
                 &[("id", v(id))],
+            ),
+            EditError::UnknownRule { rule, profile } => text(
+                lang,
+                "error-edit-unknown-rule",
+                &[("name", v(rule)), ("id", v(profile))],
+            ),
+            EditError::FindingNeedsPlace { rule, places } => text(
+                lang,
+                "error-edit-finding-needs-place",
+                &[("name", v(rule)), ("places", v(place_list(lang, places)))],
+            ),
+            EditError::FindingHasOnePlace { rule } => text(
+                lang,
+                "error-edit-finding-has-one-place",
+                &[("name", v(rule))],
+            ),
+            EditError::FindingWrongPlace {
+                rule,
+                place,
+                places,
+            } => text(
+                lang,
+                "error-edit-finding-wrong-place",
+                &[
+                    ("name", v(rule)),
+                    ("place", v(place_word(lang, place))),
+                    ("places", v(place_list(lang, places))),
+                ],
+            ),
+            EditError::AcceptedNotFound { rule } => {
+                text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
+            }
+            EditError::StartWindowZero => text(lang, "error-edit-start-window-zero", &[]),
+            EditError::BlankRuleCategory { class } => text(
+                lang,
+                "error-edit-blank-rule-category",
+                &[("name", v(class))],
+            ),
+            EditError::Rules(e) => e.localize(lang),
+        }
+    }
+}
+
+impl Localize for RulesError {
+    fn localize(&self, lang: &Lang) -> String {
+        match self {
+            RulesError::UnknownProfile { id, available } => text(
+                lang,
+                "error-rules-unknown-profile",
+                &[("id", v(id)), ("list", v(available))],
+            ),
+            RulesError::NotABase(id) => text(lang, "error-rules-not-a-base", &[("id", v(id))]),
+            RulesError::NotAnOverlay(id) => {
+                text(lang, "error-rules-not-an-overlay", &[("id", v(id))])
+            }
+            RulesError::OverlayForAnotherBase {
+                overlay,
+                extends,
+                base,
+            } => text(
+                lang,
+                "error-rules-overlay-for-another-base",
+                &[("id", v(overlay)), ("other", v(extends)), ("name", v(base))],
+            ),
+            RulesError::Malformed { profile, message } => text(
+                lang,
+                "error-rules-malformed",
+                &[("id", v(profile)), ("message", v(message))],
+            ),
+            RulesError::UnknownKey { profile, rule, key } => text(
+                lang,
+                "error-rules-unknown-key",
+                &[("id", v(profile)), ("name", v(rule)), ("key", v(key))],
+            ),
+            RulesError::UnknownRule { overlay, rule } => text(
+                lang,
+                "error-rules-unknown-rule",
+                &[("id", v(overlay)), ("name", v(rule))],
             ),
         }
     }
@@ -611,6 +710,54 @@ mod tests {
             "specials",
             "values",
             "crossings",
+            "discipline",
+            "scale",
+            "warnings",
+            "hints",
+            "accepted",
+            "skipped",
+            "note",
+            "rule",
+            "location",
+            "reason",
+            "doc",
+            "section",
+            "first",
+            "first_kind",
+            "second",
+            "second_kind",
+            "first_symbol",
+            "second_symbol",
+            "metres",
+            "limit",
+            "stop",
+            "stop_kind",
+            "place",
+            "places",
+            "legs",
+            "leg",
+            "overlay",
+            "unmatched",
+            "minutes",
+            "degrees",
+            "min_length",
+            "min",
+            "max",
+            "symbol",
+            "start",
+            "shared",
+            "classes",
+            "category",
+            "categories",
+            "percent",
+            "reference",
+            "rows",
+            "easy",
+            "hard",
+            "actual",
+            "length",
+            "climb",
+            "target",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -716,7 +863,7 @@ mod tests {
             .skip(1)
             .step_by(2)
             .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-"]
+                ["error-", "cli-", "word-", "mcp-", "check-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
@@ -727,9 +874,89 @@ mod tests {
             .collect()
     }
 
+    /// Every non-test source file directly under `src/check/`; the guard test below fails when a
+    /// new module is missing here, so its message ids are scanned.
+    const CHECK_SOURCES: [(&str, &str); 11] = [
+        ("mod.rs", include_str!("check/mod.rs")),
+        ("codes.rs", include_str!("check/codes.rs")),
+        ("context.rs", include_str!("check/context.rs")),
+        ("distance.rs", include_str!("check/distance.rs")),
+        ("geometry.rs", include_str!("check/geometry.rs")),
+        ("legs.rs", include_str!("check/legs.rs")),
+        ("start.rs", include_str!("check/start.rs")),
+        ("stops.rs", include_str!("check/stops.rs")),
+        ("tables.rs", include_str!("check/tables.rs")),
+        ("tests.rs", include_str!("check/tests.rs")),
+        ("testing.rs", include_str!("check/testing.rs")),
+    ];
+
+    #[test]
+    fn every_check_module_is_scanned_for_message_ids() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/check");
+        let mut missing = Vec::new();
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "rs") {
+                let name = path.file_name().unwrap().to_str().unwrap().to_owned();
+                if !CHECK_SOURCES.iter().any(|(n, _)| *n == name) {
+                    missing.push(name);
+                }
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "add to CHECK_SOURCES in text.rs: {missing:?}"
+        );
+    }
+
+    #[test]
+    fn list_and_table_check_texts_render_in_every_language() {
+        let n = |x: f64| FluentValue::from(x);
+        let row = |lang: &Lang| {
+            text(
+                lang,
+                "check-nor-lkm-row",
+                &[
+                    ("categories", v("H-12")),
+                    ("target", n(3.9)),
+                    ("min", n(3.7)),
+                    ("max", n(4.1)),
+                ],
+            )
+        };
+        let en = row(&lang_of("en"));
+        assert!(
+            en.contains("H-12") && en.contains("3.9") && en.contains("4.1"),
+            "{en}"
+        );
+        let de = row(&lang_of("de"));
+        assert!(de.contains("H-12") && de.contains("Ziel-Lkm"), "{de}");
+        for lang in available() {
+            let empty = text(
+                &lang,
+                "check-skip-length-reference-empty",
+                &[("course", v("HE"))],
+            );
+            assert!(empty.contains("HE") && empty.contains('0'), "{empty}");
+            let unknown = text(
+                &lang,
+                "check-skip-category-not-in-table",
+                &[("categories", v("D-99"))],
+            );
+            assert!(unknown.contains("D-99"), "{unknown}");
+        }
+    }
+
     #[test]
     fn ids_used_in_code_exist() {
         let mut ids = ids_in_source(include_str!("text.rs"));
+        for (_, source) in CHECK_SOURCES {
+            ids.extend(ids_in_source(source));
+        }
+        assert!(
+            ids.contains("check-skip-print-scale"),
+            "the scanner sees the check module"
+        );
         assert!(ids.len() > 30, "scanner found only {}", ids.len());
         for kind in ["individual", "team", "relay", "score"] {
             ids.insert(format!("word-kind-{kind}"));
@@ -750,6 +977,9 @@ mod tests {
             "class-name",
         ] {
             ids.insert(format!("word-name-{what}"));
+        }
+        for place in Place::ALL {
+            ids.insert(format!("word-place-{}", place.as_str()));
         }
         for kind in [
             "marked-route",
@@ -835,6 +1065,7 @@ mod tests {
                 what: "control code",
                 value: s(" 31"),
             },
+            ModelError::BlankNote { rule: s("r") },
             ModelError::CodeClashesWithSpecial(code("S1")),
             ModelError::DuplicateCourseInSpecial {
                 id: s("w1"),
@@ -971,6 +1202,28 @@ mod tests {
                 specials: vec![s("W1"), s("M2")],
             },
             EditError::StartOrFinishHasNoCourses(s("S1")),
+            EditError::UnknownRule {
+                rule: s("wkb2026.no.such"),
+                profile: s("wkb-2026 + nor-bb-2021"),
+            },
+            EditError::FindingNeedsPlace {
+                rule: s("wkb2026.distance.min"),
+                places: vec![Place::Controls],
+            },
+            EditError::FindingHasOnePlace {
+                rule: s("wkb2026.distance.min"),
+            },
+            EditError::FindingWrongPlace {
+                rule: s("wkb2026.distance.min"),
+                place: Place::Course,
+                places: vec![Place::Controls],
+            },
+            EditError::AcceptedNotFound {
+                rule: s("wkb2026.distance.min"),
+            },
+            EditError::StartWindowZero,
+            EditError::BlankRuleCategory { class: s("H21") },
+            EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
         for what in [
             "control",
@@ -983,6 +1236,34 @@ mod tests {
         }
         for e in &edits {
             check(e);
+        }
+        for e in [
+            RulesError::UnknownProfile {
+                id: s("wkb-2025"),
+                available: s("wkb-2026, nor-bb-2021"),
+            },
+            RulesError::NotABase(s("nor-bb-2021")),
+            RulesError::NotAnOverlay(s("wkb-2026")),
+            RulesError::OverlayForAnotherBase {
+                overlay: s("nor-bb-2021"),
+                extends: s("wkb-2026"),
+                base: s("iof-2026"),
+            },
+            RulesError::Malformed {
+                profile: s("wkb-2026"),
+                message: s("format = 1 is missing"),
+            },
+            RulesError::UnknownKey {
+                profile: s("wkb-2026"),
+                rule: s("wkb2026.x.y"),
+                key: s("no_such_check"),
+            },
+            RulesError::UnknownRule {
+                overlay: s("nor-bb-2021"),
+                rule: s("wkb2026.x.y"),
+            },
+        ] {
+            check(&e);
         }
     }
 

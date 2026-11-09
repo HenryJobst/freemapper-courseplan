@@ -318,6 +318,28 @@ pub enum Discipline {
     Training,
 }
 
+impl Discipline {
+    /// Every discipline, in declaration order.
+    pub const ALL: [Discipline; 5] = [
+        Discipline::Sprint,
+        Discipline::Middle,
+        Discipline::Long,
+        Discipline::Ultralong,
+        Discipline::Training,
+    ];
+
+    /// The name used in project and profile files.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Discipline::Sprint => "sprint",
+            Discipline::Middle => "middle",
+            Discipline::Long => "long",
+            Discipline::Ultralong => "ultralong",
+            Discipline::Training => "training",
+        }
+    }
+}
+
 /// A start class, optionally tied to a rule category.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Class {
@@ -336,7 +358,97 @@ pub struct AcceptedFinding {
     pub controls: Vec<ControlCode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub course: Option<String>,
+    /// Legs the finding sits on; part of its key together with `rule` and `controls`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub legs: Vec<LegRef>,
     pub note: String,
+}
+
+/// What identifies an accepted finding: rule id, course, and the controls and legs it names.
+/// Controls and legs are deduplicated and sorted, so their order in the file does not matter.
+/// `course: None` and `Some` are different keys.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FindingKey {
+    pub rule: String,
+    pub course: Option<String>,
+    pub controls: Vec<ControlCode>,
+    pub legs: Vec<LegRef>,
+}
+
+impl AcceptedFinding {
+    /// The key a check finding is matched against. Controls whose code is all digits come first,
+    /// by numeric value; other codes follow in lexical order.
+    pub fn key(&self) -> FindingKey {
+        let mut controls = self.controls.clone();
+        controls.sort_by(|a, b| control_order(a).cmp(&control_order(b)));
+        controls.dedup();
+        let mut legs = self.legs.clone();
+        legs.sort();
+        legs.dedup();
+        FindingKey {
+            rule: self.rule.clone(),
+            course: self.course.clone(),
+            controls,
+            legs,
+        }
+    }
+}
+
+impl FindingKey {
+    /// The key with the ends of its legs left out, so legs compare by course and position only.
+    /// `finding remove` names a leg this way, also after its ends changed.
+    pub fn by_position(&self) -> FindingKey {
+        let mut legs: Vec<LegRef> = self
+            .legs
+            .iter()
+            .map(|l| LegRef::at(l.course.clone(), l.after))
+            .collect();
+        legs.sort();
+        legs.dedup();
+        FindingKey {
+            legs,
+            ..self.clone()
+        }
+    }
+}
+
+/// Sort key of a control code: numeric codes (by value, then spelling) before the rest.
+fn control_order(code: &ControlCode) -> (bool, usize, &str, &str) {
+    let text = code.0.as_str();
+    if !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()) {
+        let digits = text.trim_start_matches('0');
+        (false, digits.len(), digits, text)
+    } else {
+        (true, 0, text, text)
+    }
+}
+
+/// A leg of a course: the leg that leaves position `after` of the course's stop list (1-based,
+/// as in the CLI, crossing points included; 0 is the leg from the start), with the ids of the
+/// stops at its ends: control codes, or the ids of the start and the finish (ruling R24 of plan
+/// M2b). The ends are part of the key, so an accepted finding on a leg comes back once the leg
+/// runs between other stops. A file without them reads them as empty; such a key matches no
+/// finding.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct LegRef {
+    pub course: String,
+    pub after: u32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub from: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub to: String,
+}
+
+impl LegRef {
+    /// The leg by course and position only, with empty ends.
+    pub fn at(course: impl Into<String>, after: u32) -> LegRef {
+        LegRef {
+            course: course.into(),
+            after,
+            from: String::new(),
+            to: String::new(),
+        }
+    }
 }
 
 /// The rule profile of an event whose file names none.
@@ -356,6 +468,9 @@ pub struct EventMeta {
     pub discipline: Discipline,
     #[serde(default = "default_rule_profile")]
     pub rule_profile: String,
+    /// Overlay profiles applied on top of `rule_profile`, in order.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rule_overlays: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start_window_min: Option<u32>,
 }
@@ -443,6 +558,7 @@ mod tests {
                 date: Some("2026-11-14".parse().unwrap()),
                 discipline: Discipline::Sprint,
                 rule_profile: "wkb-2026".to_owned(),
+                rule_overlays: vec!["nor-bb-2021".to_owned()],
                 start_window_min: Some(90),
             },
             sources: Sources {
@@ -544,12 +660,80 @@ mod tests {
                 rule: "wkb26.b7.2.1.min_distance".to_owned(),
                 controls: vec![code("31"), code("44")],
                 course: None,
+                legs: vec![LegRef {
+                    course: "A".to_owned(),
+                    after: 3,
+                    from: "33".to_owned(),
+                    to: "34".to_owned(),
+                }],
                 note: "Checked on site.".to_owned(),
             }],
         };
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();
         assert_eq!(back, event, "{text}");
+    }
+
+    #[test]
+    fn finding_key_sorts_and_deduplicates() {
+        let code = |s: &str| ControlCode(s.to_owned());
+        let leg = |c: &str, after| LegRef::at(c, after);
+        let finding =
+            |controls: Vec<ControlCode>, legs: Vec<LegRef>, course: Option<&str>| AcceptedFinding {
+                rule: "r".to_owned(),
+                controls,
+                course: course.map(str::to_owned),
+                legs,
+                note: "n".to_owned(),
+            };
+        let key = finding(
+            vec![
+                code("100"),
+                code("S1"),
+                code("31"),
+                code("100"),
+                code("9"),
+                code("A"),
+            ],
+            vec![leg("B", 1), leg("A", 3), leg("A", 0), leg("A", 3)],
+            None,
+        )
+        .key();
+        assert_eq!(
+            key.controls,
+            vec![code("9"), code("31"), code("100"), code("A"), code("S1")]
+        );
+        assert_eq!(key.legs, vec![leg("A", 0), leg("A", 3), leg("B", 1)]);
+        let shuffled = finding(
+            vec![code("A"), code("9"), code("S1"), code("100"), code("31")],
+            vec![leg("A", 3), leg("B", 1), leg("A", 0)],
+            None,
+        );
+        assert_eq!(shuffled.key(), key);
+        let with_course = finding(shuffled.controls.clone(), shuffled.legs.clone(), Some("A"));
+        assert_ne!(with_course.key(), key);
+    }
+
+    #[test]
+    fn leg_ends_are_part_of_the_key_but_not_of_the_position() {
+        let leg = |from: &str, to: &str| LegRef {
+            course: "A".to_owned(),
+            after: 6,
+            from: from.to_owned(),
+            to: to.to_owned(),
+        };
+        let accepted = |legs: Vec<LegRef>| AcceptedFinding {
+            rule: "r".to_owned(),
+            controls: vec![],
+            course: None,
+            legs,
+            note: "n".to_owned(),
+        };
+        let old = accepted(vec![leg("36", "37")]).key();
+        let moved = accepted(vec![leg("36", "38")]).key();
+        assert_ne!(old, moved);
+        assert_eq!(old.by_position(), moved.by_position());
+        assert_eq!(old.by_position().legs, vec![LegRef::at("A", 6)]);
     }
 
     #[test]

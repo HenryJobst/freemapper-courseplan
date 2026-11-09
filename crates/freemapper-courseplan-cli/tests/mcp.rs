@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 25] = [
+const TOOLS: [&str; 31] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -22,6 +22,7 @@ const TOOLS: [&str; 25] = [
     "set_special_courses",
     "add_class",
     "remove_class",
+    "set_class",
     "add_course",
     "remove_course",
     "set_course_controls",
@@ -32,6 +33,11 @@ const TOOLS: [&str; 25] = [
     "map_features_near",
     "map_extent",
     "init_event",
+    "check",
+    "accept_finding",
+    "remove_accepted_finding",
+    "set_rule_profile",
+    "set_start_window",
 ];
 
 struct Session {
@@ -868,5 +874,416 @@ fn new_tools_do_not_quote_the_file() {
                 assert!(!text.contains(word), "{tool}: {text}");
             }
         }
+    }
+}
+
+/// A project with start, finish, controls 31 and 32 and course A. The points lie in an open part
+/// of the Lübeck map, so the map-based checks find nothing.
+fn checked_workspace(session: &mut Session) -> (tempfile::TempDir, PathBuf) {
+    let (dir, map, project) = workspace();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let p = |x: f64, y: f64| json!({ "x": x, "y": y });
+    session.ok(
+        "add_special",
+        json!({ "project": project, "kind": "start", "id": "S1", "at": p(88.0, 82.0) }),
+    );
+    session.ok(
+        "add_special",
+        json!({ "project": project, "kind": "finish", "id": "F1", "at": p(118.0, 82.0) }),
+    );
+    session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(93.0, 89.0) }),
+    );
+    session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(113.0, 89.0) }),
+    );
+    session.ok(
+        "add_course",
+        json!({ "project": project, "name": "A", "start": "S1", "finish": "F1", "controls": [31, 32] }),
+    );
+    (dir, project)
+}
+
+#[test]
+fn check_returns_findings_accepted_and_skipped() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["rule_profile"], "wkb-2026");
+    assert_eq!(report["findings"], json!([]), "{report}");
+    assert_eq!(report["accepted"], json!([]));
+    let skipped = report["skipped"].as_array().unwrap();
+    assert!(!skipped.is_empty());
+    assert_eq!(report["summary"]["skipped"], skipped.len());
+    assert_eq!(report["summary"]["errors"], 0);
+    for s in skipped {
+        assert!(s["rule"].as_str().unwrap().starts_with("wkb2026."), "{s}");
+        assert_eq!(s["profile"], "wkb-2026");
+        assert!(s["location"]["kind"].is_string(), "{s}");
+        assert!(
+            s["reason_id"].as_str().unwrap().starts_with("check-skip-"),
+            "{s}"
+        );
+        assert!(s["args"].is_object(), "{s}");
+        assert!(s["text"].as_str().unwrap().len() > 8, "{s}");
+    }
+    let info = session.ok("event_info", json!({ "project": project }));
+    assert_eq!(info["rule_profile"], "wkb-2026");
+    assert_eq!(info["rule_overlays"], json!([]));
+}
+
+#[test]
+fn check_speaks_german() {
+    let mut session = Session::start_in("de");
+    let (_dir, project) = checked_workspace(&mut session);
+    let report = session.ok("check", json!({ "project": project }));
+    let texts: Vec<&str> = report["skipped"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| s["text"].as_str().unwrap())
+        .collect();
+    assert!(
+        texts.contains(&"Die Veranstaltung hat kein Startfenster; event start-window setzt es"),
+        "{texts:?}"
+    );
+    let (error, text) = session.call(
+        "remove_accepted_finding",
+        json!({ "project": project, "rule": "wkb2026.distance.min", "controls": [31] }),
+    );
+    assert!(error);
+    assert!(text.contains("keinen akzeptierten Befund"), "{text}");
+}
+
+#[test]
+fn accept_and_remove_findings() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let accepted = session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": " wkb2026.distance.min_half ", "controls": [32, "31"],
+            "note": "on purpose"
+        }),
+    );
+    assert_eq!(accepted["rule"], "wkb2026.distance.min_half");
+    assert_eq!(accepted["controls"], json!(["31", "32"]));
+    assert_eq!(accepted["replaced"], false);
+    let again = session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.distance.min_half", "controls": ["31", "32"],
+            "note": "still on purpose"
+        }),
+    );
+    assert_eq!(again["replaced"], true);
+    let leg = session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 2 }], "note": "n"
+        }),
+    );
+    // The server stores the ends of the leg from the course (ruling R24).
+    assert_eq!(
+        leg["legs"],
+        json!([{ "course": "A", "after": 2, "from": "32", "to": "F1" }])
+    );
+    let text = std::fs::read_to_string(&project).unwrap();
+    assert_eq!(text.matches("[[accepted_findings]]").count(), 2, "{text}");
+    assert!(text.contains("still on purpose"), "{text}");
+
+    let before = std::fs::read_to_string(&project).unwrap();
+    for (args, expected) in [
+        (
+            json!({ "project": project, "rule": "wkb2026.distance.min_half", "note": "n" }),
+            "name that place",
+        ),
+        (
+            json!({ "project": project, "rule": "wkb2026.no.such", "controls": [31], "note": "n" }),
+            "not an active rule",
+        ),
+        (
+            json!({
+                "project": project, "rule": "wkb2026.leg.through_control", "note": "n",
+                "legs": [{ "course": "A", "after": 9 }]
+            }),
+            "position 9",
+        ),
+    ] {
+        let (error, text) = session.call("accept_finding", args);
+        assert!(error, "{text}");
+        assert!(text.contains(expected), "{text}");
+    }
+    let message = session.request_full(
+        "tools/call",
+        json!({ "name": "accept_finding", "arguments": {
+            "project": project, "rule": "wkb2026.code.range", "control": [31], "note": "n"
+        } }),
+    );
+    let refused = message.get("error").is_some() || message["result"]["isError"] == true;
+    assert!(refused, "{message}");
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+
+    session.ok(
+        "remove_accepted_finding",
+        json!({ "project": project, "rule": "wkb2026.distance.min_half", "controls": [31, 32] }),
+    );
+    let (error, _) = session.call(
+        "remove_accepted_finding",
+        json!({ "project": project, "rule": "wkb2026.distance.min_half", "controls": [31, 32] }),
+    );
+    assert!(error);
+}
+
+#[test]
+fn set_rule_profile_validates_first() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let set = session.ok(
+        "set_rule_profile",
+        json!({ "project": project, "base": "wkb-2026", "overlays": ["nor-bb-2021"] }),
+    );
+    assert_eq!(set["rule_overlays"], json!(["nor-bb-2021"]));
+    let info = session.ok("event_info", json!({ "project": project }));
+    assert_eq!(info["rule_overlays"], json!(["nor-bb-2021"]));
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["rule_overlays"], json!(["nor-bb-2021"]));
+
+    let before = std::fs::read_to_string(&project).unwrap();
+    let (error, text) = session.call(
+        "set_rule_profile",
+        json!({ "project": project, "base": "wkb-1999" }),
+    );
+    assert!(error);
+    assert!(
+        text.contains("wkb-2026") && text.contains("nor-bb-2021"),
+        "{text}"
+    );
+    let (error, _) = session.call(
+        "set_rule_profile",
+        json!({ "project": project, "base": "nor-bb-2021" }),
+    );
+    assert!(error);
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+}
+
+#[test]
+fn check_tools_do_not_quote_the_file() {
+    let dir = tempfile::tempdir().unwrap();
+    let broken = dir.path().join("broken.toml");
+    std::fs::write(&broken, "magic = sesame-4711 = oops\n").unwrap();
+    let foreign = dir.path().join("settings.toml");
+    std::fs::write(&foreign, "sesame_key = 1\n[vault]\nopen = 2\n").unwrap();
+    let mut session = Session::start();
+    for project in [&broken, &foreign] {
+        for (tool, args) in [
+            ("check", json!({ "project": project })),
+            (
+                "accept_finding",
+                json!({ "project": project, "rule": "r", "controls": [31], "note": "n" }),
+            ),
+            (
+                "remove_accepted_finding",
+                json!({ "project": project, "rule": "r", "controls": [31] }),
+            ),
+            (
+                "set_rule_profile",
+                json!({ "project": project, "base": "wkb-2026" }),
+            ),
+        ] {
+            let (error, text) = session.call(tool, args);
+            assert!(error, "{tool}: {text}");
+            for word in ["sesame", "4711", "magic", "vault"] {
+                assert!(!text.contains(word), "{tool}: {text}");
+            }
+        }
+    }
+    let (error, text) = session.call("check", json!({ "project": dir.path().join("x.txt") }));
+    assert!(error);
+    assert!(text.contains("not a project file"), "{text}");
+}
+
+#[test]
+fn an_acceptance_that_matches_nothing_is_returned_as_unmatched() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }], "note": "kept"
+        }),
+    );
+    session.ok(
+        "set_course_controls",
+        json!({ "project": project, "name": "A", "codes": [32, 31] }),
+    );
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["summary"]["unmatched"], 1, "{report}");
+    assert_eq!(report["summary"]["errors"], 0);
+    let u = &report["unmatched"][0];
+    assert_eq!(u["rule"], "wkb2026.leg.through_control");
+    assert_eq!(u["note"], "kept");
+    assert_eq!(
+        u["location"],
+        json!({ "kind": "leg", "course": "A", "after": 1, "from": "31", "to": "32" })
+    );
+    assert_eq!(u["text"], "course A, leg 31–32");
+    // Accepting leg A:1 again stores a new entry 32–31 and returns it, not the stale 31–32.
+    let again = session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }], "note": "new leg"
+        }),
+    );
+    assert_eq!(again["note"], "new leg");
+    assert_eq!(
+        again["legs"],
+        json!([{ "course": "A", "after": 1, "from": "32", "to": "31" }])
+    );
+    assert_eq!(again["replaced"], false);
+    // Removing A:1 takes the exact entry first, the stale one stays unmatched.
+    let exact = session.ok(
+        "remove_accepted_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }]
+        }),
+    );
+    assert_eq!(exact["removed"].as_array().unwrap().len(), 1);
+    assert_eq!(exact["removed"][0]["note"], "new leg");
+    // remove_accepted_finding then matches the stale leg by position and returns what it removed.
+    let removed = session.ok(
+        "remove_accepted_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }]
+        }),
+    );
+    assert_eq!(removed["removed"][0]["legs"][0]["to"], "32");
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["unmatched"], json!([]));
+}
+
+#[test]
+fn start_window_and_class_settings() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let text = std::fs::read_to_string(&project).unwrap();
+    std::fs::write(&project, format!("# planned by H.\n{text}")).unwrap();
+    let set = session.ok(
+        "set_start_window",
+        json!({ "project": project, "minutes": 90 }),
+    );
+    assert_eq!(set["start_window_min"], 90);
+    session.ok("add_class", json!({ "project": project, "name": "H21" }));
+    let class = session.ok(
+        "set_class",
+        json!({
+            "project": project, "name": "H21", "rule_category": "H21", "expected_starters": 40
+        }),
+    );
+    assert_eq!(
+        (
+            &class["name"],
+            &class["rule_category"],
+            &class["expected_starters"]
+        ),
+        (&json!("H21"), &json!("H21"), &json!(40))
+    );
+    let cleared = session.ok(
+        "set_class",
+        json!({ "project": project, "name": "H21", "no_expected_starters": true }),
+    );
+    assert_eq!(cleared["rule_category"], "H21");
+    assert_eq!(cleared["expected_starters"], Value::Null);
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(file.starts_with("# planned by H.\n"), "{file}");
+    assert!(file.contains("start_window_min = 90"), "{file}");
+
+    let before = std::fs::read_to_string(&project).unwrap();
+    for (tool, args, expected) in [
+        (
+            "set_start_window",
+            json!({ "project": project, "minutes": 0 }),
+            "at least 1 minute",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21" }),
+            "nothing to change",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "D21", "expected_starters": 3 }),
+            "no class D21",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21", "rule_category": " " }),
+            "is empty",
+        ),
+        (
+            "set_class",
+            json!({
+                "project": project, "name": "H21", "rule_category": "H21",
+                "no_rule_category": true
+            }),
+            "rule_category cannot be used together with no_rule_category",
+        ),
+        (
+            "set_class",
+            json!({
+                "project": project, "name": "H21", "expected_starters": 3,
+                "no_expected_starters": true
+            }),
+            "expected_starters cannot be used together with no_expected_starters",
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains(expected), "{tool}: {text}");
+    }
+    for (tool, args) in [
+        (
+            "set_start_window",
+            json!({ "project": project, "minutes": 5, "seconds": 3 }),
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21", "category": "H21" }),
+        ),
+    ] {
+        let message =
+            session.request_full("tools/call", json!({ "name": tool, "arguments": args }));
+        let refused = message.get("error").is_some() || message["result"]["isError"] == true;
+        assert!(refused, "{tool}: {message}");
+    }
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    // A project file outside the rules is refused without quoting it.
+    let dir = tempfile::tempdir().unwrap();
+    let foreign = dir.path().join("settings.toml");
+    std::fs::write(&foreign, "sesame_key = 1\n").unwrap();
+    for (tool, args) in [
+        (
+            "set_start_window",
+            json!({ "project": foreign, "minutes": 5 }),
+        ),
+        (
+            "set_class",
+            json!({ "project": foreign, "name": "H21", "expected_starters": 3 }),
+        ),
+        (
+            "set_start_window",
+            json!({ "project": "rel/x.toml", "minutes": 5 }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(!text.contains("sesame"), "{tool}: {text}");
     }
 }

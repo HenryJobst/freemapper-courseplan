@@ -68,3 +68,8 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0022](0022-program-texts-in-fluent-files.md) | Program texts in Fluent files, one per language | Accepted | 2026-11-08 |
 | [0023](0023-mcp-server-file-checks-and-redaction.md) | MCP server: localized tool texts, file checks and redacted errors | Accepted | 2026-11-08 |
 | [0024](0024-cli-editing-conventions.md) | CLI editing conventions | Accepted | 2026-11-08 |
+| [0025](0025-rule-profiles-as-data.md) | Rule profiles as data files | Accepted | 2026-11-09 |
+| [0026](0026-check-engine-skipped-rules-and-accepted-findings.md) | Check engine: skipped rules and accepted findings | Accepted | 2026-11-09 |
+| [0027](0027-distance-checks-places-drawn-legs-symbol-codes.md) | Distance checks: places, drawn legs and symbol codes | Accepted | 2026-11-09 |
+| [0028](0028-leg-shape-checks-angles-opposing-legs-two-leg-places.md) | Leg shape checks: angles, opposing legs and findings at two legs | Accepted | 2026-11-09 |
+| [0029](0029-code-start-and-table-checks.md) | Code, start and table checks | Accepted | 2026-11-09 |

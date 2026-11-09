@@ -16,10 +16,13 @@ use freemapper_courseplan_model::{
     MapPoint, NumberPlacement, ProjectFile, SpecialObject,
 };
 
-/// Why a command failed: a wrong call (exit code 2) or a refused operation (exit code 1).
+/// Why a command failed: a wrong call (exit code 2), a refused operation (exit code 1), or a
+/// `check` that found an error (exit code 1; the findings are already printed).
+#[derive(Debug)]
 pub enum Failure {
     Usage(String),
     Error(String),
+    Findings,
 }
 
 type Outcome = Result<(), Failure>;
@@ -148,6 +151,25 @@ pub enum ClassCmd {
     },
     /// Remove a class
     Remove { project: PathBuf, name: String },
+    /// Change the rule category or the expected starters of a class
+    #[command(group(
+        ArgGroup::new("change")
+            .required(true)
+            .multiple(true)
+            .args(["rule_category", "no_rule_category", "starters", "no_starters"])
+    ))]
+    Set {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "CAT", conflicts_with = "no_rule_category")]
+        rule_category: Option<String>,
+        #[arg(long)]
+        no_rule_category: bool,
+        #[arg(long, value_name = "N", conflicts_with = "no_starters")]
+        starters: Option<String>,
+        #[arg(long)]
+        no_starters: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -281,19 +303,23 @@ impl SpecialKind {
 
 /// Arguments that hold codes, ids or names, or lists of them. Their values lose surrounding white
 /// space, each list item on its own, so `--controls "31, 32"` means 31 and 32.
-const TRIMMED: [&str; 8] = [
-    "code", "id", "name", "start", "finish", "controls", "classes", "courses",
+const TRIMMED: [&str; 13] = [
+    "code", "id", "name", "start", "finish", "controls", "classes", "courses", "rule", "course",
+    "leg", "base", "overlay",
 ];
 
 fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
     Ok(value.trim().to_owned())
 }
 
-/// Sets the catalog texts on the four command groups and everything below them, and the trimming
+/// The command groups whose texts [`localize_groups`] sets.
+pub const GROUPS: [&str; 6] = ["control", "special", "class", "course", "finding", "event"];
+
+/// Sets the catalog texts on the command groups and everything below them, and the trimming
 /// value parser on the arguments in [`TRIMMED`].
 pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
     let mut root = root;
-    for group in ["control", "special", "class", "course"] {
+    for group in GROUPS {
         root = root.mut_subcommand(group, |g| {
             let subs: Vec<String> = g
                 .get_subcommands()
@@ -365,7 +391,7 @@ fn parse_placement(lang: &Lang, direction: &str, gap: &str) -> Result<NumberPlac
     Ok(NumberPlacement { direction, gap_mm })
 }
 
-fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
+pub fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
     value
         .parse::<u32>()
         .map_err(|_| Failure::Usage(text(lang, "cli-edit-bad-count", &[("value", v(value))])))
@@ -742,6 +768,30 @@ pub fn class(lang: &Lang, cmd: ClassCmd) -> Outcome {
             edit::remove_class(&mut file.event, &name).map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             say(lang, "cli-edit-class-removed", &[("name", v(name))]);
+        }
+        ClassCmd::Set {
+            project,
+            name,
+            rule_category,
+            no_rule_category,
+            starters,
+            no_starters,
+        } => {
+            let category = match (rule_category, no_rule_category) {
+                (Some(c), _) => Some(Some(c)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let starters = match (starters, no_starters) {
+                (Some(n), _) => Some(Some(parse_count(lang, &n)?)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let mut file = load(lang, &project)?;
+            edit::set_class(&mut file.event, &name, category, starters)
+                .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(lang, "cli-edit-class-set", &[("name", v(name))]);
         }
     }
     Ok(())
