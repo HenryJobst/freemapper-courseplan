@@ -2,6 +2,9 @@
 
 [Deutsche Version](README.md) · [User manual](docs/manual/en.md) · [Glossary](docs/glossary.md) · [Changes](CHANGELOG.en.md)
 
+<!-- claude-cost:start -->
+<!-- claude-cost:end -->
+
 freemapper-courseplan is the course-setting program of the freemapper suite. You set courses by hand in an
 editor in the browser, on the finished map from OpenOrienteering Mapper (OOM). The program checks them against
 the competition rules and hands them on to result software and to printing:

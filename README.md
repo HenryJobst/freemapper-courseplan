@@ -2,6 +2,9 @@
 
 [English version](README.en.md) · [Handbuch](docs/manual/de.md) · [Glossar](docs/glossary.md) · [Änderungen](CHANGELOG.md)
 
+<!-- claude-cost:start -->
+<!-- claude-cost:end -->
+
 freemapper-courseplan ist das Bahnlegungsprogramm der freemapper-Suite. Man legt die Bahnen von Hand in einem
 Editor im Browser, auf der fertigen Karte aus OpenOrienteering Mapper (OOM). Das Programm prüft sie gegen die
 Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
