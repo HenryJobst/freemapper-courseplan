@@ -90,7 +90,8 @@ impl<'de> Deserialize<'de> for ControlCode {
 pub struct NumberPlacement {
     /// Degrees, 0 = east, counter-clockwise.
     pub direction: f64,
-    /// Gap to the circle in print millimetres.
+    /// Shortest distance in print millimetres between the outer edge of the circle line and the
+    /// number box, which sits centred on the direction ray (agreed with freemapper-print, ADR 0030).
     pub gap_mm: f64,
 }
 

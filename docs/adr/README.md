@@ -73,3 +73,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0027](0027-distance-checks-places-drawn-legs-symbol-codes.md) | Distance checks: places, drawn legs and symbol codes | Accepted | 2026-11-09 |
 | [0028](0028-leg-shape-checks-angles-opposing-legs-two-leg-places.md) | Leg shape checks: angles, opposing legs and findings at two legs | Accepted | 2026-11-09 |
 | [0029](0029-code-start-and-table-checks.md) | Code, start and table checks | Accepted | 2026-11-09 |
+| [0030](0030-number-gap-is-the-clearance-to-the-circle-line.md) | The number gap is the clearance to the circle line | Accepted | 2026-11-09 |
