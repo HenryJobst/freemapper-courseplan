@@ -8,7 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
-- `check` weist auf fast gerade Winkel an Posten hin: Bilden die Strecken an einem Posten einen Winkel über 170°,
+- `check` weist auf fast gestreckte Winkel an Posten hin: Bilden die Strecken an einem Posten einen Winkel über 170°,
   gibt es einen Hinweis (`wkb2026.leg.straight_angle_hint`). Querungsstellen bleiben außen vor.
 
 ### Geändert
@@ -16,9 +16,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 - Die automatische Platzierung setzt eine Postennummer hinter den Kreis, in Verlängerung der Strecke, die zum
   Posten führt. Läuft die weiterführende Strecke dort entlang (fast gerader Winkel), steht die Nummer außen, an
   der Spitze des Winkels. Die Nummer deckt keine Punkt- und Liniensymbole der Karte ab, solange ein freier Platz
-  bleibt; Flächen darf sie überdecken. Ist der bevorzugte Platz belegt, nimmt die Platzierung den freien Platz
-  mit der geringsten Abweichung, in Schritten von 15°. Neu gesetzte Nummern stehen daher oft anders als bisher
-  (ADR 0031). freemapper-print baut dieselben Regeln in sein gemeinsames Platzierungsmodul ein.
+  bleibt; Flächen und Nordlinien (Symbol 601) darf sie überdecken. Strecken, Kreise und andere Nummern zählen
+  stärker als Kartensymbole. Ist der bevorzugte Platz belegt, nimmt die Platzierung den freien Platz mit der
+  geringsten Abweichung, in Schritten von 15°; die Richtung ist auf 0,1° gerundet. Neu gesetzte Nummern stehen
+  daher oft anders als bisher (ADR 0031). freemapper-print baut dieselben Regeln in sein gemeinsames Platzierungsmodul ein.
 - Der Abstand einer Postennummer (`--gap`, `gap_mm`) zählt jetzt ab der Außenkante der Kreislinie und meint
   den kürzesten Abstand zum Nummernfeld, in jeder Richtung. Bisher zählte er ab der Mitte der Kreislinie, und
   schräg zum Kreis stand die Nummer weiter weg als angegeben. freemapper-print rechnet ab seinem M3 genauso.

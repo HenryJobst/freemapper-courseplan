@@ -68,42 +68,42 @@ gap_mm = 0.5
 code = 32
 
 [courses.controls.number]
-direction = 87.50101101426645
+direction = 87.5
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 33
 
 [courses.controls.number]
-direction = 3.0528825147924294
+direction = 3.1
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 34
 
 [courses.controls.number]
-direction = 290.0437476488562
+direction = 290.0
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 35
 
 [courses.controls.number]
-direction = 138.5126684721998
+direction = 138.5
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 36
 
 [courses.controls.number]
-direction = 237.0947570770121
+direction = 237.1
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 37
 
 [courses.controls.number]
-direction = 157.67623463562836
+direction = 157.7
 gap_mm = 0.5
 
 [[accepted_findings]]

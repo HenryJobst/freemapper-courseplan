@@ -113,7 +113,8 @@ freemapper-courseplan check halle.courseplan.toml --all
 
 Winkel prüft `check` in beide Richtungen. Spitze Winkel meldet es unter 90° als Hinweis und unter 45° als Warnung.
 Läuft die Bahn an einem Posten fast geradeaus, also mit einem Winkel über 170° zwischen den Strecken, gibt es
-einen Hinweis (`wkb2026.leg.straight_angle_hint`), denn dort ist der Posten schwer als Richtungswechsel zu lesen.
+einen Hinweis (`wkb2026.leg.straight_angle_hint`). Der Posten ändert die Laufrichtung dann kaum, und hinter dem
+Kreis ist kein Platz für die Nummer.
 
 Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
 geprüft wurde.

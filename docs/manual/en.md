@@ -110,7 +110,8 @@ freemapper-courseplan check hall.courseplan.toml --all
 
 `check` tests angles in both directions. It reports an acute angle as a hint below 90° and as a warning below
 45°. If the course runs almost straight at a control, with an angle above 170° between the legs, it gives a hint
-(`wkb2026.leg.straight_angle_hint`), because the control is hard to read as a change of direction there.
+(`wkb2026.leg.straight_angle_hint`). The control then hardly changes the running direction, and there is no room
+for the number behind the circle.
 
 The program does not check team, relay and score courses yet. For each of them it reports once that it was not
 checked.

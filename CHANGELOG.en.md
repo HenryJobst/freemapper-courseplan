@@ -16,8 +16,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 - Automatic placement puts a control number behind the circle, in line with the leg that leads to the control.
   When the next leg runs along that line (an almost straight angle), the number goes outside, at the tip of the
   angle. The number covers no point or line symbol of the map as long as a free place is left; it may cover
-  areas. If the preferred place is taken, placement picks the free place that deviates least, in steps of 15°.
-  Newly placed numbers therefore often stand differently than before (ADR 0031). freemapper-print builds the
+  areas and magnetic north lines (symbol 601). Legs, circles and other numbers weigh more than map symbols. If
+  the preferred place is taken, placement picks the free place that deviates least, in steps of 15°; the
+  direction is rounded to 0.1°. Newly placed numbers therefore often stand differently than before (ADR 0031). freemapper-print builds the
   same rules into its shared placement module.
 - The gap of a control number (`--gap`, `gap_mm`) now starts at the outer edge of the circle line and means
   the shortest distance to the number box, in every direction. It used to start at the centre of the circle

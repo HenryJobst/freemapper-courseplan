@@ -255,8 +255,8 @@ Workspace with three crates *(Claude's call)*:
 
 - Levels, the more specific winning: automatic placement, central position per control, position per course
   *(agreed with freemapper-print)*.
-- Automatic placement runs when a control is created, when a leg changes and on request. It follows
-  these rules (ADR 0031):
+- Automatic placement runs on request only (`course numbers`, `place_numbers`); creating a control or
+  changing a leg does not move numbers. It follows these rules (ADR 0031):
   1. The number covers no point or line symbol of the map in the control area; area symbols may be covered.
      This wins over rules 2–4 *(user, 2026-11-09)*.
   2. Preferred direction "behind": the continuation of the incoming connecting line past the control
@@ -268,7 +268,8 @@ Workspace with three crates *(Claude's call)*:
      freemapper-print)*.
   4. If the preferred place is blocked, the free place that deviates least from it wins *(user,
      2026-11-09)*. Candidates lie on a 15° grid around the preferred direction *(Claude's call)*.
-  The course's own circles, legs and numbers stay hard conflicts as before *(Claude's call)*.
+  The course's own circles, legs and numbers outweigh any number of covered map symbols, and magnetic north
+  lines (601) never count as covered *(Claude's call)*.
 - freemapper-print develops the shared placement module (§5.7 there) and extracts it later. Until then this
   project uses a simple placement of its own behind an interface that the shared module can replace
   *(agreed with freemapper-print)*.
