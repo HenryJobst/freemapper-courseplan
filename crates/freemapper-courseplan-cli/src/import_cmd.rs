@@ -50,7 +50,7 @@ impl ImportError {
         match self {
             ImportError::Project(e) => project(e),
             ImportError::NotMap(path) => {
-                text(lang, "mcp-error-not-map", &[("path", path_arg(&path))])
+                text(lang, "error-import-not-map", &[("path", path_arg(&path))])
             }
             ImportError::Map(path, e) => map(&path, e),
             ImportError::ReadPpen(path, e) => text(
@@ -70,6 +70,13 @@ impl ImportError {
             ImportError::Init(e) => e.localize(lang),
         }
     }
+}
+
+/// The `sources.ppen` link: `ppen` relative to the project's folder. The fallback, `ppen` as given (relative
+/// to the working folder), is reached only when `ppen` cannot be resolved; the caller has just read it, so
+/// this is a safeguard.
+fn link_for(project: &Path, ppen: &Path) -> PathBuf {
+    link_from_project(project, ppen).unwrap_or_else(|| ppen.to_path_buf())
 }
 
 fn read_oom(map_path: &Path) -> Result<MapDocument, ImportError> {
@@ -125,7 +132,7 @@ pub(crate) fn import_ppen_file(
     let mut file = ProjectFile::load(project).map_err(ImportError::Project)?;
     let doc = read_oom(&file.map_path())?;
     let bytes = read_ppen_file(ppen)?;
-    let link = link_from_project(project, ppen).unwrap_or_else(|| ppen.to_path_buf());
+    let link = link_for(project, ppen);
     let report = bring_in(&mut file.event, &doc, &bytes, link, replace, project)?;
     file.save().map_err(ImportError::Project)?;
     Ok(report)
@@ -142,7 +149,7 @@ pub(crate) fn init_from_ppen(
     let mut event = new_event(map, project, title).map_err(ImportError::Init)?;
     let doc = read_oom(map)?;
     let bytes = read_ppen_file(ppen)?;
-    let link = link_from_project(project, ppen).unwrap_or_else(|| ppen.to_path_buf());
+    let link = link_for(project, ppen);
     let report = bring_in(&mut event, &doc, &bytes, link, false, project)?;
     let file = create_project(project, event).map_err(ImportError::Init)?;
     Ok((file, report))

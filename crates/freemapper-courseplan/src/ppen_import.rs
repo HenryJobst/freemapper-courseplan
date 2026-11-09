@@ -68,7 +68,8 @@ pub enum ImportNote {
         column: char,
         id: String,
     },
-    /// The number box reaches into the circle (negative gap); the placement is kept.
+    /// The number box touches or reaches into the circle (gap of 0 or less, which the editors reject); the
+    /// placement is kept.
     NumberIntoCircle { control: String },
     /// A note of the fit worth reporting.
     Fit(FitNote),
@@ -86,6 +87,9 @@ pub enum ImportNote {
     MapIssueAsStart { id: String },
     /// A special object of a kind the model does not have, by its Purple Pen kind.
     SpecialSkipped { kind: &'static str },
+    /// A point of the special object lies outside the map's bounding box (grown by the margin the fit
+    /// uses for controls), so the object is left out.
+    SpecialOffMap { kind: &'static str },
     /// A special object for courses none of which was imported, left out so that it does not apply to
     /// all courses.
     SpecialWithoutCourse { kind: &'static str },
@@ -95,7 +99,7 @@ pub enum ImportNote {
     /// An unused control without a position, which cannot be placed on the map and is left out.
     ControlWithoutPosition { control: String },
     /// The number of the control lies farther from the circle than the editors accept; the gap was
-    /// shortened to [`MAX_GAP_MM`].
+    /// shortened to [`MAX_GAP_MM`]. Once per control.
     NumberGapClamped { control: String },
     /// A special object names a course whose name two or more courses of the file share. It applies to
     /// all of them, since the file does not say which one it meant.
@@ -133,7 +137,7 @@ pub fn read(bytes: &[u8]) -> Result<RawEvent, PpenImportError> {
 /// fit the map (another scale, controls off the map).
 pub fn import_ppen(bytes: &[u8], map: &MapDocument) -> Result<PpenImport, PpenImportError> {
     let fitted = fit(read(bytes)?, map, &FitOptions::default())?;
-    let mut import = from_fitted(fitted.event, map_kind(map));
+    let mut import = from_fitted_in(fitted.event, map_kind(map), map_bounds(map));
     let fit_notes = fitted
         .notes
         .into_iter()
@@ -142,6 +146,28 @@ pub fn import_ppen(bytes: &[u8], map: &MapDocument) -> Result<PpenImport, PpenIm
     import.notes.splice(0..0, fit_notes);
     Ok(import)
 }
+
+/// The box around every object coordinate of the map (map mm), grown by the margin the fit allows for
+/// controls; `None` for a map without objects.
+fn map_bounds(map: &MapDocument) -> Option<Bounds> {
+    let mut coords = map
+        .parts
+        .iter()
+        .flat_map(|p| &p.objects)
+        .flat_map(|o| &o.coords);
+    let first = coords.next()?;
+    let (mut lo, mut hi) = ((first.x, first.y), (first.x, first.y));
+    for c in coords {
+        lo = (lo.0.min(c.x), lo.1.min(c.y));
+        hi = (hi.0.max(c.x), hi.1.max(c.y));
+    }
+    let m = freemapper_course::fit::MARGIN_MM;
+    let mm = |v: i32| f64::from(v) / 1000.0;
+    Some(((mm(lo.0) - m, mm(lo.1) - m), (mm(hi.0) + m, mm(hi.1) + m)))
+}
+
+/// Lower left and upper right corner in map mm.
+type Bounds = ((f64, f64), (f64, f64));
 
 /// The fit notes an import reports: the unchecked scale and the warnings about orientation and axis. The
 /// georeferencing notes (`PlacedByGeoref` and the like) are left out: a `.ppen` has no latitude and
@@ -155,6 +181,11 @@ fn worth_reporting(note: &FitNote) -> bool {
 
 /// Maps a fitted event onto the model; `kind` gives the overprint sizes for the number placements.
 pub fn from_fitted(event: FittedEvent, kind: MapKind) -> PpenImport {
+    from_fitted_in(event, kind, None)
+}
+
+/// Like [`from_fitted`]; special objects with a point outside `bounds` are left out and noted.
+fn from_fitted_in(event: FittedEvent, kind: MapKind, bounds: Option<Bounds>) -> PpenImport {
     let mut notes = Vec::new();
     for note in &event.notes {
         match note {
@@ -184,6 +215,7 @@ pub fn from_fitted(event: FittedEvent, kind: MapKind) -> PpenImport {
 
     let mut out = Builder {
         notes,
+        bounds,
         ..Builder::default()
     };
     for c in &event.controls {
@@ -234,6 +266,10 @@ struct Builder {
     numbers: HashMap<String, Vec<Numbered>>,
     /// Control codes in file order, for notes in a stable order.
     order: Vec<String>,
+    /// Control codes whose clamped number gap was noted, so that each is noted once.
+    clamped: HashSet<String>,
+    /// The map's bounding box; special objects outside it are left out.
+    bounds: Option<Bounds>,
 }
 
 fn point(c: MapCoord) -> MapPoint {
@@ -432,11 +468,10 @@ impl Builder {
                 number += 1;
                 let placement = stop.number_text_at.map(|o| {
                     let (placement, clamped) = placement(o, kind, number, ratio);
-                    let note = ImportNote::NumberGapClamped {
-                        control: stop.control.clone(),
-                    };
-                    if clamped && !self.notes.contains(&note) {
-                        self.notes.push(note);
+                    if clamped && self.clamped.insert(stop.control.clone()) {
+                        self.notes.push(ImportNote::NumberGapClamped {
+                            control: stop.control.clone(),
+                        });
                     }
                     placement
                 });
@@ -495,13 +530,19 @@ impl Builder {
     /// Puts each control's number placements into place: central when every course that numbers the
     /// control gives the same placement, else on the course controls.
     fn central_numbers(&mut self) {
+        let index: HashMap<String, usize> = self
+            .controls
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.code.0.clone(), i))
+            .collect();
         for code in &self.order {
             let Some(list) = self.numbers.get(code) else {
                 continue;
             };
             if list
                 .iter()
-                .any(|n| n.placement.as_ref().is_some_and(|p| p.gap_mm < 0.0))
+                .any(|n| n.placement.as_ref().is_some_and(|p| p.gap_mm <= 0.0))
             {
                 self.notes.push(ImportNote::NumberIntoCircle {
                     control: code.clone(),
@@ -509,8 +550,8 @@ impl Builder {
             }
             let first = list[0].placement.clone();
             if first.is_some() && list.iter().all(|n| n.placement == first) {
-                if let Some(c) = self.controls.iter_mut().find(|c| &c.code.0 == code) {
-                    c.number = first;
+                if let Some(&i) = index.get(code) {
+                    self.controls[i].number = first;
                 }
                 continue;
             }
@@ -556,6 +597,26 @@ impl Builder {
             self.notes
                 .push(ImportNote::SpecialSkipped { kind: pp_kind });
             return;
+        }
+        if let Some(((x0, y0), (x1, y1))) = self.bounds {
+            let outside = |p: &MapCoord| {
+                let p = point(*p);
+                !(x0 <= p.x && p.x <= x1 && y0 <= p.y && p.y <= y1)
+            };
+            let off = match &special {
+                Special::OutOfBounds { rings: r, .. } | Special::Dangerous { rings: r, .. } => {
+                    r.iter().flatten().any(outside)
+                }
+                Special::ForbiddenRoute { path, .. } | Special::MarkedRoute { path, .. } => {
+                    path.iter().any(outside)
+                }
+                Special::FirstAid { pt, .. } | Special::Water { pt, .. } => outside(pt),
+                _ => false,
+            };
+            if off {
+                self.notes.push(ImportNote::SpecialOffMap { kind: pp_kind });
+                return;
+            }
         }
         let courses: Vec<String> = match filter {
             CourseFilter::All => Vec::new(),

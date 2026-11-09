@@ -607,6 +607,15 @@ fn circle_gaps_are_noted_per_course() {
     );
     let got = import(&body);
     assert_eq!(got.courses.len(), 2);
+    let codes = |name: &str| -> Vec<String> {
+        course_controls(course_named(&got, name))
+            .iter()
+            .map(|cc| cc.code.0.clone())
+            .collect()
+    };
+    assert_eq!(codes("A"), ["32"]);
+    assert_eq!(codes("B"), ["31", "32"]);
+    assert_eq!(control(&got, "32").map_mm, pt(60.0, -60.0));
     assert_eq!(
         got.notes,
         vec![
@@ -792,4 +801,97 @@ fn courses_with_one_name_get_distinct_names_and_the_special_notes_it() {
         kind: "water",
         name: "A".to_owned()
     }));
+}
+
+/// `count` controls with codes 100 and up, all at (30, 30), plus start 1 and finish 2.
+fn many_controls(count: u32) -> String {
+    let mut out = String::from(
+        r#"  <control id="1" kind="start"><location x="10" y="10" /></control>
+  <control id="2" kind="finish"><location x="100" y="10" /></control>
+"#,
+    );
+    for i in 0..count {
+        out.push_str(&format!(
+            r#"  <control id="{id}" kind="normal"><code>{code}</code><location x="30" y="30" /></control>
+"#,
+            id = 100 + i,
+            code = 100 + i
+        ));
+    }
+    out
+}
+
+#[test]
+fn many_clamped_numbers_give_one_note_per_control_and_stay_fast() {
+    let (controls_n, courses_n) = (400_u32, 5_u32);
+    let far = r#"<number-location x="90" y="0" />"#;
+    let chain: Vec<u32> = std::iter::once(1)
+        .chain(100..100 + controls_n)
+        .chain(std::iter::once(2))
+        .collect();
+    let extras: Vec<(u32, &str)> = (100..100 + controls_n).map(|c| (c, far)).collect();
+    let mut body = many_controls(controls_n);
+    for k in 0..courses_n {
+        body.push_str(&course(
+            k + 1,
+            &format!("C{k}"),
+            1000 * (k + 1),
+            &chain,
+            r#"<options print-scale="4000" />"#,
+            &extras,
+        ));
+    }
+    let started = std::time::Instant::now();
+    let got = import(&body);
+    assert!(started.elapsed().as_secs() < 20, "{:?}", started.elapsed());
+    assert_eq!(got.courses.len(), courses_n as usize);
+    let clamped = got
+        .notes
+        .iter()
+        .filter(|n| matches!(n, ImportNote::NumberGapClamped { .. }))
+        .count();
+    assert_eq!(clamped, controls_n as usize);
+}
+
+#[test]
+fn a_special_with_a_point_off_the_map_is_left_out_and_noted() {
+    let specials = r#"  <special-object id="5" kind="water"><location x="500" y="500" /><courses all="true" /></special-object>
+  <special-object id="6" kind="first-aid"><location x="80" y="80" /><courses all="true" /></special-object>
+  <special-object id="7" kind="out-of-bounds"><location x="10" y="10" /><location x="20" y="10" /><location x="-900" y="20" /><courses all="true" /></special-object>
+"#;
+    let got = import(&format!("{}{}{specials}", controls(&[]), plain_course()));
+    let kinds: Vec<&SpecialObject> = got.specials.iter().skip(2).collect();
+    assert_eq!(kinds.len(), 1, "{kinds:?}");
+    assert!(matches!(kinds[0], SpecialObject::FirstAid { .. }));
+    assert_eq!(
+        got.notes,
+        vec![
+            ImportNote::SpecialOffMap { kind: "water" },
+            ImportNote::SpecialOffMap {
+                kind: "out-of-bounds"
+            },
+        ]
+    );
+}
+
+#[test]
+fn a_purple_pen_4_course_with_unknown_attribute_and_element_imports_with_notes() {
+    let body = format!(
+        r#"{}  <course id="1" kind="normal" order="1" future-flag="yes"><name>A</name><first course-control="1" /><options print-scale="4000" future-option="3" /><future-child detail="x" /></course>
+  <course-control id="1" control="1"><next course-control="2" /></course-control>
+  <course-control id="2" control="3"><next course-control="3" /></course-control>
+  <course-control id="3" control="2" />
+"#,
+        controls(&[])
+    );
+    let got = import(&body);
+    assert_eq!(got.courses.len(), 1);
+    assert_eq!(course_controls(&got.courses[0]).len(), 1);
+    assert!(
+        got.notes
+            .iter()
+            .any(|n| matches!(n, ImportNote::UnknownElement(_))),
+        "{:?}",
+        got.notes
+    );
 }

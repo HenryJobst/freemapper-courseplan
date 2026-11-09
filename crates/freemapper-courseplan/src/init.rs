@@ -94,15 +94,28 @@ pub fn init_project(
 }
 
 /// Creates the project folder if needed and writes `event` as a new project file at `project_path`.
-/// Nothing is written when the event is invalid or the file exists.
+/// Nothing is left behind when the event is invalid or the file exists: a folder this call created is
+/// removed again.
 pub fn create_project(project_path: &Path, event: Event) -> Result<ProjectFile, InitError> {
+    let mut created: Option<PathBuf> = None;
     if let Some(dir) = project_path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        // The topmost folder that does not exist yet; removing it undoes `create_dir_all`.
+        created = dir
+            .ancestors()
+            .take_while(|d| !d.as_os_str().is_empty() && !d.exists())
+            .last()
+            .map(Path::to_owned);
         std::fs::create_dir_all(dir).map_err(|source| InitError::Io {
             path: dir.to_owned(),
             source,
         })?;
     }
-    Ok(ProjectFile::create(project_path, event)?)
+    ProjectFile::create(project_path, event).map_err(|e| {
+        if let Some(dir) = created {
+            let _ = std::fs::remove_dir_all(dir);
+        }
+        e.into()
+    })
 }
 
 /// `target` as a path relative to the folder of `project_path` (forward slashes where the platform

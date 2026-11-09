@@ -95,7 +95,7 @@ fn init_ppen_writes_controls_courses_and_the_link() {
     let toml = read(&project(dir.path()));
     assert!(toml.contains(r#"ppen = "park.ppen""#), "{toml}");
     assert!(toml.contains(r#"name = "Short""#), "{toml}");
-    assert!(toml.contains("31"), "{toml}");
+    assert!(toml.contains("[[controls]]\ncode = 31\nmap_mm"), "{toml}");
     let info = run(dir.path(), "en", &["info", "park.courseplan.toml"]);
     assert!(info.status.success(), "{}", stderr(&info));
 }
@@ -243,6 +243,53 @@ fn an_invalid_result_is_refused_and_leaves_the_project_untouched() {
     );
     assert_eq!(out.status.code(), Some(1));
     assert!(!dir.path().join("other.toml").exists());
+    // A new folder for the project is not left behind empty.
+    let out = run(
+        dir.path(),
+        "en",
+        &[
+            "init",
+            "park.omap",
+            "--ppen",
+            "park.ppen",
+            "--project",
+            "new/deeper/other.toml",
+        ],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    assert!(!dir.path().join("new").exists());
+}
+
+#[test]
+fn the_ppen_link_is_relative_to_the_project_folder() {
+    let dir = plain();
+    std::fs::create_dir(dir.path().join("sub")).unwrap();
+    let out = run(
+        dir.path(),
+        "en",
+        &[
+            "init",
+            "park.omap",
+            "--ppen",
+            "park.ppen",
+            "--project",
+            "sub/x.toml",
+        ],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    let toml = read(&dir.path().join("sub/x.toml"));
+    assert!(toml.contains(r#"ppen = "../park.ppen""#), "{toml}");
+    assert!(toml.contains(r#"map = "../park.omap""#), "{toml}");
+
+    // A project in the folder, a Purple Pen file one level up: the link goes up with `../`.
+    let inner = dir.path().join("sub");
+    let out = run(
+        &inner,
+        "en",
+        &["import", "x.toml", "--ppen", "../park.ppen", "--replace"],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert!(read(&inner.join("x.toml")).contains(r#"ppen = "../park.ppen""#));
 }
 
 #[test]

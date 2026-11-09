@@ -390,10 +390,12 @@ impl Localize for ImportNote {
                     FitNote::AxisAgainstFormat { .. } => {
                         t("import-ppen-note-fit-axis-against-format", &[])
                     }
-                    other => t(
-                        "import-ppen-note-fit-other",
-                        &[("note", v(format!("{other:?}")))],
-                    ),
+                    // `worth_reporting` keeps these out of an import; a text is here for completeness.
+                    FitNote::YUpDetected
+                    | FitNote::GeorefChecked { .. }
+                    | FitNote::GeorefSkipped(_)
+                    | FitNote::GeorefCheckOff
+                    | FitNote::PlacedByGeoref(_) => t("import-ppen-note-fit-other", &[]),
                 }
             }
             ImportNote::MapExchange { course, control } => t(
@@ -428,6 +430,10 @@ impl Localize for ImportNote {
             ),
             ImportNote::SpecialWithoutCourse { kind } => t(
                 "import-ppen-note-special-without-course",
+                &[("kind", v(word(lang, "word-import-special", kind)))],
+            ),
+            ImportNote::SpecialOffMap { kind } => t(
+                "import-ppen-note-special-off-map",
                 &[("kind", v(word(lang, "word-import-special", kind)))],
             ),
             ImportNote::CourseRenamed { from, to } => t(
