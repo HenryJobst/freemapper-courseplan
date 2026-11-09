@@ -13,5 +13,6 @@ pub mod iof_xml;
 pub mod map;
 pub mod numbers;
 pub mod omap;
+pub mod ppen_import;
 pub mod rules;
 pub mod text;

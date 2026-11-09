@@ -27,6 +27,7 @@ fn cc(s: &str) -> CourseControl {
 
 fn control(s: &str) -> Control {
     Control {
+        ppen_id: None,
         code: code(s),
         kind: ControlKind::Control,
         map_mm: pt(10.0, 10.0),
@@ -37,6 +38,7 @@ fn control(s: &str) -> Control {
 
 fn course(name: &str, kind: CourseKind) -> Course {
     Course {
+        ppen_id: None,
         name: name.to_owned(),
         classes: vec!["H21".to_owned()],
         start: "S1".to_owned(),

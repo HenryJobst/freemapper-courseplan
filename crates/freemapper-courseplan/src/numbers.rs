@@ -352,6 +352,30 @@ fn digits(n: u32) -> usize {
     n.to_string().len()
 }
 
+/// Radius of the control circle plus half its line width, in the unit of `sizes`.
+fn outer_radius(sizes: &OverprintSizes) -> f64 {
+    (sizes.circle_diameter_mm + sizes.line_width_mm) / 2.0
+}
+
+/// Width and height of the box of control number `number`, in the unit of `sizes`: `0.6 * height`
+/// per digit wide and the number height high.
+fn box_size(sizes: &OverprintSizes, number: u32) -> (f64, f64) {
+    let h = sizes.number_height_mm;
+    (DIGIT_WIDTH_FACTOR * h * digits(number) as f64, h)
+}
+
+/// Radius of the control circle plus half its line width, in print mm at the base scale of the
+/// map kind: the circle the number gap is measured from.
+pub fn circle_outer_radius_mm(kind: MapKind) -> f64 {
+    outer_radius(&overprint_sizes(kind))
+}
+
+/// Width and height of the box of control number `number` in print mm at the base scale of the
+/// map kind, as the placement and the check use it.
+pub fn number_box_mm(kind: MapKind, number: u32) -> (f64, f64) {
+    box_size(&overprint_sizes(kind), number)
+}
+
 /// The rectangle a number occupies on the map. The centre lies on the ray in `direction`, and
 /// `gap_mm` (print mm) is the shortest distance between the outer edge of the circle line and the
 /// rectangle (agreed with freemapper-print, ADR 0030).
@@ -363,12 +387,12 @@ fn number_rect(
     sizes: &OverprintSizes,
     factor: f64,
 ) -> Rect {
-    let h = sizes.number_height_mm * factor;
-    let w = DIGIT_WIDTH_FACTOR * h * digits(number) as f64;
+    let (w, h) = box_size(sizes, number);
+    let (w, h) = (w * factor, h * factor);
     let rad = direction.to_radians();
     // y is down: 90 degrees (north) is -y.
     let (dx, dy) = (rad.cos(), -rad.sin());
-    let reach = (sizes.circle_diameter_mm + sizes.line_width_mm) * factor / 2.0 + gap_mm * factor;
+    let reach = outer_radius(sizes) * factor + gap_mm * factor;
     let dist = box_distance(rad.cos().abs(), rad.sin().abs(), w / 2.0, h / 2.0, reach);
     Rect::centred(centre.x + dx * dist, centre.y + dy * dist, w, h)
 }
@@ -607,8 +631,8 @@ pub fn auto_place(
         let preferred_dir = preferred(incoming_dir, outgoing_dir, behind_blocked);
 
         // Point and line symbols near enough for any candidate box to cover them.
-        let box_h = sizes.number_height_mm * factor;
-        let box_w = DIGIT_WIDTH_FACTOR * box_h * digits(number) as f64;
+        let (box_w, box_h) = box_size(&sizes, number);
+        let (box_w, box_h) = (box_w * factor, box_h * factor);
         // Farthest a candidate box can reach from the control, plus a symbol's own extent.
         let reach =
             radius + half_line + gaps.max_mm * factor + box_w.hypot(box_h) + POINT_SYMBOL_RADIUS_MM;
@@ -850,6 +874,7 @@ mod tests {
 
     fn ctrl(code: &str, x: f64, y: f64, kind: ControlKind) -> Control {
         Control {
+            ppen_id: None,
             code: ControlCode(code.to_owned()),
             kind,
             map_mm: p(x, y),
@@ -903,6 +928,7 @@ mod tests {
                 },
             ],
             courses: vec![Course {
+                ppen_id: None,
                 name: "A".to_owned(),
                 classes: vec![],
                 start: "S1".to_owned(),

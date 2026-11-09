@@ -186,6 +186,7 @@ mod tests {
 
     fn ctrl(code: &str, x: f64, y: f64, kind: ControlKind) -> Control {
         Control {
+            ppen_id: None,
             code: ControlCode(code.to_owned()),
             kind,
             map_mm: p(x, y),
@@ -205,6 +206,7 @@ mod tests {
 
     fn course(kind: CourseKind) -> Course {
         Course {
+            ppen_id: None,
             name: "A".to_owned(),
             classes: vec![],
             start: "S1".to_owned(),

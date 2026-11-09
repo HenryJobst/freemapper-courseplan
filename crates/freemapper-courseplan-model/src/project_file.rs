@@ -49,7 +49,7 @@ pub enum ModelError {
     #[error("special object {id} lists course {course} more than once")]
     DuplicateCourseInSpecial { id: String, course: String },
     /// `kind` is "marked route", "forbidden route", "out-of-bounds area" or "dangerous area".
-    #[error("{kind} {id} needs at least {needed} points")]
+    #[error("{kind} {id} needs at least {needed} {}", if *.needed == 1 { "point" } else { "points" })]
     TooFewPoints {
         id: String,
         kind: &'static str,

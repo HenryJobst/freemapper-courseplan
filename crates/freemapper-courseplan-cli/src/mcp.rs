@@ -1023,6 +1023,7 @@ impl CoursePlanServer {
                 .map(edit_cmd::course_control)
                 .collect();
             let course = Course {
+                ppen_id: None,
                 name: req.name.0.clone(),
                 classes: name_list(req.classes.unwrap_or_default()),
                 start: req.start.0,

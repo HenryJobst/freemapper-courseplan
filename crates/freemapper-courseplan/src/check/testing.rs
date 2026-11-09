@@ -143,6 +143,7 @@ pub(crate) fn course_control(s: &str) -> CourseControl {
 /// An individual course from start S1 to finish F1 over `codes`.
 pub(crate) fn course(name: &str, codes: &[&str]) -> Course {
     Course {
+        ppen_id: None,
         name: name.to_owned(),
         classes: vec![],
         start: "S1".to_owned(),
@@ -183,6 +184,7 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         controls: controls
             .iter()
             .map(|(c, x, y)| Control {
+                ppen_id: None,
                 code: code(c),
                 kind: ControlKind::Control,
                 map_mm: pt(*x, *y),

@@ -38,7 +38,10 @@ error-model-blank-name = { $what } "{ $value }" ist leer oder beginnt oder endet
 error-model-blank-note = Die Begründung des akzeptierten Befunds { $name } ist leer
 error-model-code-clashes-with-special = Postencode { $code } ist auch die ID eines Sonderobjekts
 error-model-duplicate-course-in-special = Sonderobjekt { $id } nennt Bahn { $course } mehrfach
-error-model-too-few-points = { $kind } { $id } braucht mindestens { $needed } Punkte
+error-model-too-few-points = { $kind } { $id } braucht mindestens { $needed ->
+    [one] { $needed } Punkt
+   *[other] { $needed } Punkte
+}
 error-model-date-not-a-date = Das Veranstaltungsdatum { $date } ist kein Datum. Schreibe es als JJJJ-MM-TT, ohne Uhrzeit und Zeitzone
 error-model-unsupported-format = Das Format { $format } der Projektdatei ist neuer, als dieses Programm versteht
 error-model-unknown-key-top = Unbekannter Schlüssel { $key } auf oberster Ebene

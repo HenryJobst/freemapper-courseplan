@@ -38,7 +38,10 @@ error-model-blank-name = { $what } "{ $value }" is empty or starts or ends with 
 error-model-blank-note = the note of accepted finding { $name } is empty
 error-model-code-clashes-with-special = control code { $code } is also the id of a special object
 error-model-duplicate-course-in-special = special object { $id } lists course { $course } more than once
-error-model-too-few-points = { $kind } { $id } needs at least { $needed } points
+error-model-too-few-points = { $kind } { $id } needs at least { $needed ->
+    [one] { $needed } point
+   *[other] { $needed } points
+}
 error-model-date-not-a-date = event date { $date } is not a date; write it as YYYY-MM-DD, without time or offset
 error-model-unsupported-format = project file format { $format } is newer than this program supports
 error-model-unknown-key-top = unknown key { $key } at the top level

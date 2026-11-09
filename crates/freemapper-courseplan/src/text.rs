@@ -174,7 +174,7 @@ impl Localize for ModelError {
                     &[
                         ("kind", v(word(lang, "word-special", kind_id))),
                         ("id", v(id)),
-                        ("needed", v(needed)),
+                        ("needed", FluentValue::from(*needed)),
                     ],
                 )
             }
@@ -800,6 +800,11 @@ mod tests {
                 id: s("o1"),
                 kind: "out-of-bounds area",
                 needed: 3,
+            },
+            ModelError::TooFewPoints {
+                id: s("r1"),
+                kind: "forbidden route",
+                needed: 1,
             },
             ModelError::DateNotADate(s("2026-13-45")),
             ModelError::UnsupportedFormat(7),

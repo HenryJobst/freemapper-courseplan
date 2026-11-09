@@ -327,6 +327,7 @@ pub fn add_control(
             return Err(EditError::CodeTaken(code));
         }
         e.controls.push(Control {
+            ppen_id: None,
             code: code.clone(),
             kind,
             map_mm: at,
