@@ -69,10 +69,12 @@ courses either, and it does not read forest maps.
 severity, place, rule and source. The built-in profile is `wkb-2026` (competition rules 2026) and the overlay
 `nor-bb-2021` (course recommendations for Berlin and Brandenburg); `freemapper-courseplan event profile <project>
 wkb-2026 --overlay nor-bb-2021` selects them. `finding accept <project> <rule> --note TEXT` records an intended
-exception with its reason, `finding remove` takes it back, and `check --all` also lists the accepted findings and
-the skipped rules. Chapter 8 of the [user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions)
-explains it, and the AI assistant has the tools `check`, `accept_finding`, `remove_accepted_finding` and
-`set_rule_profile` for it. The program does not check team, relay or score courses yet, and the route analysis is
+exception with its reason, `finding remove` takes it back, and `check --all` also lists the accepted findings, the
+exceptions that match no finding any more and the skipped rules. `event start-window` and `class set` add the start
+window, rule categories and expected starters that some checks need. Chapter 8 of the
+[user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions) explains it, and the AI
+assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
+`set_start_window` and `set_class` for it. The program does not check team, relay or score courses yet, and the route analysis is
 missing, so it reports a straight leg through an out-of-bounds area only as a warning.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the

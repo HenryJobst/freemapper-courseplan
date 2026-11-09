@@ -83,7 +83,8 @@ there.
 - Every change is saved at once. If the program refuses a change, for example a point outside the map or a
   code that is taken, the file stays as it was and the assistant gets the reason.
 - Positions are in map millimetres at map scale, with y pointing down. Look at every control position yourself
-  on the map, because nothing checks them against the rules yet.
+  on the map. `check` tests distances, angles and codes against the rules (chapter 8), but not whether the
+  control stands at the right feature.
 - The program places control numbers only when the assistant asks for it. If the assistant then changes legs or
   the order, it has to have them placed again. A number placement set for a control or in a course stays.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
@@ -94,9 +95,9 @@ there.
 
 ## 8. Checking: reading findings, giving reasons for exceptions
 
-`check` holds every individual course against the rules the event is meant to follow and tells you what stands out.
-It changes nothing in the project file. You decide whether to change the course or to give a reason for the finding
-as an intended exception.
+`check` holds every individual course against the rules the event is meant to follow and tells you what stands
+out. It changes nothing in the project file. You decide whether to change the course or to give a reason for the
+finding as an intended exception.
 
 ```sh
 freemapper-courseplan check hall.courseplan.toml
@@ -110,34 +111,37 @@ checked.
 
 ```text
 course A:
-  hint course A, leg after 6: the legs at control 37 form an angle of 85°, at least 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  hint course A, leg 36–37: the legs at control 37 form an angle of 85°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
 ```
 
 From left to right the line holds:
 
 - the severity, here "hint",
-- the place, here the leg after the sixth position of course A (position 0 would be the leg from the start),
+- the place, here the leg from control 36 to control 37 of course A. A leg is named by its ends, such as
+  "leg start–31" or "leg 37–finish"; as places, start and finish read "start S1" and "finish F1",
 - the text with the measured value and the limit,
 - in brackets the id of the rule and the source the limit comes from.
 
-You need the id to give a reason for an exception. The source tells you where to read the rule yourself. After the
-findings comes a summary, in the example "0 errors, 0 warnings, 1 hint; 0 accepted, 5 skipped".
+You need the id to give a reason for an exception. The source tells you where to read the rule yourself. Within a
+course the findings about the whole course come first, then those of its legs in running order. The output ends
+with one summary, in the example "0 errors, 0 warnings, 1 hint; 0 accepted, 5 skipped".
 
 ### Severity and exit code
 
-The rule profile sets how heavily a violation weighs for each rule:
+The rule profile sets how heavily a violation weighs for each rule. `check` itself treats the three levels
+differently only in the exit code:
 
-- Error: the course breaks a rule that the profile treats as binding.
-- Warning: the course deviates, and you should change it or give a reason for the deviation.
+- Error: the profile treats the rule as binding. An open error sets exit code 1.
+- Warning: the profile expects you to change the course or give a reason for the deviation.
 - Hint: something stands out that you should look at, such as an angle just under the guideline.
 
 The exit code tells a script how the run went. It is 0 when no error finding is open, 1 with at least one error or
 when the check is refused (project file or map unreadable), and 2 for a wrong call such as an unknown option.
 Warnings and hints do not change the exit code, and accepted findings do not count.
 
-Some checks are proposals of the program and do not appear word for word in the rules, for example that the halved
-control distances also apply to schoolyard maps. The notes of the profile (`note` in the profile file, see
-`crates/freemapper-courseplan/rules/README.en.md`) mark them with "Claude's call". If a straight leg crosses an
+Some limits are not written in the rules like that; the program proposes them, for example that the halved control
+distances also apply to schoolyard maps. Their source then reads "proposal of freemapper-courseplan", and `check
+--all` shows the rule's note below the finding, which explains the proposal. If a straight leg crosses an
 out-of-bounds area, the program only warns, because the best route might lead through it. Only the later route
 analysis can say whether it does.
 
@@ -147,15 +151,20 @@ analysis can say whether it does.
 
 - At a training the program does not apply the length and difficulty rules of competitions.
 - The rule applies only to another discipline, map kind or print scale.
-- A value is missing, such as the start window of the event for the start capacity or the climb of a course.
-- A class is not mapped to a category of the rule table, for example a name you chose yourself such as "Offen".
+- An overlay switched the rule off; the reason names it, such as "switched off by nor-bb-2021".
+- A value is missing. `event start-window hall.courseplan.toml 90` sets the start window, `class set
+  hall.courseplan.toml H21 --starters 40` the expected starters of a class, and `course set hall.courseplan.toml A
+  --climb 120` the climb of a course.
+- A class has no rule category, for example a name you chose yourself such as "Offen". `class set
+  hall.courseplan.toml Offen --rule-category H21` gives it one. A rule category in no row of the table skips the
+  course too.
 
-A skipped rule has not passed anything, it has just not checked. Read the list once before you rely on an empty
-result.
+A skipped rule has not checked anything. An empty result therefore does not mean that everything passes. Read the
+list once before you rely on it.
 
 ### Giving a reason for an exception
 
-Some findings are intended. You accept them with the id of the rule, the place as `check` shows it, and a note:
+Some findings are intended. You accept them with the id of the rule, the place and a note:
 
 ```sh
 # two controls that stand close together on purpose
@@ -168,41 +177,52 @@ freemapper-courseplan finding accept hall.courseplan.toml wkb2026.leg.acute_angl
 freemapper-courseplan finding accept hall.courseplan.toml wkb2026.distance.min_half --controls 31,S1 --note "The start is close to the first control on purpose, so the training begins with a short run-in."
 ```
 
-`--controls` takes control codes and the id of a start or finish, `--leg COURSE:N` the leg after position N (`--leg A:2 --leg A:5` for a finding at two legs), and `--course COURSE` a finding about a
-whole course. A finding of the
-whole event needs no place. If you give a place where the rule never reports anything, the program refuses it.
-Accepting the same finding again replaces the old note with the new one.
+`--controls` takes control codes and the id of a start or finish, and `--course COURSE` a finding about a whole
+course. `--leg COURSE:N` names the leg that leaves position N of the course. Positions count the controls of the
+course from 1, crossing points included, and 0 is the start. So N is not the control number on the map: on course
+A with controls 31 to 37, `--leg A:6` is the leg 36–37. A finding at two legs gets `--leg` twice, such as
+`--leg A:2 --leg A:5`. A finding of the whole event needs no place. If you give a place where the rule never
+reports anything, the program refuses it and names the places the rule reports at. Accepting the same finding
+again replaces the old note with the new one.
 
-The note is stored in the project file. `check` no longer lists accepted findings but counts them in the summary.
-With `--all` they appear under "accepted", with your note. That way next year's course setter can see why the course
-is the way it is.
+The note is stored in the project file, for a leg together with its ends. `check` no longer lists accepted findings
+but counts them in the summary. With `--all` they appear under "accepted", with your note. That way next year's
+course setter can see why the course is the way it is.
 
-To see a finding again, take the exception back with the same details:
+When you change a course, an exception can lose its finding: the control was removed, the course deleted, or the
+leg now runs between other controls. In the last case `check` reports the finding at the new leg again, because
+the old note was about the old leg. `check --all` lists such exceptions under "not matched", the summary counts
+them, and they do not change the exit code.
+
+To see a finding again, or to drop an exception that is not matched, take it back with the rule and the place:
 
 ```sh
 freemapper-courseplan finding remove hall.courseplan.toml wkb2026.distance.min_half --controls 31,32
+freemapper-courseplan finding remove hall.courseplan.toml wkb2026.leg.acute_angle --leg A:3
 ```
 
-If the id of a rule changes, for example in a new program version, `check` reports its findings again.
+`finding remove --leg` finds the leg by course and position, also when its ends have changed since. If the id of
+a rule changes, for example in a new program version, `check` reports its findings again.
 
 ### Choosing the rule profile and overlays
 
 An event has one base profile and any number of overlays on it. The program ships two: `wkb-2026` (German
-competition rules 2026) and `nor-bb-2021`, an overlay with the course recommendations of Berlin and Brandenburg. One
-command sets both:
+competition rules 2026) and `nor-bb-2021`, an overlay with the course recommendations of Berlin and Brandenburg.
+One command sets both:
 
 ```sh
 freemapper-courseplan event profile hall.courseplan.toml wkb-2026 --overlay nor-bb-2021
 ```
 
 For several overlays, repeat `--overlay`; they apply in the order given. The program loads the profiles first and
-refuses an unknown name with the list of available profiles. `info` shows the profile. In every finding of `check`, the
-rule id starts with its profile (`wkb2026`, `norbb2021`). How a profile file is built and how to add one is described in
-`crates/freemapper-courseplan/rules/README.en.md`.
+refuses an unknown name with the list of available profiles. `info` shows the profile. In every finding of
+`check`, the rule id starts with its profile (`wkb2026`, `norbb2021`). How a profile file is built and how to add
+one is described in `crates/freemapper-courseplan/rules/README.en.md`.
 
 ### With the AI assistant
 
-The assistant has four tools for this. `check` returns findings, accepted findings and skipped rules,
-`accept_finding` and `remove_accepted_finding` match `finding accept` and `finding remove`, and `set_rule_profile`
-matches `event profile`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you
-before it accepts one. You write the note or dictate it. The assistant should not invent one.
+The assistant has six tools for this. `check` returns findings, accepted and unmatched exceptions and skipped
+rules. `accept_finding` and `remove_accepted_finding` match `finding accept` and `finding remove`,
+`set_rule_profile` matches `event profile`, and `set_start_window` and `set_class` match `event start-window` and
+`class set`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you before it
+accepts one. You write the note or dictate it. The assistant should not invent one.

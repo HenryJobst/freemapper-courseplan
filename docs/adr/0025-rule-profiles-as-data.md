@@ -28,3 +28,18 @@ Rule changes are file edits, and every value names its source. Format 1 stays pr
 `rule_overlays` and `legs` need no bump. Cost if wrong: renaming keys in the embedded files.
 
 Source: agreed with freemapper-print, 2026-11-09; ADR 0019.
+
+## Amendment 2026-11-09: a leg is named by its ends
+
+- A leg reference stores the ids of the stops at its ends as well:
+  `{ course = "A", after = 6, from = "36", to = "37" }`. `from` and `to` are control codes or the ids of the
+  start and the finish. The key compares all four, so an acceptance on a leg comes back once the leg runs
+  between other stops, even at the same position (ruling R24).
+- `finding accept --leg A:6` and the MCP `accept_finding` name the leg by course and position; the program
+  fills `from` and `to` from the course as it is when the finding is accepted. `finding remove` and
+  `remove_accepted_finding` match legs by course and position only, so an acceptance that no longer matches
+  can still be removed.
+- A file without `from` and `to` reads them as empty. Such an acceptance matches no finding and is listed as
+  not matched (ADR 0026). No release has stored leg acceptances, so format 1 stays.
+
+Source: final review of plan M2b; controller ruling R24, 2026-11-09.

@@ -144,7 +144,9 @@ IOF-R, IOF-SG, BOF, SOA, BL02, BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14). Dazu kom
 bei Tabellen auch die PDF-Seite.
 
 Für manche Werte nennt keine Quelle eine Zahl. Sie verweisen auf `doc = "claude"` mit dem Plan als
-Abschnitt, und ihre `note` sagt, was die Quellen sagen und dass die Zahl ein Vorschlag ist.
+Abschnitt, und ihre `note` sagt, was die Quellen sagen und dass die Zahl ein Vorschlag ist. `check`
+nennt eine solche Quelle „Vorschlag von freemapper-courseplan“, ohne den Abschnitt aus dem Plan, und
+`check --all` zeigt die Anmerkung unter dem Befund.
 
 ## Aufsätze
 

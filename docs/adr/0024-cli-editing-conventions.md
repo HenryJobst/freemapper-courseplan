@@ -49,3 +49,19 @@ Source: plan M2a Tasks 4, 7, 8; rulings R5 (amended), R8, R11, R12; final review
 - The rule profile is set with `event profile <PROJECT> <BASE> [--overlay ID …]`; there is no `project set`.
 
 Source: plan M2b Task 3; controller rulings for Task 3, 2026-11-09.
+
+## Amendment 2026-11-09: start window and class settings
+
+- `event start-window <PROJECT> <MINUTES>` sets the start window; 0 is refused, since the start capacity check
+  reads 0 as no window. `class set <PROJECT> <CLASS> [--rule-category C] [--no-rule-category] [--starters N]
+  [--no-starters]` changes a class and needs at least one option. A `--no-…` flag clears a value, as
+  `--no-climb` does for `course set`, and an empty category is refused. The option is called
+  `--rule-category` as in `class add`. MCP has the same as `set_start_window` and `set_class`
+  (`no_rule_category`, `no_expected_starters`), with the checks of ADR 0023 (ruling R29).
+- The skip reasons for a missing start window, missing expected starters and a class without rule category
+  name these commands.
+- In `finding accept --leg COURSE:N`, N is the position the leg leaves in the course's list of controls,
+  counted from 1 with crossing points included, and 0 is the start. It is not the number printed on the map,
+  and the help says so.
+
+Source: final review of plan M2b; controller ruling R29, 2026-11-09.

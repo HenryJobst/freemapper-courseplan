@@ -19,7 +19,7 @@ Plan M2b implements the checks one task at a time.
   discipline and the map kind that is decided once for the event, for the print scale once per course. Each
   rule of the key then gets one skip with its reason, such as "no rule of this kind for print scale 1:2500".
   A rule whose sibling checks the course stays silent, so `check --all` does not list a skip for every
-  alternative. A training gets its own reason. A key whose check is not written yet gives one skip per rule.
+  alternative. A training gets its own reason.
 - A finding's key comes from its location through `AcceptedFinding::key`: the event has no course, controls or
   legs; a course sets only `course`; one or several controls set only `controls`; one or several legs of a
   course set only `legs`, with the course inside each leg reference (ADR 0028). Keys are compared for
@@ -44,3 +44,20 @@ Plan M2b implements the checks one task at a time.
 - Cost if wrong: a reviewer who wants every filtered rule listed changes one condition in `run_key`.
 
 Source: plan M2b Task 3; controller rulings R2 and R4 and the rulings for Task 3, 2026-11-09.
+
+## Amendment 2026-11-09: unmatched acceptances and switched-off rules
+
+- An accepted finding that matches no finding of a run is reported as not matched (`CheckReport::unmatched`):
+  its control, leg or course changed or is gone, or its rule did not run. `check --all` lists these with their
+  notes and a hint that `finding remove` takes them out, the summary counts them, and MCP `check` returns them
+  under `unmatched`. They never change the exit code (ruling R25).
+- A rule that a profile switched off with `enabled = false` is listed as skipped at the event, with the id of
+  that profile as the reason ("switched off by nor-bb-2021"). Before, it vanished from the output (ruling R27).
+- With `--all` the CLI prints the rule's note in the output language under each finding. A value whose source
+  is the document `claude` is shown as "proposal of freemapper-courseplan" without the plan section; MCP keeps
+  `doc` and `section` and gets that text as `title`.
+- The CLI names a leg by its end stops ("leg 36–37", "leg start–31", "leg 37–finish"), crossing points by code,
+  and starts and finishes in places by their role ("start S1"). Within a course the course comes first, then
+  the legs in running order (ruling R28).
+
+Source: final review of plan M2b; controller rulings R25, R27 and R28, 2026-11-09.

@@ -85,7 +85,8 @@ dort an.
 - Jede Änderung wird sofort gespeichert. Lehnt das Programm eine Änderung ab, etwa einen Punkt außerhalb der Karte
   oder einen vergebenen Code, bleibt die Datei, wie sie war, und der Assistent bekommt den Grund.
 - Positionen stehen in Kartenmillimetern im Kartenmaßstab, y zeigt nach unten. Sieh dir jede Postenposition
-  selbst auf der Karte an, denn noch prüft nichts sie gegen die Regeln.
+  selbst auf der Karte an. `check` prüft Abstände, Winkel und Codes gegen die Regeln (Kapitel 8), aber nicht, ob
+  der Posten am richtigen Objekt steht.
 - Postennummern setzt das Programm nur, wenn der Assistent darum bittet. Ändert er danach Strecken oder die
   Reihenfolge, muss er sie neu setzen lassen. Eine Nummernlage, die für einen Posten oder in einer Bahn
   festgelegt ist, bleibt dabei stehen.
@@ -97,41 +98,45 @@ dort an.
 
 ## 8. Prüfen: Hinweise lesen, Ausnahmen begründen
 
-`check` legt jede Einzelbahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was auffällt.
-Es ändert nichts an der Projektdatei. Du entscheidest, ob du die Bahn änderst oder den Befund als gewollte Ausnahme
-begründest.
+`check` legt jede Einzelbahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was
+auffällt. Es ändert nichts an der Projektdatei. Du entscheidest, ob du die Bahn änderst oder den Befund als gewollte
+Ausnahme begründest.
 
 ```sh
 freemapper-courseplan check halle.courseplan.toml
 freemapper-courseplan check halle.courseplan.toml --all
 ```
 
-Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht geprüft wurde.
+Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
+geprüft wurde.
 
 ### Eine Zeile lesen
 
 ```text
 Bahn A:
-  Hinweis Bahn A, Strecke nach 6: Die Strecken am Posten 37 bilden einen Winkel von 85°, mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  Hinweis Bahn A, Strecke 36–37: Die Strecken am Posten 37 bilden einen Winkel von 85°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
 ```
 
 Von links nach rechts steht da:
 
 - die Schwere, hier „Hinweis“,
-- der Ort, hier die Strecke nach der sechsten Position von Bahn A (Position 0 wäre die Strecke vom Start),
+- der Ort, hier die Strecke von Posten 36 zu Posten 37 auf Bahn A. Eine Strecke heißt nach ihren Enden, etwa
+  „Strecke Start–31“ oder „Strecke 37–Ziel“; Start und Ziel als Ort heißen „Start S1“ und „Ziel F1“,
 - der Text mit gemessenem Wert und Grenze,
 - in Klammern die Kennung der Prüfregel und die Quelle, aus der die Grenze stammt.
 
 Die Kennung brauchst du, um eine Ausnahme zu begründen. Die Quelle sagt dir, wo du die Regel selbst nachlesen
-kannst. Unter den Befunden einer Bahn steht am Ende eine Zusammenfassung, im Beispiel
-„0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert, 5 übersprungen“.
+kannst. Innerhalb einer Bahn stehen zuerst die Befunde der ganzen Bahn, dann die der Strecken in Laufrichtung. Am
+Ende der Ausgabe steht einmal eine Zusammenfassung, im Beispiel „0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert,
+5 übersprungen“.
 
 ### Schwere und Exit-Code
 
-Das Regelprofil legt für jede Prüfregel fest, wie schwer ein Verstoß wiegt:
+Das Regelprofil legt für jede Prüfregel fest, wie schwer ein Verstoß wiegt. `check` selbst unterscheidet die
+drei Stufen nur beim Exit-Code:
 
-- Fehler: Die Bahn verletzt eine Regel, die das Profil als verbindlich führt.
-- Warnung: Die Bahn weicht ab, und du solltest sie ändern oder die Abweichung begründen.
+- Fehler: Das Profil führt die Regel als verbindlich. Ein offener Fehler setzt den Exit-Code 1.
+- Warnung: Das Profil erwartet, dass du die Bahn änderst oder die Abweichung begründest.
 - Hinweis: Etwas fällt auf, das du ansehen solltest, etwa ein Winkel knapp unter dem Richtwert.
 
 Der Exit-Code sagt einem Skript, wie es ausging: 0, wenn kein Befund der Schwere Fehler offen ist, 1 bei
@@ -139,9 +144,9 @@ mindestens einem Fehler oder wenn die Prüfung abgelehnt wurde (Projektdatei ode
 falschem Aufruf, etwa einer unbekannten Option. Warnungen und Hinweise ändern den Exit-Code nicht, und
 akzeptierte Befunde zählen nicht.
 
-Einige Prüfungen sind Vorschläge des Programms und stehen nicht wörtlich in den Regeln, zum Beispiel dass die
-halbierten Postenabstände auch auf Schulhofkarten gelten. Die Hinweise zum Profil (`note` in der Profildatei,
-siehe `crates/freemapper-courseplan/rules/README.md`) kennzeichnen sie mit „Claude's call“. Führt die gerade
+Einige Grenzen stehen so nicht in den Regeln, das Programm schlägt sie vor, zum Beispiel dass die halbierten
+Postenabstände auch auf Schulhofkarten gelten. Als Quelle steht dann „Vorschlag von freemapper-courseplan“, und
+`check --all` zeigt unter dem Befund die Anmerkung der Prüfregel, die den Vorschlag begründet. Führt die gerade
 Strecke durch ein Sperrgebiet, meldet das Programm nur eine Warnung, denn die Optimalroute könnte hindurchführen.
 Ob sie es tut, kann erst die spätere Routenanalyse sagen.
 
@@ -152,17 +157,20 @@ Häufige Gründe:
 
 - Beim Training wendet das Programm die Längen- und Schwierigkeitsregeln des Wettkampfs nicht an.
 - Die Prüfregel gilt nur für eine andere Disziplin, Kartenart oder einen anderen Druckmaßstab.
-- Ein Wert fehlt, etwa das Startfenster der Veranstaltung für die Startkapazität oder der Anstieg einer Bahn.
-- Eine Kategorie ist keiner Kategorie der Regeltabelle zugeordnet, zum Beispiel ein selbst gewählter Name wie
-  „Offen“.
+- Ein Aufsatz hat die Prüfregel abgeschaltet; der Grund nennt ihn, etwa „abgeschaltet durch nor-bb-2021“.
+- Ein Wert fehlt. Das Startfenster setzt `event start-window halle.courseplan.toml 90`, die erwartete Starterzahl
+  einer Kategorie `class set halle.courseplan.toml H21 --starters 40`, den Anstieg einer Bahn `course set
+  halle.courseplan.toml A --climb 120`.
+- Eine Kategorie hat keine Regelkategorie, zum Beispiel ein selbst gewählter Name wie „Offen“. `class set
+  halle.courseplan.toml Offen --rule-category H21` ordnet ihr eine zu. Eine Regelkategorie, die in keiner Zeile
+  der Tabelle steht, überspringt die Bahn ebenfalls.
 
-Eine übersprungene Prüfregel hat nichts bestanden, sie hat nur nicht geprüft. Lies die Liste deshalb einmal durch,
-bevor du dich auf ein leeres Ergebnis verlässt.
+Eine übersprungene Prüfregel hat nicht geprüft. Ein leeres Ergebnis heißt deshalb nicht, dass alles besteht. Lies
+die Liste einmal durch, bevor du dich darauf verlässt.
 
 ### Eine Ausnahme begründen
 
-Manche Befunde sind gewollt. Du akzeptierst sie mit der Kennung der Prüfregel, dem Ort, wie `check` ihn zeigt, und
-einer Begründung:
+Manche Befunde sind gewollt. Du akzeptierst sie mit der Kennung der Prüfregel, dem Ort und einer Begründung:
 
 ```sh
 # zwei Posten, die bewusst nah beieinander stehen
@@ -175,22 +183,34 @@ freemapper-courseplan finding accept halle.courseplan.toml wkb2026.leg.acute_ang
 freemapper-courseplan finding accept halle.courseplan.toml wkb2026.distance.min_half --controls 31,S1 --note "Der Start liegt bewusst nah am ersten Posten, das Training beginnt mit einer kurzen Einlaufstrecke."
 ```
 
-`--controls` nimmt Postencodes und die Kennung von Start oder Ziel, `--leg BAHN:N` die Strecke nach Position N
-(`--leg A:2 --leg A:5` für einen Befund an zwei Strecken), `--course BAHN` einen Befund der ganzen Bahn. Ein Befund
-der ganzen Veranstaltung braucht keine Ortsangabe. Gibst du einen Ort an, an dem die Prüfregel nie etwas meldet,
-lehnt das Programm ab. Akzeptierst du denselben Befund noch einmal, ersetzt die neue Begründung die alte.
+`--controls` nimmt Postencodes und die Kennung von Start oder Ziel, `--course BAHN` einen Befund der ganzen Bahn.
+`--leg BAHN:N` nennt die Strecke, die von Position N der Bahn abgeht. Die Positionen zählen die Posten der Bahn ab
+1, Querungsstellen mitgezählt, und 0 ist der Start. N ist also nicht die Postennummer auf der Karte: Auf Bahn A
+mit den Posten 31 bis 37 ist `--leg A:6` die Strecke 36–37. Ein Befund an zwei Strecken bekommt `--leg` zweimal,
+etwa `--leg A:2 --leg A:5`. Ein Befund der ganzen Veranstaltung braucht keine Ortsangabe. Gibst du einen Ort an, an
+dem die Prüfregel nie etwas meldet, lehnt das Programm ab und nennt die Orte, an denen sie meldet. Akzeptierst du
+denselben Befund noch einmal, ersetzt die neue Begründung die alte.
 
-Die Begründung steht in der Projektdatei. `check` zeigt akzeptierte Befunde nicht mehr in der Liste, zählt sie aber
-in der Zusammenfassung. Mit `--all` stehen sie unter „akzeptiert“, mit deiner Begründung. So sieht auch die
-Bahnlegerin im nächsten Jahr, warum die Bahn so ist.
+Die Begründung steht in der Projektdatei, bei einer Strecke zusammen mit ihren Enden. `check` zeigt akzeptierte
+Befunde nicht mehr in der Liste, zählt sie aber in der Zusammenfassung. Mit `--all` stehen sie unter „akzeptiert“,
+mit deiner Begründung. So sieht auch die Bahnlegerin im nächsten Jahr, warum die Bahn so ist.
 
-Willst du einen Befund wieder sehen, nimmst du die Ausnahme mit denselben Angaben zurück:
+Änderst du die Bahn, kann eine Ausnahme ihren Befund verlieren: Der Posten ist entfernt, die Bahn gelöscht, oder die
+Strecke läuft jetzt zwischen anderen Posten. Im letzten Fall meldet `check` den Befund an der neuen Strecke wieder,
+denn die alte Begründung galt für die alte Strecke. `check --all` listet solche Ausnahmen unter „nicht
+zugeordnet“, die Zusammenfassung zählt sie, und am Exit-Code ändern sie nichts.
+
+Willst du einen Befund wieder sehen oder eine nicht zugeordnete Ausnahme loswerden, nimmst du sie mit Prüfregel
+und Ort zurück:
 
 ```sh
 freemapper-courseplan finding remove halle.courseplan.toml wkb2026.distance.min_half --controls 31,32
+freemapper-courseplan finding remove halle.courseplan.toml wkb2026.leg.acute_angle --leg A:3
 ```
 
-Ändert sich die Kennung einer Prüfregel, etwa in einer neuen Programmversion, meldet `check` die Befunde dazu wieder.
+`finding remove --leg` findet die Strecke nach Bahn und Position, auch wenn sich ihre Enden seitdem geändert haben.
+Ändert sich die Kennung einer Prüfregel, etwa in einer neuen Programmversion, meldet `check` die Befunde dazu
+wieder.
 
 ### Regelprofil und Aufsätze wählen
 
@@ -203,14 +223,15 @@ freemapper-courseplan event profile halle.courseplan.toml wkb-2026 --overlay nor
 ```
 
 Mehrere Aufsätze wiederholen `--overlay` und gelten in der angegebenen Reihenfolge. Das Programm lädt die Profile
-vorher. Einen unbekannten Namen lehnt es mit der Liste der vorhandenen Profile ab. `info` zeigt das Profil an. In jedem Befund von `check`
-beginnt die Kennung der Prüfregel mit ihrem Profil (`wkb2026`, `norbb2021`). Wie eine Profildatei aufgebaut ist und wie man
-eine neue anlegt, steht in `crates/freemapper-courseplan/rules/README.md`.
+vorher. Einen unbekannten Namen lehnt es mit der Liste der vorhandenen Profile ab. `info` zeigt das Profil an. In
+jedem Befund von `check` beginnt die Kennung der Prüfregel mit ihrem Profil (`wkb2026`, `norbb2021`). Wie eine
+Profildatei aufgebaut ist und wie man eine neue anlegt, steht in `crates/freemapper-courseplan/rules/README.md`.
 
 ### Mit dem KI-Assistenten
 
-Der Assistent hat vier Werkzeuge dafür: `check` liefert Befunde, akzeptierte Befunde und übersprungene
-Prüfregeln, `accept_finding` und `remove_accepted_finding` entsprechen `finding accept` und `finding remove`, und
-`set_rule_profile` entspricht `event profile`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, jeden Befund in einem
-Satz zu erklären und dich zu fragen, bevor er einen akzeptiert. Die Begründung schreibst du oder diktierst sie ihm.
-Er soll sie nicht erfinden.
+Der Assistent hat sechs Werkzeuge dafür: `check` liefert Befunde, akzeptierte und nicht zugeordnete Ausnahmen und
+übersprungene Prüfregeln. `accept_finding` und `remove_accepted_finding` entsprechen `finding accept` und `finding
+remove`, `set_rule_profile` entspricht `event profile`, `set_start_window` und `set_class` entsprechen `event
+start-window` und `class set`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, jeden Befund in einem Satz zu
+erklären und dich zu fragen, bevor er einen akzeptiert. Die Begründung schreibst du oder diktierst sie ihm. Er soll
+sie nicht erfinden.

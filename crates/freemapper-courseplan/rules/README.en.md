@@ -136,7 +136,9 @@ keys of `docs/research/2026-11-08-bahnlegung-kriterien.md` (WKB26, IOF-R, IOF-SG
 BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14) and give the section, and the PDF page for tables.
 
 Some values have no number in any source. They cite `doc = "claude"` with the plan as section,
-and their `note` says what the sources say and that the number is a proposal.
+and their `note` says what the sources say and that the number is a proposal. `check` names such a
+source as "proposal of freemapper-courseplan", without the plan section, and `check --all` prints
+the note below the finding.
 
 ## Overlays
 

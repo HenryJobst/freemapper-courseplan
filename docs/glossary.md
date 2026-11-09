@@ -55,12 +55,12 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Deutsch | English | Definition | Code |
 |---|---|---|---|
 | Disziplin | discipline | Sprint, Mittel, Lang, Ultralang oder Training. Training schaltet die Tabellenprüfungen ab. | `Discipline` |
-| Kategorie | class | Startklasse mit freiem Namen, passend zu OE; optional einer WKB-Kategorie zugeordnet. | `Class` |
-| WKB-Kategorie | rule category | Kategorie nach WKB (H21, D-12, 130T …), an der Längentabelle und Schwierigkeitsstufe hängen. | `RuleCategory` |
+| Kategorie | class | Startklasse mit freiem Namen, passend zu OE; optional einer Regelkategorie zugeordnet. | `Class` |
+| Regelkategorie | rule category | Kategorie nach dem Regelwerk eines Profils, etwa nach WKB (H21, D-12, 130T …), an der Längentabelle und Schwierigkeitsstufe hängen. | `RuleCategory` |
 | Kartenpunkt | map point | Punkt in Millimetern auf der Karte im Kartenmaßstab, `f64`, y nach unten. `omap::MapCoord` ist die Dateiform der OOM in 1/1000 mm. | `MapPoint` |
 | Kartenindex | map index | Alle Geländeobjekte einer Karte in Millimetern, abfragbar nach Abstand zu einem Punkt. Blatt-Objekte (`freemapper:source=sheet`) fehlen. | `MapIndex` |
 | Kartenobjekt für Abfragen | map feature | Ein Geländeobjekt im Kartenindex: Symbolnummer, Kartenteil und Geometrie (Punkt, Linie, Fläche). | `MapFeature` |
-| Startfenster | start window | Zeit vom ersten bis zum letzten Start. | `start_window` |
+| Startfenster | start window | Zeit vom ersten bis zum letzten Start, in ganzen Minuten, mindestens 1; `event start-window` setzt es. Die Startkapazität teilt die erwarteten Starter dadurch. | `start_window_min` |
 | erster Posten | first control | Der erste Posten einer Bahn nach dem Start. | `first_control` |
 | Sprache | language | Sprache der Programmtexte: `de` oder `en`, gewählt mit `--lang`, `FREEMAPPER_LANG` oder der Systemsprache (ADR 0022). | `Lang` |
 
@@ -74,9 +74,13 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Regelprofil-Aufsatz | rule overlay | Regelprofil, das ein Basisprofil ergänzt oder einzelne Regeln ersetzt, zum Beispiel für ein Landesregelwerk; der Veranstaltung zugeordnet über `rule_overlays`. | `rule_overlays` |
 | Befund | finding | Ergebnis einer Prüfregel an einem Posten, einer Strecke oder einer Bahn. | `Finding` |
 | akzeptierter Befund | accepted finding | Befund, den der Bahnleger mit Begründung als gewollte Ausnahme markiert hat; wird nicht mehr gemeldet. | `AcceptedFinding` |
-| übersprungene Prüfregel | skipped rule | Prüfregel, die `check` für eine Veranstaltung oder Bahn nicht ausführt, mit dem Grund: Filter (Disziplin, Kartenart, Druckmaßstab) passt nicht, Angabe fehlt. Auch eine Bahn, die nicht Einzelbahn ist. Wird gemeldet, nie stillschweigend als bestanden gezählt. | `Skipped` |
+| nicht zugeordnete Ausnahme | unmatched acceptance | Akzeptierter Befund, zu dem `check` keinen Befund mehr findet, etwa weil sein Posten oder seine Bahn fehlt oder seine Strecke jetzt zwischen anderen Posten läuft. `check --all` listet ihn, er zählt nie als Fehler. | `CheckReport::unmatched` |
+| übersprungene Prüfregel | skipped rule | Prüfregel, die `check` für eine Veranstaltung oder Bahn nicht ausführt, mit dem Grund: Filter (Disziplin, Kartenart, Druckmaßstab) passt nicht, Angabe fehlt, ein Profil hat sie abgeschaltet. Auch eine Bahn, die nicht Einzelbahn ist. Wird gemeldet, nie stillschweigend als bestanden gezählt. | `Skipped` |
+| abgeschaltete Prüfregel | switched-off rule | Prüfregel, die ein Profil mit `enabled = false` abschaltet, meist ein Aufsatz. `check --all` führt sie als übersprungen, mit der Kennung dieses Profils. | `SwitchedOff` |
+| Vorschlag des Programms | proposal of the program | Grenzwert, den keine Quelle als Zahl nennt und den freemapper-courseplan vorschlägt; im Profil mit `doc = "claude"` und einer Anmerkung. Die Ausgabe nennt als Quelle „Vorschlag von freemapper-courseplan“. | `PROPOSAL_DOC` |
 | Ort eines Befunds | finding location | Wo ein Befund sitzt: Veranstaltung, Bahn, ein Posten, mehrere Posten, eine Strecke oder zwei oder mehr Strecken einer Bahn. Start und Ziel zählen dabei als Posten. Bestimmt mit der Kennung der Prüfregel, welcher akzeptierte Befund passt. | `Location` |
-| Strecken-Bezug | leg reference | Verweis auf eine Strecke einer Bahn: Bahnname und Nummer des Postens, von dem die Strecke abgeht (ab 1; 0 ist die Strecke vom Start). | `LegRef` |
+| Strecken-Bezug | leg reference | Verweis auf eine Strecke einer Bahn in einem akzeptierten Befund: Bahnname, Position, von der die Strecke abgeht (ab 1, Querungsstellen mitgezählt; 0 ist die Strecke vom Start), und die Kennungen ihrer beiden Enden. Die Position ist nicht die Postennummer auf der Karte. | `LegRef` |
+| Streckenende | leg end | Start, Posten oder Querungsstelle oder Ziel am Anfang oder Ende einer Strecke. Die Ausgabe nennt eine Strecke nach ihren Enden: „Strecke 36–37“, „Strecke Start–31“, „Strecke 37–Ziel“. | `LegEnd` |
 | ähnliche Objekte | similar features | Postenobjekte, die im Gelände oder auf der Karte verwechselbar sind (WKB B 7.2.1). | `similar_features` |
 | Ortsart | place kind | Art des Orts eines Befunds: Veranstaltung, Bahn, ein Posten, zwei oder mehr Posten, Strecke, zwei oder mehr Strecken einer Bahn. Jede Prüfung nennt die Ortsarten ihrer Befunde; `finding accept` lehnt andere ab, weil ein solcher akzeptierter Befund nie passen würde. | `Place` |
 | Postenobjekt | control feature | Das Kartenobjekt, an dem ein Posten steht: das nächste Kartenobjekt mit Symbolnummer innerhalb von `feature_search_mm` um die Postenmitte. Eine Fläche zählt mit ihrem Rand; die Fläche, in der der Posten nur liegt, ist also nicht sein Objekt. | `control_feature` |

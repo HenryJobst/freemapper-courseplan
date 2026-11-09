@@ -29,7 +29,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Kartenrand, Strecken, die durch einen anderen Posten derselben Bahn führen, und gerade Strecken durch ein
   Sperrgebiet als Warnung, dass die Optimalroute hindurchführen könnte. Abgeflaggte Strecken dürfen durch
   Sperrgebiete führen. Gebäude, Mauern, Zäune und Wasser prüft erst die spätere Routenanalyse. Jeder Befund nennt
-  den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m auseinander, mindestens 15 m“.
+  den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m auseinander, gefordert sind
+  mindestens 15 m“.
   Ein Paar oder ein Posten wird einmal gemeldet, auch wenn mehrere Bahnen ihn nutzen. Start und Ziel können Ort
   eines Befunds sein: `finding accept … --controls 31,S1`.
 - `finding accept` lehnt einen Ort ab, an dem die Prüfregel nie einen Befund meldet, etwa `--course A` für den
@@ -61,14 +62,41 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   HE-Bahn oder bei einer HE-Bahn der Länge 0 wird die Prüfregel übersprungen, bei zwei HE-Bahnen dient die erste
   als Bezug, und ein Hinweis sagt das. Eine Bahn mit leichten und schweren Kategorien (Stufen 1 und 2 gegen 3
   bis 5) ist ein Fehler, der beide Seiten nennt. Mit dem NOR-Aufsatz ergeben Leistungskilometer (Länge plus
-  Steigung × 10 / 1000) außerhalb des Ziel-Lkm der Kategoriezeile ±6 % eine Warnung; eine Bahn ohne Steigung
-  wird übersprungen, eine Kategorie ohne Zeile ergibt einen Hinweis. Trifft eine Bahn mit ihren Kategorien
-  mehrere Zeilen, gibt es einen Befund, der jede verletzte Zeile nennt. Eine Klasse ohne Regelkategorie
-  überspringt die Bahn und wird genannt.
+  Anstieg × 10 / 1000) außerhalb des Ziel-Lkm der Kategoriezeile ±6 % eine Warnung, mit bis zu zwei
+  Nachkommastellen; eine Bahn ohne Anstieg wird übersprungen. Eine Kategorie, die in keiner Zeile der Tabelle
+  steht, überspringt die Bahn für diese Kategorie, bei der Längentabelle wie bei der NOR-Tabelle. Trifft eine
+  Bahn mit ihren Kategorien mehrere Zeilen, gibt es einen Befund, der jede verletzte Zeile nennt. Eine Kategorie
+  ohne Regelkategorie überspringt die Bahn und wird genannt.
 - Handbuch, Kapitel 8 „Prüfen: Hinweise lesen, Ausnahmen begründen“: wie man eine Zeile von `check` liest, was
   Schwere, Exit-Code und übersprungene Prüfregeln bedeuten, wie man Ausnahmen akzeptiert und zurücknimmt und wie
   man Profil und Aufsätze wählt. Das Lübecker Beispiel zeigt in `check.de.txt` und `check.en.txt` die Ausgabe von
   `check` und einen akzeptierten Hinweis; die Projektdatei enthält ihn.
+- `event start-window <PROJEKT> <MINUTEN>` setzt das Startfenster, das die Prüfung der Startkapazität braucht;
+  0 lehnt es ab. `class set <PROJEKT> <KATEGORIE> [--rule-category C] [--starters N]` ändert Regelkategorie und
+  erwartete Starterzahl einer Kategorie, `--no-rule-category` und `--no-starters` entfernen sie. Über MCP heißen
+  die Werkzeuge `set_start_window` und `set_class`. Fehlt eine dieser Angaben, nennt `check --all` bei der
+  übersprungenen Prüfregel den Befehl, der sie setzt.
+- `check --all` listet unter „nicht zugeordnet“ akzeptierte Befunde, zu denen kein Befund mehr passt, etwa weil
+  ein Posten oder eine Bahn entfernt wurde, mit Begründung und dem Hinweis auf `finding remove`. Die
+  Zusammenfassung zählt sie, der Exit-Code bleibt davon unberührt. MCP `check` gibt sie in `unmatched` zurück.
+- Eine Prüfregel, die ein Aufsatz abschaltet, steht bei `check --all` unter den übersprungenen, mit „abgeschaltet
+  durch“ und der Kennung des Aufsatzes.
+- `check --all` zeigt unter jedem Befund die Anmerkung seiner Prüfregel in der gewählten Sprache. Ein Wert, den
+  das Programm vorschlägt, weil keine Quelle eine Zahl nennt, trägt als Quelle „Vorschlag von
+  freemapper-courseplan“.
+
+### Geändert
+
+- Eine Strecke heißt in der Ausgabe nach ihren Enden: „Strecke 36–37“, „Strecke Start–31“, „Strecke 37–Ziel“,
+  zwei Strecken „Strecken 31–32 und 35–36“. Start und Ziel heißen als Ort „Start S1“ und „Ziel F1“. Innerhalb einer
+  Bahn steht die Bahn vorn, dann die Strecken in Laufrichtung. Eingegeben wird eine Strecke weiter als
+  `--leg A:6`, die Strecke ab Position 6 der Bahn, wobei Querungsstellen mitzählen; die Hilfe sagt das.
+- Ein akzeptierter Befund an einer Strecke speichert deren Enden (`from`, `to`). Läuft die Strecke später zwischen
+  anderen Posten, meldet `check` den Befund wieder. `finding remove --leg A:6` findet die Ausnahme weiter nach
+  Bahn und Position.
+- Texte: Grenzen lauten „gefordert sind mindestens 15 m“, eine Strecke über einen Posten „Die Strecke führt über
+  den Posten 31“ statt „0 m am Posten 31 vorbei“. Start- und Tabellenbefunde wiederholen ihren Ort nicht mehr im
+  Text. Eine leere Begründung wird mit einer eigenen Meldung abgelehnt.
 
 ## [0.1.0] - 2026-11-09
 

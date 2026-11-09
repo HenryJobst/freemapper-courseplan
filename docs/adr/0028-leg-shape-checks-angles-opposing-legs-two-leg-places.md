@@ -20,8 +20,10 @@ below 45°, hint below 90°), and an opposing-legs finding concerns two legs, wh
 - Legs that cross head-on at a shallow angle are opposing once their near stretch reaches the minimum length
   (R17): with 10 m and 30 m, below a crossing angle of about 41.8°.
 - A sharp dog-leg can give both an `acute_angle` and an `opposing_legs` finding, since they are different keys.
-- A finding at two legs has `Location::Legs { course, afters }` and place kind `Legs`, accepted with
-  `--leg A:2 --leg A:5` or two MCP `legs` objects in any order; legs of two courses are refused.
+- A finding at two legs has `Location::Legs { course, legs }` and place kind `Legs`, accepted with
+  `--leg A:2 --leg A:5` or two MCP `legs` objects in any order; legs of two courses are refused. Each leg
+  carries its position and its end stops (ADR 0025, amendment), and output names the pair as "legs 31–32
+  and 35–36".
 
 ## Consequences
 Cost if wrong: one condition for the strictest rule, one location variant. The values are proposals in the
