@@ -467,6 +467,15 @@ impl Localize for RulesError {
                 "error-rules-unknown-rule",
                 &[("id", v(overlay)), ("name", v(rule))],
             ),
+            RulesError::Ambiguous { key, value, rules } => text(
+                lang,
+                "error-rules-ambiguous",
+                &[
+                    ("key", v(key)),
+                    ("value", v(value)),
+                    ("list", v(rules.join(", "))),
+                ],
+            ),
         }
     }
 }
@@ -977,6 +986,11 @@ mod tests {
             RulesError::UnknownRule {
                 overlay: s("nor-bb-2021"),
                 rule: s("wkb2026.x.y"),
+            },
+            RulesError::Ambiguous {
+                key: s("min_distance"),
+                value: s("metres"),
+                rules: vec![s("wkb2026.distance.min"), s("wkb2026.distance.min_half")],
             },
         ] {
             check(&e);

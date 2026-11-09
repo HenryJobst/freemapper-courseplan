@@ -74,6 +74,7 @@ error-rules-overlay-for-another-base = Aufsatz { $id } ergänzt { $other }, nich
 error-rules-malformed = Regelprofil { $id } ist fehlerhaft: { $message }
 error-rules-unknown-key = Prüfregel { $name } in Regelprofil { $id } hat den unbekannten Schlüssel { $key }
 error-rules-unknown-rule = Aufsatz { $id } schaltet Prüfregel { $name } ab, die das Basisprofil nicht hat
+error-rules-ambiguous = Mehr als eine aktive Prüfregel liefert { $key } { $value }: { $list }
 
 ## Bearbeiten (EditError)
 

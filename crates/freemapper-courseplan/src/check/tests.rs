@@ -3,7 +3,7 @@ use freemapper_courseplan_model::{AcceptedFinding, CourseKind, Discipline, LegRe
 use super::testing::*;
 use super::*;
 use crate::map::MapKind;
-use crate::rules::KNOWN_KEYS;
+use crate::rules::SCHEMA;
 
 /// A fake check: one warning per course it sees, at the course's first two controls.
 fn first_two(
@@ -286,9 +286,9 @@ fn finding_keys_follow_the_location() {
 fn rules_filtered_out_for_the_whole_event_are_skipped_with_the_reason() {
     let mut event = sample_event();
     let mut long = fake_rule();
-    long.disciplines = vec![Discipline::Long];
+    crate::rules::set_disciplines(&mut long, &[Discipline::Long]);
     let mut forest = rule("t.fake.forest", "min_distance", Severity::Warning);
-    forest.map_kinds = vec![MapKind::Forest];
+    crate::rules::set_map_kinds(&mut forest, &[MapKind::Forest]);
     let rules = rule_set(vec![(long, "base"), (forest, "base")]);
 
     event.event.discipline = Discipline::Training;
@@ -326,9 +326,9 @@ fn a_rule_is_not_skipped_while_another_rule_of_its_key_applies() {
     let mut event = sample_event();
     event.event.discipline = Discipline::Middle;
     let mut long = fake_rule();
-    long.disciplines = vec![Discipline::Long];
+    crate::rules::set_disciplines(&mut long, &[Discipline::Long]);
     let mut middle = rule("t.fake.middle", "min_distance", Severity::Warning);
-    middle.disciplines = vec![Discipline::Middle];
+    crate::rules::set_disciplines(&mut middle, &[Discipline::Middle]);
     let rules = rule_set(vec![(long, "base"), (middle, "base")]);
     let report = run(&event, &rules);
     assert!(report.skipped.is_empty(), "{:?}", report.skipped);
@@ -342,9 +342,9 @@ fn a_print_scale_without_rule_is_skipped_per_course() {
     event.courses[0].planned_print_scale = Some(4000);
     event.courses[1].planned_print_scale = Some(2500);
     let mut sprint = fake_rule();
-    sprint.print_scales = vec![3000, 4000];
+    crate::rules::set_print_scales(&mut sprint, &[3000, 4000]);
     let mut forest = rule("t.fake.forest", "min_distance", Severity::Warning);
-    forest.print_scales = vec![10000, 15000];
+    crate::rules::set_print_scales(&mut forest, &[10000, 15000]);
     let rules = rule_set(vec![(sprint, "base"), (forest, "base")]);
     let report = run(&event, &rules);
 
@@ -395,7 +395,8 @@ fn courses_of_other_kinds_are_skipped_once() {
 #[test]
 fn every_known_key_has_a_check() {
     let keys: Vec<&str> = CHECKS.iter().map(|c| c.key).collect();
-    assert_eq!(keys, KNOWN_KEYS);
+    let known: Vec<&str> = SCHEMA.keys.iter().map(|k| k.key).collect();
+    assert_eq!(keys, known);
 }
 
 #[test]

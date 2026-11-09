@@ -1,7 +1,7 @@
 //! The check engine: runs the rules of a [`RuleSet`] on the individual courses of an event and
 //! collects [`Finding`]s, accepted findings and [`Skipped`] rules (design §5.6, ADR 0025).
 //!
-//! Each rule names a `key`; [`CHECKS`] maps every key of [`KNOWN_KEYS`](crate::rules::KNOWN_KEYS)
+//! Each rule names a `key`; [`CHECKS`] maps every key of [`SCHEMA`](crate::rules::SCHEMA)
 //! to the function that implements it, one line per key. The engine applies the rule filters
 //! (discipline, map kind, print scale) before it calls the function, so a check only sees the
 //! courses its rule applies to. A key whose rules apply to nothing is reported as skipped with
@@ -27,7 +27,10 @@ use freemapper_courseplan_model::{
 };
 
 use crate::omap::MapDocument;
-use crate::rules::{PROPOSAL_DOC, Rule, RuleSet, SetRule, Severity, SourceRef};
+use crate::rules::{
+    FIELD_DISCIPLINES, FIELD_MAP_KINDS, FIELD_PRINT_SCALES, FilterArg, PROPOSAL_DOC, Rule, RuleSet,
+    SetRule, Severity, SourceRef,
+};
 use crate::text::{FluentValue, Lang, text};
 
 /// Where a finding sits.
@@ -597,7 +600,10 @@ fn above(value: f64, limit: f64) -> bool {
 
 /// Whether a rule's print scale filter covers the course.
 fn covers(rule: &Rule, course: &CourseContext<'_>) -> bool {
-    rule.print_scales.is_empty() || rule.print_scales.contains(&course.print_scale)
+    rule.admits(
+        FIELD_PRINT_SCALES,
+        FilterArg::Int(i64::from(course.print_scale)),
+    )
 }
 
 fn skip_of(rule: &SetRule, location: Location, reason_id: &'static str, args: Args) -> Skipped {
@@ -805,7 +811,7 @@ pub(crate) fn run_checks(ctx: &CheckContext<'_>, rules: &RuleSet, checks: &[Chec
 /// Why the event as a whole falls outside a rule's discipline or map kind filter.
 fn event_filter(ctx: &CheckContext<'_>, rule: &Rule) -> Option<(&'static str, Args)> {
     let discipline = ctx.event.event.discipline;
-    if !rule.disciplines.is_empty() && !rule.disciplines.contains(&discipline) {
+    if !rule.admits(FIELD_DISCIPLINES, FilterArg::Text(discipline.as_str())) {
         return Some(if discipline == Discipline::Training {
             (SKIP_TRAINING, Vec::new())
         } else {
@@ -813,7 +819,7 @@ fn event_filter(ctx: &CheckContext<'_>, rule: &Rule) -> Option<(&'static str, Ar
             (SKIP_DISCIPLINE, vec![("discipline", ArgValue::Text(name))])
         });
     }
-    if !rule.map_kinds.is_empty() && !rule.map_kinds.contains(&ctx.map_kind) {
+    if !rule.admits(FIELD_MAP_KINDS, FilterArg::Text(ctx.map_kind.as_str())) {
         let name = ctx.map_kind.as_str().to_owned();
         return Some((SKIP_MAP_KIND, vec![("kind", ArgValue::Text(name))]));
     }

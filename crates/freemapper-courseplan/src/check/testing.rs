@@ -209,9 +209,7 @@ pub(crate) fn rule(id: &str, key: &str, severity: Severity) -> Rule {
         key: key.to_owned(),
         severity,
         enabled: true,
-        map_kinds: vec![],
-        disciplines: vec![],
-        print_scales: vec![],
+        filters: BTreeMap::new(),
         values: Table::new(),
         source: SourceRef {
             doc: "TEST".to_owned(),

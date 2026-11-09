@@ -206,7 +206,7 @@ fn a_place_gets_only_the_strictest_rule_of_the_key() {
 #[test]
 fn a_stricter_rule_for_another_print_scale_does_not_silence_the_hint() {
     let mut warning = warning_rule();
-    warning.print_scales = vec![10000];
+    crate::rules::set_print_scales(&mut warning, &[10000]);
     let r = report(
         &angle_event(30.0),
         &map(4000, vec![]),

@@ -61,7 +61,7 @@ fn length_rule() -> Rule {
         rule("t.length", "length_table", Severity::Warning),
         LENGTH_TABLE,
     );
-    r.disciplines = vec![Discipline::Long];
+    crate::rules::set_disciplines(&mut r, &[Discipline::Long]);
     r
 }
 
@@ -87,7 +87,7 @@ courses = [
 
 fn nor_rule() -> Rule {
     let mut r = with_values(rule("t.nor", "nor_lkm", Severity::Warning), NOR_TABLE);
-    r.disciplines = vec![Discipline::Long, Discipline::Middle];
+    crate::rules::set_disciplines(&mut r, &[Discipline::Long, Discipline::Middle]);
     r
 }
 

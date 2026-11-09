@@ -124,12 +124,12 @@ fn a_control_of_a_course_at_another_print_scale_is_a_neighbour() {
         vec![course("A", &["31"]), b],
     );
     let mut half = min_rule();
-    half.print_scales = vec![4000];
+    crate::rules::set_print_scales(&mut half, &[4000]);
     let mut full = with_values(
         rule("t.distance.full", "min_distance", Severity::Error),
         "metres = 30.0",
     );
-    full.print_scales = vec![10000];
+    crate::rules::set_print_scales(&mut full, &[10000]);
     let r = report(&e, &map(4000, vec![]), vec![half, full]);
     let rules: Vec<&str> = r.findings.iter().map(|f| f.rule.as_str()).collect();
     assert_eq!(rules, ["t.distance.min", "t.distance.full"]);

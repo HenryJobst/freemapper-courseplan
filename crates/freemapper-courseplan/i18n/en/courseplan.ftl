@@ -74,6 +74,7 @@ error-rules-overlay-for-another-base = overlay { $id } extends { $other }, not {
 error-rules-malformed = rule profile { $id } is malformed: { $message }
 error-rules-unknown-key = rule { $name } in profile { $id } has the unknown key { $key }
 error-rules-unknown-rule = overlay { $id } switches off rule { $name }, which the base profile does not have
+error-rules-ambiguous = more than one active rule gives { $key } { $value }: { $list }
 
 ## Editing (EditError)
 
