@@ -5,7 +5,7 @@ use freemapper_courseplan_model::{AcceptedFinding, Event, LegRef, SpecialObject}
 
 use super::super::testing::*;
 use super::super::*;
-use crate::rules::load_rule_set;
+use crate::rules::{SwitchedOff, load_rule_set};
 
 fn warning_rule() -> Rule {
     with_values(
@@ -144,6 +144,39 @@ fn a_stricter_rule_for_another_print_scale_does_not_silence_the_hint() {
     );
     let rules: Vec<&str> = r.findings.iter().map(|f| f.rule.as_str()).collect();
     assert_eq!(rules, ["t.leg.acute_hint"]);
+}
+
+#[test]
+fn a_switched_off_warning_leaves_the_angle_to_the_hint() {
+    // As an overlay with `enabled = false` would: the 45° warning moves to `switched_off`.
+    let mut rules = load_rule_set("wkb-2026", &[]).unwrap();
+    let i = rules
+        .rules
+        .iter()
+        .position(|r| r.rule.id == "wkb2026.leg.acute_angle")
+        .unwrap();
+    let off = rules.rules.remove(i);
+    rules.switched_off.push(SwitchedOff {
+        rule: off.rule,
+        profile: off.profile,
+        by: "test-overlay".to_owned(),
+    });
+    let e = angle_event(30.0);
+    let map = map(4000, vec![]);
+    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    let acute: Vec<(&str, String)> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule.starts_with("wkb2026.leg.acute"))
+        .map(|f| (f.rule.as_str(), en(f)))
+        .collect();
+    assert_eq!(
+        acute,
+        [(
+            "wkb2026.leg.acute_angle_hint",
+            "the legs at control 31 form an angle of 30°, at least 90°".to_owned()
+        )]
+    );
 }
 
 #[test]
@@ -550,6 +583,48 @@ fn a_leg_with_bends_is_compared_along_its_bends() {
     };
     controls[1].bends.push(pt(30.0, 20.0));
     let r = report(&e, &map(4000, vec![]), vec![opposing_rule()]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+/// Course A: the leg from the start runs east along y = 0 to 31 (60, 0); the leg after 2 crosses
+/// it head-on at (30, 0), turned by `degrees` from the opposite direction, 25 mm to either side.
+fn crossing_event(degrees: f64) -> Event {
+    let (c, s) = (degrees.to_radians().cos(), degrees.to_radians().sin());
+    let mut e = event(
+        &[
+            ("31", 60.0, 0.0),
+            ("32", 30.0 + 25.0 * c, 25.0 * s),
+            ("33", 30.0 - 25.0 * c, -25.0 * s),
+        ],
+        vec![course("A", &["31", "32", "33"])],
+    );
+    set_finish(&mut e, 30.0 - 25.0 * c, -60.0);
+    e
+}
+
+#[test]
+fn legs_crossing_head_on_at_a_shallow_angle_are_opposing() {
+    // Ruling R17: near a crossing at angle a, each leg is within 10 m of the other for
+    // 2 × 10 m / sin a, which reaches 30 m below about 41.8°.
+    let r = report(
+        &crossing_event(40.0),
+        &map(4000, vec![]),
+        vec![opposing_rule()],
+    );
+    let places: Vec<(&str, Vec<u32>)> = r.findings.iter().map(|f| legs_at(&f.location)).collect();
+    assert_eq!(places, [("A", vec![0, 2])], "{:?}", r.findings);
+    // 20 m / sin 40° = 31.1 m.
+    assert!(
+        en(&r.findings[0]).contains("for 31 m"),
+        "{}",
+        en(&r.findings[0])
+    );
+    // At 50° the directions differ by 130°, below 135°, and the stretch would be 26 m.
+    let r = report(
+        &crossing_event(50.0),
+        &map(4000, vec![]),
+        vec![opposing_rule()],
+    );
     assert!(r.findings.is_empty(), "{:?}", r.findings);
 }
 
