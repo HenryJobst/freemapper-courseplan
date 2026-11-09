@@ -1,10 +1,11 @@
 //! Program texts from Fluent files (ADR 0022).
 //!
-//! Provenance: written in freemapper-courseplan; freemapper and freemapper-print copy this file
-//! (everything above the `Localize` implementations is program independent).
+//! Provenance: the program independent part (languages, lookup with English fallback, language
+//! detection, catalog checks) lives in `freemapper-text` of freemapper-core (ADR 0010 there). This
+//! file holds the embedded catalogs and the `Localize` implementations of this program.
 //!
 //! Every user-facing text lives in `i18n/<language>/courseplan.ftl`. The files are embedded with
-//! `include_str!`, so adding a language means adding a folder, listing it in `EMBEDDED` and
+//! `include_str!`, so adding a language means adding a folder, listing it in `TEXTS` and
 //! running the tests. English is the reference and the fallback: a message missing in another
 //! language is taken from English, and a message missing everywhere comes back as its id.
 //!
@@ -31,12 +32,8 @@
 //! `std::io::Error` arrive as arguments and stay English. `Display` of every error type stays
 //! English too (logs, tests); `Localize::localize(&Lang::english())` returns exactly that text.
 
-use std::sync::OnceLock;
-
-pub use fluent_bundle::FluentValue;
-use fluent_bundle::concurrent::FluentBundle;
-use fluent_bundle::{FluentArgs, FluentResource};
-use unic_langid::LanguageIdentifier;
+use freemapper_text::Catalog;
+pub use freemapper_text::{FluentValue, Lang};
 
 use freemapper_courseplan_model::{ModelError, ProjectError};
 
@@ -47,154 +44,41 @@ use crate::init::InitError;
 use crate::omap::OmapError;
 use crate::rules::RulesError;
 
-/// A language of the program texts, identified by its language part (`en`, `de`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Lang(pub LanguageIdentifier);
-
-impl Lang {
-    /// English, the reference language and the fallback.
-    pub fn english() -> Lang {
-        Lang(LanguageIdentifier::from_parts(
-            "en".parse().expect("valid language"),
-            None,
-            None,
-            &[],
-        ))
-    }
-
-    /// The language part as text, for example `de`.
-    pub fn code(&self) -> String {
-        self.0.language.to_string()
-    }
+/// Program texts for a value, for example an error.
+///
+/// Defined here and not taken from `freemapper_text::Localize`: this program implements it for
+/// `ModelError` and `ProjectError` of the model crate, which the orphan rule forbids for a trait
+/// from a third crate.
+pub trait Localize {
+    /// The text in `lang`. In English it equals `to_string()` for error types.
+    fn localize(&self, lang: &Lang) -> String;
 }
 
 /// The embedded catalogs: language code and file content. English comes first.
-const EMBEDDED: &[(&str, &str)] = &[
+pub static TEXTS: Catalog = Catalog::new(&[
     ("en", include_str!("../i18n/en/courseplan.ftl")),
     ("de", include_str!("../i18n/de/courseplan.ftl")),
-];
-
-type Bundle = FluentBundle<FluentResource>;
-
-fn lang_of(code: &str) -> Lang {
-    Lang(LanguageIdentifier::from_parts(
-        code.parse().expect("valid language code"),
-        None,
-        None,
-        &[],
-    ))
-}
+]);
 
 /// The languages the program has texts for, English first.
 pub fn available() -> Vec<Lang> {
-    EMBEDDED.iter().map(|(code, _)| lang_of(code)).collect()
-}
-
-fn build_bundle(code: &str, source: &str) -> Bundle {
-    // A file with syntax errors still yields its valid messages; the tests refuse such files.
-    let resource = match FluentResource::try_new(source.to_owned()) {
-        Ok(resource) => resource,
-        Err((resource, _)) => resource,
-    };
-    let mut bundle = FluentBundle::new_concurrent(vec![lang_of(code).0]);
-    // Isolation marks would show up as stray characters in terminals.
-    bundle.set_use_isolating(false);
-    // Overriding is impossible with a single resource; ignore the (empty) error list.
-    let _ = bundle.add_resource(resource);
-    bundle
-}
-
-fn bundles() -> &'static [(String, Bundle)] {
-    static BUNDLES: OnceLock<Vec<(String, Bundle)>> = OnceLock::new();
-    BUNDLES.get_or_init(|| {
-        EMBEDDED
-            .iter()
-            .map(|(code, source)| ((*code).to_owned(), build_bundle(code, source)))
-            .collect()
-    })
-}
-
-fn bundle_of(lang: &Lang) -> Option<&'static Bundle> {
-    let code = lang.code();
-    bundles().iter().find(|(c, _)| *c == code).map(|(_, b)| b)
-}
-
-fn english_bundle() -> &'static Bundle {
-    bundle_of(&Lang::english()).expect("English is embedded")
-}
-
-/// The language part of a locale value such as `de_DE.UTF-8`, `de-AT` or `en`; `None` for an
-/// empty value, `C` and `POSIX`.
-fn language_part(value: &str) -> Option<String> {
-    let head = value.split(['.', '@']).next().unwrap_or("");
-    let language = head.split(['_', '-']).next().unwrap_or("").trim();
-    if language.is_empty()
-        || language.eq_ignore_ascii_case("c")
-        || language.eq_ignore_ascii_case("posix")
-    {
-        None
-    } else {
-        Some(language.to_ascii_lowercase())
-    }
-}
-
-fn match_available(value: &str) -> Option<Lang> {
-    let language = language_part(value)?;
-    available().into_iter().find(|l| l.code() == language)
+    TEXTS.available()
 }
 
 /// The `--lang` value as a language, or the list of available languages when it names none.
 pub fn parse_lang_arg(arg: &str) -> Result<Lang, Vec<Lang>> {
-    match_available(arg.trim()).ok_or_else(available)
+    TEXTS.parse_lang_arg(arg)
 }
 
 /// Picks the language: `--lang`, else `FREEMAPPER_LANG`, else `LC_ALL`, `LC_MESSAGES`, `LANG`,
-/// else English. Values naming no available language pass to the next source. `env` reads one
-/// environment variable (`|name| std::env::var(name).ok()` in the programs).
+/// else English (see `freemapper_text::Catalog::detect_lang`).
 pub fn detect_lang(arg: Option<&str>, env: &dyn Fn(&str) -> Option<String>) -> Lang {
-    let from_arg = arg.and_then(match_available);
-    let from_env = || {
-        ["FREEMAPPER_LANG", "LC_ALL", "LC_MESSAGES", "LANG"]
-            .iter()
-            .find_map(|name| env(name).and_then(|v| match_available(&v)))
-    };
-    from_arg.or_else(from_env).unwrap_or_else(Lang::english)
-}
-
-fn format_in(bundle: &Bundle, id: &str, args: &FluentArgs) -> Option<String> {
-    let pattern = bundle.get_message(id)?.value()?;
-    let mut errors = Vec::new();
-    Some(
-        bundle
-            .format_pattern(pattern, Some(args), &mut errors)
-            .into_owned(),
-    )
-}
-
-/// Looks `id` up in the bundles in order; the id itself when none has it.
-fn lookup(chain: &[&Bundle], id: &str, args: &[(&str, FluentValue)]) -> String {
-    let mut fluent_args = FluentArgs::new();
-    for (name, value) in args {
-        fluent_args.set(*name, value.clone());
-    }
-    chain
-        .iter()
-        .find_map(|bundle| format_in(bundle, id, &fluent_args))
-        .unwrap_or_else(|| id.to_owned())
+    TEXTS.detect_lang(arg, env)
 }
 
 /// The text `id` in `lang`, falling back to English, and to the id itself as a last resort.
 pub fn text(lang: &Lang, id: &str, args: &[(&str, FluentValue)]) -> String {
-    match bundle_of(lang) {
-        Some(bundle) => lookup(&[bundle, english_bundle()], id, args),
-        None => lookup(&[english_bundle()], id, args),
-    }
-}
-
-/// Program texts for a value, for example an error.
-pub trait Localize {
-    /// The text in `lang`. In English it equals `to_string()` for error types.
-    fn localize(&self, lang: &Lang) -> String;
+    TEXTS.text(lang, id, args)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -594,66 +478,8 @@ mod tests {
     use std::collections::BTreeSet;
     use std::path::PathBuf;
 
-    fn env_of<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<String> + 'a {
-        move |name| {
-            pairs
-                .iter()
-                .find(|(n, _)| *n == name)
-                .map(|(_, v)| (*v).to_owned())
-        }
-    }
-
     fn de() -> Lang {
-        lang_of("de")
-    }
-
-    #[test]
-    fn detects_language_in_order() {
-        let env = env_of(&[("FREEMAPPER_LANG", "en"), ("LANG", "de_DE.UTF-8")]);
-        assert_eq!(detect_lang(Some("de"), &env), de());
-        assert_eq!(detect_lang(Some("DE"), &env), de());
-        assert_eq!(detect_lang(None, &env), Lang::english());
-        let env = env_of(&[("LANG", "de_DE.UTF-8")]);
-        assert_eq!(detect_lang(None, &env), de());
-        assert_eq!(detect_lang(Some("en"), &env), Lang::english());
-        let env = env_of(&[("LANG", "C")]);
-        assert_eq!(detect_lang(None, &env), Lang::english());
-        let env = env_of(&[("FREEMAPPER_LANG", "fr"), ("LANG", "de_DE.UTF-8")]);
-        assert_eq!(detect_lang(None, &env), de());
-        // LC_ALL before LC_MESSAGES before LANG; empty values and POSIX pass on.
-        let env = env_of(&[("LC_ALL", ""), ("LC_MESSAGES", "POSIX"), ("LANG", "de_AT")]);
-        assert_eq!(detect_lang(None, &env), de());
-        let env = env_of(&[("LC_ALL", "en_US.UTF-8"), ("LANG", "de_DE")]);
-        assert_eq!(detect_lang(None, &env), Lang::english());
-        let env = env_of(&[("LC_MESSAGES", "de-DE")]);
-        assert_eq!(detect_lang(None, &env), de());
-        assert_eq!(detect_lang(None, &env_of(&[])), Lang::english());
-        // An unknown --lang passes to the next source.
-        let env = env_of(&[("LANG", "de_DE")]);
-        assert_eq!(detect_lang(Some("fr"), &env), de());
-    }
-
-    #[test]
-    fn unknown_lang_argument_is_refused() {
-        assert_eq!(parse_lang_arg("de"), Ok(de()));
-        assert_eq!(parse_lang_arg("EN"), Ok(Lang::english()));
-        let available = parse_lang_arg("fr").unwrap_err();
-        assert_eq!(available, vec![Lang::english(), de()]);
-        assert!(parse_lang_arg("").is_err());
-        assert!(parse_lang_arg("C").is_err());
-    }
-
-    fn message_ids(source: &str) -> BTreeSet<String> {
-        use fluent_syntax::ast::Entry;
-        let resource = fluent_syntax::parser::parse(source).expect("file parses without errors");
-        resource
-            .body
-            .iter()
-            .filter_map(|entry| match entry {
-                Entry::Message(m) => Some(m.id.name.to_owned()),
-                _ => None,
-            })
-            .collect()
+        parse_lang_arg("de").unwrap()
     }
 
     /// Sample values for every variable the catalogs use.
@@ -765,113 +591,18 @@ mod tests {
     }
 
     #[test]
-    fn every_language_has_every_message() {
-        let english = message_ids(EMBEDDED[0].1);
-        assert!(!english.is_empty());
-        for (code, source) in EMBEDDED {
-            let ids = message_ids(source);
-            assert_eq!(ids, english, "message ids of {code} differ from English");
-            let lang = lang_of(code);
-            let bundle = bundle_of(&lang).unwrap();
-            let args = sample_args();
-            let mut fluent_args = FluentArgs::new();
-            for (n, value) in &args {
-                fluent_args.set(*n, value.clone());
-            }
-            for id in &ids {
-                let pattern = bundle.get_message(id).unwrap().value().unwrap();
-                let mut errors = Vec::new();
-                let out = bundle.format_pattern(pattern, Some(&fluent_args), &mut errors);
-                assert!(errors.is_empty(), "{code}/{id}: {errors:?}");
-                assert!(!out.trim().is_empty(), "{code}/{id} is empty");
-            }
-        }
+    fn catalogs_have_no_problems() {
+        let problems = TEXTS.problems(&sample_args());
+        assert!(problems.is_empty(), "{problems:#?}");
     }
 
-    /// The variables a pattern refers to, including those inside selectors and variants.
-    fn variables_of(source: &str) -> std::collections::BTreeMap<String, BTreeSet<String>> {
-        use fluent_syntax::ast::{
-            CallArguments, Entry, Expression, InlineExpression, Pattern, PatternElement,
-        };
-        fn in_inline(e: &InlineExpression<&str>, out: &mut BTreeSet<String>) {
-            match e {
-                InlineExpression::VariableReference { id } => {
-                    out.insert(id.name.to_owned());
-                }
-                InlineExpression::FunctionReference { arguments, .. } => in_args(arguments, out),
-                InlineExpression::TermReference {
-                    arguments: Some(arguments),
-                    ..
-                } => in_args(arguments, out),
-                InlineExpression::Placeable { expression } => in_expression(expression, out),
-                _ => {}
-            }
-        }
-        fn in_args(a: &CallArguments<&str>, out: &mut BTreeSet<String>) {
-            a.positional.iter().for_each(|e| in_inline(e, out));
-            a.named.iter().for_each(|n| in_inline(&n.value, out));
-        }
-        fn in_expression(e: &Expression<&str>, out: &mut BTreeSet<String>) {
-            match e {
-                Expression::Inline(i) => in_inline(i, out),
-                Expression::Select { selector, variants } => {
-                    in_inline(selector, out);
-                    variants.iter().for_each(|v| in_pattern(&v.value, out));
-                }
-            }
-        }
-        fn in_pattern(p: &Pattern<&str>, out: &mut BTreeSet<String>) {
-            for element in &p.elements {
-                if let PatternElement::Placeable { expression } = element {
-                    in_expression(expression, out);
-                }
-            }
-        }
-        let resource = fluent_syntax::parser::parse(source).expect("file parses");
-        let mut map = std::collections::BTreeMap::new();
-        for entry in &resource.body {
-            if let Entry::Message(m) = entry {
-                let mut vars = BTreeSet::new();
-                if let Some(pattern) = &m.value {
-                    in_pattern(pattern, &mut vars);
-                }
-                map.insert(m.id.name.to_owned(), vars);
-            }
-        }
-        map
-    }
-
-    #[test]
-    fn every_language_uses_the_same_variables() {
-        let english = variables_of(EMBEDDED[0].1);
-        for (code, source) in EMBEDDED {
-            let vars = variables_of(source);
-            for (id, expected) in &english {
-                assert_eq!(
-                    vars.get(id),
-                    Some(expected),
-                    "{code}/{id}: variables differ from English"
-                );
-            }
-        }
-    }
-
-    /// Message ids written as string literals in the code above the test module.
     fn ids_in_source(source: &str) -> BTreeSet<String> {
-        let code = source.split("#[cfg(test)]").next().unwrap();
-        code.split('"')
-            .skip(1)
-            .step_by(2)
-            .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-", "check-"]
-                    .iter()
-                    .any(|p| lit.starts_with(p))
-                    && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
-                    && !lit.ends_with('-')
-                    && !["word-kind", "word-what", "word-name", "word-special"].contains(lit)
-            })
-            .map(str::to_owned)
-            .collect()
+        let mut ids =
+            freemapper_text::ids_in_source(source, &["error-", "cli-", "word-", "mcp-", "check-"]);
+        for excluded in ["word-kind", "word-what", "word-name", "word-special"] {
+            ids.remove(excluded);
+        }
+        ids
     }
 
     /// Every non-test source file directly under `src/check/`; the guard test below fails when a
@@ -925,12 +656,12 @@ mod tests {
                 ],
             )
         };
-        let en = row(&lang_of("en"));
+        let en = row(&parse_lang_arg("en").unwrap());
         assert!(
             en.contains("H-12") && en.contains("3.9") && en.contains("4.1"),
             "{en}"
         );
-        let de = row(&lang_of("de"));
+        let de = row(&parse_lang_arg("de").unwrap());
         assert!(de.contains("H-12") && de.contains("Ziel-Lkm"), "{de}");
         for lang in available() {
             let empty = text(
@@ -1002,26 +733,10 @@ mod tests {
                 );
             }
         }
-        let english = message_ids(EMBEDDED[0].1);
+        let english = TEXTS.message_ids("en");
         for id in &ids {
             assert!(english.contains(id), "{id} not in the English file");
         }
-    }
-
-    #[test]
-    fn missing_message_falls_back_to_english() {
-        let partial = build_bundle("de", "other = Anderes\n");
-        let english = english_bundle();
-        let args = [("code", v("31"))];
-        assert_eq!(
-            lookup(&[&partial, english], "error-edit-code-taken", &args),
-            "control 31 already exists"
-        );
-        assert_eq!(lookup(&[&partial, english], "other", &[]), "Anderes");
-        assert_eq!(
-            lookup(&[&partial, english], "no-such-id", &[]),
-            "no-such-id"
-        );
     }
 
     fn code(s: &str) -> ControlCode {
@@ -1308,7 +1023,7 @@ mod tests {
     /// The German catalog uses the glossary terms (ruling R13), not the older wording.
     #[test]
     fn german_catalog_uses_the_glossary_terms() {
-        let german = EMBEDDED.iter().find(|(code, _)| *code == "de").unwrap().1;
+        let german = include_str!("../i18n/de/courseplan.ftl");
         for old in [
             "Querungspunkt",
             "Nummernplatz",

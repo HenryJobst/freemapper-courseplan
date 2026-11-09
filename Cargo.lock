@@ -310,14 +310,12 @@ dependencies = [
 name = "freemapper-courseplan"
 version = "0.4.0"
 dependencies = [
- "fluent-bundle",
- "fluent-syntax",
  "freemapper-courseplan-model",
+ "freemapper-text",
  "quick-xml",
  "tempfile",
  "thiserror",
  "toml",
- "unic-langid",
 ]
 
 [[package]]
@@ -346,6 +344,16 @@ dependencies = [
  "thiserror",
  "toml",
  "toml_edit",
+]
+
+[[package]]
+name = "freemapper-text"
+version = "0.1.0"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.1.0#36299b8c7432c48732471fab0e86f524178300bd"
+dependencies = [
+ "fluent-bundle",
+ "fluent-syntax",
+ "unic-langid",
 ]
 
 [[package]]
