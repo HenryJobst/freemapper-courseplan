@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.6.0] - 2026-11-09
+
 ### Hinzugefügt
 
 - `freemapper-courseplan init <Karte> --ppen <Datei>` und `import <Projekt> --ppen <Datei> [--replace]` übernehmen

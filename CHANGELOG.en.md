@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09
+
 ### Added
 
 - `freemapper-courseplan init <map> --ppen <file>` and `import <project> --ppen <file> [--replace]` take over a
