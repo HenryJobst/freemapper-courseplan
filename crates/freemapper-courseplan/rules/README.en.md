@@ -87,7 +87,7 @@ the findings that were accepted for it are reported again.
 | `nor_lkm` | Performance kilometres against the NOR recommendation |
 
 A rule with any other key is refused. A new key needs code in `src/check/` and an entry in
-`KNOWN_KEYS` in `src/rules.rs`.
+`SCHEMA` in `src/rules.rs`.
 
 `severity` is `error`, `warning` or `hint`.
 
@@ -114,14 +114,16 @@ by map kind, since forest maps use ISOM symbol codes and sprint maps ISSprOM cod
 ends in `_<unit>`. The units are `metres`, `mm`, `degrees`, `percent` and `factor`. Examples:
 `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`, `feature_search_mm = 1.0`.
 A name like `distance = 30` is refused, because nobody can tell whether it means metres on the
-ground or millimetres on the map.
+ground or millimetres on the map. A number under a unit name must be in the range of its unit:
+`metres` and `mm` above 0, `factor` 0 or more, `percent` from 0 to 100. A text or a boolean under a
+unit name is refused.
 
 Texts, true/false and lists of texts need no unit. Symbol codes are texts: `impassable = ["520",
 "709"]`. A map symbol matches a code when it has that code or a sub-code of it: `505.1` matches
 `505`, `5051` does not.
 
 Tables and lists of rows have no single unit. Each one is listed with its shape in
-`TABLE_VALUES` in `src/rules.rs`, and the profile file describes its tables in a comment at the
+`SCHEMA` in `src/rules.rs`, and the profile file describes its tables in a comment at the
 top. The current tables are `range` and `pairs` (codes), `courses` of `length_table` and of
 `nor_lkm`, and `levels`, `easy_levels` and `hard_levels` of `difficulty_mix`.
 
@@ -138,7 +140,7 @@ keys of `docs/research/2026-11-08-bahnlegung-kriterien.md` (WKB26, IOF-R, IOF-SG
 BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14) and give the section, and the PDF page for tables.
 
 Some values have no number in any source. They cite `doc = "claude"` with the plan as section,
-and their `note` says what the sources say and that the number is a proposal. `check` names such a
+and their `note` says what the sources say and that the number is a proposal. The loader refuses such a rule without a `note`. `check` names such a
 source as "proposal of freemapper-courseplan", without the plan section, and `check --all` prints
 the note below the finding.
 
