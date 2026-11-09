@@ -14,6 +14,9 @@ Every dependency version must be at least two weeks old. Where a newer release i
 older version exactly, in `Cargo.toml` or in `Cargo.lock`. The first `Cargo.lock` comes from freemapper-print, so
 shared crates start at versions already checked there.
 
+Amendment 2026-11-09: the suite's own crates (freemapper-core) are exempt. This app may pin a core release on
+the day it appears (core ADR 0004).
+
 ## Consequences
 
 - Every lock file change needs a check against this rule.

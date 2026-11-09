@@ -4,6 +4,13 @@
 
 Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zuerst. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unveröffentlicht]
+
+### Geändert
+
+- Die Programmtexte kommen jetzt aus `freemapper-text` (freemapper-core 0.1.0) statt aus einer eigenen Kopie des
+  Codes. Für Nutzer ändert sich nichts.
+
 ## [0.4.0] - 2026-11-09
 
 ### Hinzugefügt
