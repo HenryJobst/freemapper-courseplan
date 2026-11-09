@@ -9,7 +9,7 @@ A sprint course with seven controls on the map of Lübeck's old town from
 
 <img src="preview.jpg" width="400" alt="Sketch of the course on the map of Lübeck's old town">
 
-The image is a sketch. freemapper-print v0.1.0 rendered the map, and `make-preview.py` drew circles, lines and
+The image is a sketch. freemapper-print v0.2.0 rendered the map, and `make-preview.py` drew circles, lines and
 numbers from the project file on top. freemapper-print will print the real course overprint once it can read
 courses from a `.ppen`; its PDF then replaces this sketch.
 

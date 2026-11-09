@@ -1130,6 +1130,7 @@ impl CoursePlanServer {
             let placed = freemapper_courseplan::numbers::place_numbers(
                 &mut file.event,
                 &req.name.0,
+                &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
                 map_kind(&doc),
                 flag(req.overwrite),

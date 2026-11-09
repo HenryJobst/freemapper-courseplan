@@ -7,6 +7,13 @@ ctrl={str(c['code']):c for c in ev['controls']}
 sp={s['id']:s for s in ev['specials']}
 course=ev['courses'][0]
 seq=[('S1',sp['S1']['map_mm'],None)]+[(str(cc['code']),ctrl[str(cc['code'])]['map_mm'],cc.get('number')) for cc in course['controls']]+[('F1',sp['F1']['map_mm'],None)]
+R_OUTER=3.0+0.175
+def box_dist(c,s,a,b,reach):
+    # distance along the ray at which a box (half sizes a, b) centred on it is `reach` from the origin
+    if s<1e-9 or (c>1e-9 and (reach+a)/c*s<=b): return (reach+a)/c
+    if c<1e-9 or (reach+b)/s*c<=a: return (reach+b)/s
+    p=a*c+b*s
+    return p+math.sqrt(max(p*p-a*a-b*b+reach*reach,0.0))
 P='#A626FF'; r=3.0*k; lw=0.35*k*1.4
 draw=[]
 pts=[px(s[1]) for s in seq]
@@ -25,8 +32,11 @@ for d in draw: cmd+=['-draw',d]
 cmd+=['-stroke','none','-fill',P,'-font','/System/Library/Fonts/Supplemental/Arial.ttf','-pointsize','19']
 for i,s in enumerate(seq[1:-1],1):
     x,y=pts[i]; n=s[2] or {'direction':45,'gap_mm':0.5}
-    t=math.radians(n['direction']); dist=r+n['gap_mm']*k+2.2*k
-    cmd+=['-draw',f"text {x+dist*math.cos(t)-5:.0f},{y-dist*math.sin(t)+7:.0f} '{i}'"]
+    t=math.radians(n['direction']); c,s_=abs(math.cos(t)),abs(math.sin(t))
+    # ADR 0030: gap = clearance from the outer edge of the circle line to the number box, box centred on the ray
+    w=0.6*4.0*k*len(str(i)); h=4.0*k; reach=R_OUTER*k+n['gap_mm']*k
+    dist=box_dist(c,s_,w/2,h/2,reach)
+    cmd+=['-draw',f"text {x+dist*math.cos(t)-w/2:.0f},{y-dist*math.sin(t)+7:.0f} '{i}'"]
 cmd+=[f'{S}/sketch.png']
 subprocess.run(cmd,check=True)
 xs=[p[0] for p in pts]; ys=[p[1] for p in pts]

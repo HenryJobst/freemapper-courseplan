@@ -90,6 +90,10 @@ dort an.
 - Postennummern setzt das Programm nur, wenn der Assistent darum bittet. Ändert er danach Strecken oder die
   Reihenfolge, muss er sie neu setzen lassen. Eine Nummernlage, die für einen Posten oder in einer Bahn
   festgelegt ist, bleibt dabei stehen.
+- Die automatische Platzierung setzt die Nummer hinter den Kreis, in Verlängerung der Strecke, die zum Posten
+  hinführt. Knickt die Bahn kaum ab, läuft die weiterführende Strecke dort entlang, und die Nummer steht außen an
+  der Spitze des Winkels. Auf Punkt- und Liniensymbolen der Karte steht sie nur, wenn kein freier Platz bleibt;
+  Flächen darf sie überdecken. Gefällt dir die Lage nicht, setzt du sie selbst.
 - Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
 - Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das
@@ -106,6 +110,11 @@ Ausnahme begründest.
 freemapper-courseplan check halle.courseplan.toml
 freemapper-courseplan check halle.courseplan.toml --all
 ```
+
+Winkel prüft `check` in beide Richtungen. Spitze Winkel meldet es unter 90° als Hinweis und unter 45° als Warnung.
+Läuft die Bahn an einem Posten fast geradeaus, also mit einem Winkel über 170° zwischen den Strecken, gibt es
+einen Hinweis (`wkb2026.leg.straight_angle_hint`). Der Posten ändert die Laufrichtung dann kaum, und hinter dem
+Kreis ist kein Platz für die Nummer.
 
 Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
 geprüft wurde.

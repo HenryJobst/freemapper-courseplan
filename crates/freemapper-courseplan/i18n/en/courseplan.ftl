@@ -191,6 +191,7 @@ check-acute-angle = the legs at { $stop_kind ->
         [crossing] crossing point
        *[control] control
     } { $stop } form an angle of { $degrees }°, at least { $limit }° required
+check-straight-angle = the legs at control { $stop } form an angle of { $degrees }°, at most { $limit }° wanted
 check-opposing-legs = the two legs run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
 check-code-range = code { $code } is outside the allowed range { $min } to { $max }
 check-code-not-numeric = code { $code } is not a number
@@ -379,7 +380,7 @@ cli-help-course-remove = Remove a course and its name from the special objects
 cli-help-course-leg = Set the bends and the marked-route flag of one leg
 cli-help-course-set = Change classes, climb or planned print scale of a course
 cli-help-course-number = Set or clear the number placement of one control in a course; it wins over the central and the automatic placement
-cli-help-course-numbers = Place the control numbers of a course clear of legs and circles. Runs only when called, so call it again after changing legs; central and course numbers stay
+cli-help-course-numbers = Place the control numbers of a course behind the circle as seen from the incoming leg, clear of legs, circles and point and line symbols of the map. Runs only when called, so call it again after changing legs; central and course numbers stay
 
 cli-arg-edit-course = Name of the course
 cli-arg-course-add-start = Id of the start special object
@@ -529,7 +530,7 @@ mcp-tool-remove-course = Remove a course and its name from the special objects.
 mcp-tool-set-course-controls = Replace the controls of a course. The n-th visit of a code keeps the number placement of the n-th visit before. A leg keeps its bends and marked-route flag only while it runs to the same next stop; the result lists the cleared legs in cleared_legs as course and after (0 is the leg from the start).
 mcp-tool-set-leg = Set the bends and the marked-route flag of one leg of an individual course: the leg from the start (from_start) or the leg after a position (after, counted from 1 as on the map, crossing points included). Without bends the leg loses its bends.
 mcp-tool-set-course-details = Change the classes, the climb or the planned print scale of a course. Parameters you leave out stay as they are.
-mcp-tool-place-numbers = Place the control numbers of a course clear of legs, circles and other numbers. Returns how many numbers it placed. It runs only when called, so call it again after changing legs. A control with a central number (set_control_number) keeps it, and course numbers (set_course_number) stay unless overwrite is true.
+mcp-tool-place-numbers = Place the control numbers of a course behind the circle as seen from the incoming leg, clear of legs, circles, other numbers and point and line symbols of the map. Returns how many numbers it placed. It runs only when called, so call it again after changing legs. A control with a central number (set_control_number) keeps it, and course numbers (set_course_number) stay unless overwrite is true.
 mcp-tool-set-course-number = Set or clear the number placement of one control in an individual course, at a position counted from 1 as on the map (crossing points included). It wins over the central placement of set_control_number and over place_numbers. Direction in degrees (0 = east, counter-clockwise), gap between circle line and number in print mm, more than 0 and at most 10. clear removes it, so the central or automatic placement applies again.
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.

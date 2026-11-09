@@ -15,10 +15,11 @@ Planned for the first version:
 
 - controls with code and control description, individual courses with bends, marked routes and forbidden
   areas;
-- control number positions set once per control and changeable per course, with automatic placement;
+- control number positions set once per control and changeable per course, with automatic placement behind the
+  circle, away from point and line symbols of the map;
 - checks against the German competition rules (WKB) 2026 with overlays for regional recommendations, such as
-  control distances, acute angles and enough different first controls for a compact start list, each with its
-  source and with exceptions you can give reasons for (`check`, usable now);
+  control distances, acute and almost straight angles and enough different first controls for a compact start
+  list, each with its source and with exceptions you can give reasons for (`check`, usable now);
 - exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side;
 - export to IOF XML 3.0 for result software, for example OE;
 - sprint and schoolyard maps; forest maps come later;

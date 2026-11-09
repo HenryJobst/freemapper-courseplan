@@ -676,6 +676,7 @@ pub const CHECKS: &[Check] = &[
         &[Place::Leg],
     ),
     Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
+    Check::at("straight_angle", legs::straight_angle, &[Place::Leg]),
     Check::at("opposing_legs", legs::opposing_legs, &[Place::Legs]),
     Check::at("code_range", codes::code_range, &[Place::Control]),
     Check::at("code_pairs", codes::code_pairs, &[Place::Controls]),

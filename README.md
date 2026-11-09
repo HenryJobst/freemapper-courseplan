@@ -14,10 +14,11 @@ Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 Geplant ist für die erste Version:
 
 - Posten mit Code und Postenbeschreibung, Einzelbahnen mit Knickpunkten, Pflichtstrecken und Sperrgebieten;
-- Lage der Postennummern zentral je Posten und je Bahn änderbar, mit automatischer Platzierung;
+- Lage der Postennummern zentral je Posten und je Bahn änderbar, mit automatischer Platzierung hinter dem Kreis,
+  abseits von Punkt- und Liniensymbolen der Karte;
 - Prüfungen nach den Wettkampfbestimmungen 2026 mit Aufsätzen für regionale Empfehlungen, etwa Postenabstände,
-  spitze Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils mit Quelle und mit
-  begründeten Ausnahmen (`check`, schon nutzbar);
+  spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
+  mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);
 - Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind;
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE;
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
