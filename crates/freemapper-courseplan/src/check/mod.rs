@@ -590,6 +590,11 @@ fn below(value: f64, limit: f64) -> bool {
     value < limit - 1e-9
 }
 
+/// Whether `value` is above `limit`, with the tolerance of `below`.
+fn above(value: f64, limit: f64) -> bool {
+    value > limit + 1e-9
+}
+
 /// Whether a rule's print scale filter covers the course.
 fn covers(rule: &Rule, course: &CourseContext<'_>) -> bool {
     rule.print_scales.is_empty() || rule.print_scales.contains(&course.print_scale)

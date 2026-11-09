@@ -1315,28 +1315,51 @@ fn numbers_on_course_a(d: &Path, p: &str) {
     ok(d, &["course", "numbers", p, "A"]);
 }
 
+/// A footpath across the box of the number of control 32, 5 mm out along `baseline` (the box
+/// spans about 3.7 to 6.1 mm there), 6 mm long, at right angles to that direction.
+fn footpath_across_number(baseline: f64) -> [(f64, f64); 2] {
+    let (ux, uy) = (baseline.to_radians().cos(), -baseline.to_radians().sin());
+    let (cx, cy) = (90.0 + 5.0 * ux, 40.0 + 5.0 * uy);
+    [
+        (cx - 3.0 * uy, cy + 3.0 * ux),
+        (cx + 3.0 * uy, cy - 3.0 * ux),
+    ]
+}
+
 /// The map reaches automatic placement: a footpath under the box of the number of control 32
-/// makes `course numbers` choose another direction.
+/// makes `course numbers` leave the covered position, here by a larger gap (the profile allows
+/// up to 5 mm).
 #[test]
 fn course_numbers_avoid_map_symbols() {
     let (dir, project) = project();
     numbers_on_course_a(dir.path(), project.to_str().unwrap());
-    let baseline = course_numbers_of(&project)[1].unwrap().0;
+    let (baseline, base_gap) = course_numbers_of(&project)[1].unwrap();
 
-    // A segment across the box of control 32 (at 90,40): 5 mm out along the baseline direction
-    // (the box spans about 3.7 to 6.1 mm there), 6 mm long, at right angles to that direction.
-    let (ux, uy) = (baseline.to_radians().cos(), -baseline.to_radians().sin());
-    let (cx, cy) = (90.0 + 5.0 * ux, 40.0 + 5.0 * uy);
-    let line = [
-        (cx - 3.0 * uy, cy + 3.0 * ux),
-        (cx + 3.0 * uy, cy - 3.0 * ux),
-    ];
-    let (dir2, project2) = project_with_footpath(line);
+    let (dir2, project2) = project_with_footpath(footpath_across_number(baseline));
     numbers_on_course_a(dir2.path(), project2.to_str().unwrap());
-    let moved = course_numbers_of(&project2)[1].unwrap().0;
+    let (moved, gap) = course_numbers_of(&project2)[1].unwrap();
     let diff = (moved - baseline + 540.0).rem_euclid(360.0) - 180.0;
     assert!(
-        diff.abs() >= 15.0,
+        diff.abs() >= 15.0 || gap > base_gap,
+        "baseline {baseline}, with footpath {moved} at {gap}"
+    );
+}
+
+/// The same footpath: the number keeps its direction and moves outward within the profile's
+/// range (0.5 to 5 mm) instead of turning away.
+#[test]
+fn course_numbers_move_outward_within_the_range() {
+    let (dir, project) = project();
+    numbers_on_course_a(dir.path(), project.to_str().unwrap());
+    let (baseline, base_gap) = course_numbers_of(&project)[1].unwrap();
+    assert!((base_gap - 0.5).abs() < 1e-9);
+
+    let (dir2, project2) = project_with_footpath(footpath_across_number(baseline));
+    numbers_on_course_a(dir2.path(), project2.to_str().unwrap());
+    let (moved, gap) = course_numbers_of(&project2)[1].unwrap();
+    assert!(
+        ((moved - baseline + 540.0).rem_euclid(360.0) - 180.0).abs() < 1e-9,
         "baseline {baseline}, with footpath {moved}"
     );
+    assert!(gap > 0.5 && gap <= 5.0, "gap {gap}");
 }

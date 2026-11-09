@@ -5,14 +5,9 @@ use std::collections::BTreeSet;
 use freemapper_courseplan_model::NumberPlacement;
 
 use super::{
-    ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_VALUE_MISSING, Skipped, below,
+    ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_VALUE_MISSING, Skipped, above, below,
     value_number,
 };
-
-/// Whether `value` is above `limit`, with the tolerance of `below`.
-fn above(value: f64, limit: f64) -> bool {
-    value > limit + 1e-9
-}
 
 /// `number_gap`: the gap between the circle and the stored number is below `min_gap_mm` or above
 /// `max_gap_mm`. Each value may be missing, at least one is needed. Controls without a stored
