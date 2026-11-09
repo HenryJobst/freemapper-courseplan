@@ -1279,4 +1279,70 @@ title = "Other rules"
         let text = text.replace("code_pairs", "map_edge");
         assert!(parse_profile("base-x", &text).is_err());
     }
+
+    /// Renders the rules of an embedded rule set as text: id, key, severity, enabled flag,
+    /// filters (lists sorted), values as inline TOML and source, plus the switched-off ids.
+    fn render_set(set: &RuleSet) -> String {
+        fn filters(rule: &Rule) -> String {
+            let mut parts = Vec::new();
+            let mut kinds: Vec<&str> = rule.map_kinds.iter().map(|k| k.as_str()).collect();
+            kinds.sort_unstable();
+            let mut disciplines: Vec<&str> = rule.disciplines.iter().map(|d| d.as_str()).collect();
+            disciplines.sort_unstable();
+            let mut scales: Vec<String> = rule.print_scales.iter().map(|n| n.to_string()).collect();
+            scales.sort_unstable();
+            for (field, items) in [
+                ("map_kinds", kinds.iter().map(|s| s.to_string()).collect()),
+                (
+                    "disciplines",
+                    disciplines.iter().map(|s| s.to_string()).collect(),
+                ),
+                ("print_scales", scales),
+            ] as [(&str, Vec<String>); 3]
+            {
+                if !items.is_empty() {
+                    parts.push(format!("{field}=[{}]", items.join(",")));
+                }
+            }
+            parts.join(" ")
+        }
+        let mut out = format!("set {} + [{}]\n", set.base, set.overlays.join(","));
+        for r in &set.rules {
+            let rule = &r.rule;
+            out += &format!(
+                "{} | {} | {} | enabled={} | {} | {} | {}:{} | from {}\n",
+                rule.id,
+                rule.key,
+                rule.severity.as_str(),
+                rule.enabled,
+                filters(rule),
+                Value::Table(rule.values.clone()),
+                rule.source.doc,
+                rule.source.section,
+                r.profile
+            );
+        }
+        for off in &set.switched_off {
+            out += &format!("off {} (by {})\n", off.rule.id, off.by);
+        }
+        out
+    }
+
+    #[test]
+    fn embedded_rule_sets_are_unchanged() {
+        let mut text = render_set(&load_rule_set("wkb-2026", &[]).unwrap());
+        text += &render_set(&load_rule_set("wkb-2026", &[s("nor-bb-2021")]).unwrap());
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/snapshots/embedded_rule_sets.txt"
+        );
+        if std::env::var_os("UPDATE_SNAPSHOT").is_some() {
+            std::fs::write(path, &text).unwrap();
+        }
+        let expected = std::fs::read_to_string(path).unwrap();
+        assert!(
+            text == expected,
+            "the embedded rule sets changed; rerun with UPDATE_SNAPSHOT=1 if intended"
+        );
+    }
 }
