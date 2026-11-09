@@ -138,6 +138,7 @@ fn finding_keys_follow_the_location() {
     let run = RuleRun {
         set_rule: &rules.rules[0],
         courses: vec![],
+        siblings: vec![],
     };
     let key = |location| run.finding(location, "x", vec![]).key();
     let event = key(Location::Event);
@@ -167,6 +168,17 @@ fn finding_keys_follow_the_location() {
     assert_eq!(leg.course, None);
     let one = key(Location::Control { code: code("31") });
     assert_eq!(one.controls, [code("31")]);
+    let legs = key(Location::Legs {
+        course: "A".to_owned(),
+        afters: vec![5, 0],
+    });
+    let leg_ref = |after| LegRef {
+        course: "A".to_owned(),
+        after,
+    };
+    assert_eq!(Place::of_key(&legs), Place::Legs);
+    assert_eq!(legs.legs, [leg_ref(0), leg_ref(5)]);
+    assert_eq!((legs.course, legs.controls), (None, vec![]));
 }
 
 #[test]
@@ -350,6 +362,20 @@ fn texts_are_localized() {
         after: 0,
     };
     assert_eq!(start.text(&Lang::english()), "course A, leg from the start");
+    let two = Location::Legs {
+        course: "A".to_owned(),
+        afters: vec![0, 4],
+    };
+    assert_eq!(
+        two.text(&Lang::english()),
+        "course A, leg from the start and leg after 4"
+    );
+    assert_eq!(
+        two.text(&de),
+        "Bahn A, Strecke vom Start und Strecke nach 4"
+    );
+    assert_eq!(two.place(), Place::Legs);
+    assert_eq!(two.course(), Some("A"));
     assert_eq!(format_number(&de, 12.34), "12,3");
     assert_eq!(format_number(&Lang::english(), 30.0), "30");
 }

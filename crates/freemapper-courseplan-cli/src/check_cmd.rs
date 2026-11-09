@@ -254,10 +254,16 @@ fn named(
 fn place_text(lang: &Lang, finding: &AcceptedFinding) -> String {
     let location = if let Some(course) = &finding.course {
         Location::Course(course.clone())
-    } else if let Some(leg) = finding.legs.first() {
+    } else if let [leg] = finding.legs.as_slice() {
         Location::Leg {
             course: leg.course.clone(),
             after: leg.after,
+        }
+    } else if let Some(first) = finding.legs.first() {
+        // `accept_finding` keeps several legs to one course.
+        Location::Legs {
+            course: first.course.clone(),
+            afters: finding.legs.iter().map(|l| l.after).collect(),
         }
     } else if finding.controls.len() == 1 {
         Location::Control {

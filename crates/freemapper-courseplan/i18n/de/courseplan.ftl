@@ -92,7 +92,7 @@ error-edit-special-would-cover-all-courses = { $count ->
 error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start oder Ziel; jede Bahn nennt ihren Start und ihr Ziel selbst
 error-edit-unknown-rule = Prüfregel { $name } ist im Regelprofil { $id } nicht aktiv
 error-edit-finding-needs-place = Befunde der Prüfregel { $name } betreffen eine Bahn, Posten oder eine Strecke; gib diesen Ort an
-error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder eine Strecke an
+error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder Strecken einer Bahn an
 error-edit-finding-wrong-place = Befunde der Prüfregel { $name } betreffen { $places }, nie { $place }
 error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
 
@@ -115,6 +115,9 @@ check-location-control = Posten { $code }
 check-location-controls = Posten { $codes }
 check-location-leg = Bahn { $course }, Strecke nach { $index }
 check-location-start-leg = Bahn { $course }, Strecke vom Start
+check-location-legs = Bahn { $course }, { $legs }
+check-location-legs-after = Strecke nach { $index }
+check-location-legs-start = Strecke vom Start
 check-skip-not-implemented = Diese Prüfung ist noch nicht umgesetzt
 check-skip-training = Beim Training wird die Prüfregel nicht angewendet
 check-skip-discipline = Die Prüfregel gilt nicht für { $discipline ->
@@ -168,6 +171,14 @@ check-leg-through-control = Die Strecke führt { $metres } m { $stop_kind ->
     } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
 check-leg-out-of-bounds = Die gerade Strecke quert das Sperrgebiet { $id }; die Optimalroute könnte hindurchführen
 check-leg-out-of-bounds-symbol = Die gerade Strecke quert das Kartensymbol { $code } (Sperrgebiet); die Optimalroute könnte hindurchführen
+check-acute-angle = Die Strecken { $stop_kind ->
+        [crossing] an der Querungsstelle
+       *[control] am Posten
+    } { $stop } bilden einen Winkel von { $degrees }°, mindestens { $limit }°
+check-opposing-legs = { $first ->
+        [0] Die Strecke vom Start
+       *[other] Die Strecke nach { $first }
+    } und die Strecke nach { $second } verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
 
 ## Kommandozeile
 
@@ -303,7 +314,9 @@ word-place-course = eine Bahn
 word-place-control = einen Posten
 word-place-controls = zwei oder mehr Posten
 word-place-leg = eine Strecke
+word-place-legs = zwei oder mehr Strecken einer Bahn
 word-or = oder
+word-and = und
 cli-edit-course-added = Bahn { $name } angelegt
 cli-edit-course-removed = Bahn { $name } entfernt
 cli-edit-course-controls = Bahn { $name } führt jetzt über { $codes }
@@ -381,12 +394,12 @@ cli-help-finding-accept = Einen Befund mit Begründung als gewollte Ausnahme akz
 cli-help-finding-remove = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Gib ihn so an wie beim Akzeptieren
 cli-arg-finding-accept-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
 cli-arg-finding-accept-controls = Die Posten des Befunds, durch Kommas getrennt
-cli-arg-finding-accept-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start
+cli-arg-finding-accept-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5
 cli-arg-finding-accept-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
 cli-arg-finding-accept-note = Warum die Ausnahme gewollt ist
 cli-arg-finding-remove-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
 cli-arg-finding-remove-controls = Die Posten des Befunds, durch Kommas getrennt
-cli-arg-finding-remove-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start
+cli-arg-finding-remove-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5
 cli-arg-finding-remove-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
 cli-finding-bad-leg = { $value } ist keine Strecke; schreibe Bahn:N, zum Beispiel A:3, wobei 0 die Strecke vom Start ist
 cli-finding-at = bei { $location }
@@ -459,7 +472,7 @@ mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
 mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc und section, und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; und die übersprungenen Prüfregeln mit dem Grund. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
-mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, eine Strecke in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
+mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, Strecken in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
 mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren.
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 
@@ -518,8 +531,8 @@ mcp-param-rule = Kennung der Prüfregel, wie check sie meldet, zum Beispiel wkb2
 mcp-param-note = Warum die Ausnahme gewollt ist
 mcp-param-accept-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check; ids von Start und Ziel sind erlaubt [Standard: keine]
 mcp-param-remove-accepted-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check [Standard: keine]
-mcp-param-accept-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]
-mcp-param-remove-accepted-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]
+mcp-param-accept-finding-legs = Die Strecken des Befunds, jede ein Objekt mit course und after wie in location von check: eine Strecke oder zwei für einen Befund an zwei Strecken [Standard: keine]
+mcp-param-remove-accepted-finding-legs = Die Strecken des Befunds, jede ein Objekt mit course und after wie in location von check: eine Strecke oder zwei für einen Befund an zwei Strecken [Standard: keine]
 mcp-param-accept-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
 mcp-param-remove-accepted-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
 mcp-param-accept-finding-after = Position, von der die Strecke abgeht, ab 1 gezählt wie auf der Karte; 0 ist die Strecke vom Start

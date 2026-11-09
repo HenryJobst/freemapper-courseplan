@@ -164,8 +164,9 @@ fn course_json(event: &Event, course: &Course, map_scale: u32, lang: &Lang) -> A
 }
 
 /// A location as a tagged object: `{"kind": "event"}`, `{"kind": "course", "course"}`,
-/// `{"kind": "control", "code"}`, `{"kind": "controls", "codes"}` or
-/// `{"kind": "leg", "course", "after"}` (after counts from 1; 0 is the leg from the start).
+/// `{"kind": "control", "code"}`, `{"kind": "controls", "codes"}`,
+/// `{"kind": "leg", "course", "after"}` (after counts from 1; 0 is the leg from the start) or
+/// `{"kind": "legs", "course", "afters"}` for two or more legs of one course.
 fn location_json(location: &Location) -> Value {
     match location {
         Location::Event => json!({ "kind": "event" }),
@@ -177,6 +178,9 @@ fn location_json(location: &Location) -> Value {
         }),
         Location::Leg { course, after } => {
             json!({ "kind": "leg", "course": course, "after": after })
+        }
+        Location::Legs { course, afters } => {
+            json!({ "kind": "legs", "course": course, "afters": afters })
         }
     }
 }
@@ -1267,6 +1271,18 @@ pub fn run(lang: Lang) -> Result<(), String> {
 mod tests {
     use super::*;
     use freemapper_courseplan::text::available;
+
+    #[test]
+    fn a_finding_at_two_legs_names_both_positions() {
+        let legs = Location::Legs {
+            course: "A".to_owned(),
+            afters: vec![0, 4],
+        };
+        assert_eq!(
+            location_json(&legs),
+            json!({ "kind": "legs", "course": "A", "afters": [0, 4] })
+        );
+    }
 
     #[test]
     fn check_json_has_machine_fields_and_localized_texts() {

@@ -92,7 +92,7 @@ error-edit-special-would-cover-all-courses = { $count ->
 error-edit-start-or-finish-has-no-courses = special object { $id } is a start or finish; each course names its start and finish itself
 error-edit-unknown-rule = rule { $name } is not an active rule of rule profile { $id }
 error-edit-finding-needs-place = findings of rule { $name } sit at a course, at controls or at a leg; name that place
-error-edit-finding-has-one-place = a finding of rule { $name } has one place: give a course, controls or one leg
+error-edit-finding-has-one-place = a finding of rule { $name } has one place: give a course, controls or legs of one course
 error-edit-finding-wrong-place = findings of rule { $name } sit at { $places }, never at { $place }
 error-edit-accepted-not-found = there is no accepted finding of rule { $name } at this place
 
@@ -115,6 +115,9 @@ check-location-control = control { $code }
 check-location-controls = controls { $codes }
 check-location-leg = course { $course }, leg after { $index }
 check-location-start-leg = course { $course }, leg from the start
+check-location-legs = course { $course }, { $legs }
+check-location-legs-after = leg after { $index }
+check-location-legs-start = leg from the start
 check-skip-not-implemented = this check is not implemented yet
 check-skip-training = not checked at a training
 check-skip-discipline = the rule is not for { $discipline ->
@@ -168,6 +171,14 @@ check-leg-through-control = the leg passes { $metres } m from { $stop_kind ->
     } { $stop }, inside its circle radius of { $limit } m
 check-leg-out-of-bounds = the straight leg crosses out-of-bounds area { $id }, so the best route may lead through it
 check-leg-out-of-bounds-symbol = the straight leg crosses map symbol { $code } (out of bounds), so the best route may lead through it
+check-acute-angle = the legs at { $stop_kind ->
+        [crossing] crossing point
+       *[control] control
+    } { $stop } form an angle of { $degrees }°, at least { $limit }°
+check-opposing-legs = { $first ->
+        [0] the leg from the start
+       *[other] the leg after { $first }
+    } and the leg after { $second } run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
 
 ## Command line
 
@@ -306,7 +317,9 @@ word-place-course = a course
 word-place-control = one control
 word-place-controls = two or more controls
 word-place-leg = a leg
+word-place-legs = two or more legs of one course
 word-or = or
+word-and = and
 cli-edit-course-added = added course { $name }
 cli-edit-course-removed = removed course { $name }
 cli-edit-course-controls = course { $name } now visits { $codes }
@@ -387,12 +400,12 @@ cli-help-finding-accept = Accept a finding as an intended exception, with a note
 cli-help-finding-remove = Remove an accepted finding, so check reports it again. Name it as when it was accepted
 cli-arg-finding-accept-rule = Id of the rule as check shows it, for example wkb2026.distance.min
 cli-arg-finding-accept-controls = The controls of the finding, separated by commas
-cli-arg-finding-accept-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start
+cli-arg-finding-accept-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start. Repeat it for a finding at two legs: --leg A:2 --leg A:5
 cli-arg-finding-accept-course = The course of a finding about a whole course
 cli-arg-finding-accept-note = Why the exception is intended
 cli-arg-finding-remove-rule = Id of the rule as check shows it, for example wkb2026.distance.min
 cli-arg-finding-remove-controls = The controls of the finding, separated by commas
-cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start
+cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start. Repeat it for a finding at two legs: --leg A:2 --leg A:5
 cli-arg-finding-remove-course = The course of a finding about a whole course
 cli-finding-bad-leg = { $value } is not a leg; write COURSE:N, for example A:3, where 0 is the leg from the start
 cli-finding-at = at { $location }
@@ -464,7 +477,7 @@ mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
 mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc and section, and text; accepted findings with the note of the course setter; and skipped rules with the reason. Team, relay and score courses are not checked yet.
-mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, one leg or the course. A start or finish id may stand in controls, as check reports it. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
+mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, legs or the course. A start or finish id may stand in controls, as check reports it. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
 mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 
@@ -523,8 +536,8 @@ mcp-param-rule = Id of the rule as check reports it, for example wkb2026.distanc
 mcp-param-note = Why the exception is intended
 mcp-param-accept-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check; start and finish ids are allowed [default: none]
 mcp-param-remove-accepted-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check [default: none]
-mcp-param-accept-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]
-mcp-param-remove-accepted-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]
+mcp-param-accept-finding-legs = The legs of the finding, each an object with course and after as in the location of check: one leg, or two for a finding at two legs [default: none]
+mcp-param-remove-accepted-finding-legs = The legs of the finding, each an object with course and after as in the location of check: one leg, or two for a finding at two legs [default: none]
 mcp-param-accept-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
 mcp-param-remove-accepted-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
 mcp-param-accept-finding-after = Position the leg leaves, counted from 1 as on the map; 0 is the leg from the start

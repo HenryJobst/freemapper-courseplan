@@ -35,6 +35,12 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   eines Befunds sein: `finding accept … --controls 31,S1`.
 - `finding accept` lehnt einen Ort ab, an dem die Prüfregel nie einen Befund meldet, etwa `--course A` für den
   Mindestabstand, der immer zwei Posten betrifft.
+- `check` prüft jetzt die Form der Strecken. Treffen sich ankommende und abgehende Strecke an einem Posten oder
+  einer Querungsstelle in einem spitzen Winkel, meldet es eine Warnung unter 45° und einen Hinweis unter 90°,
+  aber nur die strengere der beiden. Zwei Strecken einer Bahn, die auf mindestens 30 m höchstens 10 m
+  voneinander entfernt gegenläufig verlaufen, ergeben eine Warnung, die beide Strecken nennt. Um einen Posten,
+  an dem sich beide treffen, zählen die ersten 10 m nicht mit, auch in der Mitte einer Schmetterlingsschleife.
+  Einen solchen Befund akzeptierst du mit beiden Strecken: `finding accept … --leg A:2 --leg A:5`.
 
 ## [0.1.0] - 2026-11-09
 

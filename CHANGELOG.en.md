@@ -34,6 +34,11 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   --controls 31,S1`.
 - `finding accept` refuses a place where the rule never reports a finding, such as `--course A` for the minimum
   distance, which always concerns two controls.
+- `check` now looks at the shape of legs. Where the incoming and the outgoing leg meet at a control or crossing
+  point at an acute angle, it reports a warning below 45° and a hint below 90°, but only the stricter of the
+  two. Two legs of one course that run in opposite directions at most 10 m apart for 30 m or more give a
+  warning that names both legs. The first 10 m around a control where both meet do not count, also at the
+  centre of a butterfly loop. Accept such a finding with both legs: `finding accept … --leg A:2 --leg A:5`.
 
 ## [0.1.0] - 2026-11-09
 

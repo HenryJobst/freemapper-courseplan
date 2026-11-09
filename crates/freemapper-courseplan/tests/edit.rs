@@ -788,10 +788,41 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         matches!(mixed, EditError::FindingHasOnePlace { .. }),
         "{mixed:?}"
     );
+    // Several legs are one place only inside one course, and only for a rule whose findings
+    // name two legs.
+    let mut two_courses = acceptance("wkb2026.leg.opposing", &[], "n");
+    two_courses.legs = vec![leg_ref("A", 1), leg_ref("B", 2)];
+    let two_courses = refused(&mut e, two_courses);
+    assert!(
+        matches!(two_courses, EditError::FindingHasOnePlace { .. }),
+        "{two_courses:?}"
+    );
     let mut two_legs = acceptance("wkb2026.leg.through_control", &[], "n");
     two_legs.legs = vec![leg_ref("A", 1), leg_ref("A", 2)];
-    let two_legs = refused(&mut e, two_legs);
-    assert!(matches!(two_legs, EditError::FindingHasOnePlace { .. }));
+    assert_eq!(
+        refused(&mut e, two_legs),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.leg.through_control".to_owned(),
+            place: Place::Legs,
+            places: vec![Place::Leg],
+        }
+    );
+    let mut one_leg = acceptance("wkb2026.leg.opposing", &[], "n");
+    one_leg.legs = vec![leg_ref("A", 1)];
+    assert_eq!(
+        refused(&mut e, one_leg),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.leg.opposing".to_owned(),
+            place: Place::Leg,
+            places: vec![Place::Legs],
+        }
+    );
+    let mut opposing_beyond = acceptance("wkb2026.leg.opposing", &[], "n");
+    opposing_beyond.legs = vec![leg_ref("A", 0), leg_ref("A", 3)];
+    assert!(matches!(
+        refused(&mut e, opposing_beyond),
+        EditError::BadIndex { index: 3, .. }
+    ));
     let mut beyond = acceptance("wkb2026.leg.through_control", &[], "n");
     beyond.legs = vec![leg_ref("A", 3)];
     assert_eq!(
@@ -870,6 +901,15 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
     )
     .unwrap();
     accept_finding(&mut e, &rules, acceptance("wkb2026.map.edge", &["F1"], "n")).unwrap();
+    // An acute angle sits at the incoming leg, opposing legs at both legs, stored in key order.
+    let mut angle = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    angle.legs = vec![leg_ref("A", 1)];
+    accept_finding(&mut e, &rules, angle).unwrap();
+    let mut opposing = acceptance("wkb2026.leg.opposing", &[], "n");
+    opposing.legs = vec![leg_ref("A", 2), leg_ref("A", 0)];
+    accept_finding(&mut e, &rules, opposing).unwrap();
+    let stored = e.accepted_findings.last().unwrap();
+    assert_eq!(stored.legs, [leg_ref("A", 0), leg_ref("A", 2)]);
     // A start-capacity finding can sit at the event.
     accept_finding(
         &mut e,
@@ -877,7 +917,7 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         acceptance("wkb2026.start.capacity", &[], "n"),
     )
     .unwrap();
-    assert_eq!(e.accepted_findings.len(), 5);
+    assert_eq!(e.accepted_findings.len(), 7);
 }
 
 fn leg_ref(course: &str, after: u32) -> LegRef {

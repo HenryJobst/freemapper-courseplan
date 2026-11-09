@@ -69,8 +69,11 @@ pub enum EditError {
     /// which this rule never reports.
     #[error("findings of rule {rule} sit at a course, at controls or at a leg; name that place")]
     FindingNeedsPlace { rule: String },
-    /// A finding sits at one place, so its key names at most one of course, controls and one leg.
-    #[error("a finding of rule {rule} has one place: give a course, controls or one leg")]
+    /// A finding sits at one place, so its key names at most one of course, controls and legs,
+    /// and its legs belong to one course.
+    #[error(
+        "a finding of rule {rule} has one place: give a course, controls or legs of one course"
+    )]
     FindingHasOnePlace { rule: String },
     /// The rule's findings never sit at this kind of place, so the acceptance could never match.
     #[error("findings of rule {rule} sit at {}, never at {}", place_list(places), place_words(*place))]
@@ -216,6 +219,7 @@ fn place_words(place: Place) -> &'static str {
         Place::Control => "one control",
         Place::Controls => "two or more controls",
         Place::Leg => "a leg",
+        Place::Legs => "two or more legs of one course",
     }
 }
 
@@ -676,9 +680,9 @@ pub enum Accepted {
 }
 
 /// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
-/// controls and leg must exist. The key names one place: nothing for a finding of the whole event
-/// (only for rules whose findings can sit there), a course, one control, several controls, or one
-/// leg; a place kind the rule's check never reports is refused (`Check::places`, ADR 0026). A
+/// controls and legs must exist. The key names one place: nothing for a finding of the whole
+/// event (only for rules whose findings can sit there), a course, one control, several controls,
+/// one leg or several legs of one course; a place kind the rule's check never reports is refused (`Check::places`, ADR 0026). A
 /// control may also be a start or finish id, for every rule. Controls and legs are stored in the
 /// order of their key. Accepting a key again replaces the note.
 pub fn accept_finding(
@@ -700,7 +704,12 @@ pub fn accept_finding(
     let one_place = || EditError::FindingHasOnePlace {
         rule: finding.rule.clone(),
     };
-    if places > 1 || finding.legs.len() > 1 {
+    let leg_courses = finding.legs.iter().map(|l| &l.course);
+    let mixed_courses = leg_courses
+        .clone()
+        .zip(leg_courses.skip(1))
+        .any(|(a, b)| a != b);
+    if places > 1 || mixed_courses {
         return Err(one_place());
     }
     let key = finding.key();

@@ -21,16 +21,17 @@ Plan M2b implements the checks one task at a time.
   A rule whose sibling checks the course stays silent, so `check --all` does not list a skip for every
   alternative. A training gets its own reason. A key whose check is not written yet gives one skip per rule.
 - A finding's key comes from its location through `AcceptedFinding::key`: the event has no course, controls or
-  legs; a course sets only `course`; one or several controls set only `controls`; a leg sets only `legs`, with
-  its course inside the leg reference. Keys are compared for equality, so an acceptance with a course and
-  controls never matches.
-- `accept_finding` refuses an unknown or inactive rule id, more than one place or more than one leg, a course,
-  control or leg position that does not exist, and an acceptance without place for a rule key whose findings
-  never sit at the event. Each entry of the check table names the place kinds its findings sit at
-  (`Check::places`: event, course, one control, two or more controls, leg), and accept refuses the others with
-  `FindingWrongPlace`, so `--course A` for the minimum distance is refused instead of stored where it never
-  matches. Keys whose check is still a stub allow every kind but the event, `start_capacity` the event too.
-  Stored controls and legs follow the key's order, and accepting the same key again replaces the note.
+  legs; a course sets only `course`; one or several controls set only `controls`; one or several legs of a
+  course set only `legs`, with the course inside each leg reference (ADR 0028). Keys are compared for
+  equality, so an acceptance with a course and controls never matches.
+- `accept_finding` refuses an unknown or inactive rule id, more than one place or legs of two courses, a
+  course, control or leg position that does not exist, and an acceptance without place for a rule key whose
+  findings never sit at the event. Each entry of the check table names the place kinds its findings sit at
+  (`Check::places`: event, course, one control, two or more controls, one leg, two or more legs), and accept
+  refuses the others with `FindingWrongPlace`, so `--course A` for the minimum distance is refused instead of
+  stored where it never matches. Keys whose check is still a stub allow every kind but the event,
+  `start_capacity` the event too. Stored controls and legs follow the key's order, and accepting the same key
+  again replaces the note.
 - The MCP `check` result gives each finding, accepted finding and skip with machine fields (rule, profile,
   severity, location as a tagged object, message id, arguments, source with document title and link) and the
   text in the server language. Accepted findings carry the course setter's note. The note is text the user

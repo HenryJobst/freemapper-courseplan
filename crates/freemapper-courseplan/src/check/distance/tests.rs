@@ -1,31 +1,13 @@
 //! Tests of the distance checks. Maps are 1:4000 sprint maps unless named otherwise, so one map
 //! mm is 4 m and the control circle radius is 3 mm (12 m).
 
-use freemapper_courseplan_model::{ControlKind, Course, Event, SpecialObject};
+use freemapper_courseplan_model::{Course, Event, SpecialObject};
 
 use super::super::testing::*;
 use super::super::*;
 use super::symbol_matches;
 use crate::omap::{MapDocument, MapObject};
 use crate::rules::load_rule_set;
-use crate::text::{Lang, parse_lang_arg};
-
-fn lang_of(code: &str) -> Lang {
-    parse_lang_arg(code).unwrap()
-}
-
-fn report(event: &Event, map: &MapDocument, rules: Vec<Rule>) -> CheckReport {
-    let rules = rule_set(rules.into_iter().map(|r| (r, "base")).collect());
-    run_checks(&CheckContext::new(event, map), &rules, CHECKS)
-}
-
-fn en(finding: &Finding) -> String {
-    finding.text(&lang_of("en"))
-}
-
-fn de(finding: &Finding) -> String {
-    finding.text(&lang_of("de"))
-}
 
 fn codes(location: &Location) -> Vec<&str> {
     match location {
@@ -35,37 +17,11 @@ fn codes(location: &Location) -> Vec<&str> {
     }
 }
 
-fn leg(course: &str, after: u32) -> Location {
-    Location::Leg {
-        course: course.to_owned(),
-        after,
-    }
-}
-
 fn min_rule() -> Rule {
     with_values(
         rule("t.distance.min", "min_distance", Severity::Error),
         "metres = 15.0",
     )
-}
-
-fn crossing(event: &mut Event, code: &str) {
-    let control = event.controls.iter_mut().find(|c| c.code.0 == code);
-    control.unwrap().kind = ControlKind::CrossingPoint;
-}
-
-fn taped_after(course: &mut Course, index: usize) {
-    let CourseKind::Individual { controls } = &mut course.kind else {
-        unreachable!()
-    };
-    controls[index].taped = true;
-}
-
-fn bend_after(course: &mut Course, index: usize, x: f64, y: f64) {
-    let CourseKind::Individual { controls } = &mut course.kind else {
-        unreachable!()
-    };
-    controls[index].bends.push(pt(x, y));
 }
 
 // ---------------------------------------------------------------------------------------------

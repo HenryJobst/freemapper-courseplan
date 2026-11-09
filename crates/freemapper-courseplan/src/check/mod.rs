@@ -13,6 +13,8 @@
 mod context;
 mod distance;
 mod geometry;
+mod legs;
+mod stops;
 
 pub use context::{CheckContext, CourseContext};
 
@@ -38,6 +40,9 @@ pub enum Location {
     /// The leg of `course` that leaves position `after` (from 1 as in the CLI; 0 is the leg from
     /// the start).
     Leg { course: String, after: u32 },
+    /// Two or more legs of one course, by the positions they leave in ascending order, for
+    /// example two legs that run against each other.
+    Legs { course: String, afters: Vec<u32> },
 }
 
 /// The kind of a [`Location`]; [`Check::places`] lists the kinds a rule key reports at.
@@ -50,16 +55,19 @@ pub enum Place {
     /// Two or more controls, starts or finishes.
     Controls,
     Leg,
+    /// Two or more legs of one course.
+    Legs,
 }
 
 impl Place {
     /// Every place kind, in declaration order.
-    pub const ALL: [Place; 5] = [
+    pub const ALL: [Place; 6] = [
         Place::Event,
         Place::Course,
         Place::Control,
         Place::Controls,
         Place::Leg,
+        Place::Legs,
     ];
 
     /// The name in English messages and the suffix of its `word-place-*` text.
@@ -70,6 +78,7 @@ impl Place {
             Place::Control => "control",
             Place::Controls => "controls",
             Place::Leg => "leg",
+            Place::Legs => "legs",
         }
     }
 
@@ -78,6 +87,8 @@ impl Place {
     pub fn of_key(key: &FindingKey) -> Place {
         if key.course.is_some() {
             Place::Course
+        } else if key.legs.len() > 1 {
+            Place::Legs
         } else if !key.legs.is_empty() {
             Place::Leg
         } else {
@@ -99,18 +110,22 @@ impl Location {
             Location::Control { .. } => Place::Control,
             Location::Controls { .. } => Place::Controls,
             Location::Leg { .. } => Place::Leg,
+            Location::Legs { .. } => Place::Legs,
         }
     }
 
     /// The course the location belongs to, for grouping the output.
     pub fn course(&self) -> Option<&str> {
         match self {
-            Location::Course(name) | Location::Leg { course: name, .. } => Some(name),
+            Location::Course(name)
+            | Location::Leg { course: name, .. }
+            | Location::Legs { course: name, .. } => Some(name),
             _ => None,
         }
     }
 
-    /// The location as text, for example "control 31" or "course A, leg after 3".
+    /// The location as text, for example "control 31", "course A, leg after 3" or
+    /// "course A, leg after 2 and leg after 5".
     pub fn text(&self, lang: &Lang) -> String {
         let v = |s: &str| FluentValue::from(s.to_owned());
         match self {
@@ -135,6 +150,25 @@ impl Location {
                 "check-location-leg",
                 &[("course", v(course)), ("index", FluentValue::from(*after))],
             ),
+            Location::Legs { course, afters } => {
+                let legs: Vec<String> = afters
+                    .iter()
+                    .map(|after| match after {
+                        0 => text(lang, "check-location-legs-start", &[]),
+                        n => text(
+                            lang,
+                            "check-location-legs-after",
+                            &[("index", FluentValue::from(*n))],
+                        ),
+                    })
+                    .collect();
+                let and = format!(" {} ", text(lang, "word-and", &[]));
+                text(
+                    lang,
+                    "check-location-legs",
+                    &[("course", v(course)), ("legs", v(&legs.join(&and)))],
+                )
+            }
         }
     }
 }
@@ -217,6 +251,15 @@ impl Finding {
                     course: course.clone(),
                     after: *after,
                 }]
+            }
+            Location::Legs { course, afters } => {
+                accepted.legs = afters
+                    .iter()
+                    .map(|after| LegRef {
+                        course: course.clone(),
+                        after: *after,
+                    })
+                    .collect()
             }
         }
         accepted.key()
@@ -304,16 +347,32 @@ impl CheckReport {
     }
 }
 
-/// One rule as a check function sees it: the rule and the courses it applies to.
+/// One rule as a check function sees it: the rule, the courses it applies to and the other
+/// rules of its key.
 pub struct RuleRun<'r> {
     pub set_rule: &'r SetRule,
     /// The individual courses whose print scale the rule covers, in file order.
     pub courses: Vec<&'r CourseContext<'r>>,
+    /// The other rules of the same key that apply to the event (discipline, map kind), such as
+    /// the hint beside a warning. A check that reports only the strictest rule at a place asks
+    /// [`RuleRun::siblings_for`] which of them also check a course (ruling R15 of plan M2b).
+    pub siblings: Vec<&'r SetRule>,
 }
 
 impl RuleRun<'_> {
     pub fn rule(&self) -> &Rule {
         &self.set_rule.rule
+    }
+
+    /// The sibling rules that also check this course.
+    pub fn siblings_for<'s>(
+        &'s self,
+        course: &'s CourseContext<'_>,
+    ) -> impl Iterator<Item = &'s Rule> + 's {
+        self.siblings
+            .iter()
+            .map(|s| &s.rule)
+            .filter(move |rule| covers(rule, course))
     }
 
     /// A finding of this rule, with its severity, profile and source.
@@ -333,6 +392,37 @@ impl RuleRun<'_> {
     pub fn skipped(&self, location: Location, reason_id: &'static str, args: Args) -> Skipped {
         skip_of(self.set_rule, location, reason_id, args)
     }
+}
+
+/// A number of the rule's values; a missing one skips the rule with the reason.
+fn number(run: &RuleRun<'_>, name: &'static str, skipped: &mut Vec<Skipped>) -> Option<f64> {
+    let value = value_number(run.rule(), name);
+    if value.is_none() {
+        skipped.push(run.skipped(
+            Location::Event,
+            SKIP_VALUE_MISSING,
+            vec![("name", ArgValue::Text(name.to_owned()))],
+        ));
+    }
+    value
+}
+
+/// A number of a rule's values, an integer or a float.
+fn value_number(rule: &Rule, name: &str) -> Option<f64> {
+    rule.values
+        .get(name)
+        .and_then(|v| v.as_float().or_else(|| v.as_integer().map(|i| i as f64)))
+}
+
+/// Whether a measured `value` is below `limit`, with a little slack for rounding of map
+/// coordinates.
+fn below(value: f64, limit: f64) -> bool {
+    value < limit - 1e-9
+}
+
+/// Whether a rule's print scale filter covers the course.
+fn covers(rule: &Rule, course: &CourseContext<'_>) -> bool {
+    rule.print_scales.is_empty() || rule.print_scales.contains(&course.print_scale)
 }
 
 fn skip_of(rule: &SetRule, location: Location, reason_id: &'static str, args: Args) -> Skipped {
@@ -358,7 +448,13 @@ pub struct Check {
 }
 
 /// Place kinds of a key whose check does not say yet: anything but the event.
-const NOT_EVENT: &[Place] = &[Place::Course, Place::Control, Place::Controls, Place::Leg];
+const NOT_EVENT: &[Place] = &[
+    Place::Course,
+    Place::Control,
+    Place::Controls,
+    Place::Leg,
+    Place::Legs,
+];
 
 impl Check {
     /// A check that has not narrowed its place kinds yet; its findings never sit at the event.
@@ -410,8 +506,8 @@ pub const CHECKS: &[Check] = &[
         distance::leg_through_forbidden,
         &[Place::Leg],
     ),
-    Check::new("acute_angle", not_implemented),
-    Check::new("opposing_legs", not_implemented),
+    Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
+    Check::at("opposing_legs", legs::opposing_legs, &[Place::Legs]),
     Check::new("code_range", not_implemented),
     Check::new("code_pairs", not_implemented),
     Check::new("code_confusable_next", not_implemented),
@@ -534,9 +630,6 @@ fn run_key(
         }
         return;
     }
-    let covers = |rule: &Rule, course: &CourseContext<'_>| {
-        rule.print_scales.is_empty() || rule.print_scales.contains(&course.print_scale)
-    };
     for course in &ctx.courses {
         if !active.iter().any(|r| covers(&r.rule, course)) {
             for set_rule in &active {
@@ -550,13 +643,18 @@ fn run_key(
             }
         }
     }
-    for set_rule in active {
+    for &set_rule in &active {
         let run = RuleRun {
             set_rule,
             courses: ctx
                 .courses
                 .iter()
                 .filter(|c| covers(&set_rule.rule, c))
+                .collect(),
+            siblings: active
+                .iter()
+                .copied()
+                .filter(|r| !std::ptr::eq(*r, set_rule))
                 .collect(),
         };
         match checks.iter().find(|c| c.key == set_rule.rule.key) {

@@ -9,10 +9,12 @@ use freemapper_courseplan_model::{
 };
 use toml::Table;
 
+use super::{CHECKS, CheckContext, CheckReport, Finding, Location, run_checks};
 use crate::omap::{
     MapCoord, MapDocument, MapGeoref, MapObject, MapObjectKind, MapPart, SymbolSet, closed_ring,
 };
 use crate::rules::{Rule, RuleSet, SetRule, Severity, Source, SourceRef};
+use crate::text::{Lang, parse_lang_arg};
 
 /// An ISSprOM symbol set: by id, 113 point, 502 line, 520 area, 521 area, 505.1 line, 109 point,
 /// 110 point, 5051 line (not a sub-code of 505), 518 line, 709 area, 708 line,
@@ -252,4 +254,55 @@ pub(crate) fn rule_set(rules: Vec<(Rule, &str)>) -> RuleSet {
 pub(crate) fn with_values(mut rule: Rule, values: &str) -> Rule {
     rule.values = values.parse().expect("test values parse");
     rule
+}
+
+/// A language by its code, such as `en`.
+pub(crate) fn lang_of(code: &str) -> Lang {
+    parse_lang_arg(code).unwrap()
+}
+
+/// The report of the rules, each from profile `base`, on the event and map.
+pub(crate) fn report(event: &Event, map: &MapDocument, rules: Vec<Rule>) -> CheckReport {
+    let rules = rule_set(rules.into_iter().map(|r| (r, "base")).collect());
+    run_checks(&CheckContext::new(event, map), &rules, CHECKS)
+}
+
+/// The finding's text in English.
+pub(crate) fn en(finding: &Finding) -> String {
+    finding.text(&lang_of("en"))
+}
+
+/// The finding's text in German.
+pub(crate) fn de(finding: &Finding) -> String {
+    finding.text(&lang_of("de"))
+}
+
+/// The leg of `course` that leaves position `after`.
+pub(crate) fn leg(course: &str, after: u32) -> Location {
+    Location::Leg {
+        course: course.to_owned(),
+        after,
+    }
+}
+
+/// Makes the control a crossing point.
+pub(crate) fn crossing(event: &mut Event, code: &str) {
+    let control = event.controls.iter_mut().find(|c| c.code.0 == code);
+    control.unwrap().kind = ControlKind::CrossingPoint;
+}
+
+/// Marks the leg after the course control at `index` (from 0) as taped.
+pub(crate) fn taped_after(course: &mut Course, index: usize) {
+    let CourseKind::Individual { controls } = &mut course.kind else {
+        unreachable!()
+    };
+    controls[index].taped = true;
+}
+
+/// Adds a bend to the leg after the course control at `index` (from 0).
+pub(crate) fn bend_after(course: &mut Course, index: usize, x: f64, y: f64) {
+    let CourseKind::Individual { controls } = &mut course.kind else {
+        unreachable!()
+    };
+    controls[index].bends.push(pt(x, y));
 }

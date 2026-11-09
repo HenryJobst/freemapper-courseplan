@@ -718,6 +718,9 @@ mod tests {
             "stop_kind",
             "place",
             "places",
+            "legs",
+            "degrees",
+            "min_length",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -841,6 +844,7 @@ mod tests {
             include_str!("check/mod.rs"),
             include_str!("check/context.rs"),
             include_str!("check/distance.rs"),
+            include_str!("check/legs.rs"),
         ] {
             ids.extend(ids_in_source(source));
         }

@@ -269,6 +269,32 @@ fn finding_accept_replace_and_remove() {
             .unwrap()
             .contains("legs = [{ course = \"A\", after = 2 }]")
     );
+    // A finding at two legs: --leg twice, in any order.
+    let two = run(
+        d,
+        &[
+            "finding",
+            "accept",
+            p,
+            "wkb2026.leg.opposing",
+            "--leg",
+            "A:2",
+            "--leg",
+            "A:0",
+            "--note",
+            "n",
+        ],
+    );
+    assert_eq!(code(&two), Some(0), "{}", stderr(&two));
+    assert_eq!(
+        stdout(&two).trim(),
+        "accepted finding wkb2026.leg.opposing at course A, leg from the start and leg after 2"
+    );
+    assert!(
+        std::fs::read_to_string(&project)
+            .unwrap()
+            .contains("legs = [{ course = \"A\", after = 0 }, { course = \"A\", after = 2 }]")
+    );
 
     let remove = |args: &[&str]| {
         let mut all = vec!["finding", "remove", p];
