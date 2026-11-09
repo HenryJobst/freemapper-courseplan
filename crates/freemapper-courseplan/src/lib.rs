@@ -9,6 +9,7 @@ pub mod check;
 pub mod course;
 pub mod edit;
 pub mod init;
+pub mod iof_xml;
 pub mod map;
 pub mod numbers;
 pub mod omap;

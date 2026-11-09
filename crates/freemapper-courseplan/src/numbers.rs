@@ -373,6 +373,30 @@ fn number_rect(
     Rect::centred(centre.x + dx * dist, centre.y + dy * dist, w, h)
 }
 
+/// Centre of the number box of a control at `at`, in map mm at `map_scale`, for the placement the
+/// check and the overprint use (direction, gap, digit count of `number`).
+pub(crate) fn number_centre(
+    at: &MapPoint,
+    placement: &NumberPlacement,
+    number: u32,
+    kind: MapKind,
+    map_scale: u32,
+) -> MapPoint {
+    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let r = number_rect(
+        at,
+        placement.direction,
+        number,
+        placement.gap_mm,
+        &overprint_sizes(kind),
+        factor,
+    );
+    MapPoint {
+        x: (r.min_x + r.max_x) / 2.0,
+        y: (r.min_y + r.max_y) / 2.0,
+    }
+}
+
 /// Distance along a ray with direction cosines `c`, `s` (both >= 0) at which a box with half sizes
 /// `a`, `b` centred on the ray is exactly `reach` away from the origin.
 fn box_distance(c: f64, s: f64, a: f64, b: f64, reach: f64) -> f64 {

@@ -126,3 +126,4 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 |---|---|---|---|
 | MCP-Server | MCP server | Teil des Programms, der KI-Assistenten über das Model Context Protocol auf stdin und stdout Werkzeuge zum Lesen und Ändern eines Projekts anbietet. Das Programm selbst enthält keine KI (ADR 0016). | `mcp::CoursePlanServer` |
 | Werkzeug | tool | Eine Funktion des MCP-Servers mit englischem Namen, zum Beispiel `add_control`. Beschreibung und Parametertexte stehen im Katalog. | `#[tool]` |
+| IOF-XML-Export | IOF XML export | Schreibt die Einzelbahnen einer Veranstaltung als IOF-XML-3.0-`CourseData` für Auswertungssoftware wie OE: Posten mit Kartenposition, Bahnen mit Postenfolge, Streckenlängen und Nummernlage, Zuordnung der Bahnen zu Klassen. Andere Bahnarten werden übersprungen und genannt. | `iof_xml::export_iof_xml` |
