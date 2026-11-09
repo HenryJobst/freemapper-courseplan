@@ -11,6 +11,10 @@ the competition rules and hands them on to result software and to printing:
 - freemapper-courseplan sets the courses,
 - [freemapper-print](https://github.com/HenryJobst/freemapper-print) prints the map sheets.
 
+Code that several of these programs need lives in a shared library:
+[freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
+`freemapper-text` for the program texts. The programs use them in a fixed version instead of copying the code.
+
 Planned for the first version:
 
 - controls with code and control description, individual courses with bends, marked routes and forbidden
@@ -92,6 +96,10 @@ cargo build --release
 
 `rust-toolchain.toml` fixes the Rust version; `rustup` installs it on the first build. Before each commit,
 [lefthook](https://github.com/evilmartians/lefthook) checks formatting and clippy (`lefthook install`).
+
+Whoever changes freemapper-core and this program together checks freemapper-core out next to freemapper-courseplan
+and uses a local `[patch]` during development. The details are in the README of
+[freemapper-core](https://github.com/HenryJobst/freemapper-core).
 
 ## Licence
 

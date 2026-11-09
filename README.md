@@ -11,6 +11,11 @@ Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 - freemapper-courseplan legt die Bahnen,
 - [freemapper-print](https://github.com/HenryJobst/freemapper-print) druckt die Kartenblätter.
 
+Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Bibliothek:
+[freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
+`freemapper-text` für die Programmtexte. Die Programme binden sie in einer festen Version ein, statt den Code
+zu kopieren.
+
 Geplant ist für die erste Version:
 
 - Posten mit Code und Postenbeschreibung, Einzelbahnen mit Knickpunkten, Pflichtstrecken und Sperrgebieten;
@@ -91,6 +96,10 @@ cargo build --release
 
 `rust-toolchain.toml` legt die Rust-Version fest; `rustup` installiert sie beim ersten Bauen. Vor jedem Commit
 prüft [lefthook](https://github.com/evilmartians/lefthook) Formatierung und clippy (`lefthook install`).
+
+Wer freemapper-core und dieses Programm zusammen ändert, legt freemapper-core neben freemapper-courseplan ab und
+bindet es während der Entwicklung über einen lokalen `[patch]` ein. Die Einzelheiten stehen in der README von
+[freemapper-core](https://github.com/HenryJobst/freemapper-core).
 
 ## Lizenz
 

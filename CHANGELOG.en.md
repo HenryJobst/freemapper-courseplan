@@ -4,6 +4,13 @@
 
 This file lists all notable changes to freemapper-courseplan, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Changed
+
+- Program texts now come from `freemapper-text` (freemapper-core 0.1.0) instead of a copy of the code in this
+  repository. Nothing changes for users.
+
 ## [0.4.0] - 2026-11-09
 
 ### Added
