@@ -92,7 +92,7 @@ Schlüssel:
 | `nor_lkm` | Leistungskilometer gegen die NOR-Empfehlung |
 
 Eine Regel mit einem anderen Schlüssel wird abgelehnt. Ein neuer Schlüssel braucht Code in
-`src/check/` und einen Eintrag in `KNOWN_KEYS` in `src/rules.rs`.
+`src/check/` und einen Eintrag in `SCHEMA` in `src/rules.rs`.
 
 `severity` ist `error`, `warning` oder `hint`.
 
@@ -120,14 +120,16 @@ Sprintkarten ISSprOM-Symbole haben.
 Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees`, `percent` und
 `factor`. Beispiele: `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`,
 `feature_search_mm = 1.0`. Ein Name wie `distance = 30` wird abgelehnt, weil niemand sieht, ob
-Meter im Gelände oder Millimeter auf der Karte gemeint sind.
+Meter im Gelände oder Millimeter auf der Karte gemeint sind. Eine Zahl unter einem Einheitennamen
+muss im Bereich ihrer Einheit liegen: `metres` und `mm` über 0, `factor` mindestens 0, `percent` von 0
+bis 100. Ein Text oder Wahrheitswert unter einem Einheitennamen wird abgelehnt.
 
 Texte, true/false und Listen von Texten brauchen keine Einheit. Symbolnummern sind Texte:
 `impassable = ["520", "709"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer hat
 oder eine Unternummer davon: `505.1` passt zu `505`, `5051` nicht.
 
 Tabellen und Zeilenlisten haben keine einzelne Einheit. Jede steht mit ihrer Form in
-`TABLE_VALUES` in `src/rules.rs`, und die Profildatei beschreibt ihre Tabellen in einem Kommentar
+`SCHEMA` in `src/rules.rs`, und die Profildatei beschreibt ihre Tabellen in einem Kommentar
 am Anfang. Zurzeit sind das `range` und `pairs` (Codes), `courses` von `length_table` und von
 `nor_lkm` sowie `levels`, `easy_levels` und `hard_levels` von `difficulty_mix`.
 
@@ -146,7 +148,7 @@ IOF-R, IOF-SG, BOF, SOA, BL02, BL12, TD11, SOFT, BB-Lkm21, BB-Kombi14). Dazu kom
 bei Tabellen auch die PDF-Seite.
 
 Für manche Werte nennt keine Quelle eine Zahl. Sie verweisen auf `doc = "claude"` mit dem Plan als
-Abschnitt, und ihre `note` sagt, was die Quellen sagen und dass die Zahl ein Vorschlag ist. `check`
+Abschnitt, und ihre `note` sagt, was die Quellen sagen und dass die Zahl ein Vorschlag ist. Der Lader lehnt eine solche Regel ohne `note` ab. `check`
 nennt eine solche Quelle „Vorschlag von freemapper-courseplan“, ohne den Abschnitt aus dem Plan, und
 `check --all` zeigt die Anmerkung unter dem Befund.
 

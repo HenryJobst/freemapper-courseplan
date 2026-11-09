@@ -57,7 +57,10 @@ pub fn gap_range(
     let applying: Vec<_> = rules
         .rules
         .iter()
-        .filter(|r| r.rule.key == "number_gap" && r.rule.applies(map_kind, discipline, print_scale))
+        .filter(|r| {
+            r.rule.key == "number_gap"
+                && crate::rules::applies(&r.rule, map_kind, discipline, print_scale)
+        })
         .collect();
     let sides: Vec<(Option<f64>, Option<f64>)> =
         applying.iter().map(|r| rule_sides(&r.rule)).collect();

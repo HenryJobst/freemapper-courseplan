@@ -10,6 +10,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 - Die Programmtexte kommen jetzt aus `freemapper-text` (freemapper-core 0.1.0) statt aus einer eigenen Kopie des
   Codes. Für Nutzer ändert sich nichts.
+- `freemapper-rules` (freemapper-core 0.2.0) liest jetzt die Regelprofile. Der Lader prüft zusätzlich die
+  Wertebereiche nach Einheit; die eingebetteten Profile bleiben unverändert.
 
 ## [0.4.0] - 2026-11-09
 
