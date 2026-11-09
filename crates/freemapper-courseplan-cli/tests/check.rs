@@ -511,6 +511,39 @@ fn an_acceptance_whose_leg_changed_is_listed_as_not_matched() {
         de.contains("nicht zugeordnet:\n  wkb2026.leg.through_control, Bahn A, Strecke 31–32"),
         "{de}"
     );
+    // Accepting A:1 again confirms the new leg 32–31, and remove takes that exact entry first.
+    let again = run(
+        d,
+        &[
+            "finding",
+            "accept",
+            p,
+            "wkb2026.leg.through_control",
+            "--leg",
+            "A:1",
+            "--note",
+            "new leg",
+        ],
+    );
+    assert_eq!(
+        stdout(&again).trim(),
+        "accepted finding wkb2026.leg.through_control at course A, leg 32–31"
+    );
+    let exact = run(
+        d,
+        &[
+            "finding",
+            "remove",
+            p,
+            "wkb2026.leg.through_control",
+            "--leg",
+            "A:1",
+        ],
+    );
+    assert_eq!(
+        stdout(&exact).trim(),
+        "removed accepted finding wkb2026.leg.through_control at course A, leg 32–31"
+    );
     // finding remove names the leg by position and removes it, though its ends changed.
     let removed = run(
         d,

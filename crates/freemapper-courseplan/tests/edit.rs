@@ -737,14 +737,14 @@ fn accepting_a_finding_twice_replaces_its_note() {
     let rules = wkb();
     let first = acceptance("wkb2026.distance.min", &["32", "31", "32"], "on purpose");
     assert_eq!(
-        accept_finding(&mut e, &rules, first).unwrap(),
+        accept_finding(&mut e, &rules, first).unwrap().0,
         Accepted::Added
     );
     // Stored with the key's order, so the file reads the same way as the check output.
     assert_eq!(e.accepted_findings[0].controls, [code("31"), code("32")]);
     let again = acceptance("wkb2026.distance.min", &["31", "32"], "still on purpose");
     assert_eq!(
-        accept_finding(&mut e, &rules, again).unwrap(),
+        accept_finding(&mut e, &rules, again).unwrap().0,
         Accepted::NoteReplaced
     );
     assert_eq!(e.accepted_findings.len(), 1);
@@ -987,6 +987,47 @@ fn a_leg_acceptance_stores_the_ends_and_is_removed_by_position() {
     let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
     named.legs = vec![leg_ref("Z", 1)];
     remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert!(e.accepted_findings.is_empty());
+}
+
+#[test]
+fn an_exact_leg_acceptance_wins_over_a_stale_one_at_the_same_position() {
+    let mut e = event();
+    let rules = wkb();
+    let angle = |note: &str| AcceptedFinding {
+        legs: vec![leg_ref("A", 1)],
+        ..acceptance("wkb2026.leg.acute_angle", &[], note)
+    };
+    accept_finding(&mut e, &rules, angle("old leg")).unwrap();
+    // Leg A:1 now runs 31–33; accepting it again stores a second entry and returns that one.
+    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    let (done, stored) = accept_finding(&mut e, &rules, angle("new leg")).unwrap();
+    assert_eq!(done, Accepted::Added);
+    assert_eq!(
+        (stored.legs[0].to.as_str(), stored.note.as_str()),
+        ("33", "new leg")
+    );
+    assert_eq!(e.accepted_findings.len(), 2);
+    // Removing A:1 takes only the entry whose ends match the course now.
+    let named = AcceptedFinding {
+        legs: vec![leg_ref("A", 1)],
+        ..acceptance("wkb2026.leg.acute_angle", &[], "")
+    };
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 1);
+    assert_eq!(removed[0].legs[0].to, "33");
+    assert_eq!(e.accepted_findings[0].note, "old leg");
+    // Without an exact match the position fallback removes every stale entry there.
+    e.accepted_findings.push(AcceptedFinding {
+        legs: vec![LegRef {
+            from: "31".to_owned(),
+            to: "39".to_owned(),
+            ..leg_ref("A", 1)
+        }],
+        ..acceptance("wkb2026.leg.acute_angle", &[], "older leg")
+    });
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 2);
     assert!(e.accepted_findings.is_empty());
 }
 

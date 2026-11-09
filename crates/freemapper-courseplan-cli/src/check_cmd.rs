@@ -342,17 +342,10 @@ pub fn finding(lang: &Lang, cmd: FindingCmd) -> Outcome {
             let finding = named(lang, rule, controls, leg, course, note)?;
             let mut file: ProjectFile = load(lang, &project)?;
             let rules = rule_set(lang, &file.event)?;
-            let key = finding.key();
-            let done = edit::accept_finding(&mut file.event, &rules, finding)
+            // The stored entry has the leg ends `accept_finding` filled in.
+            let (done, stored) = edit::accept_finding(&mut file.event, &rules, finding)
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            // The stored key has the leg ends `accept_finding` filled in.
-            let stored = file
-                .event
-                .accepted_findings
-                .iter()
-                .find(|a| a.key().by_position() == key.by_position())
-                .expect("just accepted");
             let id = match done {
                 Accepted::Added => "cli-finding-accepted",
                 Accepted::NoteReplaced => "cli-finding-note-replaced",
@@ -361,8 +354,8 @@ pub fn finding(lang: &Lang, cmd: FindingCmd) -> Outcome {
                 lang,
                 id,
                 &[
-                    ("rule", v(key.rule.as_str())),
-                    ("location", v(place_text(lang, &file.event, stored))),
+                    ("rule", v(stored.rule.as_str())),
+                    ("location", v(place_text(lang, &file.event, &stored))),
                 ],
             );
         }

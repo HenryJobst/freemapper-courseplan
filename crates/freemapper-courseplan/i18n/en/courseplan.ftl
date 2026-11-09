@@ -152,7 +152,7 @@ check-skip-starters-missing = classes without an expected number of starters: { 
 check-skip-length-no-reference = no course carries category { $category }, so the length table has no reference
 check-skip-length-reference-empty = the reference course { $course } has length 0
 check-skip-category-not-in-table = categories in no row of the table: { $categories }
-check-skip-switched-off = switched off by { $overlay }
+check-skip-switched-off = rule profile { $overlay } switches the rule off
 check-distance-min = { $first_kind ->
         [start] start
         [finish] finish
@@ -450,7 +450,7 @@ cli-arg-finding-accept-course = The course of a finding about a whole course
 cli-arg-finding-accept-note = Why the exception is intended
 cli-arg-finding-remove-rule = Id of the rule as check shows it, for example wkb2026.distance.min
 cli-arg-finding-remove-controls = The controls of the finding, separated by commas
-cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg that leaves position N of the course: positions count the controls of the course from 1, crossing points included, and 0 is the start. N is not the control number on the map; check names the leg by its ends, for example 36–37. Repeat it for a finding at two legs: --leg A:2 --leg A:5. The leg is matched by course and position, also when its ends have changed since
+cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg that leaves position N of the course: positions count the controls of the course from 1, crossing points included, and 0 is the start. N is not the control number on the map; check names the leg by its ends, for example 36–37. Repeat it for a finding at two legs: --leg A:2 --leg A:5. The exception for the leg as it runs now is removed first; without one, those at this position whose leg has changed since
 cli-arg-finding-remove-course = The course of a finding about a whole course
 cli-finding-bad-leg = { $value } is not a leg; write COURSE:N, for example A:3, where N is a position in the course and 0 is the start
 cli-finding-at = at { $location }
@@ -536,7 +536,7 @@ mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, 
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
 mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc, section and title, rule_note, and text; accepted findings with the note of the course setter; unmatched, the accepted findings that match no finding any more, for example because a control or course is gone (remove them with remove_accepted_finding if they are no longer needed; they never count as errors); and skipped rules with the reason, including rules an overlay switched off. A leg location carries course, after and the ids of its ends in from and to. Team, relay and score courses are not checked yet.
 mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, legs or the course. A start or finish id may stand in controls, as check reports it. A leg is given by course and after; the server stores the ids of its ends from the course as it is now, so the finding comes back when the leg later runs between other stops. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
-mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted. A leg is matched by course and after only, so an entry from unmatched can be removed after its leg or course changed. Returns the removed entries.
+mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted. A leg is given by course and after. The entry for the leg as it runs now is removed first; if there is none, every entry at that position goes, so an entry from unmatched can be removed after its leg or course changed. Returns the removed entries.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 mcp-tool-set-start-window = Set the start window of the event, the minutes from the first to the last start, at least 1. The start capacity check divides the expected starters by it.
 

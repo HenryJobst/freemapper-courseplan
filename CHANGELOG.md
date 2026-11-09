@@ -79,8 +79,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 - `check --all` listet unter „nicht zugeordnet“ akzeptierte Befunde, zu denen kein Befund mehr passt, etwa weil
   ein Posten oder eine Bahn entfernt wurde, mit Begründung und dem Hinweis auf `finding remove`. Die
   Zusammenfassung zählt sie, der Exit-Code bleibt davon unberührt. MCP `check` gibt sie in `unmatched` zurück.
-- Eine Prüfregel, die ein Aufsatz abschaltet, steht bei `check --all` unter den übersprungenen, mit „abgeschaltet
-  durch“ und der Kennung des Aufsatzes.
+- Eine Prüfregel, die ein Aufsatz abschaltet, steht bei `check --all` unter den übersprungenen, mit einem Grund,
+  der den Aufsatz nennt: „Das Regelprofil nor-bb-2021 schaltet die Prüfregel ab“.
 - `check --all` zeigt unter jedem Befund die Anmerkung seiner Prüfregel in der gewählten Sprache. Ein Wert, den
   das Programm vorschlägt, weil keine Quelle eine Zahl nennt, trägt als Quelle „Vorschlag von
   freemapper-courseplan“.
@@ -92,8 +92,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Bahn steht die Bahn vorn, dann die Strecken in Laufrichtung. Eingegeben wird eine Strecke weiter als
   `--leg A:6`, die Strecke ab Position 6 der Bahn, wobei Querungsstellen mitzählen; die Hilfe sagt das.
 - Ein akzeptierter Befund an einer Strecke speichert deren Enden (`from`, `to`). Läuft die Strecke später zwischen
-  anderen Posten, meldet `check` den Befund wieder. `finding remove --leg A:6` findet die Ausnahme weiter nach
-  Bahn und Position.
+  anderen Posten, meldet `check` den Befund wieder. `finding remove --leg A:6` entfernt die Ausnahme für die
+  Strecke, wie sie jetzt verläuft; gibt es keine, entfernt es die älteren an dieser Position.
 - Texte: Grenzen lauten „gefordert sind mindestens 15 m“, eine Strecke über einen Posten „Die Strecke führt über
   den Posten 31“ statt „0 m am Posten 31 vorbei“. Start- und Tabellenbefunde wiederholen ihren Ort nicht mehr im
   Text. Eine leere Begründung wird mit einer eigenen Meldung abgelehnt.

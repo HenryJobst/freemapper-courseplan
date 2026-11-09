@@ -157,7 +157,8 @@ Häufige Gründe:
 
 - Beim Training wendet das Programm die Längen- und Schwierigkeitsregeln des Wettkampfs nicht an.
 - Die Prüfregel gilt nur für eine andere Disziplin, Kartenart oder einen anderen Druckmaßstab.
-- Ein Aufsatz hat die Prüfregel abgeschaltet; der Grund nennt ihn, etwa „abgeschaltet durch nor-bb-2021“.
+- Ein Aufsatz hat die Prüfregel abgeschaltet; der Grund nennt ihn, etwa „Das Regelprofil nor-bb-2021 schaltet die
+  Prüfregel ab“.
 - Ein Wert fehlt. Das Startfenster setzt `event start-window halle.courseplan.toml 90`, die erwartete Starterzahl
   einer Kategorie `class set halle.courseplan.toml H21 --starters 40`, den Anstieg einer Bahn `course set
   halle.courseplan.toml A --climb 120`.
@@ -208,7 +209,8 @@ freemapper-courseplan finding remove halle.courseplan.toml wkb2026.distance.min_
 freemapper-courseplan finding remove halle.courseplan.toml wkb2026.leg.acute_angle --leg A:3
 ```
 
-`finding remove --leg` findet die Strecke nach Bahn und Position, auch wenn sich ihre Enden seitdem geändert haben.
+`finding remove --leg` entfernt zuerst die Ausnahme für die Strecke, wie sie jetzt verläuft. Gibt es keine, entfernt
+es die Ausnahmen an dieser Position, deren Strecke sich seitdem geändert hat.
 Ändert sich die Kennung einer Prüfregel, etwa in einer neuen Programmversion, meldet `check` die Befunde dazu
 wieder.
 

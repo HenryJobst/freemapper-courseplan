@@ -36,9 +36,11 @@ Source: agreed with freemapper-print, 2026-11-09; ADR 0019.
   start and the finish. The key compares all four, so an acceptance on a leg comes back once the leg runs
   between other stops, even at the same position (ruling R24).
 - `finding accept --leg A:6` and the MCP `accept_finding` name the leg by course and position; the program
-  fills `from` and `to` from the course as it is when the finding is accepted. `finding remove` and
-  `remove_accepted_finding` match legs by course and position only, so an acceptance that no longer matches
-  can still be removed.
+  fills `from` and `to` from the course as it is when the finding is accepted, and returns the stored entry.
+  `finding remove` and `remove_accepted_finding` first remove the entry whose ends are the leg's ends now. Only
+  when there is none do they match legs by course and position, and then they remove every entry found there:
+  none of them fits the course as it is, and the CLI could not name them apart. So an acceptance that no
+  longer matches can still be removed.
 - A file without `from` and `to` reads them as empty. Such an acceptance matches no finding and is listed as
   not matched (ADR 0026). No release has stored leg acceptances, so format 1 stays.
 

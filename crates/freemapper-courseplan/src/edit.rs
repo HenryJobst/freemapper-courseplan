@@ -6,7 +6,7 @@
 
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
-    CourseControl, CourseKind, Event, FindingKey, MapPoint, ModelError, NumberPlacement,
+    CourseControl, CourseKind, Event, FindingKey, LegRef, MapPoint, ModelError, NumberPlacement,
     SpecialObject, validate,
 };
 
@@ -721,50 +721,9 @@ pub fn set_class(
     })
 }
 
-/// What [`accept_finding`] did.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Accepted {
-    Added,
-    /// An accepted finding with the same key existed; its note is replaced.
-    NoteReplaced,
-}
-
-/// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
-/// controls and legs must exist. The key names one place: nothing for a finding of the whole
-/// event (only for rules whose findings can sit there), a course, one control, several controls,
-/// one leg or several legs of one course. A place kind the rule's check never reports is refused
-/// (`Check::places`, ADR 0026). A control may also be a start or finish id, for every rule.
-/// A leg is named by course and position; its ends (`LegRef::from`, `to`) are taken from the
-/// course as it is now, whatever the caller passed (ruling R24). Controls and legs are stored in
-/// the order of their key. Accepting a key again replaces the note.
-pub fn accept_finding(
-    event: &mut Event,
-    rules: &RuleSet,
-    mut finding: AcceptedFinding,
-) -> Result<Accepted, EditError> {
-    let Some(set_rule) = rules.rule(&finding.rule) else {
-        let mut profile = vec![rules.base.as_str()];
-        profile.extend(rules.overlays.iter().map(String::as_str));
-        return Err(EditError::UnknownRule {
-            rule: finding.rule,
-            profile: profile.join(" + "),
-        });
-    };
-    let places = usize::from(finding.course.is_some())
-        + usize::from(!finding.controls.is_empty())
-        + usize::from(!finding.legs.is_empty());
-    let one_place = || EditError::FindingHasOnePlace {
-        rule: finding.rule.clone(),
-    };
-    let leg_courses = finding.legs.iter().map(|l| &l.course);
-    let mixed_courses = leg_courses
-        .clone()
-        .zip(leg_courses.skip(1))
-        .any(|(a, b)| a != b);
-    if places > 1 || mixed_courses {
-        return Err(one_place());
-    }
-    for leg in &mut finding.legs {
+/// Sets `from` and `to` of each leg to the ends the leg has in its course now (ruling R24).
+fn fill_leg_ends(event: &Event, legs: &mut [LegRef]) -> Result<(), EditError> {
+    for leg in legs {
         let course = event
             .courses
             .iter()
@@ -790,6 +749,55 @@ pub fn accept_finding(
             .get(after)
             .map_or_else(|| course.finish.clone(), |c| c.code.0.clone());
     }
+    Ok(())
+}
+
+/// What [`accept_finding`] did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Accepted {
+    Added,
+    /// An accepted finding with the same key existed; its note is replaced.
+    NoteReplaced,
+}
+
+/// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
+/// controls and legs must exist. The key names one place: nothing for a finding of the whole
+/// event (only for rules whose findings can sit there), a course, one control, several controls,
+/// one leg or several legs of one course. A place kind the rule's check never reports is refused
+/// (`Check::places`, ADR 0026). A control may also be a start or finish id, for every rule.
+/// A leg is named by course and position; its ends (`LegRef::from`, `to`) are taken from the
+/// course as it is now, whatever the caller passed (ruling R24). Controls and legs are stored in
+/// the order of their key. Accepting a key again replaces the note. Returns what it did and the
+/// stored entry, whose legs carry the ends; an older entry at the same position with other ends
+/// is a different key and stays as it is.
+pub fn accept_finding(
+    event: &mut Event,
+    rules: &RuleSet,
+    mut finding: AcceptedFinding,
+) -> Result<(Accepted, AcceptedFinding), EditError> {
+    let Some(set_rule) = rules.rule(&finding.rule) else {
+        let mut profile = vec![rules.base.as_str()];
+        profile.extend(rules.overlays.iter().map(String::as_str));
+        return Err(EditError::UnknownRule {
+            rule: finding.rule,
+            profile: profile.join(" + "),
+        });
+    };
+    let places = usize::from(finding.course.is_some())
+        + usize::from(!finding.controls.is_empty())
+        + usize::from(!finding.legs.is_empty());
+    let one_place = || EditError::FindingHasOnePlace {
+        rule: finding.rule.clone(),
+    };
+    let leg_courses = finding.legs.iter().map(|l| &l.course);
+    let mixed_courses = leg_courses
+        .clone()
+        .zip(leg_courses.skip(1))
+        .any(|(a, b)| a != b);
+    if places > 1 || mixed_courses {
+        return Err(one_place());
+    }
+    fill_leg_ends(event, &mut finding.legs)?;
     let key = finding.key();
     if let Some(check) = check_of(&set_rule.rule.key) {
         let place = Place::of_key(&key);
@@ -825,33 +833,51 @@ pub fn accept_finding(
         }
         if let Some(existing) = e.accepted_findings.iter_mut().find(|a| a.key() == key) {
             existing.note = finding.note;
-            return Ok(Accepted::NoteReplaced);
+            return Ok((Accepted::NoteReplaced, existing.clone()));
         }
-        e.accepted_findings.push(AcceptedFinding {
+        let stored = AcceptedFinding {
             rule: key.rule.clone(),
             controls: key.controls.clone(),
             course: key.course.clone(),
             legs: key.legs.clone(),
             note: finding.note,
-        });
-        Ok(Accepted::Added)
+        };
+        e.accepted_findings.push(stored.clone());
+        Ok((Accepted::Added, stored))
     })
 }
 
 /// Removes the accepted findings with this key, so the finding is reported again, and returns
-/// them. Legs compare by course and position only ([`FindingKey::by_position`]), so an
-/// acceptance whose leg now runs between other stops, or whose course is gone, can still be
-/// named and removed.
+/// them. Legs are named by course and position. The entry whose leg ends are the leg's ends in
+/// the course now is removed if there is one. Only without such an exact match do legs compare
+/// by course and position ([`FindingKey::by_position`]), so an acceptance whose leg now runs
+/// between other stops, or whose course is gone, can still be removed; if that finds several
+/// stale entries, all of them go, since none of them matches the course as it is.
 pub fn remove_accepted_finding(
     event: &mut Event,
     key: &FindingKey,
 ) -> Result<Vec<AcceptedFinding>, EditError> {
+    let mut legs = key.legs.clone();
+    let exact = fill_leg_ends(event, &mut legs).ok().map(|()| {
+        AcceptedFinding {
+            rule: key.rule.clone(),
+            controls: key.controls.clone(),
+            course: key.course.clone(),
+            legs,
+            note: String::new(),
+        }
+        .key()
+    });
+    let exact = exact.filter(|k| event.accepted_findings.iter().any(|a| &a.key() == k));
     let wanted = key.by_position();
     apply(event, |e| {
         let (removed, kept): (Vec<AcceptedFinding>, Vec<AcceptedFinding>) =
             std::mem::take(&mut e.accepted_findings)
                 .into_iter()
-                .partition(|a| a.key().by_position() == wanted);
+                .partition(|a| match &exact {
+                    Some(k) => &a.key() == k,
+                    None => a.key().by_position() == wanted,
+                });
         e.accepted_findings = kept;
         if removed.is_empty() {
             return Err(EditError::AcceptedNotFound {

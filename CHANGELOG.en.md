@@ -73,8 +73,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 - `check --all` lists under "not matched" the accepted findings that match no finding any more, for example
   because a control or a course was removed, with their notes and a pointer to `finding remove`. The summary
   counts them; they do not change the exit code. MCP `check` returns them in `unmatched`.
-- A rule that an overlay switches off is listed among the skipped rules by `check --all`, as "switched off by"
-  and the overlay's id.
+- A rule that an overlay switches off is listed among the skipped rules by `check --all`, with a reason that
+  names the overlay: "rule profile nor-bb-2021 switches the rule off".
 - `check --all` prints the note of each finding's rule in the chosen language below it. A value the program
   proposes because no source gives a number names its source as "proposal of freemapper-courseplan".
 
@@ -85,8 +85,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   first, then its legs in running order. Input stays `--leg A:6`, the leg from position 6 of the course with
   crossing points counted; the help says so.
 - An accepted finding on a leg stores the leg's ends (`from`, `to`). When the leg later runs between other
-  controls, `check` reports the finding again. `finding remove --leg A:6` still finds the exception by course
-  and position.
+  controls, `check` reports the finding again. `finding remove --leg A:6` removes the exception for the leg as it
+  runs now; if there is none, it removes the older ones at that position.
 - Texts: limits read "at least 15 m required", and a leg over a control "the leg runs over control 31" instead of
   "passes 0 m from control 31". Start and table findings no longer repeat their place in the text. An empty
   note is refused with a message of its own.

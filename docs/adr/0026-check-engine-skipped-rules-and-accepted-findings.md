@@ -52,7 +52,7 @@ Source: plan M2b Task 3; controller rulings R2 and R4 and the rulings for Task 3
   notes and a hint that `finding remove` takes them out, the summary counts them, and MCP `check` returns them
   under `unmatched`. They never change the exit code (ruling R25).
 - A rule that a profile switched off with `enabled = false` is listed as skipped at the event, with the id of
-  that profile as the reason ("switched off by nor-bb-2021"). Before, it vanished from the output (ruling R27).
+  that profile as the reason ("rule profile nor-bb-2021 switches the rule off"). Before, it vanished from the output (ruling R27).
 - With `--all` the CLI prints the rule's note in the output language under each finding. A value whose source
   is the document `claude` is shown as "proposal of freemapper-courseplan" without the plan section; MCP keeps
   `doc` and `section` and gets that text as `title`.

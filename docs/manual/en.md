@@ -151,7 +151,8 @@ analysis can say whether it does.
 
 - At a training the program does not apply the length and difficulty rules of competitions.
 - The rule applies only to another discipline, map kind or print scale.
-- An overlay switched the rule off; the reason names it, such as "switched off by nor-bb-2021".
+- An overlay switched the rule off; the reason names it, such as "rule profile nor-bb-2021 switches the rule
+  off".
 - A value is missing. `event start-window hall.courseplan.toml 90` sets the start window, `class set
   hall.courseplan.toml H21 --starters 40` the expected starters of a class, and `course set hall.courseplan.toml A
   --climb 120` the climb of a course.
@@ -201,8 +202,9 @@ freemapper-courseplan finding remove hall.courseplan.toml wkb2026.distance.min_h
 freemapper-courseplan finding remove hall.courseplan.toml wkb2026.leg.acute_angle --leg A:3
 ```
 
-`finding remove --leg` finds the leg by course and position, also when its ends have changed since. If the id of
-a rule changes, for example in a new program version, `check` reports its findings again.
+`finding remove --leg` first removes the exception for the leg as it runs now. If there is none, it removes the
+exceptions at that position whose leg has changed since. If the id of a rule changes, for example in a new program
+version, `check` reports its findings again.
 
 ### Choosing the rule profile and overlays
 

@@ -950,6 +950,22 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SetClass>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
+            let conflict = |arg: &str, other: &str| {
+                text(
+                    &self.lang,
+                    "cli-parse-argument-conflict",
+                    &[
+                        ("arg", FluentValue::from(arg.to_owned())),
+                        ("other", FluentValue::from(other.to_owned())),
+                    ],
+                )
+            };
+            if req.rule_category.is_some() && flag(req.no_rule_category) {
+                return Err(conflict("rule_category", "no_rule_category"));
+            }
+            if req.expected_starters.is_some() && flag(req.no_expected_starters) {
+                return Err(conflict("expected_starters", "no_expected_starters"));
+            }
             let category = match (req.rule_category, flag(req.no_rule_category)) {
                 (Some(c), _) => Some(Some(c)),
                 (None, true) => Some(None),
@@ -1228,17 +1244,10 @@ impl CoursePlanServer {
         reply(self.edit(&req.project, |file| {
             let rules = self.rule_set(&file.event)?;
             let finding = named_finding(req.rule, req.controls, req.legs, req.course, req.note);
-            let key = finding.key();
-            let done = edit::accept_finding(&mut file.event, &rules, finding)
-                .map_err(|e| self.refused(e))?;
             // The stored entry carries the leg ends `accept_finding` took from the course.
-            let stored = file
-                .event
-                .accepted_findings
-                .iter()
-                .find(|a| a.key().by_position() == key.by_position())
-                .expect("just accepted");
-            let mut value = accepted_json(stored);
+            let (done, stored) = edit::accept_finding(&mut file.event, &rules, finding)
+                .map_err(|e| self.refused(e))?;
+            let mut value = accepted_json(&stored);
             value["replaced"] = json!(done == Accepted::NoteReplaced);
             Ok(value)
         }))

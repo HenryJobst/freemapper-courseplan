@@ -1132,7 +1132,31 @@ fn an_acceptance_that_matches_nothing_is_returned_as_unmatched() {
         json!({ "kind": "leg", "course": "A", "after": 1, "from": "31", "to": "32" })
     );
     assert_eq!(u["text"], "course A, leg 31–32");
-    // remove_accepted_finding matches the leg by position and returns what it removed.
+    // Accepting leg A:1 again stores a new entry 32–31 and returns it, not the stale 31–32.
+    let again = session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }], "note": "new leg"
+        }),
+    );
+    assert_eq!(again["note"], "new leg");
+    assert_eq!(
+        again["legs"],
+        json!([{ "course": "A", "after": 1, "from": "32", "to": "31" }])
+    );
+    assert_eq!(again["replaced"], false);
+    // Removing A:1 takes the exact entry first, the stale one stays unmatched.
+    let exact = session.ok(
+        "remove_accepted_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }]
+        }),
+    );
+    assert_eq!(exact["removed"].as_array().unwrap().len(), 1);
+    assert_eq!(exact["removed"][0]["note"], "new leg");
+    // remove_accepted_finding then matches the stale leg by position and returns what it removed.
     let removed = session.ok(
         "remove_accepted_finding",
         json!({
@@ -1202,6 +1226,22 @@ fn start_window_and_class_settings() {
             "set_class",
             json!({ "project": project, "name": "H21", "rule_category": " " }),
             "is empty",
+        ),
+        (
+            "set_class",
+            json!({
+                "project": project, "name": "H21", "rule_category": "H21",
+                "no_rule_category": true
+            }),
+            "rule_category cannot be used together with no_rule_category",
+        ),
+        (
+            "set_class",
+            json!({
+                "project": project, "name": "H21", "expected_starters": 3,
+                "no_expected_starters": true
+            }),
+            "expected_starters cannot be used together with no_expected_starters",
         ),
     ] {
         let (error, text) = session.call(tool, args);

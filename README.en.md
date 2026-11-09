@@ -74,8 +74,8 @@ exceptions that match no finding any more and the skipped rules. `event start-wi
 window, rule categories and expected starters that some checks need. Chapter 8 of the
 [user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions) explains it, and the AI
 assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
-`set_start_window` and `set_class` for it. The program does not check team, relay or score courses yet, and the route analysis is
-missing, so it reports a straight leg through an out-of-bounds area only as a warning.
+`set_start_window` and `set_class` for it. The program does not check team, relay or score courses yet, and the
+route analysis is missing, so it reports a straight leg through an out-of-bounds area only as a warning.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

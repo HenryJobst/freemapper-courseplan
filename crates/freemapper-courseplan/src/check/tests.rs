@@ -181,8 +181,14 @@ fn rules_switched_off_by_an_overlay_are_skipped_with_its_id() {
     assert_eq!(off[0].profile.as_deref(), Some("base"));
     assert_eq!(off[0].location, Location::Event);
     let de = crate::text::parse_lang_arg("de").unwrap();
-    assert_eq!(off[0].text(&de), "abgeschaltet durch nor-bb-2021");
-    assert_eq!(off[0].text(&Lang::english()), "switched off by nor-bb-2021");
+    assert_eq!(
+        off[0].text(&de),
+        "Das Regelprofil nor-bb-2021 schaltet die Prüfregel ab"
+    );
+    assert_eq!(
+        off[0].text(&Lang::english()),
+        "rule profile nor-bb-2021 switches the rule off"
+    );
 }
 
 #[test]
