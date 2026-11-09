@@ -84,17 +84,19 @@ with a note.
 ```text
 $ freemapper-courseplan check luebeck-sprint.courseplan.toml
 course A:
-  hint course A, leg after 6: the legs at control 37 form an angle of 85°, at least 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  hint course A, leg 36–37: the legs at control 37 form an angle of 85°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
 0 errors, 0 warnings, 1 hint; 0 accepted, 5 skipped
 
 $ freemapper-courseplan finding accept luebeck-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:6 --note "Training: the 85° angle at the last control is intended."
-accepted finding wkb2026.leg.acute_angle_hint at course A, leg after 6
+accepted finding wkb2026.leg.acute_angle_hint at course A, leg 36–37
 ```
 
-After that, `check` reports nothing. The five skipped rules are the length and difficulty rules of competitions,
-which do not apply to a training, and the start capacity, because the event has no start window. All commands and the
-output of `check --all` are in [`check.en.txt`](check.en.txt) and [`check.de.txt`](check.de.txt). The English file
-shows an English note; the project file holds the German one.
+`--leg A:6` names the leg that leaves the sixth position of the course, from control 36 to control 37. The
+project file stores the exception with both ends of the leg. After that, `check` reports nothing. The five skipped
+rules are the length and difficulty rules of competitions, which do not apply to a training, and the start
+capacity, because the event has no start window. All commands and the output of `check --all` are in
+[`check.en.txt`](check.en.txt) and [`check.de.txt`](check.de.txt). The English file shows an English note; the
+project file holds the German one.
 
 ## Making the sketch again
 

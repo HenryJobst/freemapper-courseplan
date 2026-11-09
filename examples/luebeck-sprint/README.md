@@ -84,18 +84,19 @@ trägt ihn mit Begründung in die Projektdatei ein.
 ```text
 $ freemapper-courseplan check luebeck-sprint.courseplan.toml
 Bahn A:
-  Hinweis Bahn A, Strecke nach 6: Die Strecken am Posten 37 bilden einen Winkel von 85°, mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  Hinweis Bahn A, Strecke 36–37: Die Strecken am Posten 37 bilden einen Winkel von 85°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
 0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert, 5 übersprungen
 
 $ freemapper-courseplan finding accept luebeck-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:6 --note "Training: Der Winkel von 85° am letzten Posten ist gewollt."
-Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke nach 6 akzeptiert
+Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke 36–37 akzeptiert
 ```
 
-Danach meldet `check` nichts mehr. Die fünf übersprungenen Prüfregeln sind Längen- und Schwierigkeitsregeln des
-Wettkampfs, die beim Training nicht gelten, und die Startkapazität, weil die Veranstaltung kein Startfenster hat.
-Alle Befehle und die Ausgabe von `check --all` stehen in [`check.de.txt`](check.de.txt) und
-[`check.en.txt`](check.en.txt). Die englische Datei zeigt eine englische Begründung; in der Projektdatei steht die
-deutsche.
+`--leg A:6` nennt die Strecke, die von der sechsten Position der Bahn abgeht, also von Posten 36 zu Posten 37. In
+der Projektdatei steht die Ausnahme mit beiden Enden der Strecke. Danach meldet `check` nichts mehr. Die fünf
+übersprungenen Prüfregeln sind Längen- und Schwierigkeitsregeln des Wettkampfs, die beim Training nicht gelten,
+und die Startkapazität, weil die Veranstaltung kein Startfenster hat. Alle Befehle und die Ausgabe von
+`check --all` stehen in [`check.de.txt`](check.de.txt) und [`check.en.txt`](check.en.txt). Die englische Datei
+zeigt eine englische Begründung; in der Projektdatei steht die deutsche.
 
 ## Skizze neu erzeugen
 

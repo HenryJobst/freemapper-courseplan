@@ -109,4 +109,4 @@ gap_mm = 0.5
 [[accepted_findings]]
 rule = "wkb2026.leg.acute_angle_hint"
 note = "Training: Der Winkel von 85° am letzten Posten ist gewollt."
-legs = [{ course = "A", after = 6 }]
+legs = [{ course = "A", after = 6, from = "36", to = "37" }]
