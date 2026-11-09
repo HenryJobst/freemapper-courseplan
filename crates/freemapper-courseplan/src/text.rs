@@ -854,16 +854,83 @@ mod tests {
             .collect()
     }
 
+    /// Every non-test source file directly under `src/check/`; the guard test below fails when a
+    /// new module is missing here, so its message ids are scanned.
+    const CHECK_SOURCES: [(&str, &str); 11] = [
+        ("mod.rs", include_str!("check/mod.rs")),
+        ("codes.rs", include_str!("check/codes.rs")),
+        ("context.rs", include_str!("check/context.rs")),
+        ("distance.rs", include_str!("check/distance.rs")),
+        ("geometry.rs", include_str!("check/geometry.rs")),
+        ("legs.rs", include_str!("check/legs.rs")),
+        ("start.rs", include_str!("check/start.rs")),
+        ("stops.rs", include_str!("check/stops.rs")),
+        ("tables.rs", include_str!("check/tables.rs")),
+        ("tests.rs", include_str!("check/tests.rs")),
+        ("testing.rs", include_str!("check/testing.rs")),
+    ];
+
+    #[test]
+    fn every_check_module_is_scanned_for_message_ids() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/check");
+        let mut missing = Vec::new();
+        for entry in std::fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_some_and(|e| e == "rs") {
+                let name = path.file_name().unwrap().to_str().unwrap().to_owned();
+                if !CHECK_SOURCES.iter().any(|(n, _)| *n == name) {
+                    missing.push(name);
+                }
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "add to CHECK_SOURCES in text.rs: {missing:?}"
+        );
+    }
+
+    #[test]
+    fn list_and_table_check_texts_render_in_every_language() {
+        let n = |x: f64| FluentValue::from(x);
+        let row = |lang: &Lang| {
+            text(
+                lang,
+                "check-nor-lkm-row",
+                &[
+                    ("categories", v("H-12")),
+                    ("target", n(3.9)),
+                    ("min", n(3.7)),
+                    ("max", n(4.1)),
+                ],
+            )
+        };
+        let en = row(&lang_of("en"));
+        assert!(
+            en.contains("H-12") && en.contains("3.9") && en.contains("4.1"),
+            "{en}"
+        );
+        let de = row(&lang_of("de"));
+        assert!(de.contains("H-12") && de.contains("Ziel-Lkm"), "{de}");
+        for lang in available() {
+            let empty = text(
+                &lang,
+                "check-skip-length-reference-empty",
+                &[("course", v("HE"))],
+            );
+            assert!(empty.contains("HE") && empty.contains('0'), "{empty}");
+            let unknown = text(
+                &lang,
+                "check-skip-category-not-in-table",
+                &[("categories", v("D-99"))],
+            );
+            assert!(unknown.contains("D-99"), "{unknown}");
+        }
+    }
+
     #[test]
     fn ids_used_in_code_exist() {
         let mut ids = ids_in_source(include_str!("text.rs"));
-        for source in [
-            include_str!("check/mod.rs"),
-            include_str!("check/codes.rs"),
-            include_str!("check/context.rs"),
-            include_str!("check/distance.rs"),
-            include_str!("check/legs.rs"),
-        ] {
+        for (_, source) in CHECK_SOURCES {
             ids.extend(ids_in_source(source));
         }
         assert!(

@@ -29,7 +29,7 @@ Plan M2b implements the checks one task at a time.
   findings never sit at the event. Each entry of the check table names the place kinds its findings sit at
   (`Check::places`: event, course, one control, two or more controls, one leg, two or more legs), and accept
   refuses the others with `FindingWrongPlace`, so `--course A` for the minimum distance is refused instead of
-  stored where it never matches. Keys whose check is still a stub allow every kind but the event.
+  stored where it never matches. Every check names its place kinds; a key that does not say allows every kind but the event.
   `start_capacity` sits at its start (a control place, ADR 0027). Stored controls and legs follow the key's order, and accepting the same key
   again replaces the note.
 - The MCP `check` result gives each finding, accepted finding and skip with machine fields (rule, profile,
@@ -39,8 +39,8 @@ Plan M2b implements the checks one task at a time.
 
 ## Consequences
 
-- Tasks 4 to 8 replace one stub line each in the check table with `Check::at(key, run, places)`, which names
-  the place kinds of the key (Task 4 did this for the five distance keys, ADR 0027).
+- Every line of the check table is `Check::at(key, run, places)`, which names the place kinds of the key (Task 4
+  did this for the five distance keys, ADR 0027). After Task 8 no key is a stub.
 - Cost if wrong: a reviewer who wants every filtered rule listed changes one condition in `run_key`.
 
 Source: plan M2b Task 3; controller rulings R2 and R4 and the rulings for Task 3, 2026-11-09.

@@ -206,7 +206,8 @@ impl ArgValue {
     }
 }
 
-/// One decimal, without a trailing `.0`, with the decimal mark of the language. Fluent's
+/// At most one decimal (a trailing `.0` is dropped: 60 not 60.0), with the decimal mark of the
+/// language. Fluent's
 /// `NUMBER()` does not localize separators in fluent-bundle 0.16.
 fn format_number(lang: &Lang, x: f64) -> String {
     let rounded = (x * 10.0).round() / 10.0;

@@ -13,7 +13,7 @@ use toml::map::Map;
 
 use super::{
     ArgValue, Args, CheckContext, CourseContext, Finding, Location, RuleRun, SKIP_CLASS_NOT_MAPPED,
-    SKIP_CLIMB_MISSING, SKIP_COURSE_UNRESOLVED, SKIP_VALUE_MISSING, Skipped, number, value_number,
+    SKIP_CLIMB_MISSING, SKIP_COURSE_UNRESOLVED, SKIP_VALUE_MISSING, Skipped, number,
 };
 use crate::course::course_length_m;
 use crate::rules::Severity;
@@ -364,7 +364,6 @@ pub(super) fn nor_lkm(
     let Some(tolerance) = number(run, "tolerance_percent", skipped) else {
         return;
     };
-    debug_assert!(value_number(run.rule(), "climb_factor").is_some());
     for course in run.courses.iter().copied() {
         let Some(categories) = course_categories(ctx, run, course, skipped) else {
             continue;
