@@ -13,7 +13,8 @@ Plan M2b implements the checks one task at a time.
 ## Decision
 
 - The engine applies the filters before it calls a check. A check sees only the individual courses whose
-  print scale its rule covers. Courses of the other kinds are reported once each as not checked yet.
+  print scale its rule covers. Courses of the other kinds are reported once each as not checked yet, and so is
+  a course whose legs cannot be built (it names a stop the event lacks).
 - A rule that does not apply is reported as skipped only when no rule with the same key applies. For the
   discipline and the map kind that is decided once for the event, for the print scale once per course. Each
   rule of the key then gets one skip with its reason, such as "no rule of this kind for print scale 1:2500".
@@ -23,11 +24,13 @@ Plan M2b implements the checks one task at a time.
   legs; a course sets only `course`; one or several controls set only `controls`; a leg sets only `legs`, with
   its course inside the leg reference. Keys are compared for equality, so an acceptance with a course and
   controls never matches.
-- `accept_finding` refuses what can never match: an unknown or inactive rule id, more than one place or more
-  than one leg, a course, control or leg position that does not exist, and an acceptance without place for a
-  rule key whose findings never sit at the event. The check table marks such keys; for now only
-  `start_capacity`. Stored controls and legs follow the key's order, and accepting the same key again replaces
-  the note.
+- `accept_finding` refuses an unknown or inactive rule id, more than one place or more than one leg, a course,
+  control or leg position that does not exist, and an acceptance without place for a rule key whose findings
+  never sit at the event. The check table marks the keys whose findings can sit there; for now only
+  `start_capacity`. Other place kinds are not checked per key yet, so `--course A` for a rule that reports at
+  controls is stored and never matches. Tasks 4 to 8 extend `Check` with the location kinds each key reports,
+  and accept then refuses the others. Stored controls and legs follow the key's order, and accepting the same
+  key again replaces the note.
 - The MCP `check` result gives each finding, accepted finding and skip with machine fields (rule, profile,
   severity, location as a tagged object, message id, arguments, source with document title and link) and the
   text in the server language. Accepted findings carry the course setter's note. The note is text the user
@@ -35,8 +38,8 @@ Plan M2b implements the checks one task at a time.
 
 ## Consequences
 
-- Tasks 4 to 8 replace one stub line each in the check table and set `event_level` where their findings can
-  sit at the event.
+- Tasks 4 to 8 replace one stub line each in the check table, set `event_level` where their findings can sit
+  at the event, and add the location kinds of their key.
 - Cost if wrong: a reviewer who wants every filtered rule listed changes one condition in `run_key`.
 
 Source: plan M2b Task 3; controller rulings R2 and R4 and the rulings for Task 3, 2026-11-09.

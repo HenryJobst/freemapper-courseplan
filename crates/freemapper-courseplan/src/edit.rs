@@ -652,7 +652,8 @@ pub enum Accepted {
 
 /// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
 /// controls and leg must exist. The key names one place: nothing for a finding of the whole event
-/// (only for rules whose findings can sit there), a course, controls, or one leg. Controls and
+/// (only for rules whose findings can sit there), a course, controls, or one leg. Which of the
+/// other place kinds a rule reports is not checked yet (ADR 0026). Controls and
 /// legs are stored in the order of their key. Accepting a key again replaces the note.
 pub fn accept_finding(
     event: &mut Event,

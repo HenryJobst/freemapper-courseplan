@@ -2,6 +2,7 @@ use freemapper_courseplan_model::{AcceptedFinding, CourseKind, Discipline, LegRe
 
 use super::testing::*;
 use super::*;
+use crate::map::MapKind;
 use crate::rules::{KNOWN_KEYS, load_rule_set};
 
 /// A fake check: one warning per course it sees, at the course's first two controls.
@@ -294,7 +295,8 @@ fn a_check_not_implemented_yet_is_skipped_once_per_rule() {
     let mut event = sample_event();
     event.event.discipline = Discipline::Long;
     let map = map(15000, vec![]);
-    let report = run_checks(&CheckContext::new(&event, &map), &rules, &stubs);
+    let ctx = CheckContext::new(&event, &map);
+    let report = run_checks(&ctx, &rules, &stubs);
     assert!(report.findings.is_empty());
     for set_rule in &rules.rules {
         let id = Some(set_rule.rule.id.as_str());
@@ -307,16 +309,18 @@ fn a_check_not_implemented_yet_is_skipped_once_per_rule() {
             .skipped
             .iter()
             .any(|s| s.rule.as_deref() == id && s.reason_id != SKIP_NOT_IMPLEMENTED);
-        // A rule is silent only while another rule of its key checks the courses.
-        let sibling = report.skipped.iter().any(|s| {
-            s.reason_id == SKIP_NOT_IMPLEMENTED
-                && rules
-                    .rule(s.rule.as_deref().unwrap())
-                    .is_some_and(|r| r.rule.key == set_rule.rule.key)
-        });
+        // A rule is silent only when the event-wide filters (discipline, map kind) leave it
+        // out while another rule of its key runs.
+        let replaced = event_filter(&ctx, &set_rule.rule).is_some()
+            && report.skipped.iter().any(|s| {
+                s.reason_id == SKIP_NOT_IMPLEMENTED
+                    && rules
+                        .rule(s.rule.as_deref().unwrap())
+                        .is_some_and(|r| r.rule.key == set_rule.rule.key)
+            });
         assert!(stubs <= 1, "{id:?} reported {stubs} times");
         assert!(
-            stubs == 1 || filtered || sibling,
+            stubs == 1 || filtered || replaced,
             "{id:?} disappears silently"
         );
     }
@@ -348,4 +352,32 @@ fn texts_are_localized() {
     assert_eq!(start.text(&Lang::english()), "course A, leg from the start");
     assert_eq!(format_number(&de, 12.34), "12,3");
     assert_eq!(format_number(&Lang::english(), 30.0), "30");
+}
+
+#[test]
+fn a_course_whose_legs_cannot_be_built_is_skipped() {
+    let mut event = sample_event();
+    event.courses.push(course("C", &["31", "99"]));
+    let rules = rule_set(vec![(fake_rule(), "base")]);
+    let report = run(&event, &rules);
+    assert_eq!(
+        report.findings.len(),
+        2,
+        "courses A and B are checked, C is not"
+    );
+    assert_eq!(
+        report.skipped,
+        [Skipped {
+            rule: None,
+            profile: None,
+            location: Location::Course("C".to_owned()),
+            reason_id: SKIP_COURSE_UNRESOLVED,
+            args: vec![("id", ArgValue::Text("99".into()))],
+        }]
+    );
+    let de = crate::text::parse_lang_arg("de").unwrap();
+    assert_eq!(
+        report.skipped[0].text(&de),
+        "Die Bahn nennt 99, das die Veranstaltung nicht definiert; sie wird nicht geprüft"
+    );
 }

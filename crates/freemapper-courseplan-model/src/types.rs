@@ -318,6 +318,28 @@ pub enum Discipline {
     Training,
 }
 
+impl Discipline {
+    /// Every discipline, in declaration order.
+    pub const ALL: [Discipline; 5] = [
+        Discipline::Sprint,
+        Discipline::Middle,
+        Discipline::Long,
+        Discipline::Ultralong,
+        Discipline::Training,
+    ];
+
+    /// The name used in project and profile files.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Discipline::Sprint => "sprint",
+            Discipline::Middle => "middle",
+            Discipline::Long => "long",
+            Discipline::Ultralong => "ultralong",
+            Discipline::Training => "training",
+        }
+    }
+}
+
 /// A start class, optionally tied to a rule category.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Class {

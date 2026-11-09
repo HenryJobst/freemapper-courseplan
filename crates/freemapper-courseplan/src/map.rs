@@ -20,6 +20,20 @@ pub enum MapKind {
     Forest,
 }
 
+impl MapKind {
+    /// Every map kind, in declaration order.
+    pub const ALL: [MapKind; 3] = [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest];
+
+    /// The name used in profile files and MCP results.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MapKind::Sprint => "sprint",
+            MapKind::Schoolyard => "schoolyard",
+            MapKind::Forest => "forest",
+        }
+    }
+}
+
 /// Geometry of one map feature in millimetres.
 #[derive(Debug, Clone, PartialEq)]
 pub enum FeatureGeometry {

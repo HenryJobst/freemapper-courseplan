@@ -92,8 +92,8 @@ error-edit-special-would-cover-all-courses = { $count ->
 error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start oder Ziel; jede Bahn nennt ihren Start und ihr Ziel selbst
 error-edit-unknown-rule = Prüfregel { $name } ist im Regelprofil { $id } nicht aktiv
 error-edit-finding-needs-place = Befunde der Prüfregel { $name } betreffen eine Bahn, Posten oder eine Strecke; gib diesen Ort an
-error-edit-finding-has-one-place = ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder eine Strecke an
-error-edit-accepted-not-found = an diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
+error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder eine Strecke an
+error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
 
 ## OOM-Karten lesen (OmapError)
 
@@ -114,30 +114,31 @@ check-location-control = Posten { $code }
 check-location-controls = Posten { $codes }
 check-location-leg = Bahn { $course }, Strecke nach { $index }
 check-location-start-leg = Bahn { $course }, Strecke vom Start
-check-skip-not-implemented = diese Prüfung ist noch nicht umgesetzt
-check-skip-training = wird beim Training nicht geprüft
-check-skip-discipline = die Prüfregel gilt nicht für { $discipline ->
+check-skip-not-implemented = Diese Prüfung ist noch nicht umgesetzt
+check-skip-training = Beim Training wird die Prüfregel nicht angewendet
+check-skip-discipline = Die Prüfregel gilt nicht für { $discipline ->
         [sprint] den Sprint
         [middle] die Mitteldistanz
         [long] die Langdistanz
         [ultralong] die Ultralangdistanz
        *[other] { $discipline }
     }
-check-skip-map-kind = die Prüfregel gilt nicht für { $kind ->
+check-skip-map-kind = Die Prüfregel gilt nicht für { $kind ->
         [sprint] Sprintkarten
         [schoolyard] Schulhofkarten
         [forest] Waldkarten
        *[other] Karten der Art { $kind }
     }
-check-skip-print-scale = keine Prüfregel dieser Art für den Druckmaßstab 1:{ $scale }
+check-skip-print-scale = Keine Prüfregel dieser Art für den Druckmaßstab 1:{ $scale }
 check-skip-course-kind = { $kind ->
         [team] Mannschaftsbahnen
         [relay] Staffelbahnen
         [score] Score-Bahnen
        *[other] Bahnen der Art { $kind }
     } werden noch nicht geprüft
+check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
 check-skip-class-not-mapped = Kategorie { $name } ist keiner WKB-Kategorie zugeordnet
-check-skip-climb-missing = für die Bahn ist kein Anstieg angegeben
+check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
 
 ## Kommandozeile
 
@@ -357,7 +358,7 @@ cli-finding-at = bei { $location }
 cli-finding-at-event = für die Veranstaltung
 cli-finding-accepted = Befund { $rule } { $location } akzeptiert
 cli-finding-note-replaced = Begründung des akzeptierten Befunds { $rule } { $location } ersetzt
-cli-finding-removed = akzeptierten Befund { $rule } { $location } entfernt
+cli-finding-removed = Akzeptierten Befund { $rule } { $location } entfernt
 
 cli-help-event = Einstellungen der ganzen Veranstaltung: das Regelprofil
 cli-help-event-profile = Basis-Regelprofil und Aufsätze setzen. Die Profile werden vorher geladen; ein unbekanntes wird mit der Liste der verfügbaren Profile abgelehnt. Ohne --overlay hat die Veranstaltung keine Aufsätze

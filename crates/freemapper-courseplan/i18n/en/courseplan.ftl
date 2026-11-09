@@ -136,6 +136,7 @@ check-skip-course-kind = { $kind ->
         [score] score courses
        *[other] { $kind } courses
     } are not checked yet
+check-skip-course-unresolved = the course refers to { $id }, which the event does not define; it is not checked
 check-skip-class-not-mapped = class { $name } has no rule category
 check-skip-climb-missing = the course has no climb
 

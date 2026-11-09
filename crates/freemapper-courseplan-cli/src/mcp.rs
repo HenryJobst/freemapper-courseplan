@@ -11,7 +11,7 @@ use freemapper_courseplan::check::{ArgValue, Args, CheckReport, Finding, Locatio
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, Accepted, LegStart};
 use freemapper_courseplan::init::{InitError, init_project};
-use freemapper_courseplan::map::{FeatureGeometry, MapIndex, MapKind, map_kind};
+use freemapper_courseplan::map::{FeatureGeometry, MapIndex, map_kind};
 use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
@@ -92,14 +92,6 @@ fn cleared_json(cleared: &[edit::ClearedLeg]) -> Value {
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
-}
-
-fn map_kind_name(kind: MapKind) -> &'static str {
-    match kind {
-        MapKind::Sprint => "sprint",
-        MapKind::Schoolyard => "schoolyard",
-        MapKind::Forest => "forest",
-    }
 }
 
 fn control_json(c: &Control) -> Value {
@@ -573,7 +565,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "title": event.event.title,
                 "map": event.sources.map.display().to_string(),
-                "map_kind": map_kind_name(map_kind(&doc)),
+                "map_kind": map_kind(&doc).as_str(),
                 "scale": scale,
                 "rule_profile": event.event.rule_profile,
                 "rule_overlays": event.event.rule_overlays,
@@ -1113,7 +1105,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "extent": extent_json(MapIndex::from_document(&doc).extent()),
                 "scale": doc.georef.scale_denominator,
-                "map_kind": map_kind_name(map_kind(&doc)),
+                "map_kind": map_kind(&doc).as_str(),
             }))
         })())
     }
@@ -1346,7 +1338,7 @@ mod tests {
         );
         assert_eq!(
             f["text"],
-            "keine Prüfregel dieser Art für den Druckmaßstab 1:2500"
+            "Keine Prüfregel dieser Art für den Druckmaßstab 1:2500"
         );
         let a = &json["accepted"][0];
         assert_eq!(
@@ -1358,7 +1350,7 @@ mod tests {
         assert_eq!(s["rule"], "wkb2026.code.range");
         assert_eq!(s["location"], json!({ "kind": "event" }));
         assert_eq!(s["reason_id"], "check-skip-not-implemented");
-        assert_eq!(s["text"], "diese Prüfung ist noch nicht umgesetzt");
+        assert_eq!(s["text"], "Diese Prüfung ist noch nicht umgesetzt");
     }
 
     #[test]

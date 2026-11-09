@@ -3,7 +3,8 @@
 
 use freemapper_courseplan_model::{Control, ControlCode, Course, CourseControl, CourseKind, Event};
 
-use crate::course::{LegGeometry, control_numbers, course_legs};
+use super::{ArgValue, Location, SKIP_COURSE_UNRESOLVED, Skipped};
+use crate::course::{CourseError, LegGeometry, control_numbers, course_legs};
 use crate::map::{MapIndex, MapKind, map_kind};
 use crate::numbers::{OverprintSizes, base_scale, overprint_sizes};
 use crate::omap::MapDocument;
@@ -22,6 +23,8 @@ pub struct CheckContext<'a> {
     pub sizes: OverprintSizes,
     /// The individual courses of the event, in file order. Other kinds are not checked.
     pub courses: Vec<CourseContext<'a>>,
+    /// Individual courses left out of `courses` because their legs cannot be built, one skip each.
+    pub unresolved: Vec<Skipped>,
 }
 
 /// One individual course as the checks see it.
@@ -41,23 +44,37 @@ impl<'a> CheckContext<'a> {
     pub fn new(event: &'a Event, map: &'a MapDocument) -> CheckContext<'a> {
         let map_scale = map.georef.scale_denominator;
         let kind = map_kind(map);
-        let courses = event
-            .courses
-            .iter()
-            .filter_map(|course| {
-                let CourseKind::Individual { controls } = &course.kind else {
-                    return None;
-                };
-                Some(CourseContext {
+        let mut courses = Vec::new();
+        let mut unresolved = Vec::new();
+        for course in &event.courses {
+            let CourseKind::Individual { controls } = &course.kind else {
+                continue;
+            };
+            // A loaded project file is consistent, so this fails only for an event built in
+            // code; the course is then reported as skipped, never as passed.
+            match course_legs(event, course) {
+                Ok(legs) => courses.push(CourseContext {
                     course,
                     controls,
-                    // A loaded project file is consistent, so its courses always resolve.
-                    legs: course_legs(event, course).unwrap_or_default(),
+                    legs,
                     numbers: control_numbers(event, course),
                     print_scale: print_scale_of(course, map_scale),
-                })
-            })
-            .collect();
+                }),
+                Err(error) => {
+                    let id = match error {
+                        CourseError::UnknownReference { id, .. } => id,
+                        _ => course.name.clone(),
+                    };
+                    unresolved.push(Skipped {
+                        rule: None,
+                        profile: None,
+                        location: Location::Course(course.name.clone()),
+                        reason_id: SKIP_COURSE_UNRESOLVED,
+                        args: vec![("id", ArgValue::Text(id))],
+                    });
+                }
+            }
+        }
         CheckContext {
             event,
             map,
@@ -66,6 +83,7 @@ impl<'a> CheckContext<'a> {
             map_scale,
             sizes: overprint_sizes(kind),
             courses,
+            unresolved,
         }
     }
 

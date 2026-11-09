@@ -18,7 +18,6 @@ use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef,
 };
 
-use crate::map::MapKind;
 use crate::omap::MapDocument;
 use crate::rules::{Rule, RuleSet, SetRule, Severity, SourceRef};
 use crate::text::{FluentValue, Lang, text};
@@ -198,6 +197,8 @@ pub const SKIP_MAP_KIND: &str = "check-skip-map-kind";
 pub const SKIP_PRINT_SCALE: &str = "check-skip-print-scale";
 /// Reason: a course of another kind than individual; argument `kind`.
 pub const SKIP_COURSE_KIND: &str = "check-skip-course-kind";
+/// Reason: the course names a start, finish or control the event lacks; argument `id`.
+pub const SKIP_COURSE_UNRESOLVED: &str = "check-skip-course-unresolved";
 /// Reason: a class of the course has no rule category; argument `name`.
 pub const SKIP_CLASS_NOT_MAPPED: &str = "check-skip-class-not-mapped";
 /// Reason: the course has no climb.
@@ -361,6 +362,8 @@ pub(crate) fn run_checks(ctx: &CheckContext<'_>, rules: &RuleSet, checks: &[Chec
         });
     }
 
+    skipped.extend(ctx.unresolved.iter().cloned());
+
     let mut keys: Vec<&str> = Vec::new();
     for set_rule in &rules.rules {
         if !keys.contains(&set_rule.rule.key.as_str()) {
@@ -399,12 +402,12 @@ fn event_filter(ctx: &CheckContext<'_>, rule: &Rule) -> Option<(&'static str, Ar
         return Some(if discipline == Discipline::Training {
             (SKIP_TRAINING, Vec::new())
         } else {
-            let name = discipline_name(discipline).to_owned();
+            let name = discipline.as_str().to_owned();
             (SKIP_DISCIPLINE, vec![("discipline", ArgValue::Text(name))])
         });
     }
     if !rule.map_kinds.is_empty() && !rule.map_kinds.contains(&ctx.map_kind) {
-        let name = map_kind_name(ctx.map_kind).to_owned();
+        let name = ctx.map_kind.as_str().to_owned();
         return Some((SKIP_MAP_KIND, vec![("kind", ArgValue::Text(name))]));
     }
     None
@@ -461,26 +464,6 @@ fn run_key(
             // Task 2 refuses profiles with unknown keys; a test table may still lack one.
             None => not_implemented(ctx, &run, found, skipped),
         }
-    }
-}
-
-/// The discipline as written in profile and project files.
-fn discipline_name(discipline: Discipline) -> &'static str {
-    match discipline {
-        Discipline::Sprint => "sprint",
-        Discipline::Middle => "middle",
-        Discipline::Long => "long",
-        Discipline::Ultralong => "ultralong",
-        Discipline::Training => "training",
-    }
-}
-
-/// The map kind as written in profile files.
-fn map_kind_name(kind: MapKind) -> &'static str {
-    match kind {
-        MapKind::Sprint => "sprint",
-        MapKind::Schoolyard => "schoolyard",
-        MapKind::Forest => "forest",
     }
 }
 

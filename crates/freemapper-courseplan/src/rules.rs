@@ -555,23 +555,21 @@ fn parse_rule(profile: &str, entry: &Table, index: usize) -> Result<Rule, RulesE
     let map_kinds = strings(entry, "map_kinds", &place)
         .map_err(bad)?
         .iter()
-        .map(|kind| match kind.as_str() {
-            "sprint" => Ok(MapKind::Sprint),
-            "schoolyard" => Ok(MapKind::Schoolyard),
-            "forest" => Ok(MapKind::Forest),
-            other => Err(bad(format!("{place}: unknown map kind {other}"))),
+        .map(|kind| {
+            MapKind::ALL
+                .into_iter()
+                .find(|k| k.as_str() == kind)
+                .ok_or_else(|| bad(format!("{place}: unknown map kind {kind}")))
         })
         .collect::<Result<Vec<_>, _>>()?;
     let disciplines = strings(entry, "disciplines", &place)
         .map_err(bad)?
         .iter()
-        .map(|discipline| match discipline.as_str() {
-            "sprint" => Ok(Discipline::Sprint),
-            "middle" => Ok(Discipline::Middle),
-            "long" => Ok(Discipline::Long),
-            "ultralong" => Ok(Discipline::Ultralong),
-            "training" => Ok(Discipline::Training),
-            other => Err(bad(format!("{place}: unknown discipline {other}"))),
+        .map(|discipline| {
+            Discipline::ALL
+                .into_iter()
+                .find(|d| d.as_str() == discipline)
+                .ok_or_else(|| bad(format!("{place}: unknown discipline {discipline}")))
         })
         .collect::<Result<Vec<_>, _>>()?;
     let print_scales = match entry.get("print_scales") {
