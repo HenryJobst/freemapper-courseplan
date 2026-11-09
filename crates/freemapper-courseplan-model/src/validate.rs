@@ -21,9 +21,8 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
 
     for finding in &event.accepted_findings {
         if finding.note.trim().is_empty() {
-            errors.push(ModelError::BlankName {
-                what: "note",
-                value: finding.note.clone(),
+            errors.push(ModelError::BlankNote {
+                rule: finding.rule.clone(),
             });
         }
     }

@@ -245,6 +245,17 @@ pub(super) struct AddClass {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetClass {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) rule_category: Option<String>,
+    pub(super) no_rule_category: Option<bool>,
+    pub(super) expected_starters: Option<u32>,
+    pub(super) no_expected_starters: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct RemoveClass {
     pub(super) project: String,
     pub(super) name: Name,
@@ -373,4 +384,11 @@ pub(super) struct SetRuleProfile {
     pub(super) project: String,
     pub(super) base: Name,
     pub(super) overlays: Option<Vec<Name>>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetStartWindow {
+    pub(super) project: String,
+    pub(super) minutes: u32,
 }

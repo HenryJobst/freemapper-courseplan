@@ -205,7 +205,12 @@ fn a_blank_accepted_finding_note_is_refused() {
         let e = event(&format!(
             "\n[[accepted_findings]]\nrule = \"r\"\nnote = {note:?}\n"
         ));
-        assert_eq!(validate(&e), vec![blank("note", note)]);
+        assert_eq!(
+            validate(&e),
+            vec![ModelError::BlankNote {
+                rule: "r".to_owned()
+            }]
+        );
     }
     let e = event("\n[[accepted_findings]]\nrule = \"r\"\nnote = \"ok\"\n");
     assert_eq!(validate(&e), vec![]);

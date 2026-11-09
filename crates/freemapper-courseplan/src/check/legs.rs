@@ -55,10 +55,7 @@ pub(super) fn acute_angle(
             }
             let stop = &stops[i + 1];
             findings.push(run.finding(
-                Location::Leg {
-                    course: course.course.name.clone(),
-                    after: i as u32,
-                },
+                course.leg_location(i),
                 "check-acute-angle",
                 vec![
                     ("stop", ArgValue::Text(stop.id.clone())),
@@ -124,12 +121,10 @@ pub(super) fn opposing_legs(
                 findings.push(run.finding(
                     Location::Legs {
                         course: course.course.name.clone(),
-                        afters: vec![i as u32, j as u32],
+                        legs: vec![course.leg_span(i), course.leg_span(j)],
                     },
                     "check-opposing-legs",
                     vec![
-                        ("first", ArgValue::Int(i as i64)),
-                        ("second", ArgValue::Int(j as i64)),
                         ("metres", ArgValue::Int(length.round() as i64)),
                         ("limit", ArgValue::Number(metres)),
                         ("min_length", ArgValue::Number(min_length)),

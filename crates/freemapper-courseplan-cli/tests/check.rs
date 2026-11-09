@@ -169,14 +169,16 @@ fn an_error_finding_exits_1_until_it_is_accepted() {
     assert!(
         stdout(&out).contains(
             "error controls 31, 33: control 31 and control 33 are 6 m apart, at least 15 m \
-             (wkb2026.distance.min_half, WKB26 B 7.2.1)"
+             required (wkb2026.distance.min_half, WKB26 B 7.2.1)"
         ),
         "{}",
         stdout(&out)
     );
     let de = run_lang(d, "de", &["check", p]);
     assert!(
-        stdout(&de).contains("Posten 31 und Posten 33 liegen 6 m auseinander, mindestens 15 m"),
+        stdout(&de).contains(
+            "Posten 31 und Posten 33 liegen 6 m auseinander, gefordert sind mindestens 15 m"
+        ),
         "{}",
         stdout(&de)
     );
@@ -264,10 +266,15 @@ fn finding_accept_replace_and_remove() {
         ],
     );
     assert_eq!(code(&leg), Some(0), "{}", stderr(&leg));
+    assert_eq!(
+        stdout(&leg).trim(),
+        "accepted finding wkb2026.leg.through_control at course A, leg 32–finish"
+    );
+    // The file stores the ends of the leg (ruling R24).
     assert!(
         std::fs::read_to_string(&project)
             .unwrap()
-            .contains("legs = [{ course = \"A\", after = 2 }]")
+            .contains("legs = [{ course = \"A\", after = 2, from = \"32\", to = \"F1\" }]")
     );
     // A finding at two legs: --leg twice, in any order.
     let two = run(
@@ -288,13 +295,12 @@ fn finding_accept_replace_and_remove() {
     assert_eq!(code(&two), Some(0), "{}", stderr(&two));
     assert_eq!(
         stdout(&two).trim(),
-        "accepted finding wkb2026.leg.opposing at course A, leg from the start and leg after 2"
+        "accepted finding wkb2026.leg.opposing at course A, legs start–31 and 32–finish"
     );
-    assert!(
-        std::fs::read_to_string(&project)
-            .unwrap()
-            .contains("legs = [{ course = \"A\", after = 0 }, { course = \"A\", after = 2 }]")
-    );
+    assert!(std::fs::read_to_string(&project).unwrap().contains(
+        "legs = [{ course = \"A\", after = 0, from = \"S1\", to = \"31\" }, \
+             { course = \"A\", after = 2, from = \"32\", to = \"F1\" }]"
+    ));
 
     let remove = |args: &[&str]| {
         let mut all = vec!["finding", "remove", p];
@@ -418,10 +424,26 @@ fn event_profile_sets_and_validates() {
     assert_eq!(code(&set), Some(0), "{}", stderr(&set));
     assert_eq!(
         stdout(&set).trim(),
-        "set rule profile wkb-2026 with overlays nor-bb-2021"
+        "set rule profile wkb-2026 with overlay nor-bb-2021"
     );
-    assert_eq!(info("en"), "rule profile: wkb-2026, overlays: nor-bb-2021");
-    assert_eq!(info("de"), "Regelprofil: wkb-2026, Aufsätze: nor-bb-2021");
+    assert_eq!(info("en"), "rule profile: wkb-2026, overlay: nor-bb-2021");
+    assert_eq!(info("de"), "Regelprofil: wkb-2026, Aufsatz: nor-bb-2021");
+    let de = run_lang(
+        d,
+        "de",
+        &[
+            "event",
+            "profile",
+            p,
+            "wkb-2026",
+            "--overlay",
+            "nor-bb-2021",
+        ],
+    );
+    assert_eq!(
+        stdout(&de).trim(),
+        "Regelprofil wkb-2026 mit dem Aufsatz nor-bb-2021 gesetzt"
+    );
 
     let before = std::fs::read(&project).unwrap();
     let unknown = run(d, &["event", "profile", p, "wkb-1999"]);
@@ -442,4 +464,170 @@ fn event_profile_sets_and_validates() {
             .unwrap()
             .contains("rule_overlays")
     );
+}
+
+#[test]
+fn an_acceptance_whose_leg_changed_is_listed_as_not_matched() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    let accept = run(
+        d,
+        &[
+            "finding",
+            "accept",
+            p,
+            "wkb2026.leg.through_control",
+            "--leg",
+            "A:1",
+            "--note",
+            "kept on purpose",
+        ],
+    );
+    assert_eq!(code(&accept), Some(0), "{}", stderr(&accept));
+    // Course A now runs S1–32–31–F1: the leg after position 1 is 32–31, not 31–32.
+    let swap = run(d, &["course", "controls", p, "A", "32,31"]);
+    assert_eq!(code(&swap), Some(0), "{}", stderr(&swap));
+    let out = run(d, &["check", p]);
+    assert_eq!(
+        code(&out),
+        Some(0),
+        "unmatched never count: {}",
+        stdout(&out)
+    );
+    let text = stdout(&out);
+    assert!(text.contains("0 accepted, 1 not matched, "), "{text}");
+    assert!(text.contains("check --all"), "{text}");
+    let all = stdout(&run(d, &["check", p, "--all"]));
+    assert!(
+        all.contains(
+            "not matched:\n  wkb2026.leg.through_control, course A, leg 31–32\n    note: kept on purpose\n"
+        ),
+        "{all}"
+    );
+    assert!(all.contains("finding remove"), "{all}");
+    let de = stdout(&run_lang(d, "de", &["check", p, "--all"]));
+    assert!(
+        de.contains("nicht zugeordnet:\n  wkb2026.leg.through_control, Bahn A, Strecke 31–32"),
+        "{de}"
+    );
+    // finding remove names the leg by position and removes it, though its ends changed.
+    let removed = run(
+        d,
+        &[
+            "finding",
+            "remove",
+            p,
+            "wkb2026.leg.through_control",
+            "--leg",
+            "A:1",
+        ],
+    );
+    assert_eq!(code(&removed), Some(0), "{}", stderr(&removed));
+    assert_eq!(
+        stdout(&removed).trim(),
+        "removed accepted finding wkb2026.leg.through_control at course A, leg 31–32"
+    );
+    let after = stdout(&run(d, &["check", p]));
+    assert!(after.contains("0 accepted, 5 skipped"), "{after}");
+}
+
+#[test]
+fn start_window_and_class_settings_feed_the_start_capacity_check() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    let text = std::fs::read_to_string(&project).unwrap();
+    std::fs::write(&project, format!("# planned by H.\n{text}")).unwrap();
+    let skipped = stdout(&run(d, &["check", p, "--all"]));
+    assert!(
+        skipped.contains("the event has no start window; event start-window sets it"),
+        "{skipped}"
+    );
+    let window = run(d, &["event", "start-window", p, "90"]);
+    assert_eq!(code(&window), Some(0), "{}", stderr(&window));
+    assert_eq!(stdout(&window).trim(), "set the start window to 90 minutes");
+    let de = run_lang(d, "de", &["event", "start-window", p, "1"]);
+    assert_eq!(stdout(&de).trim(), "Startfenster auf 1 Minute gesetzt");
+    assert_eq!(code(&run(d, &["event", "start-window", p, "90"])), Some(0));
+    for args in [
+        vec!["class", "add", p, "H21"],
+        vec!["course", "set", p, "A", "--classes", "H21"],
+    ] {
+        let out = run(d, &args);
+        assert_eq!(code(&out), Some(0), "{args:?}: {}", stderr(&out));
+    }
+    let all = stdout(&run(d, &["check", p, "--all"]));
+    assert!(
+        all.contains(
+            "wkb2026.start.capacity, start S1: classes without an expected number of starters: \
+             H21; class set --starters sets it"
+        ),
+        "{all}"
+    );
+    let set = run(d, &["class", "set", p, "H21", "--starters", "400"]);
+    assert_eq!(code(&set), Some(0), "{}", stderr(&set));
+    assert_eq!(stdout(&set).trim(), "changed class H21");
+    let out = stdout(&run(d, &["check", p]));
+    assert!(
+        out.contains(
+            "start S1: 5 different first controls are needed for the starters per minute, but \
+             only 1 in use"
+        ),
+        "{out}"
+    );
+    let category = run(d, &["class", "set", p, "H21", "--rule-category", "H21"]);
+    assert_eq!(code(&category), Some(0), "{}", stderr(&category));
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(file.starts_with("# planned by H.\n"), "{file}");
+    assert!(file.contains("start_window_min = 90"), "{file}");
+    assert!(
+        file.contains("rule_category = \"H21\"") && file.contains("expected_starters = 400"),
+        "{file}"
+    );
+    let cleared = run(
+        d,
+        &[
+            "class",
+            "set",
+            p,
+            "H21",
+            "--no-rule-category",
+            "--no-starters",
+        ],
+    );
+    assert_eq!(code(&cleared), Some(0), "{}", stderr(&cleared));
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(
+        !file.contains("rule_category") && !file.contains("expected_starters"),
+        "{file}"
+    );
+
+    // Refusals leave the file as it was.
+    let before = std::fs::read(&project).unwrap();
+    let zero = run(d, &["event", "start-window", p, "0"]);
+    assert_eq!(code(&zero), Some(1));
+    assert_eq!(
+        stderr(&zero).trim(),
+        "error: the start window must be at least 1 minute"
+    );
+    assert_eq!(code(&run(d, &["event", "start-window", p, "x"])), Some(2));
+    let nothing = run(d, &["class", "set", p, "H21"]);
+    assert_eq!(code(&nothing), Some(2), "{}", stderr(&nothing));
+    let both = run(
+        d,
+        &["class", "set", p, "H21", "--starters", "3", "--no-starters"],
+    );
+    assert_eq!(code(&both), Some(2), "{}", stderr(&both));
+    let unknown = run(d, &["class", "set", p, "D21", "--starters", "3"]);
+    assert_eq!(code(&unknown), Some(1));
+    assert!(
+        stderr(&unknown).contains("there is no class D21"),
+        "{}",
+        stderr(&unknown)
+    );
+    let blank = run(d, &["class", "set", p, "H21", "--rule-category", " "]);
+    assert_eq!(code(&blank), Some(1), "{}", stderr(&blank));
+    assert!(stderr(&blank).contains("is empty"), "{}", stderr(&blank));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
 }

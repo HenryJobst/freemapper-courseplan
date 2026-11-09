@@ -67,8 +67,11 @@ pub enum EditError {
     UnknownRule { rule: String, profile: String },
     /// An accepted finding without course, controls and legs is a finding of the whole event,
     /// which this rule never reports.
-    #[error("findings of rule {rule} sit at a course, at controls or at a leg; name that place")]
-    FindingNeedsPlace { rule: String },
+    #[error(
+        "findings of rule {rule} sit at {}; name that place",
+        place_list(places)
+    )]
+    FindingNeedsPlace { rule: String, places: Vec<Place> },
     /// A finding sits at one place, so its key names at most one of course, controls and legs,
     /// and its legs belong to one course.
     #[error(
@@ -85,6 +88,12 @@ pub enum EditError {
     /// No accepted finding has this key.
     #[error("there is no accepted finding of rule {rule} at this place")]
     AcceptedNotFound { rule: String },
+    /// A start window of 0 minutes means no window; the start capacity check needs at least 1.
+    #[error("the start window must be at least 1 minute")]
+    StartWindowZero,
+    /// A rule category must not be empty; clear it instead.
+    #[error("the rule category of class {class} is empty; give a category or clear it")]
+    BlankRuleCategory { class: String },
     /// The rule profile or an overlay cannot be loaded.
     #[error(transparent)]
     Rules(#[from] RulesError),
@@ -671,6 +680,47 @@ pub fn remove_class(event: &mut Event, name: &str) -> Result<(), EditError> {
     })
 }
 
+/// Sets the start window of the event: the minutes from the first to the last start, at least 1.
+pub fn set_start_window(event: &mut Event, minutes: u32) -> Result<(), EditError> {
+    if minutes == 0 {
+        return Err(EditError::StartWindowZero);
+    }
+    apply(event, |e| {
+        e.event.start_window_min = Some(minutes);
+        Ok(())
+    })
+}
+
+/// Changes the rule category or the expected number of starters of a class. `None` leaves a
+/// value as it is; `Some(None)` clears it. A category is trimmed, and an empty one is refused.
+pub fn set_class(
+    event: &mut Event,
+    name: &str,
+    rule_category: Option<Option<String>>,
+    expected_starters: Option<Option<u32>>,
+) -> Result<(), EditError> {
+    apply(event, |e| {
+        let class = e
+            .classes
+            .iter_mut()
+            .find(|c| c.name == name)
+            .ok_or_else(|| not_found("class", name))?;
+        if let Some(category) = rule_category {
+            let category = category.map(|c| c.trim().to_owned());
+            if category.as_deref() == Some("") {
+                return Err(EditError::BlankRuleCategory {
+                    class: name.to_owned(),
+                });
+            }
+            class.rule_category = category;
+        }
+        if let Some(starters) = expected_starters {
+            class.expected_starters = starters;
+        }
+        Ok(())
+    })
+}
+
 /// What [`accept_finding`] did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Accepted {
@@ -684,12 +734,13 @@ pub enum Accepted {
 /// event (only for rules whose findings can sit there), a course, one control, several controls,
 /// one leg or several legs of one course. A place kind the rule's check never reports is refused
 /// (`Check::places`, ADR 0026). A control may also be a start or finish id, for every rule.
-/// Controls and legs are stored in the order of their key. Accepting a key again replaces the
-/// note.
+/// A leg is named by course and position; its ends (`LegRef::from`, `to`) are taken from the
+/// course as it is now, whatever the caller passed (ruling R24). Controls and legs are stored in
+/// the order of their key. Accepting a key again replaces the note.
 pub fn accept_finding(
     event: &mut Event,
     rules: &RuleSet,
-    finding: AcceptedFinding,
+    mut finding: AcceptedFinding,
 ) -> Result<Accepted, EditError> {
     let Some(set_rule) = rules.rule(&finding.rule) else {
         let mut profile = vec![rules.base.as_str()];
@@ -713,11 +764,40 @@ pub fn accept_finding(
     if places > 1 || mixed_courses {
         return Err(one_place());
     }
+    for leg in &mut finding.legs {
+        let course = event
+            .courses
+            .iter()
+            .find(|c| c.name == leg.course)
+            .ok_or_else(|| not_found("course", leg.course.clone()))?;
+        let CourseKind::Individual { controls } = &course.kind else {
+            return Err(EditError::NotSupported {
+                course: course.name.clone(),
+            });
+        };
+        let after = leg.after as usize;
+        if after > controls.len() {
+            return Err(EditError::BadIndex {
+                course: leg.course.clone(),
+                index: after,
+            });
+        }
+        leg.from = match after {
+            0 => course.start.clone(),
+            n => controls[n - 1].code.0.clone(),
+        };
+        leg.to = controls
+            .get(after)
+            .map_or_else(|| course.finish.clone(), |c| c.code.0.clone());
+    }
     let key = finding.key();
     if let Some(check) = check_of(&set_rule.rule.key) {
         let place = Place::of_key(&key);
         if place == Place::Event && !check.reports_at(place) {
-            return Err(EditError::FindingNeedsPlace { rule: finding.rule });
+            return Err(EditError::FindingNeedsPlace {
+                rule: finding.rule,
+                places: check.places.to_vec(),
+            });
         }
         if !check.reports_at(place) {
             return Err(EditError::FindingWrongPlace {
@@ -743,15 +823,6 @@ pub fn accept_finding(
                 control_mut(e, code)?;
             }
         }
-        for leg in &key.legs {
-            let controls = individual_mut(course_mut(e, &leg.course)?)?;
-            if leg.after as usize > controls.len() {
-                return Err(EditError::BadIndex {
-                    course: leg.course.clone(),
-                    index: leg.after as usize,
-                });
-            }
-        }
         if let Some(existing) = e.accepted_findings.iter_mut().find(|a| a.key() == key) {
             existing.note = finding.note;
             return Ok(Accepted::NoteReplaced);
@@ -767,17 +838,27 @@ pub fn accept_finding(
     })
 }
 
-/// Removes the accepted findings with this key, so the finding is reported again.
-pub fn remove_accepted_finding(event: &mut Event, key: &FindingKey) -> Result<(), EditError> {
+/// Removes the accepted findings with this key, so the finding is reported again, and returns
+/// them. Legs compare by course and position only ([`FindingKey::by_position`]), so an
+/// acceptance whose leg now runs between other stops, or whose course is gone, can still be
+/// named and removed.
+pub fn remove_accepted_finding(
+    event: &mut Event,
+    key: &FindingKey,
+) -> Result<Vec<AcceptedFinding>, EditError> {
+    let wanted = key.by_position();
     apply(event, |e| {
-        let before = e.accepted_findings.len();
-        e.accepted_findings.retain(|a| &a.key() != key);
-        if e.accepted_findings.len() == before {
+        let (removed, kept): (Vec<AcceptedFinding>, Vec<AcceptedFinding>) =
+            std::mem::take(&mut e.accepted_findings)
+                .into_iter()
+                .partition(|a| a.key().by_position() == wanted);
+        e.accepted_findings = kept;
+        if removed.is_empty() {
             return Err(EditError::AcceptedNotFound {
                 rule: key.rule.clone(),
             });
         }
-        Ok(())
+        Ok(removed)
     })
 }
 

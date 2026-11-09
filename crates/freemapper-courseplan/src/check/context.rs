@@ -3,7 +3,7 @@
 
 use freemapper_courseplan_model::{Control, ControlCode, Course, CourseControl, CourseKind, Event};
 
-use super::{ArgValue, Location, SKIP_COURSE_UNRESOLVED, Skipped};
+use super::{ArgValue, LegEnd, LegSpan, Location, SKIP_COURSE_UNRESOLVED, Skipped};
 use crate::course::{CourseError, LegGeometry, control_numbers, course_legs};
 use crate::map::{MapIndex, MapKind, map_kind};
 use crate::numbers::{OverprintSizes, base_scale, overprint_sizes};
@@ -38,6 +38,34 @@ pub struct CourseContext<'a> {
     pub numbers: Vec<Option<u32>>,
     /// The print scale the rule filters see (`rules::print_scale_of`).
     pub print_scale: u32,
+}
+
+impl CourseContext<'_> {
+    /// The leg at `index` of [`CourseContext::legs`] (0 leaves the start), with its end stops.
+    pub fn leg_span(&self, index: usize) -> LegSpan {
+        let leg = &self.legs[index];
+        LegSpan {
+            after: index as u32,
+            from: if index == 0 {
+                LegEnd::Start(leg.from.clone())
+            } else {
+                LegEnd::Control(leg.from.clone())
+            },
+            to: if index + 1 == self.legs.len() {
+                LegEnd::Finish(leg.to.clone())
+            } else {
+                LegEnd::Control(leg.to.clone())
+            },
+        }
+    }
+
+    /// The location of the leg at `index`.
+    pub fn leg_location(&self, index: usize) -> Location {
+        Location::Leg {
+            course: self.course.name.clone(),
+            leg: self.leg_span(index),
+        }
+    }
 }
 
 impl<'a> CheckContext<'a> {

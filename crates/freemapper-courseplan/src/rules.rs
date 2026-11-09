@@ -275,6 +275,10 @@ pub enum RulesError {
     UnknownRule { overlay: String, rule: String },
 }
 
+/// The document key of values this program proposes where no source gives a number
+/// (`[sources.claude]` in a profile); output names it as a proposal of freemapper-courseplan.
+pub const PROPOSAL_DOC: &str = "claude";
+
 /// The ids of the embedded profiles, base profiles and overlays.
 pub fn available() -> Vec<&'static str> {
     EMBEDDED.iter().map(|(id, _)| *id).collect()

@@ -151,6 +151,25 @@ pub enum ClassCmd {
     },
     /// Remove a class
     Remove { project: PathBuf, name: String },
+    /// Change the rule category or the expected starters of a class
+    #[command(group(
+        ArgGroup::new("change")
+            .required(true)
+            .multiple(true)
+            .args(["rule_category", "no_rule_category", "starters", "no_starters"])
+    ))]
+    Set {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "CAT", conflicts_with = "no_rule_category")]
+        rule_category: Option<String>,
+        #[arg(long)]
+        no_rule_category: bool,
+        #[arg(long, value_name = "N", conflicts_with = "no_starters")]
+        starters: Option<String>,
+        #[arg(long)]
+        no_starters: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -372,7 +391,7 @@ fn parse_placement(lang: &Lang, direction: &str, gap: &str) -> Result<NumberPlac
     Ok(NumberPlacement { direction, gap_mm })
 }
 
-fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
+pub fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
     value
         .parse::<u32>()
         .map_err(|_| Failure::Usage(text(lang, "cli-edit-bad-count", &[("value", v(value))])))
@@ -749,6 +768,30 @@ pub fn class(lang: &Lang, cmd: ClassCmd) -> Outcome {
             edit::remove_class(&mut file.event, &name).map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             say(lang, "cli-edit-class-removed", &[("name", v(name))]);
+        }
+        ClassCmd::Set {
+            project,
+            name,
+            rule_category,
+            no_rule_category,
+            starters,
+            no_starters,
+        } => {
+            let category = match (rule_category, no_rule_category) {
+                (Some(c), _) => Some(Some(c)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let starters = match (starters, no_starters) {
+                (Some(n), _) => Some(Some(parse_count(lang, &n)?)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let mut file = load(lang, &project)?;
+            edit::set_class(&mut file.event, &name, category, starters)
+                .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(lang, "cli-edit-class-set", &[("name", v(name))]);
         }
     }
     Ok(())

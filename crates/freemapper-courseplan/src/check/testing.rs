@@ -9,7 +9,7 @@ use freemapper_courseplan_model::{
 };
 use toml::Table;
 
-use super::{CHECKS, CheckContext, CheckReport, Finding, Location, run_checks};
+use super::{CHECKS, CheckContext, CheckReport, Finding, LegEnd, LegSpan, Location, run_checks};
 use crate::omap::{
     MapCoord, MapDocument, MapGeoref, MapObject, MapObjectKind, MapPart, SymbolSet, closed_ring,
 };
@@ -277,11 +277,41 @@ pub(crate) fn de(finding: &Finding) -> String {
     finding.text(&lang_of("de"))
 }
 
-/// The leg of `course` that leaves position `after`.
-pub(crate) fn leg(course: &str, after: u32) -> Location {
-    Location::Leg {
-        course: course.to_owned(),
+/// The leg of `course` that leaves position `after`; it equals a [`Location::Leg`] of that
+/// course and position, whatever its ends.
+pub(crate) fn leg(course: &str, after: u32) -> LegAt {
+    LegAt(course.to_owned(), after)
+}
+
+/// A leg by course and position, see [`leg`].
+#[derive(Debug, PartialEq)]
+pub(crate) struct LegAt(pub String, pub u32);
+
+/// The course and position of a leg location.
+pub(crate) fn leg_of(location: &Location) -> LegAt {
+    match location {
+        Location::Leg { course, leg } => LegAt(course.clone(), leg.after),
+        other => panic!("not at a leg: {other:?}"),
+    }
+}
+
+impl PartialEq<LegAt> for Location {
+    fn eq(&self, other: &LegAt) -> bool {
+        matches!(self, Location::Leg { course, leg } if *course == other.0 && leg.after == other.1)
+    }
+}
+
+/// A leg span from its position and end ids; `S…` is a start, `F…` a finish.
+pub(crate) fn span(after: u32, from: &str, to: &str) -> LegSpan {
+    let end = |id: &str| match id.chars().next() {
+        Some('S') => LegEnd::Start(id.to_owned()),
+        Some('F') => LegEnd::Finish(id.to_owned()),
+        _ => LegEnd::Control(id.to_owned()),
+    };
+    LegSpan {
         after,
+        from: end(from),
+        to: end(to),
     }
 }
 

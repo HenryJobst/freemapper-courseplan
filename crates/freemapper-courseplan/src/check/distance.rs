@@ -16,7 +16,7 @@ use freemapper_courseplan_model::{AcceptedFinding, ControlCode, MapPoint};
 use super::geometry::{distance, drawn_part, polyline_meets_area, polylines_meet};
 use super::stops::{Stop, StopKind, stops_of};
 use super::{
-    ArgValue, Args, CheckContext, CourseContext, Finding, Location, RuleRun, SKIP_NO_MAP_EXTENT,
+    ArgValue, Args, CheckContext, Finding, Location, RuleRun, SKIP_NO_MAP_EXTENT,
     SKIP_VALUE_MISSING, Skipped, below, number, symbol_matches,
 };
 use crate::map::{FeatureGeometry, MapFeature, distance_to_polyline};
@@ -281,13 +281,6 @@ pub(super) fn map_edge(
     }
 }
 
-fn leg_location(course: &CourseContext<'_>, index: usize) -> Location {
-    Location::Leg {
-        course: course.course.name.clone(),
-        after: index as u32,
-    }
-}
-
 /// `leg_through_control`: the drawn part of a leg (outside the circles at its ends) passes
 /// within one circle radius of another stop of the same course (BL02). One finding per leg,
 /// naming the nearest stop.
@@ -313,7 +306,7 @@ pub(super) fn leg_through_control(
                 .min_by(|a, b| a.1.total_cmp(&b.1));
             if let Some((stop, d)) = nearest {
                 findings.push(run.finding(
-                    leg_location(course, i),
+                    course.leg_location(i),
                     "check-leg-through-control",
                     vec![
                         ("stop", ArgValue::Text(stop.id.clone())),
@@ -424,7 +417,7 @@ pub(super) fn leg_through_forbidden(
                 continue;
             }
             if let Some(hit) = obstacles.iter().chain(&symbols).find(|o| o.met_by(&drawn)) {
-                findings.push(hit.finding(run, leg_location(course, i)));
+                findings.push(hit.finding(run, course.leg_location(i)));
             }
         }
     }

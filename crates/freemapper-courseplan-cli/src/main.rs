@@ -462,9 +462,10 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
         line("cli-info-rule-profile", &[("value", profile)]);
     } else {
         let list = FluentValue::from(event.event.rule_overlays.join(", "));
+        let count = FluentValue::from(event.event.rule_overlays.len());
         line(
             "cli-info-rule-profile-overlays",
-            &[("value", profile), ("list", list)],
+            &[("value", profile), ("list", list), ("count", count)],
         );
     }
     // Crossing points get no number, so they are not counted as controls, as in the course lines.

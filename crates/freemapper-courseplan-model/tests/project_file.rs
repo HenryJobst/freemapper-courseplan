@@ -987,10 +987,14 @@ fn a_new_finding_writes_legs_as_an_inline_array() {
             LegRef {
                 course: "A".to_owned(),
                 after: 3,
+                from: "33".to_owned(),
+                to: "34".to_owned(),
             },
             LegRef {
                 course: "A".to_owned(),
                 after: 0,
+                from: "S1".to_owned(),
+                to: "31".to_owned(),
             },
         ],
         note: "n".to_owned(),
@@ -998,7 +1002,10 @@ fn a_new_finding_writes_legs_as_an_inline_array() {
     project.save().unwrap();
     let text = std::fs::read_to_string(&file).unwrap();
     assert!(
-        text.contains("legs = [{ course = \"A\", after = 3 }"),
+        text.contains(
+            "legs = [{ course = \"A\", after = 3, from = \"33\", to = \"34\" }, \
+             { course = \"A\", after = 0, from = \"S1\", to = \"31\" }]"
+        ),
         "{text}"
     );
     assert!(ProjectFile::load(&file).is_ok());

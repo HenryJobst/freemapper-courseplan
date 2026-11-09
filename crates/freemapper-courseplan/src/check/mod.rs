@@ -22,11 +22,11 @@ mod tables;
 pub use context::{CheckContext, CourseContext};
 
 use freemapper_courseplan_model::{
-    AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef,
+    AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef, SpecialObject,
 };
 
 use crate::omap::MapDocument;
-use crate::rules::{Rule, RuleSet, SetRule, Severity, SourceRef};
+use crate::rules::{PROPOSAL_DOC, Rule, RuleSet, SetRule, Severity, SourceRef};
 use crate::text::{FluentValue, Lang, text};
 
 /// Where a finding sits.
@@ -40,12 +40,84 @@ pub enum Location {
     Control { code: ControlCode },
     /// Several controls, for example two that stand too close.
     Controls { codes: Vec<ControlCode> },
-    /// The leg of `course` that leaves position `after` (from 1 as in the CLI; 0 is the leg from
-    /// the start).
-    Leg { course: String, after: u32 },
+    /// One leg of `course`, by the position it leaves and its end stops.
+    Leg { course: String, leg: LegSpan },
     /// Two or more legs of one course, by the positions they leave in ascending order, for
     /// example two legs that run against each other.
-    Legs { course: String, afters: Vec<u32> },
+    Legs { course: String, legs: Vec<LegSpan> },
+}
+
+/// One end of a leg: the start, a control or crossing point, or the finish, by id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LegEnd {
+    Start(String),
+    /// A control or a crossing point, by code.
+    Control(String),
+    Finish(String),
+}
+
+impl LegEnd {
+    /// The id of the stop: the control code, or the id of the start or finish.
+    pub fn id(&self) -> &str {
+        match self {
+            LegEnd::Start(id) | LegEnd::Control(id) | LegEnd::Finish(id) => id,
+        }
+    }
+
+    /// The end with this id in `event`: a start or a finish special object, otherwise a control.
+    pub fn of_id(event: &Event, id: &str) -> LegEnd {
+        let special = event.specials.iter().find(|s| s.id() == id);
+        match special {
+            Some(SpecialObject::Start { .. }) => LegEnd::Start(id.to_owned()),
+            Some(SpecialObject::Finish { .. }) => LegEnd::Finish(id.to_owned()),
+            _ => LegEnd::Control(id.to_owned()),
+        }
+    }
+
+    /// Start and finish by their role, a control by its code (ruling R28 of plan M2b).
+    fn text(&self, lang: &Lang) -> String {
+        match self {
+            LegEnd::Start(_) => text(lang, "check-leg-end-start", &[]),
+            LegEnd::Finish(_) => text(lang, "check-leg-end-finish", &[]),
+            LegEnd::Control(code) if code.is_empty() => "?".to_owned(),
+            LegEnd::Control(code) => code.clone(),
+        }
+    }
+}
+
+/// A leg in a [`Location`]: the position of the course's stop list it leaves (from 1 as in the
+/// CLI, crossing points included; 0 is the leg from the start) and the stops at its ends.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LegSpan {
+    pub after: u32,
+    pub from: LegEnd,
+    pub to: LegEnd,
+}
+
+impl LegSpan {
+    /// The leg as output names it, by its ends: "36–37", "start–31", "37–finish".
+    pub fn text(&self, lang: &Lang) -> String {
+        format!("{}–{}", self.from.text(lang), self.to.text(lang))
+    }
+
+    /// The leg reference of an accepted finding on this leg of `course`.
+    pub fn leg_ref(&self, course: &str) -> LegRef {
+        LegRef {
+            course: course.to_owned(),
+            after: self.after,
+            from: self.from.id().to_owned(),
+            to: self.to.id().to_owned(),
+        }
+    }
+
+    /// The leg a leg reference names in `event`, with the ends it stores.
+    pub fn of_ref(event: &Event, leg: &LegRef) -> LegSpan {
+        LegSpan {
+            after: leg.after,
+            from: LegEnd::of_id(event, &leg.from),
+            to: LegEnd::of_id(event, &leg.to),
+        }
+    }
 }
 
 /// The kind of a [`Location`]; [`Check::places`] lists the kinds a rule key reports at.
@@ -127,10 +199,61 @@ impl Location {
         }
     }
 
-    /// The location as text, for example "control 31", "course A, leg after 3" or
-    /// "course A, leg after 2 and leg after 5".
+    /// Where an accepted finding sits in `event`: the place its key names, with the leg ends it
+    /// stores.
+    pub fn of_accepted(event: &Event, accepted: &AcceptedFinding) -> Location {
+        if let Some(course) = &accepted.course {
+            return Location::Course(course.clone());
+        }
+        if let Some(first) = accepted.legs.first() {
+            let legs: Vec<LegSpan> = accepted
+                .legs
+                .iter()
+                .map(|l| LegSpan::of_ref(event, l))
+                .collect();
+            return if legs.len() == 1 {
+                Location::Leg {
+                    course: first.course.clone(),
+                    leg: legs.into_iter().next().expect("one leg"),
+                }
+            } else {
+                Location::Legs {
+                    course: first.course.clone(),
+                    legs,
+                }
+            };
+        }
+        match accepted.controls.as_slice() {
+            [] => Location::Event,
+            [code] => Location::Control { code: code.clone() },
+            codes => Location::Controls {
+                codes: codes.to_vec(),
+            },
+        }
+    }
+
+    /// The location as text with starts and finishes named by their role, as the CLI and the MCP
+    /// server show it: "start S1" instead of "control S1".
+    pub fn text_in(&self, lang: &Lang, event: &Event) -> String {
+        let one = |code: &ControlCode| match LegEnd::of_id(event, &code.0) {
+            LegEnd::Start(id) => text(lang, "check-location-start", &[("id", v(&id))]),
+            LegEnd::Finish(id) => text(lang, "check-location-finish", &[("id", v(&id))]),
+            LegEnd::Control(code) => text(lang, "check-location-control", &[("code", v(&code))]),
+        };
+        let is_stop =
+            |code: &ControlCode| !matches!(LegEnd::of_id(event, &code.0), LegEnd::Control(_));
+        match self {
+            Location::Control { code } => one(code),
+            Location::Controls { codes } if codes.iter().any(is_stop) => {
+                codes.iter().map(one).collect::<Vec<_>>().join(", ")
+            }
+            _ => self.text(lang),
+        }
+    }
+
+    /// The location as text, for example "control 31", "course A, leg 36–37" or
+    /// "course A, legs 31–32 and 35–36".
     pub fn text(&self, lang: &Lang) -> String {
-        let v = |s: &str| FluentValue::from(s.to_owned());
         match self {
             Location::Event => text(lang, "check-location-event", &[]),
             Location::Course(name) => text(lang, "check-location-course", &[("course", v(name))]),
@@ -145,34 +268,45 @@ impl Location {
                     &[("codes", v(&list.join(", ")))],
                 )
             }
-            Location::Leg { course, after: 0 } => {
-                text(lang, "check-location-start-leg", &[("course", v(course))])
-            }
-            Location::Leg { course, after } => text(
+            Location::Leg { course, leg } => text(
                 lang,
                 "check-location-leg",
-                &[("course", v(course)), ("index", FluentValue::from(*after))],
+                &[("course", v(course)), ("leg", v(&leg.text(lang)))],
             ),
-            Location::Legs { course, afters } => {
-                let legs: Vec<String> = afters
-                    .iter()
-                    .map(|after| match after {
-                        0 => text(lang, "check-location-legs-start", &[]),
-                        n => text(
-                            lang,
-                            "check-location-legs-after",
-                            &[("index", FluentValue::from(*n))],
-                        ),
-                    })
-                    .collect();
-                let and = format!(" {} ", text(lang, "word-and", &[]));
+            Location::Legs { course, legs } => {
+                let names: Vec<String> = legs.iter().map(|l| l.text(lang)).collect();
                 text(
                     lang,
                     "check-location-legs",
-                    &[("course", v(course)), ("legs", v(&legs.join(&and)))],
+                    &[("course", v(course)), ("legs", v(&and_list(lang, &names)))],
                 )
             }
         }
+    }
+}
+
+fn v(s: &str) -> FluentValue<'static> {
+    FluentValue::from(s.to_owned())
+}
+
+/// The source of a rule as output shows it: document key and section, such as "WKB26 B 7.2.1",
+/// or for a value this program proposes (`doc = "claude"`) a localized "proposal of
+/// freemapper-courseplan" without the plan section (ruling R27).
+pub fn source_text(lang: &Lang, source: &SourceRef) -> String {
+    if source.doc == PROPOSAL_DOC {
+        text(lang, "check-source-claude", &[])
+    } else {
+        format!("{} {}", source.doc, source.section)
+    }
+}
+
+/// "a", "a and b", "a, b and c".
+pub fn and_list(lang: &Lang, items: &[String]) -> String {
+    match items.split_last() {
+        Some((last, rest)) if !rest.is_empty() => {
+            format!("{} {} {last}", rest.join(", "), text(lang, "word-and", &[]))
+        }
+        _ => items.concat(),
     }
 }
 
@@ -180,8 +314,10 @@ impl Location {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ArgValue {
     Text(String),
-    /// A measured value; shown with one decimal in the language's decimal mark.
+    /// A measured value; shown with at most one decimal in the language's decimal mark.
     Number(f64),
+    /// A value shown with at most this many decimals, such as performance kilometres.
+    Decimals(f64, u8),
     Int(i64),
     /// Several items of one message, each rendered from its own message id and arguments and
     /// joined with "; ", such as the table rows a course violates.
@@ -197,6 +333,7 @@ impl ArgValue {
             ArgValue::Text(s) => FluentValue::from(s.clone()),
             ArgValue::Int(n) => FluentValue::from(*n),
             ArgValue::Number(x) => FluentValue::from(format_number(lang, *x)),
+            ArgValue::Decimals(x, places) => FluentValue::from(format_decimals(lang, *x, *places)),
             ArgValue::List(id, items) => {
                 let shown: Vec<String> =
                     items.iter().map(|args| localize(lang, id, args)).collect();
@@ -207,15 +344,23 @@ impl ArgValue {
 }
 
 /// At most one decimal (a trailing `.0` is dropped: 60 not 60.0), with the decimal mark of the
-/// language. Fluent's
-/// `NUMBER()` does not localize separators in fluent-bundle 0.16.
+/// language. Fluent's `NUMBER()` does not localize separators in fluent-bundle 0.16.
 fn format_number(lang: &Lang, x: f64) -> String {
-    let rounded = (x * 10.0).round() / 10.0;
-    let shown = if rounded.fract() == 0.0 {
-        format!("{rounded:.0}")
+    format_decimals(lang, x, 1)
+}
+
+/// At most `places` decimals, trailing zeros dropped (4.04, 4.1, 4), with the decimal mark of the
+/// language.
+fn format_decimals(lang: &Lang, x: f64, places: u8) -> String {
+    let factor = 10f64.powi(i32::from(places));
+    let rounded = (x * factor).round() / factor;
+    let shown = format!("{rounded:.*}", usize::from(places));
+    let shown = if shown.contains('.') {
+        shown.trim_end_matches('0').trim_end_matches('.').to_owned()
     } else {
-        format!("{rounded:.1}")
+        shown
     };
+    let shown = if shown == "-0" { "0".to_owned() } else { shown };
     shown.replace('.', &text(lang, "word-decimal-point", &[]))
 }
 
@@ -258,20 +403,9 @@ impl Finding {
             Location::Course(name) => accepted.course = Some(name.clone()),
             Location::Control { code } => accepted.controls = vec![code.clone()],
             Location::Controls { codes } => accepted.controls = codes.clone(),
-            Location::Leg { course, after } => {
-                accepted.legs = vec![LegRef {
-                    course: course.clone(),
-                    after: *after,
-                }]
-            }
-            Location::Legs { course, afters } => {
-                accepted.legs = afters
-                    .iter()
-                    .map(|after| LegRef {
-                        course: course.clone(),
-                        after: *after,
-                    })
-                    .collect()
+            Location::Leg { course, leg } => accepted.legs = vec![leg.leg_ref(course)],
+            Location::Legs { course, legs } => {
+                accepted.legs = legs.iter().map(|l| l.leg_ref(course)).collect()
             }
         }
         accepted.key()
@@ -327,6 +461,9 @@ pub const SKIP_START_WINDOW_MISSING: &str = "check-skip-start-window-missing";
 pub const SKIP_STARTERS_MISSING: &str = "check-skip-starters-missing";
 /// Reason: the map has no features, so it has no extent.
 pub const SKIP_NO_MAP_EXTENT: &str = "check-skip-no-map-extent";
+/// Reason: a profile switched the rule off (`enabled = false`); argument `overlay`, the id of
+/// that profile (ruling R27).
+pub const SKIP_SWITCHED_OFF: &str = "check-skip-switched-off";
 
 /// Whether the symbol code of a map feature matches a code of a rule: equal, or a sub-code of it
 /// (`505.1` matches `505`; `5051` does not). Ruling R9 of plan M2b.
@@ -343,6 +480,10 @@ pub struct CheckReport {
     pub findings: Vec<Finding>,
     /// Findings an accepted finding of the event matches, with its note.
     pub accepted: Vec<(Finding, String)>,
+    /// Accepted findings of the event that match no finding of this run, in file order: their
+    /// control, leg or course changed or is gone, or their rule did not run (ruling R25). They
+    /// never count as errors.
+    pub unmatched: Vec<AcceptedFinding>,
     pub skipped: Vec<Skipped>,
 }
 
@@ -594,6 +735,15 @@ pub(crate) fn run_checks(ctx: &CheckContext<'_>, rules: &RuleSet, checks: &[Chec
     }
 
     skipped.extend(ctx.unresolved.iter().cloned());
+    for off in &rules.switched_off {
+        skipped.push(Skipped {
+            rule: Some(off.rule.id.clone()),
+            profile: Some(off.profile.clone()),
+            location: Location::Event,
+            reason_id: SKIP_SWITCHED_OFF,
+            args: vec![("overlay", ArgValue::Text(off.by.clone()))],
+        });
+    }
 
     let mut keys: Vec<&str> = Vec::new();
     for set_rule in &rules.rules {
@@ -616,13 +766,27 @@ pub(crate) fn run_checks(ctx: &CheckContext<'_>, rules: &RuleSet, checks: &[Chec
         skipped,
         ..CheckReport::default()
     };
+    let mut matched = vec![false; accepted_keys.len()];
     for finding in found {
         let key = finding.key();
-        match accepted_keys.iter().find(|(k, _)| *k == key) {
-            Some((_, note)) => report.accepted.push((finding, (*note).to_owned())),
+        match accepted_keys.iter().position(|(k, _)| *k == key) {
+            Some(i) => {
+                matched[i] = true;
+                report
+                    .accepted
+                    .push((finding, accepted_keys[i].1.to_owned()));
+            }
             None => report.findings.push(finding),
         }
     }
+    report.unmatched = ctx
+        .event
+        .accepted_findings
+        .iter()
+        .zip(matched)
+        .filter(|(_, m)| !m)
+        .map(|(a, _)| a.clone())
+        .collect();
     report
 }
 

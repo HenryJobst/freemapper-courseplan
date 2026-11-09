@@ -379,8 +379,18 @@ fn a_course_outside_the_tolerance_is_a_warning() {
     assert_eq!(f.location, at_course("A"));
     let text = en(f);
     assert!(text.contains("4.5") && text.contains("3.9"), "{text}");
-    assert!(text.contains("3.7") && text.contains("4.1"), "{text}");
+    assert!(text.contains("3.67") && text.contains("4.13"), "{text}");
     assert!(de(f).contains("4,5") && de(f).contains("3,9"), "{}", de(f));
+    assert!(de(f).contains("3,67 bis 4,13 Lkm"), "{}", de(f));
+}
+
+#[test]
+fn lkm_values_show_two_decimals() {
+    // 3.042 km and 150 m climb: 4.542 Lkm shows as 4.54, not as 4.5.
+    let r = run(&nor_event(304.2, Some(150), &[c("H-12")]), vec![nor_rule()]);
+    assert_eq!(r.findings.len(), 1, "{r:?}");
+    let text = en(&r.findings[0]);
+    assert!(text.contains("4.54 Lkm (3.04 km length"), "{text}");
 }
 
 #[test]
@@ -399,16 +409,19 @@ fn a_climb_of_zero_is_a_value_and_a_missing_climb_a_skip() {
 }
 
 #[test]
-fn a_category_in_no_row_is_a_hint() {
+fn a_category_in_no_row_is_a_skip() {
+    // Ruling R26: like length_table, a category the NOR table does not name skips the course
+    // for it, with no hint; the categories in a row are still checked (3.9 Lkm, on target).
     let r = run(
         &nor_event(300.0, Some(90), &[c("H-12"), c("D-99")]),
         vec![nor_rule()],
     );
-    assert_eq!(r.findings.len(), 1);
-    let f = &r.findings[0];
-    assert_eq!(f.severity, Severity::Hint);
-    assert_eq!(f.location, at_course("A"));
-    assert!(en(f).contains("D-99") && de(f).contains("D-99"));
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+    assert_eq!(r.skipped.len(), 1);
+    let s = &r.skipped[0];
+    assert_eq!(s.location, at_course("A"));
+    assert_eq!(s.reason_id, "check-skip-category-not-in-table");
+    assert!(s.text(&lang_of("en")).contains("D-99"));
 }
 
 #[test]

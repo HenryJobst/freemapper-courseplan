@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 29] = [
+const TOOLS: [&str; 31] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -22,6 +22,7 @@ const TOOLS: [&str; 29] = [
     "set_special_courses",
     "add_class",
     "remove_class",
+    "set_class",
     "add_course",
     "remove_course",
     "set_course_controls",
@@ -36,6 +37,7 @@ const TOOLS: [&str; 29] = [
     "accept_finding",
     "remove_accepted_finding",
     "set_rule_profile",
+    "set_start_window",
 ];
 
 struct Session {
@@ -944,7 +946,7 @@ fn check_speaks_german() {
         .map(|s| s["text"].as_str().unwrap())
         .collect();
     assert!(
-        texts.contains(&"Die Veranstaltung hat kein Startfenster"),
+        texts.contains(&"Die Veranstaltung hat kein Startfenster; event start-window setzt es"),
         "{texts:?}"
     );
     let (error, text) = session.call(
@@ -984,7 +986,11 @@ fn accept_and_remove_findings() {
             "legs": [{ "course": "A", "after": 2 }], "note": "n"
         }),
     );
-    assert_eq!(leg["legs"], json!([{ "course": "A", "after": 2 }]));
+    // The server stores the ends of the leg from the course (ruling R24).
+    assert_eq!(
+        leg["legs"],
+        json!([{ "course": "A", "after": 2, "from": "32", "to": "F1" }])
+    );
     let text = std::fs::read_to_string(&project).unwrap();
     assert_eq!(text.matches("[[accepted_findings]]").count(), 2, "{text}");
     assert!(text.contains("still on purpose"), "{text}");
@@ -1098,4 +1104,146 @@ fn check_tools_do_not_quote_the_file() {
     let (error, text) = session.call("check", json!({ "project": dir.path().join("x.txt") }));
     assert!(error);
     assert!(text.contains("not a project file"), "{text}");
+}
+
+#[test]
+fn an_acceptance_that_matches_nothing_is_returned_as_unmatched() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    session.ok(
+        "accept_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }], "note": "kept"
+        }),
+    );
+    session.ok(
+        "set_course_controls",
+        json!({ "project": project, "name": "A", "codes": [32, 31] }),
+    );
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["summary"]["unmatched"], 1, "{report}");
+    assert_eq!(report["summary"]["errors"], 0);
+    let u = &report["unmatched"][0];
+    assert_eq!(u["rule"], "wkb2026.leg.through_control");
+    assert_eq!(u["note"], "kept");
+    assert_eq!(
+        u["location"],
+        json!({ "kind": "leg", "course": "A", "after": 1, "from": "31", "to": "32" })
+    );
+    assert_eq!(u["text"], "course A, leg 31–32");
+    // remove_accepted_finding matches the leg by position and returns what it removed.
+    let removed = session.ok(
+        "remove_accepted_finding",
+        json!({
+            "project": project, "rule": "wkb2026.leg.through_control",
+            "legs": [{ "course": "A", "after": 1 }]
+        }),
+    );
+    assert_eq!(removed["removed"][0]["legs"][0]["to"], "32");
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["unmatched"], json!([]));
+}
+
+#[test]
+fn start_window_and_class_settings() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let text = std::fs::read_to_string(&project).unwrap();
+    std::fs::write(&project, format!("# planned by H.\n{text}")).unwrap();
+    let set = session.ok(
+        "set_start_window",
+        json!({ "project": project, "minutes": 90 }),
+    );
+    assert_eq!(set["start_window_min"], 90);
+    session.ok("add_class", json!({ "project": project, "name": "H21" }));
+    let class = session.ok(
+        "set_class",
+        json!({
+            "project": project, "name": "H21", "rule_category": "H21", "expected_starters": 40
+        }),
+    );
+    assert_eq!(
+        (
+            &class["name"],
+            &class["rule_category"],
+            &class["expected_starters"]
+        ),
+        (&json!("H21"), &json!("H21"), &json!(40))
+    );
+    let cleared = session.ok(
+        "set_class",
+        json!({ "project": project, "name": "H21", "no_expected_starters": true }),
+    );
+    assert_eq!(cleared["rule_category"], "H21");
+    assert_eq!(cleared["expected_starters"], Value::Null);
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(file.starts_with("# planned by H.\n"), "{file}");
+    assert!(file.contains("start_window_min = 90"), "{file}");
+
+    let before = std::fs::read_to_string(&project).unwrap();
+    for (tool, args, expected) in [
+        (
+            "set_start_window",
+            json!({ "project": project, "minutes": 0 }),
+            "at least 1 minute",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21" }),
+            "nothing to change",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "D21", "expected_starters": 3 }),
+            "no class D21",
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21", "rule_category": " " }),
+            "is empty",
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains(expected), "{tool}: {text}");
+    }
+    for (tool, args) in [
+        (
+            "set_start_window",
+            json!({ "project": project, "minutes": 5, "seconds": 3 }),
+        ),
+        (
+            "set_class",
+            json!({ "project": project, "name": "H21", "category": "H21" }),
+        ),
+    ] {
+        let message =
+            session.request_full("tools/call", json!({ "name": tool, "arguments": args }));
+        let refused = message.get("error").is_some() || message["result"]["isError"] == true;
+        assert!(refused, "{tool}: {message}");
+    }
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    // A project file outside the rules is refused without quoting it.
+    let dir = tempfile::tempdir().unwrap();
+    let foreign = dir.path().join("settings.toml");
+    std::fs::write(&foreign, "sesame_key = 1\n").unwrap();
+    for (tool, args) in [
+        (
+            "set_start_window",
+            json!({ "project": foreign, "minutes": 5 }),
+        ),
+        (
+            "set_class",
+            json!({ "project": foreign, "name": "H21", "expected_starters": 3 }),
+        ),
+        (
+            "set_start_window",
+            json!({ "project": "rel/x.toml", "minutes": 5 }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(!text.contains("sesame"), "{tool}: {text}");
+    }
 }

@@ -265,6 +265,9 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::BlankNote { rule } => {
+                text(lang, "error-model-blank-note", &[("name", v(rule))])
+            }
             ModelError::CodeClashesWithSpecial(code) => text(
                 lang,
                 "error-model-code-clashes-with-special",
@@ -429,6 +432,22 @@ impl Localize for CourseError {
     }
 }
 
+fn place_word(lang: &Lang, place: &Place) -> String {
+    text(lang, &format!("word-place-{}", place.as_str()), &[])
+}
+
+/// "a, b or c" of place kinds.
+fn place_list(lang: &Lang, places: &[Place]) -> String {
+    let words: Vec<String> = places.iter().map(|p| place_word(lang, p)).collect();
+    match words.split_last() {
+        Some((last, rest)) if !rest.is_empty() => {
+            let or = text(lang, "word-or", &[]);
+            format!("{} {or} {last}", rest.join(", "))
+        }
+        _ => words.concat(),
+    }
+}
+
 impl Localize for EditError {
     fn localize(&self, lang: &Lang) -> String {
         match self {
@@ -491,9 +510,11 @@ impl Localize for EditError {
                 "error-edit-unknown-rule",
                 &[("name", v(rule)), ("id", v(profile))],
             ),
-            EditError::FindingNeedsPlace { rule } => {
-                text(lang, "error-edit-finding-needs-place", &[("name", v(rule))])
-            }
+            EditError::FindingNeedsPlace { rule, places } => text(
+                lang,
+                "error-edit-finding-needs-place",
+                &[("name", v(rule)), ("places", v(place_list(lang, places)))],
+            ),
             EditError::FindingHasOnePlace { rule } => text(
                 lang,
                 "error-edit-finding-has-one-place",
@@ -503,29 +524,24 @@ impl Localize for EditError {
                 rule,
                 place,
                 places,
-            } => {
-                let word = |p: &Place| text(lang, &format!("word-place-{}", p.as_str()), &[]);
-                let words: Vec<String> = places.iter().map(word).collect();
-                let list = match words.split_last() {
-                    Some((last, rest)) if !rest.is_empty() => {
-                        let or = text(lang, "word-or", &[]);
-                        format!("{} {or} {last}", rest.join(", "))
-                    }
-                    _ => words.concat(),
-                };
-                text(
-                    lang,
-                    "error-edit-finding-wrong-place",
-                    &[
-                        ("name", v(rule)),
-                        ("place", v(word(place))),
-                        ("places", v(list)),
-                    ],
-                )
-            }
+            } => text(
+                lang,
+                "error-edit-finding-wrong-place",
+                &[
+                    ("name", v(rule)),
+                    ("place", v(place_word(lang, place))),
+                    ("places", v(place_list(lang, places))),
+                ],
+            ),
             EditError::AcceptedNotFound { rule } => {
                 text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
             }
+            EditError::StartWindowZero => text(lang, "error-edit-start-window-zero", &[]),
+            EditError::BlankRuleCategory { class } => text(
+                lang,
+                "error-edit-blank-rule-category",
+                &[("name", v(class))],
+            ),
             EditError::Rules(e) => e.localize(lang),
         }
     }
@@ -719,6 +735,10 @@ mod tests {
             "place",
             "places",
             "legs",
+            "leg",
+            "overlay",
+            "unmatched",
+            "minutes",
             "degrees",
             "min_length",
             "min",
@@ -1045,6 +1065,7 @@ mod tests {
                 what: "control code",
                 value: s(" 31"),
             },
+            ModelError::BlankNote { rule: s("r") },
             ModelError::CodeClashesWithSpecial(code("S1")),
             ModelError::DuplicateCourseInSpecial {
                 id: s("w1"),
@@ -1187,6 +1208,7 @@ mod tests {
             },
             EditError::FindingNeedsPlace {
                 rule: s("wkb2026.distance.min"),
+                places: vec![Place::Controls],
             },
             EditError::FindingHasOnePlace {
                 rule: s("wkb2026.distance.min"),
@@ -1199,6 +1221,8 @@ mod tests {
             EditError::AcceptedNotFound {
                 rule: s("wkb2026.distance.min"),
             },
+            EditError::StartWindowZero,
+            EditError::BlankRuleCategory { class: s("H21") },
             EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
         for what in [

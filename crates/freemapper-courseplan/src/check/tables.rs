@@ -5,7 +5,9 @@
 //! The tables work on rule categories (ruling R23): the `rule_category` of the classes of a
 //! course. A class without a category skips the course, a course without classes gives nothing.
 //! A course whose categories hit several table rows gets one finding that names every row it
-//! violates.
+//! violates. Categories in no row of a table skip the course with their names (ruling R26): the
+//! NOR table names its categories regionally (D19K, H19K) and has no elite rows, so a WKB category
+//! missing there says nothing about the course.
 
 use freemapper_courseplan_model::Class;
 use toml::Value;
@@ -154,6 +156,27 @@ fn hit_rows<'t, 'c>(
     (hit, unknown)
 }
 
+/// Skips the course for the categories in no row of the table, if there are any.
+fn skip_not_in_table(
+    run: &RuleRun<'_>,
+    course: &CourseContext<'_>,
+    unknown: &[&str],
+    skipped: &mut Vec<Skipped>,
+) {
+    if !unknown.is_empty() {
+        skipped.push(run.skipped(
+            course_location(course),
+            SKIP_NOT_IN_TABLE,
+            vec![("categories", text_arg(unknown.join(", ")))],
+        ));
+    }
+}
+
+/// Lkm and kilometres with up to two decimals, so 4.042 does not show as 4.
+fn km(x: f64) -> ArgValue {
+    ArgValue::Decimals(x, 2)
+}
+
 /// `length_table`: the length of a course as a percentage of the length of the HE course lies in
 /// the range of every table row its categories hit (WKB26 Anlage 5 Nr. 3 to 5, length by B 7.2.5).
 /// The reference is the first course with a class of the category `reference_category`; with two
@@ -238,13 +261,7 @@ pub(super) fn length_table(
             continue;
         }
         let (hit, unknown) = hit_rows(&table, &categories);
-        if !unknown.is_empty() {
-            skipped.push(run.skipped(
-                course_location(course),
-                SKIP_NOT_IN_TABLE,
-                vec![("categories", text_arg(unknown.join(", ")))],
-            ));
-        }
+        skip_not_in_table(run, course, &unknown, skipped);
         if hit.is_empty() {
             continue;
         }
@@ -346,8 +363,8 @@ pub(super) fn difficulty_mix(
 
 /// `nor_lkm`: the performance kilometres of a course, `length_km + climb_km × climb_factor`, lie
 /// within `tolerance_percent` of the target of every table row the categories hit (BB-Lkm21,
-/// BB-Kombi14). A course without climb is skipped (a climb of 0 is a value); categories in no row
-/// give a hint, since the recommendation does not cover them.
+/// BB-Kombi14). A course without climb is skipped (a climb of 0 is a value), and so are
+/// categories in no row. Lkm, length and bounds are shown with up to two decimals.
 pub(super) fn nor_lkm(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -372,17 +389,7 @@ pub(super) fn nor_lkm(
             continue;
         }
         let (hit, unknown) = hit_rows(&table, &categories);
-        if !unknown.is_empty() {
-            findings.push(run.finding_with_severity(
-                Severity::Hint,
-                course_location(course),
-                "check-nor-lkm-category-unknown",
-                vec![
-                    ("course", text_arg(course.course.name.as_str())),
-                    ("categories", text_arg(unknown.join(", "))),
-                ],
-            ));
-        }
+        skip_not_in_table(run, course, &unknown, skipped);
         if hit.is_empty() {
             continue;
         }
@@ -408,9 +415,9 @@ pub(super) fn nor_lkm(
                 (lkm < min - SLACK || lkm > max + SLACK).then(|| {
                     vec![
                         ("categories", text_arg(own.join(", "))),
-                        ("target", ArgValue::Number(row.target)),
-                        ("min", ArgValue::Number(min)),
-                        ("max", ArgValue::Number(max)),
+                        ("target", km(row.target)),
+                        ("min", km(min)),
+                        ("max", km(max)),
                     ]
                 })
             })
@@ -423,8 +430,8 @@ pub(super) fn nor_lkm(
             "check-nor-lkm",
             vec![
                 ("course", text_arg(course.course.name.as_str())),
-                ("actual", ArgValue::Number(lkm)),
-                ("length", ArgValue::Number(length_km)),
+                ("actual", km(lkm)),
+                ("length", km(length_km)),
                 ("climb", ArgValue::Int(i64::from(climb))),
                 ("rows", ArgValue::List("check-nor-lkm-row", violated)),
             ],

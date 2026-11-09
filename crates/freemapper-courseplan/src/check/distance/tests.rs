@@ -53,11 +53,11 @@ fn controls_closer_than_the_minimum_are_an_error() {
     assert_eq!(codes(&f.location), ["31", "32"]);
     assert_eq!(
         en(f),
-        "control 31 and control 32 are 8 m apart, at least 15 m"
+        "control 31 and control 32 are 8 m apart, at least 15 m required"
     );
     assert_eq!(
         de(f),
-        "Posten 31 und Posten 32 liegen 8 m auseinander, mindestens 15 m"
+        "Posten 31 und Posten 32 liegen 8 m auseinander, gefordert sind mindestens 15 m"
     );
     assert!(r.has_errors());
 }
@@ -80,11 +80,11 @@ fn the_start_and_crossing_points_count_the_finish_does_not() {
     assert_eq!(places, [vec!["31", "S1"], vec!["32", "33"]]);
     assert_eq!(
         en(&r.findings[0]),
-        "control 31 and start S1 are 4 m apart, at least 15 m"
+        "control 31 and start S1 are 4 m apart, at least 15 m required"
     );
     assert_eq!(
         de(&r.findings[1]),
-        "Posten 32 und Querungsstelle 33 liegen 8 m auseinander, mindestens 15 m"
+        "Posten 32 und Querungsstelle 33 liegen 8 m auseinander, gefordert sind mindestens 15 m"
     );
 }
 
@@ -173,7 +173,7 @@ fn the_wkb_profile_halves_the_distance_on_sprint_maps() {
     assert_eq!(min[0].rule, "wkb2026.distance.min_half");
     assert_eq!(
         en(min[0]),
-        "control 31 and control 32 are 12 m apart, at least 15 m"
+        "control 31 and control 32 are 12 m apart, at least 15 m required"
     );
 }
 
@@ -211,11 +211,11 @@ fn controls_at_similar_features_closer_than_the_limit_are_a_warning() {
     assert_eq!(codes(&f.location), ["31", "32"]);
     assert_eq!(
         en(f),
-        "controls 31 and 32 stand at similar features (109, 110) and are 20 m apart, at least 30 m"
+        "controls 31 and 32 stand at similar features (109, 110) and are 20 m apart, at least 30 m required"
     );
     assert_eq!(
         de(f),
-        "Posten 31 und 32 stehen an ähnlichen Objekten (109, 110) und liegen 20 m auseinander, mindestens 30 m"
+        "Posten 31 und 32 stehen an ähnlichen Objekten (109, 110) und liegen 20 m auseinander, gefordert sind mindestens 30 m"
     );
 }
 
@@ -385,11 +385,11 @@ fn controls_and_the_finish_near_the_map_edge_are_a_warning() {
     assert!(matches!(r.findings[0].location, Location::Control { .. }));
     assert_eq!(
         en(&r.findings[0]),
-        "control 31 is 8 m from the map edge, at least 10 m"
+        "control 31 is 8 m from the map edge, at least 10 m required"
     );
     assert_eq!(
         de(&r.findings[2]),
-        "Ziel F1 liegt 4 m vom Kartenrand entfernt, mindestens 10 m"
+        "Ziel F1 liegt 4 m vom Kartenrand entfernt, gefordert sind mindestens 10 m"
     );
 }
 
@@ -401,7 +401,7 @@ fn a_crossing_point_near_the_edge_is_named_as_such() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(
         de(&r.findings[0]),
-        "Querungsstelle 35 liegt 4 m vom Kartenrand entfernt, mindestens 10 m"
+        "Querungsstelle 35 liegt 4 m vom Kartenrand entfernt, gefordert sind mindestens 10 m"
     );
 }
 
@@ -420,8 +420,8 @@ fn start_and_finish_of_a_course_without_controls_near_the_edge() {
     assert_eq!(
         found,
         [
-            "start S1 is 4 m from the map edge, at least 10 m",
-            "finish F1 is 2 m from the map edge, at least 10 m",
+            "start S1 is 4 m from the map edge, at least 10 m required",
+            "finish F1 is 2 m from the map edge, at least 10 m required",
         ]
     );
 }
@@ -506,10 +506,9 @@ fn a_one_control_course_whose_leg_passes_the_finish() {
     let r = report(&e, &map(4000, vec![]), vec![through_rule()]);
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(r.findings[0].location, leg("A", 0));
-    assert_eq!(
-        en(&r.findings[0]),
-        "the leg passes 0 m from finish F1, inside its circle radius of 12 m"
-    );
+    // A distance that rounds down to 0 m reads as running over the stop.
+    assert_eq!(en(&r.findings[0]), "the leg runs over finish F1");
+    assert_eq!(de(&r.findings[0]), "Die Strecke führt über das Ziel F1");
 }
 
 #[test]
@@ -541,8 +540,8 @@ fn the_leg_from_the_start_is_checked() {
     let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
     assert_eq!(places, [&leg("A", 0)], "{:?}", r.findings);
     assert_eq!(
-        leg("A", 0).text(&lang_of("en")),
-        "course A, leg from the start"
+        r.findings[0].location.text(&lang_of("en")),
+        "course A, leg start–32"
     );
 }
 
@@ -556,7 +555,7 @@ fn a_crossing_point_on_a_leg_is_named_as_such() {
     let r = report(&e, &map(4000, vec![]), vec![through_rule()]);
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert!(
-        en(&r.findings[0]).contains("0 m from crossing point 35"),
+        en(&r.findings[0]).contains("runs over crossing point 35"),
         "{}",
         en(&r.findings[0])
     );
@@ -777,11 +776,15 @@ fn out_of_bounds_specials_apply_to_their_courses_forbidden_routes_to_none() {
         courses: vec![],
     });
     let r = report(&e, &map(4000, vec![]), vec![forbidden_rule()]);
-    let found: Vec<(&Location, String)> = r.findings.iter().map(|f| (&f.location, en(f))).collect();
+    let found: Vec<(LegAt, String)> = r
+        .findings
+        .iter()
+        .map(|f| (leg_of(&f.location), en(f)))
+        .collect();
     assert_eq!(
         found,
         [(
-            &leg("B", 1),
+            leg("B", 1),
             "the straight leg crosses out-of-bounds area oob, so the best route may lead through it"
                 .to_owned()
         )]

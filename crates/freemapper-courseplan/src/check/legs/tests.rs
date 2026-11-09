@@ -1,7 +1,7 @@
 //! Tests of the leg shape checks. Maps are 1:4000 sprint maps, so one map mm is 4 m: the
 //! opposing-legs values of 10 m and 30 m are 2.5 mm and 7.5 mm.
 
-use freemapper_courseplan_model::{AcceptedFinding, Event, LegRef, SpecialObject};
+use freemapper_courseplan_model::{AcceptedFinding, Control, Event, LegRef, SpecialObject};
 
 use super::super::testing::*;
 use super::super::*;
@@ -59,13 +59,60 @@ fn angle_event(degrees: f64) -> Event {
 
 fn legs_at(location: &Location) -> (&str, Vec<u32>) {
     match location {
-        Location::Legs { course, afters } => (course.as_str(), afters.clone()),
+        Location::Legs { course, legs } => {
+            (course.as_str(), legs.iter().map(|l| l.after).collect())
+        }
         other => panic!("not at legs: {other:?}"),
     }
 }
 
 // ---------------------------------------------------------------------------------------------
 // acute_angle
+
+#[test]
+fn an_accepted_angle_comes_back_when_its_leg_runs_to_another_control() {
+    // Ruling R24: the acceptance stores the leg's ends, so it no longer matches once the
+    // control at position 1 is replaced, even though the angle and the position stay.
+    let mut e = angle_event(30.0);
+    let rules = rule_set(vec![(warning_rule(), "base")]);
+    let mut acceptance = AcceptedFinding {
+        rule: "t.leg.acute".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef::at("A", 0)],
+        note: "on purpose".to_owned(),
+    };
+    crate::edit::accept_finding(&mut e, &rules, acceptance.clone()).unwrap();
+    let map = map(4000, vec![]);
+    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    assert_eq!((r.findings.len(), r.accepted.len()), (0, 1), "{r:?}");
+    assert_eq!(
+        r.accepted[0].0.location.text(&lang_of("de")),
+        "Bahn A, Strecke Start–31"
+    );
+    // Control 39 takes the place of 31, at the same spot.
+    let at = e.controls[0].map_mm.clone();
+    e.controls.push(Control {
+        code: code("39"),
+        map_mm: at,
+        ..e.controls[0].clone()
+    });
+    crate::edit::set_course_controls(&mut e, "A", &[code("39"), code("32")]).unwrap();
+    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    assert_eq!(r.findings.len(), 1, "{r:?}");
+    assert_eq!(r.findings[0].location, leg("A", 0));
+    assert_eq!(
+        r.findings[0].location.text(&lang_of("en")),
+        "course A, leg start–39"
+    );
+    assert!(r.accepted.is_empty());
+    assert_eq!(r.unmatched.len(), 1);
+    // Accepting it again stores the new ends.
+    acceptance.note = "still on purpose".to_owned();
+    crate::edit::accept_finding(&mut e, &rules, acceptance).unwrap();
+    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    assert_eq!((r.findings.len(), r.accepted.len()), (0, 1), "{r:?}");
+}
 
 #[test]
 fn an_acute_angle_at_a_control_is_reported_at_the_incoming_leg() {
@@ -77,11 +124,11 @@ fn an_acute_angle_at_a_control_is_reported_at_the_incoming_leg() {
     assert_eq!(f.location, leg("A", 0));
     assert_eq!(
         en(f),
-        "the legs at control 31 form an angle of 30°, at least 45°"
+        "the legs at control 31 form an angle of 30°, at least 45° required"
     );
     assert_eq!(
         de(f),
-        "Die Strecken am Posten 31 bilden einen Winkel von 30°, mindestens 45°"
+        "Die Strecken am Posten 31 bilden einen Winkel von 30°, gefordert sind mindestens 45°"
     );
     // A wide angle gives nothing.
     let r = report(
@@ -113,7 +160,7 @@ fn a_place_gets_only_the_strictest_rule_of_the_key() {
     assert_eq!(found, [("t.leg.acute_hint", Severity::Hint)]);
     assert_eq!(
         en(&r.findings[0]),
-        "the legs at control 31 form an angle of 60°, at least 90°"
+        "the legs at control 31 form an angle of 60°, at least 90° required"
     );
     // Accepting the warning at 30° does not bring up the hint.
     let mut e = angle_event(30.0);
@@ -124,6 +171,8 @@ fn a_place_gets_only_the_strictest_rule_of_the_key() {
         legs: vec![LegRef {
             course: "A".to_owned(),
             after: 0,
+            from: "S1".to_owned(),
+            to: "31".to_owned(),
         }],
         note: "on purpose".to_owned(),
     });
@@ -174,7 +223,7 @@ fn a_switched_off_warning_leaves_the_angle_to_the_hint() {
         acute,
         [(
             "wkb2026.leg.acute_angle_hint",
-            "the legs at control 31 form an angle of 30°, at least 90°".to_owned()
+            "the legs at control 31 form an angle of 30°, at least 90° required".to_owned()
         )]
     );
 }
@@ -215,7 +264,7 @@ fn angles_use_the_last_bend_before_and_the_first_bend_after_the_control() {
     // atan(10 / 30) = 18.4°, shown rounded down.
     assert_eq!(
         en(&r.findings[0]),
-        "the legs at control 31 form an angle of 18°, at least 45°"
+        "the legs at control 31 form an angle of 18°, at least 45° required"
     );
     // A bend before 31 changes the incoming direction: (0, 1) against (-3, 1) is 71.6°.
     let mut a = course("A", &["31"]);
@@ -232,7 +281,7 @@ fn angles_use_the_last_bend_before_and_the_first_bend_after_the_control() {
         found,
         [(
             "t.leg.acute_hint",
-            "the legs at control 31 form an angle of 71°, at least 90°".to_owned()
+            "the legs at control 31 form an angle of 71°, at least 90° required".to_owned()
         )]
     );
 }
@@ -270,11 +319,11 @@ fn an_acute_angle_at_a_crossing_point_is_named_as_such() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(
         en(&r.findings[0]),
-        "the legs at crossing point 31 form an angle of 30°, at least 45°"
+        "the legs at crossing point 31 form an angle of 30°, at least 45° required"
     );
     assert_eq!(
         de(&r.findings[0]),
-        "Die Strecken an der Querungsstelle 31 bilden einen Winkel von 30°, mindestens 45°"
+        "Die Strecken an der Querungsstelle 31 bilden einen Winkel von 30°, gefordert sind mindestens 45°"
     );
 }
 
@@ -293,20 +342,20 @@ fn each_visit_of_a_butterfly_control_has_its_own_angle() {
         vec![course("A", &["31", "32", "33", "31", "34", "35", "31"])],
     );
     let r = report(&e, &map(4000, vec![]), vec![warning_rule(), hint_rule()]);
-    let found: Vec<(&Location, &str)> = r
+    let found: Vec<(LegAt, &str)> = r
         .findings
         .iter()
-        .map(|f| (&f.location, f.rule.as_str()))
+        .map(|f| (leg_of(&f.location), f.rule.as_str()))
         .collect();
     let hint = "t.leg.acute_hint";
     assert_eq!(
         found,
         [
-            (&leg("A", 0), hint),
-            (&leg("A", 1), hint),
-            (&leg("A", 2), hint),
-            (&leg("A", 4), hint),
-            (&leg("A", 5), hint),
+            (leg("A", 0), hint),
+            (leg("A", 1), hint),
+            (leg("A", 2), hint),
+            (leg("A", 4), hint),
+            (leg("A", 5), hint),
         ]
     );
     assert!(en(&r.findings[0]).contains("control 31 form an angle of 56°"));
@@ -377,17 +426,21 @@ fn legs_running_against_each_other_are_a_warning_naming_both() {
     assert_eq!(legs_at(&f.location), ("A", vec![0, 2]));
     assert_eq!(
         f.location.text(&lang_of("en")),
-        "course A, leg from the start and leg after 2"
+        "course A, legs start–31 and 32–33"
+    );
+    assert_eq!(
+        f.location.text(&lang_of("de")),
+        "Bahn A, Strecken Start–31 und 32–33"
     );
     assert_eq!(
         en(f),
-        "the leg from the start and the leg after 2 run in opposite directions for 240 m \
-         at most 10 m apart, less than 30 m allowed"
+        "the two legs run in opposite directions for 240 m at most 10 m apart, less than 30 m \
+         allowed"
     );
     assert_eq!(
         de(f),
-        "Die Strecke vom Start und die Strecke nach 2 verlaufen auf 240 m gegenläufig in \
-         höchstens 10 m Abstand, erlaubt sind weniger als 30 m"
+        "Die beiden Strecken verlaufen auf 240 m gegenläufig in höchstens 10 m Abstand, erlaubt \
+         sind weniger als 30 m"
     );
 }
 
@@ -409,10 +462,9 @@ fn legs_after_controls_are_named_by_their_positions() {
     let r = report(&e, &map(4000, vec![]), vec![opposing_rule()]);
     let places: Vec<(&str, Vec<u32>)> = r.findings.iter().map(|f| legs_at(&f.location)).collect();
     assert_eq!(places, [("A", vec![2, 4])], "{:?}", r.findings);
-    assert!(
-        en(&r.findings[0]).starts_with("the leg after 2 and the leg after 4 run"),
-        "{}",
-        en(&r.findings[0])
+    assert_eq!(
+        r.findings[0].location.text(&lang_of("en")),
+        "course A, legs 32–33 and 34–35"
     );
 }
 
@@ -684,10 +736,14 @@ fn the_wkb_profile_warns_about_opposing_legs() {
             LegRef {
                 course: "A".to_owned(),
                 after: 2,
+                from: "32".to_owned(),
+                to: "33".to_owned(),
             },
             LegRef {
                 course: "A".to_owned(),
                 after: 0,
+                from: "S1".to_owned(),
+                to: "31".to_owned(),
             },
         ],
         note: "n".to_owned(),

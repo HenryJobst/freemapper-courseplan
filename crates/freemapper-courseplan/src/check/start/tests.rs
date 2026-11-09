@@ -89,11 +89,11 @@ fn courses_sharing_a_first_control_without_enough_room_are_reported_at_the_start
     assert_eq!(f.location, at_control("S1"));
     assert_eq!(
         en(f),
-        "start S1: 3 different first controls are needed for the starters per minute, but only 1 in use; first controls shared by several courses: 31"
+        "3 different first controls are needed for the starters per minute, but only 1 in use; first controls shared by several courses: 31"
     );
     assert_eq!(
         de(f),
-        "Start S1: Für die Starter pro Minute braucht es 3 verschiedene erste Posten, belegt sind aber nur 1; erste Posten mehrerer Bahnen: 31"
+        "Für die Starter pro Minute braucht es 3 verschiedene erste Posten, belegt sind aber nur 1; erste Posten mehrerer Bahnen: 31"
     );
 }
 
@@ -125,11 +125,11 @@ fn a_single_course_with_too_many_starters_has_no_shared_control() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(
         en(&r.findings[0]),
-        "start S1: 2 different first controls are needed for the starters per minute, but only 1 in use"
+        "2 different first controls are needed for the starters per minute, but only 1 in use"
     );
     assert_eq!(
         de(&r.findings[0]),
-        "Start S1: Für die Starter pro Minute braucht es 2 verschiedene erste Posten, belegt sind aber nur 1"
+        "Für die Starter pro Minute braucht es 2 verschiedene erste Posten, belegt sind aber nur 1"
     );
 }
 
@@ -215,7 +215,7 @@ fn courses_without_classes_have_no_starters() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(
         en(&r.findings[0]),
-        "start S1: 2 different first controls are needed for the starters per minute, but only 1 in use"
+        "2 different first controls are needed for the starters per minute, but only 1 in use"
     );
 }
 
@@ -265,7 +265,7 @@ fn a_course_without_controls_has_starters_but_no_first_control() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     assert_eq!(
         en(&r.findings[0]),
-        "start S1: 2 different first controls are needed for the starters per minute, but only 0 in use"
+        "2 different first controls are needed for the starters per minute, but only 0 in use"
     );
 }
 
@@ -327,11 +327,13 @@ fn first_legs_in_nearly_the_same_direction_are_a_hint() {
     assert_eq!(controls_at(&f.location), ["31", "32"]);
     assert_eq!(
         en(f),
-        "start S1: the first legs to controls 31 and 32 differ in direction by only 11°, at least 30° are wanted"
+        "the first legs from start S1 to controls 31 and 32 differ in direction by only 11°, at \
+         least 30° required"
     );
     assert_eq!(
         de(f),
-        "Start S1: Die ersten Strecken zu den Posten 31 und 32 unterscheiden sich in der Richtung nur um 11°, gewünscht sind mindestens 30°"
+        "Die ersten Strecken vom Start S1 zu den Posten 31 und 32 unterscheiden sich in der \
+         Richtung nur um 11°, gefordert sind mindestens 30°"
     );
 }
 

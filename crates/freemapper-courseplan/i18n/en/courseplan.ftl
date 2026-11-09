@@ -18,7 +18,6 @@ word-name-control-code = control code
 word-name-special-object-id = special object id
 word-name-course-name = course name
 word-name-class-name = class name
-word-name-note = note
 word-map-sprint = sprint
 word-map-schoolyard = schoolyard
 word-map-forest = forest
@@ -36,6 +35,7 @@ error-model-unknown-finish = course { $course } has finish { $id }, which is not
 error-model-team-too-small = course { $course } has team size { $team_size }, at least 2 is needed
 error-model-free-control-is-mandatory = course { $course } lists control { $code } as free and as mandatory
 error-model-blank-name = { $what } "{ $value }" is empty or starts or ends with a space
+error-model-blank-note = the note of accepted finding { $name } is empty
 error-model-code-clashes-with-special = control code { $code } is also the id of a special object
 error-model-duplicate-course-in-special = special object { $id } lists course { $course } more than once
 error-model-too-few-points = { $kind } { $id } needs at least { $needed } points
@@ -91,10 +91,12 @@ error-edit-special-would-cover-all-courses = { $count ->
 }
 error-edit-start-or-finish-has-no-courses = special object { $id } is a start or finish; each course names its start and finish itself
 error-edit-unknown-rule = rule { $name } is not an active rule of rule profile { $id }
-error-edit-finding-needs-place = findings of rule { $name } sit at a course, at controls or at a leg; name that place
+error-edit-finding-needs-place = findings of rule { $name } sit at { $places }; name that place
 error-edit-finding-has-one-place = a finding of rule { $name } has one place: give a course, controls or legs of one course
 error-edit-finding-wrong-place = findings of rule { $name } sit at { $places }, never at { $place }
 error-edit-accepted-not-found = there is no accepted finding of rule { $name } at this place
+error-edit-start-window-zero = the start window must be at least 1 minute
+error-edit-blank-rule-category = the rule category of class { $name } is empty; give a category or clear it
 
 ## Reading OOM maps (OmapError)
 
@@ -113,11 +115,12 @@ check-location-event = event
 check-location-course = course { $course }
 check-location-control = control { $code }
 check-location-controls = controls { $codes }
-check-location-leg = course { $course }, leg after { $index }
-check-location-start-leg = course { $course }, leg from the start
-check-location-legs = course { $course }, { $legs }
-check-location-legs-after = leg after { $index }
-check-location-legs-start = leg from the start
+check-location-start = start { $id }
+check-location-finish = finish { $id }
+check-location-leg = course { $course }, leg { $leg }
+check-location-legs = course { $course }, legs { $legs }
+check-leg-end-start = start
+check-leg-end-finish = finish
 check-skip-training = not checked at a training
 check-skip-discipline = the rule is not for { $discipline ->
         [sprint] sprint
@@ -140,15 +143,16 @@ check-skip-course-kind = { $kind ->
        *[other] { $kind } courses
     } are not checked yet
 check-skip-course-unresolved = the course refers to { $id }, which the event does not define; it is not checked
-check-skip-class-not-mapped = class { $name } has no rule category
+check-skip-class-not-mapped = class { $name } has no rule category; class set --rule-category assigns one
 check-skip-climb-missing = the course has no climb
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
-check-skip-start-window-missing = the event has no start window
-check-skip-starters-missing = start { $start }: classes without an expected number of starters: { $classes }
+check-skip-start-window-missing = the event has no start window; event start-window sets it
+check-skip-starters-missing = classes without an expected number of starters: { $classes }; class set --starters sets it
 check-skip-length-no-reference = no course carries category { $category }, so the length table has no reference
 check-skip-length-reference-empty = the reference course { $course } has length 0
 check-skip-category-not-in-table = categories in no row of the table: { $categories }
+check-skip-switched-off = switched off by { $overlay }
 check-distance-min = { $first_kind ->
         [start] start
         [finish] finish
@@ -159,46 +163,51 @@ check-distance-min = { $first_kind ->
         [finish] finish
         [crossing] crossing point
        *[control] control
-    } { $second } are { $metres } m apart, at least { $limit } m
-check-distance-similar = controls { $first } and { $second } stand at similar features ({ $first_symbol }, { $second_symbol }) and are { $metres } m apart, at least { $limit } m
+    } { $second } are { $metres } m apart, at least { $limit } m required
+check-distance-similar = controls { $first } and { $second } stand at similar features ({ $first_symbol }, { $second_symbol }) and are { $metres } m apart, at least { $limit } m required
 check-map-edge = { $kind ->
         [start] start
         [finish] finish
         [crossing] crossing point
        *[control] control
-    } { $id } is { $metres } m from the map edge, at least { $limit } m
-check-leg-through-control = the leg passes { $metres } m from { $stop_kind ->
-        [start] start
-        [finish] finish
-        [crossing] crossing point
-       *[control] control
-    } { $stop }, inside its circle radius of { $limit } m
+    } { $id } is { $metres } m from the map edge, at least { $limit } m required
+check-leg-through-control = { $metres ->
+        [0] the leg runs over { $stop_kind ->
+            [start] start
+            [finish] finish
+            [crossing] crossing point
+           *[control] control
+        } { $stop }
+       *[other] the leg passes { $metres } m from { $stop_kind ->
+            [start] start
+            [finish] finish
+            [crossing] crossing point
+           *[control] control
+        } { $stop }, inside its circle radius of { $limit } m
+    }
 check-leg-out-of-bounds = the straight leg crosses out-of-bounds area { $id }, so the best route may lead through it
 check-leg-out-of-bounds-symbol = the straight leg crosses map symbol { $code } (out of bounds), so the best route may lead through it
 check-acute-angle = the legs at { $stop_kind ->
         [crossing] crossing point
        *[control] control
-    } { $stop } form an angle of { $degrees }°, at least { $limit }°
-check-opposing-legs = { $first ->
-        [0] the leg from the start
-       *[other] the leg after { $first }
-    } and the leg after { $second } run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
+    } { $stop } form an angle of { $degrees }°, at least { $limit }° required
+check-opposing-legs = the two legs run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
 check-code-range = code { $code } is outside the allowed range { $min } to { $max }
 check-code-not-numeric = code { $code } is not a number
 check-code-pair = codes { $first } and { $second } must not both be used in one event
 check-code-confusable-rotated = codes { $first } and { $second } look alike when turned upside down and follow each other
 check-code-confusable-six-nine = codes { $first } and { $second } differ only by 6 and 9 and follow each other
 check-same-objects-in-circle = control { $code } stands at symbol { $symbol }, which occurs again within its circle, and column C of the description is empty
-check-start-capacity = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use
-check-start-capacity-shared = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use; first controls shared by several courses: { $shared }
-check-first-leg-angle = start { $start }: the first legs to controls { $first } and { $second } differ in direction by only { $degrees }°, at least { $limit }° are wanted
-check-length-table = course { $course } has a length outside the table: { $rows }
+check-start-capacity = { $needed } different first controls are needed for the starters per minute, but only { $available } in use
+check-start-capacity-shared = { $needed } different first controls are needed for the starters per minute, but only { $available } in use; first controls shared by several courses: { $shared }
+check-first-leg-angle = the first legs from start { $start } to controls { $first } and { $second } differ in direction by only { $degrees }°, at least { $limit }° required
+check-length-table = the course length is outside the table: { $rows }
 check-length-table-row = { $categories }: { $percent } % of the { $reference } course, allowed { $min } to { $max } %
 check-length-table-reference-twice = courses { $courses } all carry category { $category }; course { $first } serves as the reference for the length table
-check-difficulty-mix = course { $course } mixes easy categories ({ $easy }) with hard ones ({ $hard })
-check-nor-lkm = course { $course } has { $actual } Lkm ({ $length } km length, { $climb } m climb), outside the recommendation: { $rows }
+check-difficulty-mix = the course mixes easy categories ({ $easy }) with hard ones ({ $hard })
+check-nor-lkm = the course has { $actual } Lkm ({ $length } km length, { $climb } m climb), outside the recommendation: { $rows }
 check-nor-lkm-row = { $categories }: target { $target } Lkm, allowed { $min } to { $max } Lkm
-check-nor-lkm-category-unknown = course { $course }: categories { $categories } are in no row of the NOR recommendation, so their target Lkm is unknown
+check-source-claude = proposal of freemapper-courseplan
 
 ## Command line
 
@@ -261,6 +270,7 @@ cli-edit-special-all-courses = special object { $id } now applies to all courses
 cli-edit-no-course-names = give at least one course name, or --all for all courses
 cli-edit-class-added = added class { $name }
 cli-edit-class-removed = removed class { $name }
+cli-edit-class-set = changed class { $name }
 cli-edit-bad-point = { $value } is not a point; write X,Y in map millimetres with a dot as decimal separator, for example 12.5,-30
 cli-edit-bad-number = { $value } is not a number; use a dot as decimal separator, for example 0.5
 cli-edit-bad-count = { $value } is not a whole number
@@ -281,7 +291,7 @@ word-special-water = water point
 
 cli-help-control = Add, move, describe, number and remove controls
 cli-help-special = Add, assign and remove special objects (start, finish, marked routes, areas, first aid, water)
-cli-help-class = Add and remove classes
+cli-help-class = Add, change and remove classes
 cli-help-control-add = Add a control
 cli-help-control-move = Move a control
 cli-help-control-remove = Remove a control and its visits in individual courses
@@ -292,6 +302,7 @@ cli-help-special-remove = Remove a special object
 cli-help-special-courses = Set the courses a special object belongs to
 cli-help-class-add = Add a class
 cli-help-class-remove = Remove a class and its name from every course
+cli-help-class-set = Change the rule category or the expected number of starters of a class. Give at least one option
 
 cli-arg-edit-code = Code of the control
 cli-arg-control-add-at = Where the control goes: X,Y in map millimetres
@@ -321,6 +332,11 @@ cli-arg-class-add-name = Name of the class
 cli-arg-class-add-rule-category = Rule category of the class
 cli-arg-class-add-starters = Expected number of starters
 cli-arg-class-remove-name = Name of the class
+cli-arg-class-set-name = Name of the class
+cli-arg-class-set-rule-category = The rule category, such as H21 or D-14; the table checks use it
+cli-arg-class-set-no-rule-category = Remove the rule category
+cli-arg-class-set-starters = Expected number of starters; the start capacity check uses it
+cli-arg-class-set-no-starters = Remove the expected number of starters
 
 ## Course commands
 
@@ -395,12 +411,15 @@ cli-help-check-exit-codes =
     Exit code 0: no finding of severity error; accepted findings do not count.
     Exit code 1: at least one error finding, or the check was refused, for example because the project file or the map cannot be read.
     Exit code 2: wrong call, for example an unknown option.
-cli-arg-check-all = Also list the accepted findings with their notes and the skipped rules with the reason
+cli-arg-check-all = Also list the accepted findings with their notes, the acceptances that match no finding, the skipped rules with the reason, and under each finding the note of its rule
 cli-check-group-event = event:
 cli-check-group-course = course { $course }:
 cli-check-heading-accepted = accepted:
 cli-check-heading-skipped = skipped:
+cli-check-heading-unmatched = not matched:
+cli-check-unmatched-hint = these acceptances match no finding; finding remove removes one that is no longer needed
 cli-check-note = note: { $note }
+cli-check-rule-note = about the rule: { $note }
 cli-check-summary = { $errors ->
         [one] 1 error
        *[other] { $errors } errors
@@ -410,36 +429,51 @@ cli-check-summary = { $errors ->
     }, { $hints ->
         [one] 1 hint
        *[other] { $hints } hints
-    }; { $accepted } accepted, { $skipped } skipped
-cli-check-show-all = check --all also lists the accepted findings and the skipped rules
+    }; { $accepted } accepted, { $unmatched ->
+        [0] {""}
+       *[other] { $unmatched } not matched,{" "}
+    }{ $skipped } skipped
+cli-check-show-all = check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
 cli-info-rule-profile = rule profile: { $value }
-cli-info-rule-profile-overlays = rule profile: { $value }, overlays: { $list }
+cli-info-rule-profile-overlays = rule profile: { $value }, { $count ->
+        [one] overlay
+       *[other] overlays
+    }: { $list }
 
 cli-help-finding = Accept findings as intended exceptions, or let check report them again
 cli-help-finding-accept = Accept a finding as an intended exception, with a note. Name its place as check shows it: --controls, --leg or --course, or none of them for a finding of the whole event. Accepting the same finding again replaces the note
 cli-help-finding-remove = Remove an accepted finding, so check reports it again. Name it as when it was accepted
 cli-arg-finding-accept-rule = Id of the rule as check shows it, for example wkb2026.distance.min
 cli-arg-finding-accept-controls = The controls of the finding, separated by commas
-cli-arg-finding-accept-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start. Repeat it for a finding at two legs: --leg A:2 --leg A:5
+cli-arg-finding-accept-leg = The leg of the finding as COURSE:N, the leg that leaves position N of the course: positions count the controls of the course from 1, crossing points included, and 0 is the start. N is not the control number on the map; check names the leg by its ends, for example 36–37. Repeat it for a finding at two legs: --leg A:2 --leg A:5
 cli-arg-finding-accept-course = The course of a finding about a whole course
 cli-arg-finding-accept-note = Why the exception is intended
 cli-arg-finding-remove-rule = Id of the rule as check shows it, for example wkb2026.distance.min
 cli-arg-finding-remove-controls = The controls of the finding, separated by commas
-cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start. Repeat it for a finding at two legs: --leg A:2 --leg A:5
+cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg that leaves position N of the course: positions count the controls of the course from 1, crossing points included, and 0 is the start. N is not the control number on the map; check names the leg by its ends, for example 36–37. Repeat it for a finding at two legs: --leg A:2 --leg A:5. The leg is matched by course and position, also when its ends have changed since
 cli-arg-finding-remove-course = The course of a finding about a whole course
-cli-finding-bad-leg = { $value } is not a leg; write COURSE:N, for example A:3, where 0 is the leg from the start
+cli-finding-bad-leg = { $value } is not a leg; write COURSE:N, for example A:3, where N is a position in the course and 0 is the start
 cli-finding-at = at { $location }
 cli-finding-at-event = at the event
 cli-finding-accepted = accepted finding { $rule } { $location }
 cli-finding-note-replaced = replaced the note of accepted finding { $rule } { $location }
 cli-finding-removed = removed accepted finding { $rule } { $location }
 
-cli-help-event = Settings of the whole event: the rule profile
+cli-help-event = Settings of the whole event: rule profile and start window
 cli-help-event-profile = Set the base rule profile and its overlays. The profiles are loaded first, and an unknown one is refused with the list of available profiles. Without --overlay the event has no overlays
 cli-arg-event-profile-base = The base rule profile, for example wkb-2026
 cli-arg-event-profile-overlay = An overlay on the base profile, for example nor-bb-2021; repeat it for more, they apply in this order
+cli-help-event-start-window = Set the start window, the minutes from the first to the last start. The start capacity check divides the expected starters by it
+cli-arg-event-start-window-minutes = Minutes from the first to the last start, at least 1
 cli-event-profile-set = set rule profile { $value }
-cli-event-profile-set-overlays = set rule profile { $value } with overlays { $list }
+cli-event-start-window-set = set the start window to { $minutes ->
+        [one] 1 minute
+       *[other] { $minutes } minutes
+    }
+cli-event-profile-set-overlays = set rule profile { $value } with { $count ->
+        [one] overlay
+       *[other] overlays
+    } { $list }
 
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
@@ -453,8 +487,10 @@ mcp-instructions =
     map_features_near to find positions, then add_special for the start and the finish, add_control for each
     control, add_course, place_numbers and event_info again to read the length. Each call saves its change. A
     refused change leaves the file as it was. Only individual courses can be edited, measured and checked yet.
-    check tests the courses against the rule profile of the event, which set_rule_profile changes. A finding the
-    course setter wants as it is gets accept_finding with a note; remove_accepted_finding takes that back.
+    check tests the courses against the rule profile of the event, which set_rule_profile changes. Some checks
+    need the start window (set_start_window) or the rule category and expected starters of a class (set_class);
+    without them check lists the rule as skipped. A finding the course setter wants as it is gets accept_finding
+    with a note; remove_accepted_finding takes that back.
 mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
 mcp-error-not-toml = { $path } is not a project file; project files end in .toml
 mcp-error-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
@@ -467,6 +503,7 @@ mcp-error-kind-needs-points = a { $kind } is drawn through points; give points a
 mcp-error-no-courses-for-kind = a { $kind } applies to every course; leave out courses
 mcp-error-leg-target = give either from_start or after, not both and not neither
 mcp-error-no-change = nothing to change; give at least one of classes, climb_m, no_climb, print_scale and no_print_scale
+mcp-error-no-class-change = nothing to change; give at least one of rule_category, no_rule_category, expected_starters and no_expected_starters
 mcp-error-number-args = give direction and gap_mm together, or clear
 mcp-error-bad-gap = gap_mm { $value } is out of range; give more than 0 and at most { $max } print millimetres
 mcp-error-special-courses-args = give either courses with at least one course name, or all as true
@@ -486,6 +523,7 @@ mcp-tool-remove-special = Remove a special object by id. A start or finish that 
 mcp-tool-set-special-courses = Set the courses a special object belongs to: a list of course names, or all as true for all courses. Not for start and finish. remove_course refuses to remove the only course of a special object, so widen or reassign it here first.
 mcp-tool-add-class = Add a class.
 mcp-tool-remove-class = Remove a class and its name in all courses.
+mcp-tool-set-class = Change the rule category or the expected number of starters of a class. Parameters you leave out stay as they are; no_rule_category and no_expected_starters remove the value. The table checks read the rule category, the start capacity check the expected starters.
 mcp-tool-add-course = Add an individual course from a start, a finish and the control codes in running order. The start and finish are ids of special objects.
 mcp-tool-remove-course = Remove a course and its name from the special objects.
 mcp-tool-set-course-controls = Replace the controls of a course. The n-th visit of a code keeps the number placement of the n-th visit before. A leg keeps its bends and marked-route flag only while it runs to the same next stop; the result lists the cleared legs in cleared_legs as course and after (0 is the leg from the start).
@@ -496,10 +534,11 @@ mcp-tool-set-course-number = Set or clear the number placement of one control in
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
-mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc and section, and text; accepted findings with the note of the course setter; and skipped rules with the reason. Team, relay and score courses are not checked yet.
-mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, legs or the course. A start or finish id may stand in controls, as check reports it. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
-mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted.
+mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc, section and title, rule_note, and text; accepted findings with the note of the course setter; unmatched, the accepted findings that match no finding any more, for example because a control or course is gone (remove them with remove_accepted_finding if they are no longer needed; they never count as errors); and skipped rules with the reason, including rules an overlay switched off. A leg location carries course, after and the ids of its ends in from and to. Team, relay and score courses are not checked yet.
+mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, legs or the course. A start or finish id may stand in controls, as check reports it. A leg is given by course and after; the server stores the ids of its ends from the course as it is now, so the finding comes back when the leg later runs between other stops. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
+mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted. A leg is matched by course and after only, so an entry from unmatched can be removed after its leg or course changed. Returns the removed entries.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
+mcp-tool-set-start-window = Set the start window of the event, the minutes from the first to the last start, at least 1. The start capacity check divides the expected starters by it.
 
 mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
 mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
@@ -534,6 +573,10 @@ mcp-param-add-class-name = Name of the class
 mcp-param-remove-class-name = Name of the class
 mcp-param-rule-category = Rule category of the class
 mcp-param-expected-starters = Expected number of starters
+mcp-param-set-class-name = Name of the class
+mcp-param-no-rule-category = Remove the rule category [default: false]
+mcp-param-no-expected-starters = Remove the expected number of starters [default: false]
+mcp-param-minutes = Minutes from the first to the last start, at least 1
 mcp-param-start = Id of the start special object
 mcp-param-finish = Id of the finish special object
 mcp-param-controls = Codes of the controls in running order, strings or whole numbers; a crossing point counts as a position [default: none]
@@ -560,7 +603,7 @@ mcp-param-accept-finding-legs = The legs of the finding, each an object with cou
 mcp-param-remove-accepted-finding-legs = The legs of the finding, each an object with course and after as in the location of check: one leg, or two for a finding at two legs [default: none]
 mcp-param-accept-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
 mcp-param-remove-accepted-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
-mcp-param-accept-finding-after = Position the leg leaves, counted from 1 as on the map; 0 is the leg from the start
-mcp-param-remove-accepted-finding-after = Position the leg leaves, counted from 1 as on the map; 0 is the leg from the start
+mcp-param-accept-finding-after = Position the leg leaves in the stop list of the course: the controls of the course count from 1, crossing points included, and 0 is the leg from the start. It is not the control number on the map; the after of a leg location in check is the value to give
+mcp-param-remove-accepted-finding-after = Position the leg leaves in the stop list of the course: the controls of the course count from 1, crossing points included, and 0 is the leg from the start. It is not the control number on the map; the after of a leg location in check is the value to give
 mcp-param-base = The base rule profile, for example wkb-2026
 mcp-param-overlays = Overlays on the base profile in the order they apply, for example nor-bb-2021 [default: none]

@@ -7,7 +7,9 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use freemapper_courseplan::check::{ArgValue, Args, CheckReport, Finding, Location, check_event};
+use freemapper_courseplan::check::{
+    ArgValue, Args, CheckReport, Finding, Location, check_event, source_text,
+};
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, Accepted, LegStart};
 use freemapper_courseplan::init::{InitError, init_project};
@@ -16,7 +18,7 @@ use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::rules::{RuleSet, SourceRef, load_rule_set};
+use freemapper_courseplan::rules::{PROPOSAL_DOC, RuleSet, SourceRef, load_rule_set};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
@@ -165,8 +167,10 @@ fn course_json(event: &Event, course: &Course, map_scale: u32, lang: &Lang) -> A
 
 /// A location as a tagged object: `{"kind": "event"}`, `{"kind": "course", "course"}`,
 /// `{"kind": "control", "code"}`, `{"kind": "controls", "codes"}`,
-/// `{"kind": "leg", "course", "after"}` (after counts from 1; 0 is the leg from the start) or
-/// `{"kind": "legs", "course", "afters"}` for two or more legs of one course.
+/// `{"kind": "leg", "course", "after", "from", "to"}` (after is the position the leg leaves,
+/// from 1; 0 is the leg from the start; from and to are the ids of its ends) or
+/// `{"kind": "legs", "course", "afters", "legs"}` for two or more legs of one course, `legs`
+/// holding after, from and to of each.
 fn location_json(location: &Location) -> Value {
     match location {
         Location::Event => json!({ "kind": "event" }),
@@ -176,12 +180,22 @@ fn location_json(location: &Location) -> Value {
             "kind": "controls",
             "codes": codes.iter().map(|c| &c.0).collect::<Vec<_>>(),
         }),
-        Location::Leg { course, after } => {
-            json!({ "kind": "leg", "course": course, "after": after })
-        }
-        Location::Legs { course, afters } => {
-            json!({ "kind": "legs", "course": course, "afters": afters })
-        }
+        Location::Leg { course, leg } => json!({
+            "kind": "leg",
+            "course": course,
+            "after": leg.after,
+            "from": leg.from.id(),
+            "to": leg.to.id(),
+        }),
+        Location::Legs { course, legs } => json!({
+            "kind": "legs",
+            "course": course,
+            "afters": legs.iter().map(|l| l.after).collect::<Vec<_>>(),
+            "legs": legs
+                .iter()
+                .map(|l| json!({ "after": l.after, "from": l.from.id(), "to": l.to.id() }))
+                .collect::<Vec<_>>(),
+        }),
     }
 }
 
@@ -191,7 +205,7 @@ fn args_json(args: &Args) -> Value {
         .map(|(name, value)| {
             let value = match value {
                 ArgValue::Text(s) => json!(s),
-                ArgValue::Number(x) => json!(round(*x, 3)),
+                ArgValue::Number(x) | ArgValue::Decimals(x, _) => json!(round(*x, 3)),
                 ArgValue::Int(n) => json!(n),
                 ArgValue::List(id, items) => json!(
                     items
@@ -207,13 +221,40 @@ fn args_json(args: &Args) -> Value {
 }
 
 /// The document and section a rule cites, with the document's title and link from its profile.
-fn source_json(rules: &RuleSet, profile: &str, source: &SourceRef) -> Value {
+/// A value this program proposes (doc `claude`) gets the localized title "proposal of
+/// freemapper-courseplan" (ruling R27); doc and section stay as machine fields.
+fn source_json(rules: &RuleSet, profile: &str, source: &SourceRef, lang: &Lang) -> Value {
     let doc = rules.sources.get(profile).and_then(|s| s.get(&source.doc));
+    let title = if source.doc == PROPOSAL_DOC {
+        Some(source_text(lang, source))
+    } else {
+        doc.map(|d| d.title.clone())
+    };
     json!({
         "doc": source.doc,
         "section": source.section,
-        "title": doc.map(|d| d.title.as_str()),
+        "title": title,
         "url": doc.and_then(|d| d.url.as_deref()),
+    })
+}
+
+/// The legs of an accepted finding with their stored ends.
+fn legs_json(legs: &[LegRef]) -> Value {
+    json!(
+        legs.iter()
+            .map(|l| json!({ "course": l.course, "after": l.after, "from": l.from, "to": l.to }))
+            .collect::<Vec<_>>()
+    )
+}
+
+/// An accepted finding as stored: rule, course, controls, legs with their ends, note.
+fn accepted_json(accepted: &AcceptedFinding) -> Value {
+    json!({
+        "rule": accepted.rule,
+        "course": accepted.course,
+        "controls": accepted.controls.iter().map(|c| &c.0).collect::<Vec<_>>(),
+        "legs": legs_json(&accepted.legs),
+        "note": accepted.note,
     })
 }
 
@@ -229,7 +270,7 @@ fn finding_json(rules: &RuleSet, finding: &Finding, lang: &Lang) -> Value {
         "location": location_json(&finding.location),
         "message_id": finding.message_id,
         "args": args_json(&finding.args),
-        "source": source_json(rules, &finding.profile, &finding.source),
+        "source": source_json(rules, &finding.profile, &finding.source, lang),
         "rule_note": note,
         "text": finding.text(lang),
     })
@@ -237,7 +278,7 @@ fn finding_json(rules: &RuleSet, finding: &Finding, lang: &Lang) -> Value {
 
 /// The result of `check`: summary, findings, accepted findings with their notes and skipped
 /// rules, each with machine fields and the text in the server's language.
-fn report_json(rules: &RuleSet, report: &CheckReport, lang: &Lang) -> Value {
+fn report_json(rules: &RuleSet, event: &Event, report: &CheckReport, lang: &Lang) -> Value {
     use freemapper_courseplan::rules::Severity;
     let accepted: Vec<Value> = report
         .accepted
@@ -245,6 +286,17 @@ fn report_json(rules: &RuleSet, report: &CheckReport, lang: &Lang) -> Value {
         .map(|(finding, note)| {
             let mut value = finding_json(rules, finding, lang);
             value["note"] = json!(note);
+            value
+        })
+        .collect();
+    let unmatched: Vec<Value> = report
+        .unmatched
+        .iter()
+        .map(|a| {
+            let location = Location::of_accepted(event, a);
+            let mut value = accepted_json(a);
+            value["location"] = location_json(&location);
+            value["text"] = json!(location.text_in(lang, event));
             value
         })
         .collect();
@@ -270,6 +322,7 @@ fn report_json(rules: &RuleSet, report: &CheckReport, lang: &Lang) -> Value {
             "warnings": report.count(Severity::Warning),
             "hints": report.count(Severity::Hint),
             "accepted": report.accepted.len(),
+            "unmatched": report.unmatched.len(),
             "skipped": report.skipped.len(),
         },
         "findings": report
@@ -278,6 +331,7 @@ fn report_json(rules: &RuleSet, report: &CheckReport, lang: &Lang) -> Value {
             .map(|f| finding_json(rules, f, lang))
             .collect::<Vec<_>>(),
         "accepted": accepted,
+        "unmatched": unmatched,
         "skipped": skipped,
     })
 }
@@ -300,10 +354,7 @@ fn named_finding(
         legs: legs
             .unwrap_or_default()
             .into_iter()
-            .map(|l| LegRef {
-                course: l.course.0,
-                after: l.after,
-            })
+            .map(|l| LegRef::at(l.course.0, l.after))
             .collect(),
         note,
     }
@@ -893,6 +944,41 @@ impl CoursePlanServer {
         }))
     }
 
+    #[tool(description = "Change the rule category or expected starters of a class")]
+    async fn set_class(
+        &self,
+        Parameters(req): Parameters<SetClass>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.edit(&req.project, |file| {
+            let category = match (req.rule_category, flag(req.no_rule_category)) {
+                (Some(c), _) => Some(Some(c)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            let starters = match (req.expected_starters, flag(req.no_expected_starters)) {
+                (Some(n), _) => Some(Some(n)),
+                (None, true) => Some(None),
+                (None, false) => None,
+            };
+            if category.is_none() && starters.is_none() {
+                return Err(text(&self.lang, "mcp-error-no-class-change", &[]));
+            }
+            edit::set_class(&mut file.event, &req.name.0, category, starters)
+                .map_err(|e| self.refused(e))?;
+            let class = file
+                .event
+                .classes
+                .iter()
+                .find(|c| c.name == req.name.0)
+                .expect("just changed");
+            Ok(json!({
+                "name": class.name,
+                "rule_category": class.rule_category,
+                "expected_starters": class.expected_starters,
+            }))
+        }))
+    }
+
     #[tool(description = "Remove a class")]
     async fn remove_class(
         &self,
@@ -1130,7 +1216,7 @@ impl CoursePlanServer {
             let rules = self.rule_set(&file.event)?;
             let doc = self.read_map(&file)?;
             let report = check_event(&file.event, &doc, &rules);
-            Ok(report_json(&rules, &report, &self.lang))
+            Ok(report_json(&rules, &file.event, &report, &self.lang))
         })())
     }
 
@@ -1145,13 +1231,16 @@ impl CoursePlanServer {
             let key = finding.key();
             let done = edit::accept_finding(&mut file.event, &rules, finding)
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({
-                "rule": key.rule,
-                "course": key.course,
-                "controls": key.controls.iter().map(|c| &c.0).collect::<Vec<_>>(),
-                "legs": key.legs.iter().map(|l| json!({ "course": l.course, "after": l.after })).collect::<Vec<_>>(),
-                "replaced": done == Accepted::NoteReplaced,
-            }))
+            // The stored entry carries the leg ends `accept_finding` took from the course.
+            let stored = file
+                .event
+                .accepted_findings
+                .iter()
+                .find(|a| a.key().by_position() == key.by_position())
+                .expect("just accepted");
+            let mut value = accepted_json(stored);
+            value["replaced"] = json!(done == Accepted::NoteReplaced);
+            Ok(value)
         }))
     }
 
@@ -1163,9 +1252,12 @@ impl CoursePlanServer {
         reply(self.edit(&req.project, |file| {
             let finding =
                 named_finding(req.rule, req.controls, req.legs, req.course, String::new());
-            edit::remove_accepted_finding(&mut file.event, &finding.key())
+            let removed = edit::remove_accepted_finding(&mut file.event, &finding.key())
                 .map_err(|e| self.refused(e))?;
-            Ok(json!({ "rule": finding.rule }))
+            Ok(json!({
+                "rule": finding.rule,
+                "removed": removed.iter().map(accepted_json).collect::<Vec<_>>(),
+            }))
         }))
     }
 
@@ -1183,6 +1275,17 @@ impl CoursePlanServer {
                 "rule_overlays": set.overlays,
                 "rules": set.rules.len(),
             }))
+        }))
+    }
+
+    #[tool(description = "Set the start window")]
+    async fn set_start_window(
+        &self,
+        Parameters(req): Parameters<SetStartWindow>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.edit(&req.project, |file| {
+            edit::set_start_window(&mut file.event, req.minutes).map_err(|e| self.refused(e))?;
+            Ok(json!({ "start_window_min": req.minutes }))
         }))
     }
 
@@ -1276,17 +1379,34 @@ pub fn run(lang: Lang) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use freemapper_courseplan::check::{LegEnd, LegSpan};
     use freemapper_courseplan::text::available;
 
     #[test]
     fn a_finding_at_two_legs_names_both_positions() {
+        let span = |after, from: LegEnd, to: &str| LegSpan {
+            after,
+            from,
+            to: LegEnd::Control(to.to_owned()),
+        };
         let legs = Location::Legs {
             course: "A".to_owned(),
-            afters: vec![0, 4],
+            legs: vec![
+                span(0, LegEnd::Start("S1".to_owned()), "31"),
+                span(4, LegEnd::Control("34".to_owned()), "35"),
+            ],
         };
         assert_eq!(
             location_json(&legs),
-            json!({ "kind": "legs", "course": "A", "afters": [0, 4] })
+            json!({
+                "kind": "legs",
+                "course": "A",
+                "afters": [0, 4],
+                "legs": [
+                    { "after": 0, "from": "S1", "to": "31" },
+                    { "after": 4, "from": "34", "to": "35" },
+                ],
+            })
         );
     }
 
@@ -1301,7 +1421,11 @@ mod tests {
             severity: Severity::Error,
             location: Location::Leg {
                 course: "A".to_owned(),
-                after: 3,
+                leg: LegSpan {
+                    after: 3,
+                    from: LegEnd::Control("33".to_owned()),
+                    to: LegEnd::Control("34".to_owned()),
+                },
             },
             message_id: SKIP_PRINT_SCALE,
             args: vec![
@@ -1323,6 +1447,18 @@ mod tests {
         let report = CheckReport {
             findings: vec![finding],
             accepted: vec![(accepted, "on purpose".to_owned())],
+            unmatched: vec![AcceptedFinding {
+                rule: "wkb2026.leg.acute_angle".to_owned(),
+                controls: vec![],
+                course: None,
+                legs: vec![LegRef {
+                    course: "Z".to_owned(),
+                    after: 1,
+                    from: "31".to_owned(),
+                    to: "32".to_owned(),
+                }],
+                note: "gone".to_owned(),
+            }],
             skipped: vec![Skipped {
                 rule: Some("wkb2026.code.range".to_owned()),
                 profile: Some("wkb-2026".to_owned()),
@@ -1332,12 +1468,22 @@ mod tests {
             }],
         };
         let de = available().into_iter().find(|l| l.code() == "de").unwrap();
-        let json = report_json(&rules, &report, &de);
+        let event: Event =
+            toml::from_str("format = 1\n[event]\ntitle = \"T\"\n[sources]\nmap = \"m.omap\"\n")
+                .unwrap();
+        let json = report_json(&rules, &event, &report, &de);
         assert_eq!(json["rule_profile"], "wkb-2026");
         assert_eq!(json["rule_overlays"], json!([]));
         assert_eq!(
             json["summary"],
-            json!({ "errors": 1, "warnings": 0, "hints": 0, "accepted": 1, "skipped": 1 })
+            json!({
+                "errors": 1,
+                "warnings": 0,
+                "hints": 0,
+                "accepted": 1,
+                "unmatched": 1,
+                "skipped": 1
+            })
         );
         let f = &json["findings"][0];
         assert_eq!(f["rule"], "wkb2026.distance.min");
@@ -1345,7 +1491,7 @@ mod tests {
         assert_eq!(f["severity"], "error");
         assert_eq!(
             f["location"],
-            json!({ "kind": "leg", "course": "A", "after": 3 })
+            json!({ "kind": "leg", "course": "A", "after": 3, "from": "33", "to": "34" })
         );
         assert_eq!(f["message_id"], "check-skip-print-scale");
         assert_eq!(
@@ -1373,6 +1519,28 @@ mod tests {
         assert_eq!(s["location"], json!({ "kind": "event" }));
         assert_eq!(s["reason_id"], "check-skip-climb-missing");
         assert_eq!(s["text"], "Für die Bahn ist kein Anstieg angegeben");
+        let u = &json["unmatched"][0];
+        assert_eq!(u["rule"], "wkb2026.leg.acute_angle");
+        assert_eq!(
+            u["legs"],
+            json!([{ "course": "Z", "after": 1, "from": "31", "to": "32" }])
+        );
+        assert_eq!(u["note"], "gone");
+        assert_eq!(u["text"], "Bahn Z, Strecke 31–32");
+    }
+
+    #[test]
+    fn a_proposed_value_gets_a_localized_source_title() {
+        let rules = load_rule_set("wkb-2026", &[]).unwrap();
+        let de = available().into_iter().find(|l| l.code() == "de").unwrap();
+        let source = SourceRef {
+            doc: "claude".to_owned(),
+            section: "M2b plan, Task 5".to_owned(),
+        };
+        let json = source_json(&rules, "wkb-2026", &source, &de);
+        assert_eq!(json["doc"], "claude");
+        assert_eq!(json["section"], "M2b plan, Task 5");
+        assert_eq!(json["title"], "Vorschlag von freemapper-courseplan");
     }
 
     #[test]
@@ -1417,7 +1585,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 29);
+            assert_eq!(tools.len(), 31);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

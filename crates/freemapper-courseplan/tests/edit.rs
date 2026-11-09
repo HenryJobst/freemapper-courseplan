@@ -909,7 +909,13 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
     opposing.legs = vec![leg_ref("A", 2), leg_ref("A", 0)];
     accept_finding(&mut e, &rules, opposing).unwrap();
     let stored = e.accepted_findings.last().unwrap();
-    assert_eq!(stored.legs, [leg_ref("A", 0), leg_ref("A", 2)]);
+    let ends = |after, from: &str, to: &str| LegRef {
+        from: from.to_owned(),
+        to: to.to_owned(),
+        ..leg_ref("A", after)
+    };
+    // The ends come from the course as it is now (ruling R24).
+    assert_eq!(stored.legs, [ends(0, "S1", "31"), ends(2, "32", "F1")]);
     // A start-capacity finding sits at its start.
     accept_finding(
         &mut e,
@@ -921,10 +927,7 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
 }
 
 fn leg_ref(course: &str, after: u32) -> LegRef {
-    LegRef {
-        course: course.to_owned(),
-        after,
-    }
+    LegRef::at(course, after)
 }
 
 #[test]
@@ -948,6 +951,88 @@ fn removing_an_accepted_finding_needs_its_key() {
     remove_accepted_finding(&mut e, &key).unwrap();
     assert!(e.accepted_findings.is_empty());
     assert!(remove_accepted_finding(&mut e, &key).is_err());
+}
+
+#[test]
+fn a_leg_acceptance_stores_the_ends_and_is_removed_by_position() {
+    let mut e = event();
+    let rules = wkb();
+    let mut angle = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    // Ends given by the caller are replaced with the ends in the course.
+    angle.legs = vec![LegRef {
+        from: "x".to_owned(),
+        to: "y".to_owned(),
+        ..leg_ref("A", 1)
+    }];
+    accept_finding(&mut e, &rules, angle).unwrap();
+    let stored = &e.accepted_findings[0].legs[0];
+    assert_eq!((stored.from.as_str(), stored.to.as_str()), ("31", "32"));
+    // The leg now runs 31–33; the acceptance still names 31–32 and is removed by position.
+    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    assert_eq!(e.accepted_findings[0].legs[0].to, "32");
+    let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
+    named.legs = vec![leg_ref("A", 1)];
+    let removed = remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert_eq!(removed.len(), 1);
+    assert_eq!(removed[0].legs[0].to, "32");
+    assert!(e.accepted_findings.is_empty());
+    // A leg of a course that is gone can be removed too.
+    let mut gone = acceptance("wkb2026.leg.acute_angle", &[], "n");
+    gone.legs = vec![LegRef {
+        from: "31".to_owned(),
+        to: "32".to_owned(),
+        ..leg_ref("Z", 1)
+    }];
+    e.accepted_findings.push(gone);
+    let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
+    named.legs = vec![leg_ref("Z", 1)];
+    remove_accepted_finding(&mut e, &named.key()).unwrap();
+    assert!(e.accepted_findings.is_empty());
+}
+
+#[test]
+fn the_start_window_is_at_least_one_minute() {
+    let mut e = event();
+    set_start_window(&mut e, 90).unwrap();
+    assert_eq!(e.event.start_window_min, Some(90));
+    let before = e.clone();
+    assert_eq!(
+        set_start_window(&mut e, 0).unwrap_err(),
+        EditError::StartWindowZero
+    );
+    assert_eq!(e, before);
+}
+
+#[test]
+fn a_class_gets_and_loses_its_category_and_starters() {
+    let mut e = event();
+    set_class(
+        &mut e,
+        "H21",
+        Some(Some(" H21 ".to_owned())),
+        Some(Some(40)),
+    )
+    .unwrap();
+    assert_eq!(e.classes[0].rule_category.as_deref(), Some("H21"));
+    assert_eq!(e.classes[0].expected_starters, Some(40));
+    // None keeps a value; Some(None) clears it.
+    set_class(&mut e, "H21", None, Some(None)).unwrap();
+    assert_eq!(e.classes[0].rule_category.as_deref(), Some("H21"));
+    assert_eq!(e.classes[0].expected_starters, None);
+    set_class(&mut e, "H21", Some(None), None).unwrap();
+    assert_eq!(e.classes[0].rule_category, None);
+    let before = e.clone();
+    assert_eq!(
+        set_class(&mut e, "H21", Some(Some("  ".to_owned())), None).unwrap_err(),
+        EditError::BlankRuleCategory {
+            class: "H21".to_owned()
+        }
+    );
+    assert!(matches!(
+        set_class(&mut e, "D21", None, Some(Some(3))).unwrap_err(),
+        EditError::NotFound { what: "class", .. }
+    ));
+    assert_eq!(e, before);
 }
 
 #[test]

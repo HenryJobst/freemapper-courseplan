@@ -394,6 +394,24 @@ impl AcceptedFinding {
     }
 }
 
+impl FindingKey {
+    /// The key with the ends of its legs left out, so legs compare by course and position only.
+    /// `finding remove` names a leg this way, also after its ends changed.
+    pub fn by_position(&self) -> FindingKey {
+        let mut legs: Vec<LegRef> = self
+            .legs
+            .iter()
+            .map(|l| LegRef::at(l.course.clone(), l.after))
+            .collect();
+        legs.sort();
+        legs.dedup();
+        FindingKey {
+            legs,
+            ..self.clone()
+        }
+    }
+}
+
 /// Sort key of a control code: numeric codes (by value, then spelling) before the rest.
 fn control_order(code: &ControlCode) -> (bool, usize, &str, &str) {
     let text = code.0.as_str();
@@ -405,12 +423,32 @@ fn control_order(code: &ControlCode) -> (bool, usize, &str, &str) {
     }
 }
 
-/// A leg of a course: the leg that leaves control number `after` (1-based, as in the CLI;
-/// 0 is the leg from the start).
+/// A leg of a course: the leg that leaves position `after` of the course's stop list (1-based,
+/// as in the CLI, crossing points included; 0 is the leg from the start), with the ids of the
+/// stops at its ends: control codes, or the ids of the start and the finish (ruling R24 of plan
+/// M2b). The ends are part of the key, so an accepted finding on a leg comes back once the leg
+/// runs between other stops. A file without them reads them as empty; such a key matches no
+/// finding.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LegRef {
     pub course: String,
     pub after: u32,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub from: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub to: String,
+}
+
+impl LegRef {
+    /// The leg by course and position only, with empty ends.
+    pub fn at(course: impl Into<String>, after: u32) -> LegRef {
+        LegRef {
+            course: course.into(),
+            after,
+            from: String::new(),
+            to: String::new(),
+        }
+    }
 }
 
 /// The rule profile of an event whose file names none.
@@ -625,6 +663,8 @@ mod tests {
                 legs: vec![LegRef {
                     course: "A".to_owned(),
                     after: 3,
+                    from: "33".to_owned(),
+                    to: "34".to_owned(),
                 }],
                 note: "Checked on site.".to_owned(),
             }],
@@ -637,10 +677,7 @@ mod tests {
     #[test]
     fn finding_key_sorts_and_deduplicates() {
         let code = |s: &str| ControlCode(s.to_owned());
-        let leg = |c: &str, after| LegRef {
-            course: c.to_owned(),
-            after,
-        };
+        let leg = |c: &str, after| LegRef::at(c, after);
         let finding =
             |controls: Vec<ControlCode>, legs: Vec<LegRef>, course: Option<&str>| AcceptedFinding {
                 rule: "r".to_owned(),
@@ -675,6 +712,28 @@ mod tests {
         assert_eq!(shuffled.key(), key);
         let with_course = finding(shuffled.controls.clone(), shuffled.legs.clone(), Some("A"));
         assert_ne!(with_course.key(), key);
+    }
+
+    #[test]
+    fn leg_ends_are_part_of_the_key_but_not_of_the_position() {
+        let leg = |from: &str, to: &str| LegRef {
+            course: "A".to_owned(),
+            after: 6,
+            from: from.to_owned(),
+            to: to.to_owned(),
+        };
+        let accepted = |legs: Vec<LegRef>| AcceptedFinding {
+            rule: "r".to_owned(),
+            controls: vec![],
+            course: None,
+            legs,
+            note: "n".to_owned(),
+        };
+        let old = accepted(vec![leg("36", "37")]).key();
+        let moved = accepted(vec![leg("36", "38")]).key();
+        assert_ne!(old, moved);
+        assert_eq!(old.by_position(), moved.by_position());
+        assert_eq!(old.by_position().legs, vec![LegRef::at("A", 6)]);
     }
 
     #[test]

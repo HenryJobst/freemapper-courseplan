@@ -18,7 +18,6 @@ word-name-control-code = Postencode
 word-name-special-object-id = Sonderobjekt-ID
 word-name-course-name = Bahnname
 word-name-class-name = Kategoriename
-word-name-note = Begründung
 word-map-sprint = Sprintkarte
 word-map-schoolyard = Schulhofkarte
 word-map-forest = Waldkarte
@@ -36,6 +35,7 @@ error-model-unknown-finish = Bahn { $course } hat das Ziel { $id }, das nicht de
 error-model-team-too-small = Bahn { $course } hat die Mannschaftsgröße { $team_size }, nötig sind mindestens 2
 error-model-free-control-is-mandatory = Bahn { $course } führt Posten { $code } als Wahlposten und als Pflichtposten
 error-model-blank-name = { $what } "{ $value }" ist leer oder beginnt oder endet mit einem Leerzeichen
+error-model-blank-note = Die Begründung des akzeptierten Befunds { $name } ist leer
 error-model-code-clashes-with-special = Postencode { $code } ist auch die ID eines Sonderobjekts
 error-model-duplicate-course-in-special = Sonderobjekt { $id } nennt Bahn { $course } mehrfach
 error-model-too-few-points = { $kind } { $id } braucht mindestens { $needed } Punkte
@@ -91,10 +91,12 @@ error-edit-special-would-cover-all-courses = { $count ->
 }
 error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start oder Ziel; jede Bahn nennt ihren Start und ihr Ziel selbst
 error-edit-unknown-rule = Prüfregel { $name } ist im Regelprofil { $id } nicht aktiv
-error-edit-finding-needs-place = Befunde der Prüfregel { $name } betreffen eine Bahn, Posten oder eine Strecke; gib diesen Ort an
+error-edit-finding-needs-place = Befunde der Prüfregel { $name } sitzen an { $places }; nenne diesen Ort
 error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder Strecken einer Bahn an
 error-edit-finding-wrong-place = Befunde der Prüfregel { $name } betreffen { $places }, nie { $place }
 error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
+error-edit-start-window-zero = Das Startfenster muss mindestens 1 Minute lang sein
+error-edit-blank-rule-category = Die Regelkategorie der Kategorie { $name } ist leer; gib eine an oder entferne sie
 
 ## OOM-Karten lesen (OmapError)
 
@@ -113,11 +115,12 @@ check-location-event = Veranstaltung
 check-location-course = Bahn { $course }
 check-location-control = Posten { $code }
 check-location-controls = Posten { $codes }
-check-location-leg = Bahn { $course }, Strecke nach { $index }
-check-location-start-leg = Bahn { $course }, Strecke vom Start
-check-location-legs = Bahn { $course }, { $legs }
-check-location-legs-after = Strecke nach { $index }
-check-location-legs-start = Strecke vom Start
+check-location-start = Start { $id }
+check-location-finish = Ziel { $id }
+check-location-leg = Bahn { $course }, Strecke { $leg }
+check-location-legs = Bahn { $course }, Strecken { $legs }
+check-leg-end-start = Start
+check-leg-end-finish = Ziel
 check-skip-training = Beim Training wird die Prüfregel nicht angewendet
 check-skip-discipline = Die Prüfregel gilt nicht für { $discipline ->
         [sprint] den Sprint
@@ -140,15 +143,16 @@ check-skip-course-kind = { $kind ->
        *[other] Bahnen der Art { $kind }
     } werden noch nicht geprüft
 check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
-check-skip-class-not-mapped = Kategorie { $name } ist keiner WKB-Kategorie zugeordnet
+check-skip-class-not-mapped = Kategorie { $name } ist keiner Regelkategorie zugeordnet; class set --rule-category ordnet ihr eine zu
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
-check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster
-check-skip-starters-missing = Start { $start }: Kategorien ohne erwartete Starterzahl: { $classes }
+check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster; event start-window setzt es
+check-skip-starters-missing = Kategorien ohne erwartete Starterzahl: { $classes }; class set --starters setzt sie
 check-skip-length-no-reference = Keine Bahn gehört zur Kategorie { $category }, daher fehlt der Längentabelle die Bezugsbahn
 check-skip-length-reference-empty = Die Bezugsbahn { $course } hat die Länge 0
 check-skip-category-not-in-table = Kategorien, die in keiner Zeile der Tabelle stehen: { $categories }
+check-skip-switched-off = abgeschaltet durch { $overlay }
 check-distance-min = { $first_kind ->
         [start] Start
         [finish] Ziel
@@ -159,46 +163,51 @@ check-distance-min = { $first_kind ->
         [finish] Ziel
         [crossing] Querungsstelle
        *[control] Posten
-    } { $second } liegen { $metres } m auseinander, mindestens { $limit } m
-check-distance-similar = Posten { $first } und { $second } stehen an ähnlichen Objekten ({ $first_symbol }, { $second_symbol }) und liegen { $metres } m auseinander, mindestens { $limit } m
+    } { $second } liegen { $metres } m auseinander, gefordert sind mindestens { $limit } m
+check-distance-similar = Posten { $first } und { $second } stehen an ähnlichen Objekten ({ $first_symbol }, { $second_symbol }) und liegen { $metres } m auseinander, gefordert sind mindestens { $limit } m
 check-map-edge = { $kind ->
         [start] Start
         [finish] Ziel
         [crossing] Querungsstelle
        *[control] Posten
-    } { $id } liegt { $metres } m vom Kartenrand entfernt, mindestens { $limit } m
-check-leg-through-control = Die Strecke führt { $metres } m { $stop_kind ->
-        [start] am Start
-        [finish] am Ziel
-        [crossing] an der Querungsstelle
-       *[control] am Posten
-    } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
+    } { $id } liegt { $metres } m vom Kartenrand entfernt, gefordert sind mindestens { $limit } m
+check-leg-through-control = { $metres ->
+        [0] Die Strecke führt über { $stop_kind ->
+            [start] den Start
+            [finish] das Ziel
+            [crossing] die Querungsstelle
+           *[control] den Posten
+        } { $stop }
+       *[other] Die Strecke führt { $metres } m { $stop_kind ->
+            [start] am Start
+            [finish] am Ziel
+            [crossing] an der Querungsstelle
+           *[control] am Posten
+        } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
+    }
 check-leg-out-of-bounds = Die gerade Strecke quert das Sperrgebiet { $id }; die Optimalroute könnte hindurchführen
 check-leg-out-of-bounds-symbol = Die gerade Strecke quert das Kartensymbol { $code } (Sperrgebiet); die Optimalroute könnte hindurchführen
 check-acute-angle = Die Strecken { $stop_kind ->
         [crossing] an der Querungsstelle
        *[control] am Posten
-    } { $stop } bilden einen Winkel von { $degrees }°, mindestens { $limit }°
-check-opposing-legs = { $first ->
-        [0] Die Strecke vom Start
-       *[other] Die Strecke nach { $first }
-    } und die Strecke nach { $second } verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
+    } { $stop } bilden einen Winkel von { $degrees }°, gefordert sind mindestens { $limit }°
+check-opposing-legs = Die beiden Strecken verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
 check-code-range = Der Code { $code } liegt außerhalb des erlaubten Bereichs { $min } bis { $max }
 check-code-not-numeric = Der Code { $code } ist keine Zahl
 check-code-pair = Die Codes { $first } und { $second } dürfen nicht beide in einer Veranstaltung vorkommen
 check-code-confusable-rotated = Die Codes { $first } und { $second } sehen auf dem Kopf gleich aus und folgen aufeinander
 check-code-confusable-six-nine = Die Codes { $first } und { $second } unterscheiden sich nur durch 6 und 9 und folgen aufeinander
 check-same-objects-in-circle = Der Posten { $code } steht an Symbol { $symbol }, das im Postenkreis noch einmal vorkommt, und Spalte C der Postenbeschreibung ist leer
-check-start-capacity = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }
-check-start-capacity-shared = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }; erste Posten mehrerer Bahnen: { $shared }
-check-first-leg-angle = Start { $start }: Die ersten Strecken zu den Posten { $first } und { $second } unterscheiden sich in der Richtung nur um { $degrees }°, gewünscht sind mindestens { $limit }°
-check-length-table = Die Länge der Bahn { $course } liegt außerhalb der Tabelle: { $rows }
+check-start-capacity = Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }
+check-start-capacity-shared = Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }; erste Posten mehrerer Bahnen: { $shared }
+check-first-leg-angle = Die ersten Strecken vom Start { $start } zu den Posten { $first } und { $second } unterscheiden sich in der Richtung nur um { $degrees }°, gefordert sind mindestens { $limit }°
+check-length-table = Die Bahnlänge liegt außerhalb der Tabelle: { $rows }
 check-length-table-row = { $categories }: { $percent } % der { $reference }-Bahn, erlaubt sind { $min } bis { $max } %
 check-length-table-reference-twice = Die Bahnen { $courses } gehören alle zur Kategorie { $category }; Bahn { $first } dient als Bezug für die Längentabelle
-check-difficulty-mix = Bahn { $course } mischt leichte Kategorien ({ $easy }) mit schweren ({ $hard })
-check-nor-lkm = Bahn { $course } hat { $actual } Lkm ({ $length } km Länge, { $climb } m Steigung) und liegt außerhalb der Empfehlung: { $rows }
+check-difficulty-mix = Die Bahn mischt leichte Kategorien ({ $easy }) mit schweren ({ $hard })
+check-nor-lkm = Die Bahn hat { $actual } Lkm ({ $length } km Länge, { $climb } m Anstieg) und liegt außerhalb der Empfehlung: { $rows }
 check-nor-lkm-row = { $categories }: Ziel-Lkm { $target }, erlaubt sind { $min } bis { $max } Lkm
-check-nor-lkm-category-unknown = Bahn { $course }: Die Kategorien { $categories } stehen in keiner Zeile der NOR-Empfehlung, daher ist ihr Ziel-Lkm unbekannt
+check-source-claude = Vorschlag von freemapper-courseplan
 
 ## Kommandozeile
 
@@ -261,6 +270,7 @@ cli-edit-special-all-courses = Sonderobjekt { $id } gilt jetzt für alle Bahnen
 cli-edit-no-course-names = Gib mindestens einen Bahnnamen an, oder --all für alle Bahnen
 cli-edit-class-added = Kategorie { $name } angelegt
 cli-edit-class-removed = Kategorie { $name } entfernt
+cli-edit-class-set = Kategorie { $name } geändert
 cli-edit-bad-point = { $value } ist kein Punkt. Schreibe X,Y in Kartenmillimetern, mit Punkt als Dezimaltrenner, zum Beispiel 12.5,-30
 cli-edit-bad-number = { $value } ist keine Zahl. Nimm einen Punkt als Dezimaltrenner, zum Beispiel 0.5
 cli-edit-bad-count = { $value } ist keine ganze Zahl
@@ -281,7 +291,7 @@ word-special-water = Verpflegungsstelle
 
 cli-help-control = Posten anlegen, verschieben, beschreiben, nummerieren und entfernen
 cli-help-special = Sonderobjekte anlegen, Bahnen zuordnen und entfernen (Start, Ziel, Pflichtstrecken, Flächen, Erste-Hilfe- und Verpflegungsstellen)
-cli-help-class = Kategorien anlegen und entfernen
+cli-help-class = Kategorien anlegen, ändern und entfernen
 cli-help-control-add = Einen Posten anlegen
 cli-help-control-move = Einen Posten verschieben
 cli-help-control-remove = Einen Posten und seine Besuche in Einzelbahnen entfernen
@@ -292,6 +302,7 @@ cli-help-special-remove = Ein Sonderobjekt entfernen
 cli-help-special-courses = Festlegen, zu welchen Bahnen ein Sonderobjekt gehört
 cli-help-class-add = Eine Kategorie anlegen
 cli-help-class-remove = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen
+cli-help-class-set = Regelkategorie oder erwartete Starterzahl einer Kategorie ändern. Gib mindestens eine Option an
 
 cli-arg-edit-code = Code des Postens
 cli-arg-control-add-at = Wohin der Posten kommt: X,Y in Kartenmillimetern
@@ -321,6 +332,11 @@ cli-arg-class-add-name = Name der Kategorie
 cli-arg-class-add-rule-category = Regelkategorie der Kategorie
 cli-arg-class-add-starters = Erwartete Zahl der Starter
 cli-arg-class-remove-name = Name der Kategorie
+cli-arg-class-set-name = Name der Kategorie
+cli-arg-class-set-rule-category = Die Regelkategorie, etwa H21 oder D-14; die Tabellenprüfungen lesen sie
+cli-arg-class-set-no-rule-category = Die Regelkategorie entfernen
+cli-arg-class-set-starters = Erwartete Zahl der Starter; die Prüfung der Startkapazität liest sie
+cli-arg-class-set-no-starters = Die erwartete Starterzahl entfernen
 
 ## Bahnbefehle
 
@@ -392,48 +408,66 @@ cli-help-check-exit-codes =
     Exit-Code 0: kein Befund der Schwere Fehler; akzeptierte Befunde zählen nicht.
     Exit-Code 1: mindestens ein Befund der Schwere Fehler, oder die Prüfung wurde abgelehnt, etwa weil Projektdatei oder Karte nicht lesbar sind.
     Exit-Code 2: falscher Aufruf, etwa eine unbekannte Option.
-cli-arg-check-all = Auch die akzeptierten Befunde mit Begründung und die übersprungenen Prüfregeln mit dem Grund zeigen
+cli-arg-check-all = Auch die akzeptierten Befunde mit Begründung, die nicht zugeordneten Ausnahmen, die übersprungenen Prüfregeln mit dem Grund und unter jedem Befund die Anmerkung seiner Prüfregel zeigen
 cli-check-group-event = Veranstaltung:
 cli-check-group-course = Bahn { $course }:
 cli-check-heading-accepted = akzeptiert:
 cli-check-heading-skipped = übersprungen:
+cli-check-heading-unmatched = nicht zugeordnet:
+cli-check-unmatched-hint = Diese Ausnahmen passen zu keinem Befund; finding remove entfernt eine, die nicht mehr gebraucht wird
 cli-check-note = Begründung: { $note }
+cli-check-rule-note = Zur Prüfregel: { $note }
 cli-check-summary = { $errors } Fehler, { $warnings ->
         [one] 1 Warnung
        *[other] { $warnings } Warnungen
     }, { $hints ->
         [one] 1 Hinweis
        *[other] { $hints } Hinweise
-    }; { $accepted } akzeptiert, { $skipped } übersprungen
-cli-check-show-all = check --all zeigt auch die akzeptierten Befunde und die übersprungenen Prüfregeln
+    }; { $accepted } akzeptiert, { $unmatched ->
+        [0] {""}
+       *[other] { $unmatched } nicht zugeordnet,{" "}
+    }{ $skipped } übersprungen
+cli-check-show-all = check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
 cli-info-rule-profile = Regelprofil: { $value }
-cli-info-rule-profile-overlays = Regelprofil: { $value }, Aufsätze: { $list }
+cli-info-rule-profile-overlays = Regelprofil: { $value }, { $count ->
+        [one] Aufsatz
+       *[other] Aufsätze
+    }: { $list }
 
 cli-help-finding = Befunde als gewollte Ausnahme akzeptieren oder wieder melden lassen
 cli-help-finding-accept = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Gib seinen Ort so an, wie check ihn zeigt: --controls, --leg oder --course, oder nichts davon für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung
 cli-help-finding-remove = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Gib ihn so an wie beim Akzeptieren
 cli-arg-finding-accept-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
 cli-arg-finding-accept-controls = Die Posten des Befunds, durch Kommas getrennt
-cli-arg-finding-accept-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5
+cli-arg-finding-accept-leg = Die Strecke des Befunds als Bahn:N, die Strecke, die von Position N der Bahn abgeht: Die Positionen zählen die Posten der Bahn ab 1, Querungsstellen mitgezählt, und 0 ist der Start. N ist nicht die Postennummer auf der Karte; check nennt die Strecke nach ihren Enden, zum Beispiel 36–37. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5
 cli-arg-finding-accept-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
 cli-arg-finding-accept-note = Warum die Ausnahme gewollt ist
 cli-arg-finding-remove-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
 cli-arg-finding-remove-controls = Die Posten des Befunds, durch Kommas getrennt
-cli-arg-finding-remove-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5
+cli-arg-finding-remove-leg = Die Strecke des Befunds als Bahn:N, die Strecke, die von Position N der Bahn abgeht: Die Positionen zählen die Posten der Bahn ab 1, Querungsstellen mitgezählt, und 0 ist der Start. N ist nicht die Postennummer auf der Karte; check nennt die Strecke nach ihren Enden, zum Beispiel 36–37. Für einen Befund an zwei Strecken wiederholen: --leg A:2 --leg A:5. Die Strecke wird nach Bahn und Position gefunden, auch wenn sich ihre Enden seitdem geändert haben
 cli-arg-finding-remove-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
-cli-finding-bad-leg = { $value } ist keine Strecke; schreibe Bahn:N, zum Beispiel A:3, wobei 0 die Strecke vom Start ist
+cli-finding-bad-leg = { $value } ist keine Strecke; schreibe Bahn:N, zum Beispiel A:3, wobei N eine Position in der Bahn und 0 der Start ist
 cli-finding-at = bei { $location }
 cli-finding-at-event = für die Veranstaltung
 cli-finding-accepted = Befund { $rule } { $location } akzeptiert
 cli-finding-note-replaced = Begründung des akzeptierten Befunds { $rule } { $location } ersetzt
 cli-finding-removed = Akzeptierten Befund { $rule } { $location } entfernt
 
-cli-help-event = Einstellungen der ganzen Veranstaltung: das Regelprofil
+cli-help-event = Einstellungen der ganzen Veranstaltung: Regelprofil und Startfenster
 cli-help-event-profile = Basis-Regelprofil und Aufsätze setzen. Die Profile werden vorher geladen; ein unbekanntes wird mit der Liste der verfügbaren Profile abgelehnt. Ohne --overlay hat die Veranstaltung keine Aufsätze
 cli-arg-event-profile-base = Das Basis-Regelprofil, zum Beispiel wkb-2026
 cli-arg-event-profile-overlay = Ein Aufsatz auf das Basisprofil, zum Beispiel nor-bb-2021; für mehrere wiederholen, sie gelten in dieser Reihenfolge
+cli-help-event-start-window = Das Startfenster setzen, die Minuten vom ersten bis zum letzten Start. Die Prüfung der Startkapazität teilt die erwarteten Starter dadurch
+cli-arg-event-start-window-minutes = Minuten vom ersten bis zum letzten Start, mindestens 1
 cli-event-profile-set = Regelprofil { $value } gesetzt
-cli-event-profile-set-overlays = Regelprofil { $value } mit den Aufsätzen { $list } gesetzt
+cli-event-start-window-set = Startfenster auf { $minutes ->
+        [one] 1 Minute
+       *[other] { $minutes } Minuten
+    } gesetzt
+cli-event-profile-set-overlays = Regelprofil { $value } mit { $count ->
+        [one] dem Aufsatz
+       *[other] den Aufsätzen
+    } { $list } gesetzt
 
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
@@ -448,8 +482,10 @@ mcp-instructions =
     add_special für Start und Ziel, add_control für jeden Posten, add_course, place_numbers und noch einmal
     event_info, um die Länge zu lesen. Jeder Aufruf speichert seine Änderung. Eine abgelehnte Änderung lässt die
     Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten, messen und prüfen. check prüft die Bahnen
-    gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Einen Befund, den der Bahnleger so haben
-    will, bekommt accept_finding mit Begründung; remove_accepted_finding nimmt das zurück.
+    gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
+    (set_start_window) oder Regelkategorie und erwartete Starterzahl einer Kategorie (set_class); fehlen sie, führt
+    check die Prüfregel als übersprungen. Einen Befund, den der Bahnleger so haben will, bekommt accept_finding mit
+    Begründung; remove_accepted_finding nimmt das zurück.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
 mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
@@ -462,6 +498,7 @@ mcp-error-kind-needs-points = { $kind } wird durch Punkte gezeichnet. Gib points
 mcp-error-no-courses-for-kind = { $kind } gilt für jede Bahn. Lass courses weg
 mcp-error-leg-target = Gib entweder from_start oder after an, nicht beides und nicht keins
 mcp-error-no-change = Nichts zu ändern. Gib mindestens eines von classes, climb_m, no_climb, print_scale und no_print_scale an
+mcp-error-no-class-change = Nichts zu ändern. Gib mindestens eines von rule_category, no_rule_category, expected_starters und no_expected_starters an
 mcp-error-number-args = Gib direction und gap_mm zusammen an, oder clear
 mcp-error-bad-gap = gap_mm { $value } liegt außerhalb des Bereichs. Gib mehr als 0 und höchstens { $max } Druckmillimeter an
 mcp-error-special-courses-args = Gib entweder courses mit mindestens einem Bahnnamen an oder all mit true
@@ -481,6 +518,7 @@ mcp-tool-remove-special = Ein Sonderobjekt anhand seiner id entfernen. Ein Start
 mcp-tool-set-special-courses = Festlegen, zu welchen Bahnen ein Sonderobjekt gehört: eine Liste von Bahnnamen oder all mit true für alle Bahnen. Nicht für Start und Ziel. remove_course entfernt die einzige Bahn eines Sonderobjekts nicht, also hier zuerst erweitern oder umhängen.
 mcp-tool-add-class = Eine Kategorie anlegen.
 mcp-tool-remove-class = Eine Kategorie samt ihrem Namen in allen Bahnen entfernen.
+mcp-tool-set-class = Regelkategorie oder erwartete Starterzahl einer Kategorie ändern. Weggelassene Parameter bleiben, wie sie sind; no_rule_category und no_expected_starters entfernen den Wert. Die Tabellenprüfungen lesen die Regelkategorie, die Prüfung der Startkapazität die erwartete Starterzahl.
 mcp-tool-add-course = Eine Einzelbahn aus Start, Ziel und den Postencodes in Laufreihenfolge anlegen. Start und Ziel sind IDs von Sonderobjekten.
 mcp-tool-remove-course = Eine Bahn samt ihrem Namen bei den Sonderobjekten entfernen.
 mcp-tool-set-course-controls = Die Posten einer Bahn ersetzen. Der n-te Besuch eines Codes behält die Nummernlage des n-ten Besuchs davor. Eine Strecke behält Knickpunkte und Abflaggung nur, solange sie zum selben nächsten Bahnpunkt führt; das Ergebnis nennt die geleerten Strecken in cleared_legs mit course und after (0 ist die Strecke vom Start).
@@ -491,10 +529,11 @@ mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn s
 mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
-mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc und section, und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; und die übersprungenen Prüfregeln mit dem Grund. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
-mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, Strecken in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
-mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren.
+mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc, section und title, rule_note und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; in unmatched die akzeptierten Befunde, zu denen kein Befund mehr passt, etwa weil ein Posten oder eine Bahn fehlt (remove_accepted_finding entfernt sie, wenn sie nicht mehr gebraucht werden; sie zählen nie als Fehler); und die übersprungenen Prüfregeln mit dem Grund, auch die von einem Aufsatz abgeschalteten. Eine Strecke in location hat course, after und die Kennungen ihrer Enden in from und to. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
+mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, Strecken in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Eine Strecke wird mit course und after angegeben; der Server speichert die Kennungen ihrer Enden aus der Bahn, wie sie jetzt ist, sodass der Befund wiederkommt, wenn die Strecke später zwischen anderen Punkten verläuft. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
+mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren. Eine Strecke wird nur nach course und after gefunden, sodass sich ein Eintrag aus unmatched auch dann entfernen lässt, wenn sich seine Strecke oder Bahn geändert hat. Gibt die entfernten Einträge zurück.
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
+mcp-tool-set-start-window = Das Startfenster der Veranstaltung setzen, die Minuten vom ersten bis zum letzten Start, mindestens 1. Die Prüfung der Startkapazität teilt die erwarteten Starter dadurch.
 
 mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
 mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
@@ -529,6 +568,10 @@ mcp-param-add-class-name = Name der Kategorie
 mcp-param-remove-class-name = Name der Kategorie
 mcp-param-rule-category = Regelkategorie der Kategorie
 mcp-param-expected-starters = Erwartete Zahl der Starter
+mcp-param-set-class-name = Name der Kategorie
+mcp-param-no-rule-category = Die Regelkategorie entfernen [Standard: false]
+mcp-param-no-expected-starters = Die erwartete Starterzahl entfernen [Standard: false]
+mcp-param-minutes = Minuten vom ersten bis zum letzten Start, mindestens 1
 mcp-param-start = ID des Sonderobjekts, das den Start bildet
 mcp-param-finish = ID des Sonderobjekts, das das Ziel bildet
 mcp-param-controls = Codes der Posten in Laufreihenfolge, als Text oder ganze Zahl; eine Querungsstelle zählt als Position [Standard: keine]
@@ -555,7 +598,7 @@ mcp-param-accept-finding-legs = Die Strecken des Befunds, jede ein Objekt mit co
 mcp-param-remove-accepted-finding-legs = Die Strecken des Befunds, jede ein Objekt mit course und after wie in location von check: eine Strecke oder zwei für einen Befund an zwei Strecken [Standard: keine]
 mcp-param-accept-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
 mcp-param-remove-accepted-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
-mcp-param-accept-finding-after = Position, von der die Strecke abgeht, ab 1 gezählt wie auf der Karte; 0 ist die Strecke vom Start
-mcp-param-remove-accepted-finding-after = Position, von der die Strecke abgeht, ab 1 gezählt wie auf der Karte; 0 ist die Strecke vom Start
+mcp-param-accept-finding-after = Position, von der die Strecke in der Punktliste der Bahn abgeht: Die Posten der Bahn zählen ab 1, Querungsstellen mitgezählt, und 0 ist die Strecke vom Start. Das ist nicht die Postennummer auf der Karte; anzugeben ist after aus dem Ort einer Strecke in check
+mcp-param-remove-accepted-finding-after = Position, von der die Strecke in der Punktliste der Bahn abgeht: Die Posten der Bahn zählen ab 1, Querungsstellen mitgezählt, und 0 ist die Strecke vom Start. Das ist nicht die Postennummer auf der Karte; anzugeben ist after aus dem Ort einer Strecke in check
 mcp-param-base = Das Basis-Regelprofil, zum Beispiel wkb-2026
 mcp-param-overlays = Aufsätze auf das Basisprofil in der Reihenfolge, in der sie gelten, zum Beispiel nor-bb-2021 [Standard: keine]

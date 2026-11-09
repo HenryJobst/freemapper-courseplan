@@ -133,6 +133,97 @@ fn accepted_finding_returns_when_its_controls_change() {
 }
 
 #[test]
+fn acceptances_that_match_no_finding_are_listed_as_unmatched() {
+    // Ruling R25: one acceptance names a control that is gone, one a course that is gone.
+    let mut event = sample_event();
+    let gone_course = AcceptedFinding {
+        course: None,
+        legs: vec![LegRef {
+            course: "Z".to_owned(),
+            after: 1,
+            from: "31".to_owned(),
+            to: "32".to_owned(),
+        }],
+        ..accepted("t.fake.pair", &[], "old course")
+    };
+    event.accepted_findings = vec![
+        accepted("t.fake.pair", &["31", "32"], "wanted"),
+        accepted("t.fake.pair", &["31", "39"], "control 39 is gone"),
+        gone_course.clone(),
+    ];
+    let rules = rule_set(vec![(fake_rule(), "base")]);
+    let report = run(&event, &rules);
+    assert_eq!(report.accepted.len(), 1);
+    let notes: Vec<&str> = report.unmatched.iter().map(|a| a.note.as_str()).collect();
+    assert_eq!(notes, ["control 39 is gone", "old course"]);
+    // Unmatched acceptances never count as errors.
+    assert!(!report.has_errors());
+    let place = Location::of_accepted(&event, &gone_course);
+    assert_eq!(place.text(&Lang::english()), "course Z, leg 31–32");
+}
+
+#[test]
+fn rules_switched_off_by_an_overlay_are_skipped_with_its_id() {
+    let mut rules = rule_set(vec![(fake_rule(), "base")]);
+    rules.switched_off.push(crate::rules::SwitchedOff {
+        rule: rule("t.code.range", "code_range", Severity::Error),
+        profile: "base".to_owned(),
+        by: "nor-bb-2021".to_owned(),
+    });
+    let report = run(&sample_event(), &rules);
+    let off: Vec<&Skipped> = report
+        .skipped
+        .iter()
+        .filter(|s| s.reason_id == SKIP_SWITCHED_OFF)
+        .collect();
+    assert_eq!(off.len(), 1, "{:?}", report.skipped);
+    assert_eq!(off[0].rule.as_deref(), Some("t.code.range"));
+    assert_eq!(off[0].profile.as_deref(), Some("base"));
+    assert_eq!(off[0].location, Location::Event);
+    let de = crate::text::parse_lang_arg("de").unwrap();
+    assert_eq!(off[0].text(&de), "abgeschaltet durch nor-bb-2021");
+    assert_eq!(off[0].text(&Lang::english()), "switched off by nor-bb-2021");
+}
+
+#[test]
+fn starts_and_finishes_are_named_by_their_role() {
+    let event = sample_event();
+    let start = Location::Control { code: code("S1") };
+    assert_eq!(start.text_in(&Lang::english(), &event), "start S1");
+    let mixed = Location::Controls {
+        codes: vec![code("31"), code("F1")],
+    };
+    let de = crate::text::parse_lang_arg("de").unwrap();
+    assert_eq!(mixed.text_in(&de, &event), "Posten 31, Ziel F1");
+    let plain = Location::Controls {
+        codes: vec![code("31"), code("32")],
+    };
+    assert_eq!(plain.text_in(&de, &event), "Posten 31, 32");
+}
+
+#[test]
+fn a_proposal_of_this_program_is_named_without_its_plan_section() {
+    let de = crate::text::parse_lang_arg("de").unwrap();
+    let proposal = SourceRef {
+        doc: "claude".to_owned(),
+        section: "M2b plan, Task 5".to_owned(),
+    };
+    assert_eq!(
+        source_text(&de, &proposal),
+        "Vorschlag von freemapper-courseplan"
+    );
+    assert_eq!(
+        source_text(&Lang::english(), &proposal),
+        "proposal of freemapper-courseplan"
+    );
+    let wkb = SourceRef {
+        doc: "WKB26".to_owned(),
+        section: "B 7.2.1".to_owned(),
+    };
+    assert_eq!(source_text(&de, &wkb), "WKB26 B 7.2.1");
+}
+
+#[test]
 fn finding_keys_follow_the_location() {
     let rules = rule_set(vec![(fake_rule(), "base")]);
     let run = RuleRun {
@@ -156,13 +247,15 @@ fn finding_keys_follow_the_location() {
     assert_eq!(controls.course, None);
     let leg = key(Location::Leg {
         course: "A".to_owned(),
-        after: 3,
+        leg: span(3, "33", "34"),
     });
     assert_eq!(
         leg.legs,
         [LegRef {
             course: "A".to_owned(),
-            after: 3
+            after: 3,
+            from: "33".to_owned(),
+            to: "34".to_owned(),
         }]
     );
     assert_eq!(leg.course, None);
@@ -170,14 +263,16 @@ fn finding_keys_follow_the_location() {
     assert_eq!(one.controls, [code("31")]);
     let legs = key(Location::Legs {
         course: "A".to_owned(),
-        afters: vec![5, 0],
+        legs: vec![span(5, "35", "F1"), span(0, "S1", "31")],
     });
-    let leg_ref = |after| LegRef {
-        course: "A".to_owned(),
-        after,
-    };
     assert_eq!(Place::of_key(&legs), Place::Legs);
-    assert_eq!(legs.legs, [leg_ref(0), leg_ref(5)]);
+    assert_eq!(
+        legs.legs,
+        [
+            span(0, "S1", "31").leg_ref("A"),
+            span(5, "35", "F1").leg_ref("A")
+        ]
+    );
     assert_eq!((legs.course, legs.controls), (None, vec![]));
 }
 
@@ -305,7 +400,7 @@ fn texts_are_localized() {
         profile: None,
         location: Location::Leg {
             course: "A".to_owned(),
-            after: 3,
+            leg: span(3, "36", "37"),
         },
         reason_id: SKIP_PRINT_SCALE,
         args: vec![("scale", ArgValue::Int(2500))],
@@ -315,27 +410,32 @@ fn texts_are_localized() {
         "{}",
         skipped.text(&de)
     );
-    assert_eq!(skipped.location.text(&de), "Bahn A, Strecke nach 3");
+    assert_eq!(skipped.location.text(&de), "Bahn A, Strecke 36–37");
     let start = Location::Leg {
         course: "A".to_owned(),
-        after: 0,
+        leg: span(0, "S1", "31"),
     };
-    assert_eq!(start.text(&Lang::english()), "course A, leg from the start");
+    assert_eq!(start.text(&Lang::english()), "course A, leg start–31");
+    let finish = Location::Leg {
+        course: "A".to_owned(),
+        leg: span(7, "37", "F1"),
+    };
+    assert_eq!(finish.text(&de), "Bahn A, Strecke 37–Ziel");
     let two = Location::Legs {
         course: "A".to_owned(),
-        afters: vec![0, 4],
+        legs: vec![span(0, "S1", "31"), span(4, "34", "35")],
     };
     assert_eq!(
         two.text(&Lang::english()),
-        "course A, leg from the start and leg after 4"
+        "course A, legs start–31 and 34–35"
     );
-    assert_eq!(
-        two.text(&de),
-        "Bahn A, Strecke vom Start und Strecke nach 4"
-    );
+    assert_eq!(two.text(&de), "Bahn A, Strecken Start–31 und 34–35");
     assert_eq!(two.place(), Place::Legs);
     assert_eq!(two.course(), Some("A"));
     assert_eq!(format_number(&de, 12.34), "12,3");
+    assert_eq!(format_decimals(&de, 4.042, 2), "4,04");
+    assert_eq!(format_decimals(&Lang::english(), 3.999, 2), "4");
+    assert_eq!(format_decimals(&Lang::english(), 3.67, 2), "3.67");
     assert_eq!(format_number(&Lang::english(), 30.0), "30");
 }
 
