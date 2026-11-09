@@ -803,6 +803,18 @@ fn a_straight_angle_at_a_control_is_reported_at_the_incoming_leg() {
 }
 
 #[test]
+fn a_straight_angle_is_measured_to_the_bend_after_the_control() {
+    // 31 lies straight between S1 and 32, but the leg after 31 first bends back: the angle is
+    // measured to that bend, so it is sharp and no straight angle.
+    let mut a = course("A", &["31", "32"]);
+    bend_after(&mut a, 0, 20.0, 20.0);
+    let mut e = event(&[("31", 50.0, 0.0), ("32", 90.0, 0.0)], vec![a]);
+    set_finish(&mut e, 90.0, 40.0);
+    let r = report(&e, &map(4000, vec![]), vec![straight_rule()]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
 fn a_straight_angle_shows_rounded_up() {
     let r = report(
         &straight_event(170.4),

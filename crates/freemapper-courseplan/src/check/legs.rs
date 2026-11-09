@@ -5,9 +5,10 @@
 use freemapper_courseplan_model::MapPoint;
 
 use super::geometry::{angle_at, opposing_length};
-use super::stops::{StopKind, course_stops};
+use super::stops::{Stop, StopKind, course_stops};
 use super::{
-    ArgValue, CheckContext, Finding, Location, RuleRun, Skipped, below, number, value_number,
+    ArgValue, CheckContext, CourseContext, Finding, Location, RuleRun, Skipped, below, number,
+    value_number,
 };
 use crate::course::LegGeometry;
 
@@ -24,6 +25,25 @@ pub(super) fn degrees_above(degrees: f64) -> ArgValue {
 /// Whether `value` is above `limit`, with the tolerance of `below`.
 fn above(value: f64, limit: f64) -> bool {
     value > limit + 1e-9
+}
+
+/// The angle at each stop between two legs of a course, in degrees: the leg index `i` of the
+/// incoming leg, the stop it reaches, and the angle from the last bend before the stop (or the
+/// stop before) to the first bend after it (or the next stop). Start and finish have no angle,
+/// and a direction without length gives none, so those stops are left out.
+fn stop_angles(ctx: &CheckContext<'_>, course: &CourseContext<'_>) -> Vec<(usize, Stop, f64)> {
+    let stops = course_stops(ctx, course);
+    course
+        .legs
+        .windows(2)
+        .enumerate()
+        .filter_map(|(i, pair)| {
+            let (incoming, outgoing) = (&pair[0], &pair[1]);
+            let before = &incoming.points[incoming.points.len() - 2];
+            let angle = angle_at(before, &outgoing.points[0], &outgoing.points[1])?;
+            Some((i, stops[i + 1].clone(), angle))
+        })
+        .collect()
 }
 
 /// `acute_angle`: the incoming and the outgoing leg at a control or crossing point form an angle
@@ -52,18 +72,10 @@ pub(super) fn acute_angle(
             .filter_map(|rule| value_number(rule, "degrees"))
             .filter(|d| below(*d, limit))
             .collect();
-        let stops = course_stops(ctx, course);
-        for (i, pair) in course.legs.windows(2).enumerate() {
-            let (incoming, outgoing) = (&pair[0], &pair[1]);
-            let at = &outgoing.points[0];
-            let before = &incoming.points[incoming.points.len() - 2];
-            let Some(angle) = angle_at(before, at, &outgoing.points[1]) else {
-                continue;
-            };
+        for (i, stop, angle) in stop_angles(ctx, course) {
             if !below(angle, limit) || stricter.iter().any(|d| below(angle, *d)) {
                 continue;
             }
-            let stop = &stops[i + 1];
             findings.push(run.finding(
                 course.leg_location(i),
                 "check-acute-angle",
@@ -100,18 +112,10 @@ pub(super) fn straight_angle(
             .filter_map(|rule| value_number(rule, "degrees"))
             .filter(|d| above(*d, limit))
             .collect();
-        let stops = course_stops(ctx, course);
-        for (i, pair) in course.legs.windows(2).enumerate() {
-            let (incoming, outgoing) = (&pair[0], &pair[1]);
-            let stop = &stops[i + 1];
+        for (i, stop, angle) in stop_angles(ctx, course) {
             if stop.kind != StopKind::Control {
                 continue;
             }
-            let at = &outgoing.points[0];
-            let before = &incoming.points[incoming.points.len() - 2];
-            let Some(angle) = angle_at(before, at, &outgoing.points[1]) else {
-                continue;
-            };
             if !above(angle, limit) || stricter.iter().any(|d| above(angle, *d)) {
                 continue;
             }
