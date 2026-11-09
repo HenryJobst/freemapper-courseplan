@@ -82,7 +82,7 @@ impl SymbolInfo {
         Some(SymbolInfo {
             symbol_type: set.symbol_type(id)?,
             hidden: set.is_hidden(id),
-            code: set.code_for_id(id).map(|c| c.0.clone()),
+            code: set.code_of(id).map(str::to_owned),
         })
     }
 }
@@ -223,6 +223,8 @@ mod tests {
                 grivation_deg: 0.0,
                 ref_projected: None,
                 crs_spec: None,
+                combined_scale_factor: 1.0,
+                map_ref_mm: (0.0, 0.0),
             },
             symbol_set,
             parts: vec![MapPart {
@@ -230,6 +232,7 @@ mod tests {
                 objects,
             }],
             templates: vec![],
+            unknown_objects: 0,
         }
     }
 
@@ -344,6 +347,7 @@ mod tests {
                     h_align: 0,
                     v_align: 0,
                     rotation_rad: 0.0,
+                    box_size: None,
                 },
                 coords: vec![MapCoord::new(0, 0)],
                 tags: vec![],
@@ -469,7 +473,7 @@ mod tests {
                 _ => continue,
             };
             expected.push(MapFeature {
-                symbol_code: set.code_for_id(o.symbol_id).map(|c| c.0.clone()),
+                symbol_code: set.code_of(o.symbol_id).map(str::to_owned),
                 part: "p".into(),
                 geometry,
             });
