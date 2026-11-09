@@ -267,12 +267,13 @@ Kategorien und akzeptierte Befunde bleiben. Der Pfad der `.ppen` steht danach re
 
 Was ankommt: Posten mit Code, Lage und Beschreibung (nach dem Standard 2024 umnummeriert), Einzelbahnen mit
 Knickpunkten und abgeflaggten Strecken, die Lage der Postennummern, Sperrgebiete, Gefahrenbereiche, verbotene
-Routen, Erste-Hilfe- und Verpflegungsstellen. Ob die y-Achse nach oben oder unten zählt, entscheidet, wie die
-Posten auf die Karte passen.
+Routen, Erste-Hilfe- und Verpflegungsstellen. Purple Pen zählt die y-Achse nach oben; der Import dreht sie um.
+Liegen die Posten dann nicht auf der Karte, bricht er ab. Ein Sonderobjekt mit einem Punkt außerhalb der Karte
+entfällt mit einem Hinweis.
 
 Was nicht ankommt, steht nach dem Import als Hinweis auf dem Terminal: Varianten und alternative Posten,
 Score-Bahnen, Text in Spalte F der Beschreibung, Beschreibungen an Start und Ziel, Lücken in Kreisen und Strecken.
-Ein Kartenwechsel wird zum Knickpunkt. Gleiche Bahnnamen bekommen eine Nummer. Der Abstand einer Nummer zum Kreis
+Auch Begrenzungen, Linien, Texte, Weißflächen und der Untertitel einer Bahn kommen nicht an. Ein Kartenwechsel wird zum Knickpunkt. Gleiche Bahnnamen bekommen eine Nummer. Der Abstand einer Nummer zum Kreis
 ist nur ungefähr richtig, die Richtung stimmt. Ein Symbol ohne Gegenstück im Standard 2024, etwa die Funkstelle,
 fehlt in der Beschreibung und steht im Hinweis.
 

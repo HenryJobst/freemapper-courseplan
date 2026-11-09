@@ -259,11 +259,12 @@ file.
 
 What arrives: controls with code, position and description (renumbered to the 2024 standard), individual courses
 with bends and marked routes, the number positions, out-of-bounds areas, dangerous areas, forbidden routes, first
-aid and water points. How the positions fit the map decides whether the y axis counts up or down.
+aid and water points. Purple Pen counts the y axis upward; the import flips it. If the controls then do not lie on
+the map, the import stops. A special object with a point outside the map is left out and noted.
 
 What does not arrive is listed as notes on the terminal after the import: variations and alternative controls,
-score courses, column F text in a description, descriptions on start and finish, and gaps in circles and legs. A
-map exchange becomes a bend. Courses with equal names get a number. The distance of a number from its circle is
+score courses, column F text in a description, descriptions on start and finish, and gaps in circles and legs.
+Boundaries, lines, texts, white-outs and the secondary title of a course do not arrive either. A map exchange becomes a bend. Courses with equal names get a number. The distance of a number from its circle is
 only approximate, the direction is exact. A symbol with no counterpart in the 2024 standard, such as the radio
 control, is missing from the description and named in the note.
 

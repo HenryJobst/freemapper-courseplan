@@ -306,10 +306,11 @@ Workspace with three crates *(Claude's call)*:
 ### 5.5 Import and export
 
 - **`.ppen` import**: controls, codes, descriptions, courses, bends, gaps, number positions, special objects.
-  Purple Pen writes the y axis upward against the standard (found by freemapper-print); the reader detects
+  Purple Pen writes the y axis upward against the standard (found by freemapper-print); the import flips
   it. Print area and print scale are kept only as hints for freemapper-print.
   **Built (one way):** `init --ppen`, `import --ppen [--replace]` and the MCP tool `import_ppen`, on the
-  freemapper-core v0.3.0 reader and fit; the fit decides the y axis; descriptions are mapped from the 2004 to the
+  freemapper-core v0.3.0 reader and fit; a `.ppen` always counts y upward and the fit flips it, and a file whose
+  controls then do not lie on the map is refused; descriptions are mapped from the 2004 to the
   2024 numbering; what the model cannot hold (variations, score courses, column F text, descriptions on start and
   finish, gaps) is named in the import notes, never dropped silently *(Claude's call)*. A forbidden route may
   have one point, as Purple Pen stores a cross. `ppen_id` is kept for the sync. See ADR 0034.

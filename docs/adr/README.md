@@ -60,7 +60,7 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0014](0014-course-content-here-presentation-in-freemapper-print.md) | Course content here, sheet presentation in freemapper-print | Accepted | 2026-11-08 |
 | [0015](0015-ai-for-judgment-only-and-tested.md) | AI for judgment only, and only after testing | Accepted | 2026-11-08 |
 | [0016](0016-ai-features-optional.md) | AI features are optional and need a configured model | Accepted | 2026-11-08 |
-| [0017](0017-omap-reader-copied-from-freemapper-print.md) | The .omap reader is copied from freemapper-print | Accepted | 2026-11-08 |
+| [0017](0017-omap-reader-copied-from-freemapper-print.md) | The .omap reader is copied from freemapper-print | Superseded by 0034 | 2026-11-08 |
 | [0018](0018-example-events-built-on-freemapper-examples.md) | Example events built on freemapper's examples | Accepted | 2026-11-08 |
 | [0019](0019-project-file-format-1.md) | Project file format 1 | Accepted | 2026-11-08 |
 | [0020](0020-format-1-crossing-points-special-ids-start-legs.md) | Format 1: crossing points, special-object ids, start legs | Accepted | 2026-11-08 |

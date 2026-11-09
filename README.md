@@ -17,8 +17,8 @@ Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 
 Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Bibliothek:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
-`freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte und `freemapper-course` für das Lesen von Purple-Pen-Dateien. Die Programme binden sie in einer festen Version ein, statt den Code
-zu kopieren.
+`freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte und `freemapper-course` für das
+Lesen von Purple-Pen-Dateien. Die Programme binden sie in einer festen Version ein, statt den Code zu kopieren.
 
 Geplant ist für die erste Version:
 
@@ -28,7 +28,8 @@ Geplant ist für die erste Version:
 - Prüfungen nach den Wettkampfbestimmungen 2026 mit Aufsätzen für regionale Empfehlungen, etwa Postenabstände,
   spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
   mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);
-- Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (der Import ist schon nutzbar, `import`);
+- Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (der Import ist
+  schon nutzbar, `import`);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser, über die Kommandozeile oder über einen KI-Assistenten (MCP).
@@ -93,8 +94,8 @@ Datei wie gewollt liest, ist noch offen: Bisher hat sie dort niemand importiert.
 schreibt das Programm noch nicht, Mannschafts-, Staffel- und Score-Bahnen überspringt es. Kapitel 10 des
 [Handbuchs](docs/manual/de.md#10-weitergeben-iof-xml-für-oe) nennt die Einzelheiten.
 
-`freemapper-courseplan init <Karte> --ppen <Datei>` und `freemapper-courseplan import <Projekt> --ppen <Datei>` übernehmen
-Posten, Beschreibungen, Bahnen, Knickpunkte, abgeflaggte Strecken, Nummernlagen und Sonderobjekte aus einem
+`freemapper-courseplan init <Karte> --ppen <Datei>` und `freemapper-courseplan import <Projekt> --ppen <Datei>`
+übernehmen Posten, Beschreibungen, Bahnen, Knickpunkte, abgeflaggte Strecken, Nummernlagen und Sonderobjekte aus einem
 Purple-Pen-Event, das für dieselbe Karte gezeichnet ist; der KI-Assistent hat dafür das Werkzeug `import_ppen`. Was
 das Modell nicht fassen kann, etwa Varianten, Score-Bahnen oder Lücken, nennt das Programm als Hinweis. Ein Projekt
 mit Inhalt ersetzt `import` nur mit `--replace`; Kategorien und akzeptierte Befunde bleiben dabei. Der Rückweg
