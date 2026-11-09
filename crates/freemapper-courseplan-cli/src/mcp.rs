@@ -193,6 +193,12 @@ fn args_json(args: &Args) -> Value {
                 ArgValue::Text(s) => json!(s),
                 ArgValue::Number(x) => json!(round(*x, 3)),
                 ArgValue::Int(n) => json!(n),
+                ArgValue::List(id, items) => json!(
+                    items
+                        .iter()
+                        .map(|args| json!({ "message_id": id, "args": args_json(args) }))
+                        .collect::<Vec<_>>()
+                ),
             };
             ((*name).to_owned(), value)
         })
@@ -1286,7 +1292,7 @@ mod tests {
 
     #[test]
     fn check_json_has_machine_fields_and_localized_texts() {
-        use freemapper_courseplan::check::{SKIP_NOT_IMPLEMENTED, SKIP_PRINT_SCALE, Skipped};
+        use freemapper_courseplan::check::{SKIP_CLIMB_MISSING, SKIP_PRINT_SCALE, Skipped};
         use freemapper_courseplan::rules::Severity;
         let rules = load_rule_set("wkb-2026", &[]).unwrap();
         let finding = Finding {
@@ -1321,7 +1327,7 @@ mod tests {
                 rule: Some("wkb2026.code.range".to_owned()),
                 profile: Some("wkb-2026".to_owned()),
                 location: Location::Event,
-                reason_id: SKIP_NOT_IMPLEMENTED,
+                reason_id: SKIP_CLIMB_MISSING,
                 args: vec![],
             }],
         };
@@ -1365,8 +1371,8 @@ mod tests {
         let s = &json["skipped"][0];
         assert_eq!(s["rule"], "wkb2026.code.range");
         assert_eq!(s["location"], json!({ "kind": "event" }));
-        assert_eq!(s["reason_id"], "check-skip-not-implemented");
-        assert_eq!(s["text"], "Diese Prüfung ist noch nicht umgesetzt");
+        assert_eq!(s["reason_id"], "check-skip-climb-missing");
+        assert_eq!(s["text"], "Für die Bahn ist kein Anstieg angegeben");
     }
 
     #[test]

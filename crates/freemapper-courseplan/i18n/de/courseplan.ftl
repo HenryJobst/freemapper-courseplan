@@ -118,7 +118,6 @@ check-location-start-leg = Bahn { $course }, Strecke vom Start
 check-location-legs = Bahn { $course }, { $legs }
 check-location-legs-after = Strecke nach { $index }
 check-location-legs-start = Strecke vom Start
-check-skip-not-implemented = Diese Prüfung ist noch nicht umgesetzt
 check-skip-training = Beim Training wird die Prüfregel nicht angewendet
 check-skip-discipline = Die Prüfregel gilt nicht für { $discipline ->
         [sprint] den Sprint
@@ -147,6 +146,9 @@ check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
 check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster
 check-skip-starters-missing = Start { $start }: Kategorien ohne erwartete Starterzahl: { $classes }
+check-skip-length-no-reference = Keine Bahn gehört zur Kategorie { $category }, daher fehlt der Längentabelle die Bezugsbahn
+check-skip-length-reference-empty = Die Bezugsbahn { $course } hat die Länge 0
+check-skip-category-not-in-table = Kategorien, die in keiner Zeile der Tabelle stehen: { $categories }
 check-distance-min = { $first_kind ->
         [start] Start
         [finish] Ziel
@@ -190,6 +192,13 @@ check-same-objects-in-circle = Der Posten { $code } steht an Symbol { $symbol },
 check-start-capacity = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }
 check-start-capacity-shared = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }; erste Posten mehrerer Bahnen: { $shared }
 check-first-leg-angle = Start { $start }: Die ersten Strecken zu den Posten { $first } und { $second } unterscheiden sich in der Richtung nur um { $degrees }°, gewünscht sind mindestens { $limit }°
+check-length-table = Die Länge der Bahn { $course } liegt außerhalb der Tabelle: { $rows }
+check-length-table-row = { $categories }: { $percent } % der { $reference }-Bahn, erlaubt sind { $min } bis { $max } %
+check-length-table-reference-twice = Die Bahnen { $courses } gehören alle zur Kategorie { $category }; Bahn { $first } dient als Bezug für die Längentabelle
+check-difficulty-mix = Bahn { $course } mischt leichte Kategorien ({ $easy }) mit schweren ({ $hard })
+check-nor-lkm = Bahn { $course } hat { $actual } Lkm ({ $length } km Länge, { $climb } m Steigung) und liegt außerhalb der Empfehlung: { $rows }
+check-nor-lkm-row = { $categories }: Ziel-Lkm { $target }, erlaubt sind { $min } bis { $max } Lkm
+check-nor-lkm-category-unknown = Bahn { $course }: Die Kategorien { $categories } stehen in keiner Zeile der NOR-Empfehlung, daher ist ihr Ziel-Lkm unbekannt
 
 ## Kommandozeile
 

@@ -727,6 +727,17 @@ mod tests {
             "start",
             "shared",
             "classes",
+            "category",
+            "categories",
+            "percent",
+            "reference",
+            "rows",
+            "easy",
+            "hard",
+            "actual",
+            "length",
+            "climb",
+            "target",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

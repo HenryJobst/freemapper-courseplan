@@ -3,7 +3,7 @@ use freemapper_courseplan_model::{AcceptedFinding, CourseKind, Discipline, LegRe
 use super::testing::*;
 use super::*;
 use crate::map::MapKind;
-use crate::rules::{KNOWN_KEYS, load_rule_set};
+use crate::rules::KNOWN_KEYS;
 
 /// A fake check: one warning per course it sees, at the course's first two controls.
 fn first_two(
@@ -295,47 +295,6 @@ fn courses_of_other_kinds_are_skipped_once() {
 fn every_known_key_has_a_check() {
     let keys: Vec<&str> = CHECKS.iter().map(|c| c.key).collect();
     assert_eq!(keys, KNOWN_KEYS);
-}
-
-#[test]
-fn a_check_not_implemented_yet_is_skipped_once_per_rule() {
-    let stubs: Vec<Check> = KNOWN_KEYS
-        .iter()
-        .map(|key| Check::new(key, not_implemented))
-        .collect();
-    let rules = load_rule_set("wkb-2026", &["nor-bb-2021".to_owned()]).unwrap();
-    let mut event = sample_event();
-    event.event.discipline = Discipline::Long;
-    let map = map(15000, vec![]);
-    let ctx = CheckContext::new(&event, &map);
-    let report = run_checks(&ctx, &rules, &stubs);
-    assert!(report.findings.is_empty());
-    for set_rule in &rules.rules {
-        let id = Some(set_rule.rule.id.as_str());
-        let stubs = report
-            .skipped
-            .iter()
-            .filter(|s| s.rule.as_deref() == id && s.reason_id == SKIP_NOT_IMPLEMENTED)
-            .count();
-        let filtered = report
-            .skipped
-            .iter()
-            .any(|s| s.rule.as_deref() == id && s.reason_id != SKIP_NOT_IMPLEMENTED);
-        // A rule is silent only when the event-wide filters (discipline, map kind) leave it
-        // out while another rule of its key runs.
-        let replaced = event_filter(&ctx, &set_rule.rule).is_some()
-            && report.skipped.iter().any(|s| {
-                s.reason_id == SKIP_NOT_IMPLEMENTED
-                    && rules
-                        .rule(s.rule.as_deref().unwrap())
-                        .is_some_and(|r| r.rule.key == set_rule.rule.key)
-            });
-        assert!(stubs <= 1, "{id:?} reported {stubs} times");
-        assert!(
-            stubs == 1 || filtered || replaced,
-            "{id:?} disappears silently"
-        );
-    }
 }
 
 #[test]

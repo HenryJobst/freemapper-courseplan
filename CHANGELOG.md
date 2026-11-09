@@ -14,8 +14,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Prüfregeln mit dem Grund. Eine Prüfregel, deren Filter (Disziplin, Kartenart, Druckmaßstab) nicht passt, gilt
   als übersprungen und wird so gemeldet. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft. Der
   Exit-Code ist 0 ohne Befund der Schwere Fehler, 1 mit einem solchen Befund oder bei abgelehnter Prüfung und 2
-  bei falschem Aufruf. Die einzelnen Prüfungen kommen mit den nächsten Schritten; bis dahin meldet `check` sie
-  als noch nicht umgesetzt.
+  bei falschem Aufruf.
 - `finding accept <PROJEKT> <REGEL> --note TEXT` akzeptiert einen Befund als gewollte Ausnahme. Den Ort gibst du
   mit `--controls 31,32`, `--leg A:3` oder `--course A` an, für einen Befund der ganzen Veranstaltung mit nichts
   davon. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. `finding remove` nimmt das zurück;
@@ -57,6 +56,15 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Bahnen am selben Start mit verschiedenen ersten Posten in der Richtung der ersten Strecke um weniger als 30°
   abweichen, einmal je Paar erster Posten. Die Richtung führt zum ersten Knickpunkt am Start, sonst zum ersten
   Bahnpunkt.
+- `check` prüft jetzt die Bahntabellen. Bei Lang-, Mittel- und Ultralang-Distanz ergibt eine Bahn, deren Länge in
+  Prozent der HE-Bahn außerhalb des Bereichs ihrer Kategoriezeile liegt, eine Warnung (WKB Anlage 5); ohne
+  HE-Bahn oder bei einer HE-Bahn der Länge 0 wird die Prüfregel übersprungen, bei zwei HE-Bahnen dient die erste
+  als Bezug, und ein Hinweis sagt das. Eine Bahn mit leichten und schweren Kategorien (Stufen 1 und 2 gegen 3
+  bis 5) ist ein Fehler, der beide Seiten nennt. Mit dem NOR-Aufsatz ergeben Leistungskilometer (Länge plus
+  Steigung × 10 / 1000) außerhalb des Ziel-Lkm der Kategoriezeile ±6 % eine Warnung; eine Bahn ohne Steigung
+  wird übersprungen, eine Kategorie ohne Zeile ergibt einen Hinweis. Trifft eine Bahn mit ihren Kategorien
+  mehrere Zeilen, gibt es einen Befund, der jede verletzte Zeile nennt. Eine Klasse ohne Regelkategorie
+  überspringt die Bahn und wird genannt.
 
 ## [0.1.0] - 2026-11-09
 

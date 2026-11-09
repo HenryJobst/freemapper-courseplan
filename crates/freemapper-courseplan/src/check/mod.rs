@@ -17,6 +17,7 @@ mod geometry;
 mod legs;
 mod start;
 mod stops;
+mod tables;
 
 pub use context::{CheckContext, CourseContext};
 
@@ -182,6 +183,9 @@ pub enum ArgValue {
     /// A measured value; shown with one decimal in the language's decimal mark.
     Number(f64),
     Int(i64),
+    /// Several items of one message, each rendered from its own message id and arguments and
+    /// joined with "; ", such as the table rows a course violates.
+    List(&'static str, Vec<Args>),
 }
 
 /// The arguments of a finding or skip text: Fluent variable name and value.
@@ -193,6 +197,11 @@ impl ArgValue {
             ArgValue::Text(s) => FluentValue::from(s.clone()),
             ArgValue::Int(n) => FluentValue::from(*n),
             ArgValue::Number(x) => FluentValue::from(format_number(lang, *x)),
+            ArgValue::List(id, items) => {
+                let shown: Vec<String> =
+                    items.iter().map(|args| localize(lang, id, args)).collect();
+                FluentValue::from(shown.join("; "))
+            }
         }
     }
 }
@@ -293,8 +302,6 @@ impl Skipped {
     }
 }
 
-/// Reason: the check of this key is not implemented yet (ruling R2 of plan M2b).
-pub const SKIP_NOT_IMPLEMENTED: &str = "check-skip-not-implemented";
 /// Reason: the event is a training, and the rule is for other disciplines.
 pub const SKIP_TRAINING: &str = "check-skip-training";
 /// Reason: the rule is for other disciplines; argument `discipline`.
@@ -506,8 +513,8 @@ impl Check {
     }
 }
 
-/// Every rule key with its check, one line per key (ruling R2 of plan M2b). Tasks 4 to 8 replace
-/// the `not_implemented` stubs and name the place kinds of their findings with [`Check::at`].
+/// Every rule key with its check, one line per key (ruling R2 of plan M2b). Every check names the place kinds
+/// of its findings with [`Check::at`].
 pub const CHECKS: &[Check] = &[
     Check::at("min_distance", distance::min_distance, &[Place::Controls]),
     Check::at(
@@ -546,23 +553,18 @@ pub const CHECKS: &[Check] = &[
         start::first_leg_angle,
         &[Place::Controls],
     ),
-    Check::new("length_table", not_implemented),
-    Check::new("difficulty_mix", not_implemented),
-    Check::new("nor_lkm", not_implemented),
+    Check::at(
+        "length_table",
+        tables::length_table,
+        &[Place::Course, Place::Event],
+    ),
+    Check::at("difficulty_mix", tables::difficulty_mix, &[Place::Course]),
+    Check::at("nor_lkm", tables::nor_lkm, &[Place::Course]),
 ];
 
 /// The check of a rule key.
 pub fn check_of(key: &str) -> Option<&'static Check> {
     CHECKS.iter().find(|c| c.key == key)
-}
-
-fn not_implemented(
-    _: &CheckContext<'_>,
-    run: &RuleRun<'_>,
-    _: &mut Vec<Finding>,
-    skipped: &mut Vec<Skipped>,
-) {
-    skipped.push(run.skipped(Location::Event, SKIP_NOT_IMPLEMENTED, Vec::new()));
 }
 
 /// Checks the individual courses of `event` on `map` against `rules`.
@@ -689,10 +691,10 @@ fn run_key(
                 .filter(|r| !std::ptr::eq(*r, set_rule))
                 .collect(),
         };
-        match checks.iter().find(|c| c.key == set_rule.rule.key) {
-            Some(check) => (check.run)(ctx, &run, found, skipped),
-            // Task 2 refuses profiles with unknown keys; a test table may still lack one.
-            None => not_implemented(ctx, &run, found, skipped),
+        // Task 2 refuses profiles with unknown keys; a test table may lack a key, and the rule
+        // is then not run.
+        if let Some(check) = checks.iter().find(|c| c.key == set_rule.rule.key) {
+            (check.run)(ctx, &run, found, skipped);
         }
     }
 }

@@ -390,7 +390,7 @@ mod tests {
             profile: "wkb-2026".to_owned(),
             severity,
             location,
-            message_id: "check-skip-not-implemented",
+            message_id: "check-skip-climb-missing",
             args: vec![],
             source: SourceRef {
                 doc: "WKB26".to_owned(),
@@ -461,13 +461,13 @@ mod tests {
             lines,
             [
                 "event:",
-                "  error controls 31, 32: this check is not implemented yet \
+                "  error controls 31, 32: the course has no climb \
                  (wkb2026.distance.min, WKB26 B 7.2.1)",
                 "course A:",
-                "  warning course A: this check is not implemented yet \
+                "  warning course A: the course has no climb \
                  (wkb2026.distance.min, WKB26 B 7.2.1)",
                 "course B:",
-                "  hint course B, leg after 2: this check is not implemented yet \
+                "  hint course B, leg after 2: the course has no climb \
                  (wkb2026.distance.min, WKB26 B 7.2.1)",
                 "1 error, 1 warning, 1 hint; 0 accepted, 0 skipped",
             ]

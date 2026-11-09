@@ -118,7 +118,6 @@ check-location-start-leg = course { $course }, leg from the start
 check-location-legs = course { $course }, { $legs }
 check-location-legs-after = leg after { $index }
 check-location-legs-start = leg from the start
-check-skip-not-implemented = this check is not implemented yet
 check-skip-training = not checked at a training
 check-skip-discipline = the rule is not for { $discipline ->
         [sprint] sprint
@@ -147,6 +146,9 @@ check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
 check-skip-start-window-missing = the event has no start window
 check-skip-starters-missing = start { $start }: classes without an expected number of starters: { $classes }
+check-skip-length-no-reference = no course carries category { $category }, so the length table has no reference
+check-skip-length-reference-empty = the reference course { $course } has length 0
+check-skip-category-not-in-table = categories in no row of the table: { $categories }
 check-distance-min = { $first_kind ->
         [start] start
         [finish] finish
@@ -190,6 +192,13 @@ check-same-objects-in-circle = control { $code } stands at symbol { $symbol }, w
 check-start-capacity = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use
 check-start-capacity-shared = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use; first controls shared by several courses: { $shared }
 check-first-leg-angle = start { $start }: the first legs to controls { $first } and { $second } differ in direction by only { $degrees }°, at least { $limit }° are wanted
+check-length-table = course { $course } has a length outside the table: { $rows }
+check-length-table-row = { $categories }: { $percent } % of the { $reference } course, allowed { $min } to { $max } %
+check-length-table-reference-twice = courses { $courses } all carry category { $category }; course { $first } serves as the reference for the length table
+check-difficulty-mix = course { $course } mixes easy categories ({ $easy }) with hard ones ({ $hard })
+check-nor-lkm = course { $course } has { $actual } Lkm ({ $length } km length, { $climb } m climb), outside the recommendation: { $rows }
+check-nor-lkm-row = { $categories }: target { $target } Lkm, allowed { $min } to { $max } Lkm
+check-nor-lkm-category-unknown = course { $course }: categories { $categories } are in no row of the NOR recommendation, so their target Lkm is unknown
 
 ## Command line
 

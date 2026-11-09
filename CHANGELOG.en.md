@@ -13,8 +13,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   summary. `--all` also lists the accepted findings with their notes and the skipped rules with the reason. A
   rule whose filters (discipline, map kind, print scale) do not fit counts as skipped and is reported as such.
   Team, relay and score courses are not checked yet. The exit code is 0 without an error finding, 1 with one or
-  when the check is refused, and 2 for a wrong call. The individual checks come with the next steps; until then
-  `check` reports them as not implemented yet.
+  when the check is refused, and 2 for a wrong call.
 - `finding accept <PROJECT> <RULE> --note TEXT` accepts a finding as an intended exception. Give its place with
   `--controls 31,32`, `--leg A:3` or `--course A`, or none of them for a finding of the whole event. Accepting
   the same finding again replaces the note. `finding remove` takes it back and refuses an accepted finding that
@@ -53,6 +52,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   expected starters is skipped with the class names. As a hint, two courses at one start with different first
   controls whose first legs differ in direction by less than 30° are reported once per pair of first controls.
   The direction runs to the first start bend, or else to the first stop.
+- `check` now looks at the course tables. At long, middle and ultralong distances, a course whose length is
+  outside the range of its category row, as a percentage of the HE course, gives a warning (WKB Anlage 5);
+  without an HE course, or with one of length 0, the rule is skipped, and with two the first serves as the
+  reference and a hint says so. A course with easy and hard categories (levels 1 and 2 against 3 to 5) is an
+  error that names both sides. With the NOR overlay, the performance kilometres (length plus climb ×
+  10 / 1000) outside the target of the category row ±6 % give a warning; a course without climb is skipped,
+  and a category in no row gives a hint. A course whose categories hit several rows gets one finding that
+  names every violated row. A class without rule category skips the course and is named.
 
 ## [0.1.0] - 2026-11-09
 
