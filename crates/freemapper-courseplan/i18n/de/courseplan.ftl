@@ -485,6 +485,7 @@ export-iof-xml-written = { $count ->
 export-iof-xml-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach IOF XML exportiert
 export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
+error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
 
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 

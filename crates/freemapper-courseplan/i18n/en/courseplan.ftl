@@ -491,6 +491,7 @@ export-iof-xml-written = { $count ->
 export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
 export-iof-xml-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE
 error-export-iof-xml-course = cannot export course { $course }: { $source }
+error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
 
 ## MCP server (tool names, parameter names and JSON fields stay English)
 

@@ -235,3 +235,70 @@ fn names_a_skipped_team_course_in_german() {
         "{text}"
     );
 }
+
+#[test]
+fn refuses_the_project_file_as_target() {
+    let (dir, project) = example("");
+    let before = std::fs::read_to_string(&project).unwrap();
+    let result = run(
+        dir.path(),
+        "en",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            project.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+    assert!(
+        stderr(&result).contains("would overwrite it"),
+        "{}",
+        stderr(&result)
+    );
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+}
+
+#[test]
+fn refuses_the_map_as_target_also_through_another_spelling() {
+    let (dir, project) = example("");
+    let map = dir.path().join("luebeck.omap");
+    let before = std::fs::read(&map).unwrap();
+    let spelled = dir.path().join(".").join("luebeck.omap");
+    let result = run(
+        dir.path(),
+        "de",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            spelled.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+    assert!(
+        stderr(&result).contains("überschreiben"),
+        "{}",
+        stderr(&result)
+    );
+    assert_eq!(std::fs::read(&map).unwrap(), before);
+}
+
+#[test]
+fn a_target_in_a_missing_directory_fails_and_names_the_path() {
+    let (dir, project) = example("");
+    let out = dir.path().join("missing").join("out.xml");
+    let result = run(
+        dir.path(),
+        "en",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            out.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+    assert!(stderr(&result).contains("out.xml"), "{}", stderr(&result));
+    assert!(!out.exists());
+}

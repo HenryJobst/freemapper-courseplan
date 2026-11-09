@@ -30,6 +30,8 @@ pub(crate) enum ExportError {
     NotMap(PathBuf),
     Map(PathBuf, OmapError),
     Course(IofXmlError),
+    /// The target is the project file or the map, which the export would overwrite.
+    Overwrites(PathBuf),
 }
 
 impl ExportError {
@@ -48,6 +50,11 @@ impl ExportError {
                 &[("path", FluentValue::from(path.display().to_string()))],
             ),
             ExportError::Map(path, e) => map(&path, e),
+            ExportError::Overwrites(path) => text(
+                lang,
+                "error-export-overwrites-input",
+                &[("path", FluentValue::from(path.display().to_string()))],
+            ),
             ExportError::Course(IofXmlError::Course { course, source }) => text(
                 lang,
                 "error-export-iof-xml-course",
@@ -69,6 +76,9 @@ pub(crate) fn export_iof_xml_file(
 ) -> Result<ExportReport, ExportError> {
     let file = ProjectFile::load(project).map_err(ExportError::Project)?;
     let map_path = file.map_path();
+    if same_file(target, project) || same_file(target, &map_path) {
+        return Err(ExportError::Overwrites(target.to_path_buf()));
+    }
     let is_oom = map_path
         .extension()
         .and_then(|e| e.to_str())
@@ -89,6 +99,21 @@ pub(crate) fn export_iof_xml_file(
         courses: file.event.courses.len() - exported.skipped.len(),
         skipped: exported.skipped,
     })
+}
+
+/// Whether two paths name the same file. A path that does not exist yet is resolved through its
+/// parent directory; paths that cannot be resolved at all count as different.
+fn same_file(a: &Path, b: &Path) -> bool {
+    fn resolve(path: &Path) -> Option<PathBuf> {
+        if let Ok(p) = path.canonicalize() {
+            return Some(p);
+        }
+        let name = path.file_name()?;
+        let parent = path.parent().filter(|p| !p.as_os_str().is_empty());
+        let parent = parent.unwrap_or_else(|| Path::new("."));
+        Some(parent.canonicalize().ok()?.join(name))
+    }
+    matches!((resolve(a), resolve(b)), (Some(x), Some(y)) if x == y)
 }
 
 /// The `export` command.
