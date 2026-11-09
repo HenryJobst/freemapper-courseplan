@@ -18,7 +18,9 @@ use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::rules::{PROPOSAL_DOC, RuleSet, SourceRef, load_rule_set};
+use freemapper_courseplan::rules::{
+    PROPOSAL_DOC, RuleSet, SourceRef, load_rule_set, print_scale_of,
+};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
@@ -1127,12 +1129,26 @@ impl CoursePlanServer {
     ) -> Result<CallToolResult, McpError> {
         reply(self.edit(&req.project, |file| {
             let doc = self.read_map(file)?;
-            let placed = freemapper_courseplan::numbers::place_numbers(
+            // The course must exist first; an unknown name keeps the not-found error of the edit.
+            let gaps = match file.event.courses.iter().find(|c| c.name == req.name.0) {
+                Some(course) => {
+                    let rules = self.rule_set(&file.event)?;
+                    numbers::gap_range(
+                        &rules,
+                        map_kind(&doc),
+                        file.event.event.discipline,
+                        print_scale_of(course, doc.georef.scale_denominator),
+                    )
+                }
+                None => numbers::GapRange::FIXED,
+            };
+            let placed = numbers::place_numbers(
                 &mut file.event,
                 &req.name.0,
                 &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
                 map_kind(&doc),
+                gaps,
                 flag(req.overwrite),
             )
             .map_err(|e| self.refused(e))?;

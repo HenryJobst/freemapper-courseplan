@@ -15,7 +15,7 @@ Geplant ist für die erste Version:
 
 - Posten mit Code und Postenbeschreibung, Einzelbahnen mit Knickpunkten, Pflichtstrecken und Sperrgebieten;
 - Lage der Postennummern zentral je Posten und je Bahn änderbar, mit automatischer Platzierung hinter dem Kreis,
-  abseits von Punkt- und Liniensymbolen der Karte;
+  abseits von Punkt- und Liniensymbolen der Karte, mit einem Abstand von 0,5 bis 5 mm zum Kreis (von `check` geprüft);
 - Prüfungen nach den Wettkampfbestimmungen 2026 mit Aufsätzen für regionale Empfehlungen, etwa Postenabstände,
   spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
   mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);

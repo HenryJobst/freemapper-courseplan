@@ -16,7 +16,7 @@ Planned for the first version:
 - controls with code and control description, individual courses with bends, marked routes and forbidden
   areas;
 - control number positions set once per control and changeable per course, with automatic placement behind the
-  circle, away from point and line symbols of the map;
+  circle, away from point and line symbols of the map, at 0.5 to 5 mm from the circle (checked by `check`);
 - checks against the German competition rules (WKB) 2026 with overlays for regional recommendations, such as
   control distances, acute and almost straight angles and enough different first controls for a compact start
   list, each with its source and with exceptions you can give reasons for (`check`, usable now);

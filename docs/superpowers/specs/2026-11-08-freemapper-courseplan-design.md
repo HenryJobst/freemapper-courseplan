@@ -207,6 +207,12 @@ Rules for `team` are in WKB 2026 B 3.3.2.3 and research §3.6. On the map and in
 mandatory controls show letter and code, free controls show the code only, sorted by code, without a
 sequence number.
 
+On relay and score maps the control code may follow the number, as "1-31" or "1 (31)". The event setting is
+`number_label = "number" | "number_dash_code" | "number_paren_code"`, with an override per course. The default
+is `number` *(user, 2026-11-09)* *(agreed with freemapper-print)*. ISSkiOM 2019 symbol 704 puts a
+hyphen between number and code; ISOM and ISSprOM do not standardise a code after the number. The label text sets the width of the number box, for placement and for drawing. This is built with the
+team, relay and score milestone, not before.
+
 ## 5. Architecture
 
 Workspace with three crates *(Claude's call)*:
@@ -276,6 +282,11 @@ Workspace with three crates *(Claude's call)*:
 - A number placement is a direction (degrees, 0 = east, counter-clockwise) and a gap: the shortest distance
   in print mm between the outer edge of the circle line and the number box, which sits centred on the
   direction ray (ADR 0030) *(agreed with freemapper-print)*.
+- The wanted gap range is a rule-profile value, 0.5 to 5.0 mm (rule `number_gap`, values `min_gap_mm` and
+  `max_gap_mm`) *(user, 2026-11-09)* *(agreed with freemapper-print)*. Automatic placement tries gaps from the
+  minimum in 0.5 mm steps, the last step being the maximum, and ranks gap before direction: in the preferred
+  direction a larger gap beats another direction at a smaller gap. "Blocked behind" is tested at the minimum.
+  Without an applicable rule the gap is a fixed 0.5 mm. When several rules apply, the strictest wins (ADR 0032).
 
 ### 5.4 Length and climb
 
@@ -351,6 +362,7 @@ routing *(Claude's call: selection)*.
 | Column G "edge"/side on a line object | TD11 |
 | Acute angle at a control (dog leg) and opposing traffic on overlapping legs | WKB26 B 7.2.6, BL12, SOA |
 | Almost straight angle at a control (above 170°, hint) *(user, 2026-11-09)* | user |
+| Number gap outside the range (0.5 to 5 mm, warning) *(user, 2026-11-09)* | user |
 | Straight leg line through a forbidden or impassable area without bends | WKB26 B 7.2.6, IOF-R 17.2 |
 | Leg line through start, finish or another control | BL02 |
 | Control too close to the map edge | BL02 |

@@ -74,6 +74,7 @@ the findings that were accepted for it are reported again.
 | `leg_through_forbidden` | A straight leg crossing an out-of-bounds area, so the best route may lead through it |
 | `acute_angle` | The angle between the legs at a control below `degrees` |
 | `straight_angle` | Angle between the legs at a control above `degrees`, almost straight on |
+| `number_gap` | Distance of the number from the circle below `min_gap_mm` or above `max_gap_mm`; either value may be missing |
 | `opposing_legs` | Two legs of a course running close to each other in opposite directions |
 | `code_range` | A control code outside `range` |
 | `code_pairs` | Both codes of a forbidden pair used in one event |

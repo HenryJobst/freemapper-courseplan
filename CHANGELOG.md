@@ -4,6 +4,21 @@
 
 Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zuerst. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## [Unveröffentlicht]
+
+### Hinzugefügt
+
+- `check` warnt, wenn der Abstand einer Postennummer zum Kreis außerhalb von 0,5 bis 5 mm liegt
+  (`wkb2026.number.gap`, Werte `min_gap_mm` und `max_gap_mm`). Keine Norm nennt einen Wert, die Grenzen hat der
+  Nutzer festgelegt (ADR 0032). Gespeicherte Nummern bleiben, wo sie sind; alte Abstände über 5 mm werden jetzt
+  gemeldet.
+
+### Geändert
+
+- Die automatische Platzierung probiert Abstände vom Mindestwert des Regelprofils an in Schritten von 0,5 mm bis
+  zum Höchstwert. Ein größerer Abstand in der bevorzugten Richtung geht vor einer anderen Richtung mit kleinerem
+  Abstand. Ohne passende Regel bleibt es bei 0,5 mm. Neu gesetzte Nummern können daher weiter außen stehen.
+
 ## [0.3.0] - 2026-11-09
 
 ### Hinzugefügt

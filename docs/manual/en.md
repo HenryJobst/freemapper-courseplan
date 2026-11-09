@@ -91,6 +91,10 @@ there.
   course hardly turns, the next leg runs there, and the number goes outside, at the tip of the angle. It stands on
   a point or line symbol of the map only when no free place is left; it may cover areas. If you dislike the
   position, set it yourself.
+- The number stands 0.5 to 5 mm from the circle (distance from the circle line to the number box, rule
+  `wkb2026.number.gap`). Automatic placement starts at 0.5 mm and moves outward in steps of 0.5 mm before it turns
+  away from the preferred direction. `check` warns when a stored gap lies outside the range, for example a number
+  set by hand at 6 mm.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
   flag. The assistant gets a list of these legs.
 - Only individual courses can be edited and measured so far. For team, relay and score courses the program

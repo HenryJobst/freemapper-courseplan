@@ -7,8 +7,8 @@ use freemapper_courseplan_model::MapPoint;
 use super::geometry::{angle_at, opposing_length};
 use super::stops::{Stop, StopKind, course_stops};
 use super::{
-    ArgValue, CheckContext, CourseContext, Finding, Location, RuleRun, Skipped, below, number,
-    value_number,
+    ArgValue, CheckContext, CourseContext, Finding, Location, RuleRun, Skipped, above, below,
+    number, value_number,
 };
 use crate::course::LegGeometry;
 
@@ -20,11 +20,6 @@ pub(super) fn degrees_below(degrees: f64) -> ArgValue {
 /// Whole degrees, rounded up, so an angle above its limit never shows as the limit.
 pub(super) fn degrees_above(degrees: f64) -> ArgValue {
     ArgValue::Int((degrees - 1e-9).ceil() as i64)
-}
-
-/// Whether `value` is above `limit`, with the tolerance of `below`.
-fn above(value: f64, limit: f64) -> bool {
-    value > limit + 1e-9
 }
 
 /// The angle at each stop between two legs of a course, in degrees: the leg index `i` of the

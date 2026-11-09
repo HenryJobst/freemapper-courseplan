@@ -10,6 +10,7 @@ use freemapper_courseplan::map::{MapIndex, map_kind};
 use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
+use freemapper_courseplan::rules::print_scale_of;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{
     Class, ControlCode, ControlDescription, ControlKind, Course, CourseControl, CourseKind,
@@ -1031,12 +1032,26 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
         } => {
             let mut file = load(lang, &project)?;
             let doc = read_map(lang, &file)?;
-            let placed = freemapper_courseplan::numbers::place_numbers(
+            // The course must exist first; an unknown name keeps the not-found error of the edit.
+            let gaps = match file.event.courses.iter().find(|c| c.name == name) {
+                Some(course) => {
+                    let rules = crate::check_cmd::rule_set(lang, &file.event)?;
+                    numbers::gap_range(
+                        &rules,
+                        map_kind(&doc),
+                        file.event.event.discipline,
+                        print_scale_of(course, doc.georef.scale_denominator),
+                    )
+                }
+                None => numbers::GapRange::FIXED,
+            };
+            let placed = numbers::place_numbers(
                 &mut file.event,
                 &name,
                 &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
                 map_kind(&doc),
+                gaps,
                 overwrite,
             )
             .map_err(|e| refused(lang, e))?;

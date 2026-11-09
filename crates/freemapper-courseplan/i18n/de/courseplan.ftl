@@ -192,6 +192,8 @@ check-acute-angle = Die Strecken { $stop_kind ->
        *[control] am Posten
     } { $stop } bilden einen Winkel von { $degrees }°, gefordert sind mindestens { $limit }°
 check-straight-angle = Die Strecken am Posten { $stop } bilden einen Winkel von { $degrees }°, erwünscht sind höchstens { $limit }°
+check-number-gap-small = Die Nummer von Posten { $stop } steht { $gap } mm vom Kreis entfernt, erwünscht sind mindestens { $limit } mm
+check-number-gap-large = Die Nummer von Posten { $stop } steht { $gap } mm vom Kreis entfernt, erwünscht sind höchstens { $limit } mm
 check-opposing-legs = Die beiden Strecken verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
 check-code-range = Der Code { $code } liegt außerhalb des erlaubten Bereichs { $min } bis { $max }
 check-code-not-numeric = Der Code { $code } ist keine Zahl
@@ -377,7 +379,7 @@ cli-help-course-remove = Eine Bahn samt ihrem Namen in den Sonderobjekten entfer
 cli-help-course-leg = Die Knickpunkte einer Strecke setzen und festlegen, ob sie abgeflaggt ist
 cli-help-course-set = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern
 cli-help-course-number = Die Nummernlage eines Postens in einer Bahn setzen oder zurücksetzen; sie geht der zentralen und der automatischen Lage vor
-cli-help-course-numbers = Die Postennummern einer Bahn hinter dem Kreis platzieren, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen sowie Punkt- und Liniensymbolen der Karte. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen; zentrale Nummernlagen und die der Bahn bleiben
+cli-help-course-numbers = Die Postennummern einer Bahn hinter dem Kreis platzieren, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen sowie Punkt- und Liniensymbolen der Karte. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen; zentrale Nummernlagen und die der Bahn bleiben. Die Nummer rückt bis zum größten Abstand des Regelprofils nach außen, bevor sie von der bevorzugten Richtung abweicht
 
 cli-arg-edit-course = Name der Bahn
 cli-arg-course-add-start = ID des Start-Sonderobjekts
@@ -525,7 +527,7 @@ mcp-tool-remove-course = Eine Bahn samt ihrem Namen bei den Sonderobjekten entfe
 mcp-tool-set-course-controls = Die Posten einer Bahn ersetzen. Der n-te Besuch eines Codes behält die Nummernlage des n-ten Besuchs davor. Eine Strecke behält Knickpunkte und Abflaggung nur, solange sie zum selben nächsten Bahnpunkt führt; das Ergebnis nennt die geleerten Strecken in cleared_legs mit course und after (0 ist die Strecke vom Start).
 mcp-tool-set-leg = Die Knickpunkte einer Strecke einer Einzelbahn setzen und festlegen, ob sie abgeflaggt ist: die Strecke ab dem Start (from_start) oder die nach einer Position (after, ab 1 gezählt wie auf der Karte, Querungsstellen eingeschlossen). Ohne bends verliert die Strecke ihre Knickpunkte.
 mcp-tool-set-course-details = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern. Parameter, die du weglässt, bleiben, wie sie sind.
-mcp-tool-place-numbers = Die Postennummern einer Bahn hinter dem Kreis setzen, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen, anderen Nummern sowie Punkt- und Liniensymbolen der Karte. Gibt zurück, wie viele Nummern es gesetzt hat. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen. Ein Posten mit zentraler Nummernlage (set_control_number) behält sie, und Nummernlagen der Bahn (set_course_number) bleiben, außer overwrite ist true.
+mcp-tool-place-numbers = Die Postennummern einer Bahn hinter dem Kreis setzen, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen, anderen Nummern sowie Punkt- und Liniensymbolen der Karte. Gibt zurück, wie viele Nummern es gesetzt hat. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen. Ein Posten mit zentraler Nummernlage (set_control_number) behält sie, und Nummernlagen der Bahn (set_course_number) bleiben, außer overwrite ist true. Die Nummer rückt bis zum größten Abstand des Regelprofils nach außen, bevor sie von der bevorzugten Richtung abweicht.
 mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn setzen oder zurücksetzen, an einer Position ab 1 gezählt wie auf der Karte (Querungsstellen eingeschlossen). Sie geht der zentralen Lage aus set_control_number und place_numbers vor. Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn), Abstand zwischen Kreislinie und Nummer in Druckmillimetern, mehr als 0 und höchstens 10. clear entfernt sie, dann gilt wieder die zentrale oder die automatische Lage.
 mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
