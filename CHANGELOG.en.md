@@ -4,6 +4,16 @@
 
 This file lists all notable changes to freemapper-courseplan, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+### Changed
+
+- The gap of a control number (`--gap`, `gap_mm`) now starts at the outer edge of the circle line and means
+  the shortest distance to the number box, in every direction. It used to start at the centre of the circle
+  line, and on the diagonals the number stood farther away than given. freemapper-print computes it the same
+  way from its M3 on. Stored number placements stay valid. Straight above, below or beside the circle a number
+  moves 0.175 mm outwards; on the diagonals it moves up to 0.6 mm closer.
+
 ## [0.2.0] - 2026-11-09
 
 ### Added

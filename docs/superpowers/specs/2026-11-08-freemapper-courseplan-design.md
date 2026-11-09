@@ -260,6 +260,9 @@ Workspace with three crates *(Claude's call)*:
 - freemapper-print develops the shared placement module (§5.7 there) and extracts it later. Until then this
   project uses a simple placement of its own behind an interface that the shared module can replace
   *(agreed with freemapper-print)*.
+- A number placement is a direction (degrees, 0 = east, counter-clockwise) and a gap: the shortest distance
+  in print mm between the outer edge of the circle line and the number box, which sits centred on the
+  direction ray (ADR 0030) *(agreed with freemapper-print)*.
 
 ### 5.4 Length and climb
 

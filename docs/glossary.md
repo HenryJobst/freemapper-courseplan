@@ -40,6 +40,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Bahnlänge | course length | Summe aller Streckenlinienzüge in Kartenmillimetern mal Kartenmaßstab: Luftlinie plus gezeichnete Umwege (Knickpunkte), abgeflaggte Strecken entlang ihrer Knickpunkte gemessen (WKB B 7.2.5). In Metern. | `course_length_m` |
 | Aufdruckgrößen | overprint sizes | Kreisdurchmesser, Linienbreite und Nummernhöhe des Bahnaufdrucks in Druckmillimetern beim Grundmaßstab der Kartenart: ISSprOM 2019-2 für Sprint und Schulhof, ISOM 2017-2 für Wald. | `OverprintSizes` |
 | Grundmaßstab | base scale | Maßstab, für den die Aufdruckgrößen gelten: Sprint 1:4000, Schulhof 1:1000, Wald 1:15000. Auf der Karte gilt `map_mm = print_mm × base_scale / map_scale`, auch bei vergrößertem Druck. | `base_scale` |
+| Nummernabstand | number gap | Teil der Nummernlage: kürzester Abstand zwischen der Außenkante der Kreislinie und dem Feld der Postennummer, in Druckmillimetern. Das Feld sitzt mittig auf dem Strahl in Richtung der Nummernlage. Mit freemapper-print abgestimmt. | `gap_mm` |
 | Druckbereich | print area | Rechteck der Karte, das das Blatt einer Bahn zeigt, in Millimetern auf der Karte. | `PrintArea` |
 | Staffelteil | relay part | Gemeinsamer Teil oder Gabelung einer Staffelbahn. | `RelayPart` |
 | Score-Posten | score control | Posten einer Score-Bahn mit seinem Wert. | `ScoreControl` |

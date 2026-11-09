@@ -317,7 +317,7 @@ cli-arg-control-describe-g = Column G symbol (IOF symbol id)
 cli-arg-control-describe-h = Column H symbol (IOF symbol id)
 cli-arg-control-describe-clear = Empty all columns first; columns given in the same call are set afterwards
 cli-arg-control-number-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
-cli-arg-control-number-gap = Gap to the circle in print millimetres, more than 0 and at most 10
+cli-arg-control-number-gap = Gap between circle line and number in print millimetres, more than 0 and at most 10
 cli-arg-control-number-clear = Go back to the default placement
 cli-arg-special-add-kind = What the object is
 cli-arg-special-add-id = Id of the object, unique among special objects
@@ -400,7 +400,7 @@ cli-arg-course-set-print-scale = Planned print scale, for example 3000 for 1:300
 cli-arg-course-set-no-print-scale = Remove the planned print scale
 cli-arg-course-number-after = Position of the control in the course, counted from 1 as on the map; crossing points count as positions
 cli-arg-course-number-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
-cli-arg-course-number-gap = Gap to the circle in print millimetres, more than 0 and at most 10
+cli-arg-course-number-gap = Gap between circle line and number in print millimetres, more than 0 and at most 10
 cli-arg-course-number-clear = Remove the placement of the course, so the central or the automatic placement applies again
 cli-arg-course-numbers-overwrite = Also replace course numbers placed before; controls with a central number keep it [default: keep them]
 
@@ -517,7 +517,7 @@ mcp-tool-add-control = Add a control at a position in map mm. Without code the l
 mcp-tool-move-control = Move a control to a new position in map mm. The position must lie on the map.
 mcp-tool-remove-control = Remove a control and its visits in individual courses. The result lists the courses it left, and in cleared_legs the legs that lost their bends and marked-route flag because they now run to another stop.
 mcp-tool-describe-control = Set the description symbols of a control, column C to H, as IOF symbol ids. Columns you leave out keep their symbol. clear empties all columns first.
-mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap to the circle in print mm. clear goes back to the default placement.
+mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap between circle line and number in print mm. clear goes back to the default placement.
 mcp-tool-add-special = Add a special object. A start, finish, first aid post or water point is a single point (at). A marked route, forbidden route, out-of-bounds area or dangerous area is drawn through points. Its id must be new.
 mcp-tool-remove-special = Remove a special object by id. A start or finish that a course uses cannot be removed.
 mcp-tool-set-special-courses = Set the courses a special object belongs to: a list of course names, or all as true for all courses. Not for start and finish. remove_course refuses to remove the only course of a special object, so widen or reassign it here first.
@@ -530,7 +530,7 @@ mcp-tool-set-course-controls = Replace the controls of a course. The n-th visit 
 mcp-tool-set-leg = Set the bends and the marked-route flag of one leg of an individual course: the leg from the start (from_start) or the leg after a position (after, counted from 1 as on the map, crossing points included). Without bends the leg loses its bends.
 mcp-tool-set-course-details = Change the classes, the climb or the planned print scale of a course. Parameters you leave out stay as they are.
 mcp-tool-place-numbers = Place the control numbers of a course clear of legs, circles and other numbers. Returns how many numbers it placed. It runs only when called, so call it again after changing legs. A control with a central number (set_control_number) keeps it, and course numbers (set_course_number) stay unless overwrite is true.
-mcp-tool-set-course-number = Set or clear the number placement of one control in an individual course, at a position counted from 1 as on the map (crossing points included). It wins over the central placement of set_control_number and over place_numbers. Direction in degrees (0 = east, counter-clockwise), gap to the circle in print mm, more than 0 and at most 10. clear removes it, so the central or automatic placement applies again.
+mcp-tool-set-course-number = Set or clear the number placement of one control in an individual course, at a position counted from 1 as on the map (crossing points included). It wins over the central placement of set_control_number and over place_numbers. Direction in degrees (0 = east, counter-clockwise), gap between circle line and number in print mm, more than 0 and at most 10. clear removes it, so the central or automatic placement applies again.
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
@@ -560,7 +560,7 @@ mcp-param-h = Symbol for column H (IOF symbol id)
 mcp-param-set-control-number-clear = Go back to the default placement; then leave out direction and gap_mm [default: false]
 mcp-param-describe-control-clear = Empty all columns first; columns given in the same call are set afterwards [default: false]
 mcp-param-direction = Degrees, 0 = east, counter-clockwise; any value is brought into 0 to 360
-mcp-param-gap-mm = Gap to the circle in print millimetres, more than 0 and at most 10
+mcp-param-gap-mm = Gap between circle line and number in print millimetres, more than 0 and at most 10
 mcp-param-kind = What the object is: start, finish, marked_route, out_of_bounds, forbidden_route, dangerous_area, first_aid or water
 mcp-param-id = Id of the object, unique among special objects
 mcp-param-points = The points of a marked_route, forbidden_route, out_of_bounds or dangerous_area, in order; each is an object with x and y in map millimetres

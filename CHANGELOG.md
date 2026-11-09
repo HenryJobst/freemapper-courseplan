@@ -4,6 +4,16 @@
 
 Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zuerst. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## Unveröffentlicht
+
+### Geändert
+
+- Der Abstand einer Postennummer (`--gap`, `gap_mm`) zählt jetzt ab der Außenkante der Kreislinie und meint
+  den kürzesten Abstand zum Nummernfeld, in jeder Richtung. Bisher zählte er ab der Mitte der Kreislinie, und
+  schräg zum Kreis stand die Nummer weiter weg als angegeben. freemapper-print rechnet ab seinem M3 genauso.
+  Gespeicherte Nummernlagen bleiben gültig. Gerade über, unter oder neben dem Kreis rückt eine Nummer um
+  0,175 mm nach außen, schräg zum Kreis bis zu 0,6 mm näher heran.
+
 ## [0.2.0] - 2026-11-09
 
 ### Hinzugefügt

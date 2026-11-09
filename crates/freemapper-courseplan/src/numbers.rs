@@ -165,8 +165,9 @@ fn digits(n: u32) -> usize {
     n.to_string().len()
 }
 
-/// The rectangle a number occupies on the map. The centre lies along `direction` at the distance
-/// circle radius + gap + half the extent of the box in that direction. `gap_mm` is in print mm.
+/// The rectangle a number occupies on the map. The centre lies on the ray in `direction`, and
+/// `gap_mm` (print mm) is the shortest distance between the outer edge of the circle line and the
+/// rectangle (agreed with freemapper-print, ADR 0030).
 fn number_rect(
     centre: &MapPoint,
     direction: f64,
@@ -180,9 +181,24 @@ fn number_rect(
     let rad = direction.to_radians();
     // y is down: 90 degrees (north) is -y.
     let (dx, dy) = (rad.cos(), -rad.sin());
-    let extent = rad.cos().abs() * w / 2.0 + rad.sin().abs() * h / 2.0;
-    let dist = sizes.circle_diameter_mm * factor / 2.0 + gap_mm * factor + extent;
+    let reach = (sizes.circle_diameter_mm + sizes.line_width_mm) * factor / 2.0 + gap_mm * factor;
+    let dist = box_distance(rad.cos().abs(), rad.sin().abs(), w / 2.0, h / 2.0, reach);
     Rect::centred(centre.x + dx * dist, centre.y + dy * dist, w, h)
+}
+
+/// Distance along a ray with direction cosines `c`, `s` (both >= 0) at which a box with half sizes
+/// `a`, `b` centred on the ray is exactly `reach` away from the origin.
+fn box_distance(c: f64, s: f64, a: f64, b: f64, reach: f64) -> f64 {
+    // The nearest point of the box is on its near vertical edge, its near horizontal edge or the
+    // corner between them.
+    if s < EPS || (c > EPS && (reach + a) / c * s <= b) {
+        return (reach + a) / c;
+    }
+    if c < EPS || (reach + b) / s * c <= a {
+        return (reach + b) / s;
+    }
+    let p = a * c + b * s;
+    p + (p * p - a * a - b * b + reach * reach).max(0.0).sqrt()
 }
 
 /// Direction in degrees [0, 360) from `from` to `to`, 0 = east, counter-clockwise, y down.
@@ -799,7 +815,40 @@ mod tests {
         let sizes = overprint_sizes(MapKind::Sprint);
         let rect = number_rect(&p(100.0, 100.0), 90.0, 1, 0.5, &sizes, 1.0);
         assert!(rect.max_y < 100.0);
-        assert!((rect.max_y - (100.0 - 3.5)).abs() < 1e-9);
+        assert!((rect.max_y - (100.0 - 3.675)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn gap_is_the_clearance_between_circle_line_and_box() {
+        // Shared with freemapper-print: the gap is the shortest distance from the outer edge of the
+        // circle line (3 + 0.175 on sprint) to the box, and the box is centred on the direction ray.
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let r_outer = 3.175;
+        for number in [1, 12] {
+            for gap in [0.3, 1.0] {
+                for direction in [0.0, 30.0, 45.0, 60.0, 90.0, 135.0, 200.0, 315.0] {
+                    let rect = number_rect(&p(0.0, 0.0), direction, number, gap, &sizes, 1.0);
+                    let clearance = rect.distance_to_point(0.0, 0.0) - r_outer;
+                    assert!(
+                        (clearance - gap).abs() < 1e-9,
+                        "{number} at {direction} with gap {gap}: clearance {clearance}"
+                    );
+                    let (cx, cy) = (
+                        (rect.min_x + rect.max_x) / 2.0,
+                        (rect.min_y + rect.max_y) / 2.0,
+                    );
+                    let rad = f64::to_radians(direction);
+                    assert!(
+                        (cx * -rad.sin() - cy * rad.cos()).abs() < 1e-9,
+                        "centre off the ray"
+                    );
+                    assert!(
+                        cx * rad.cos() - cy * rad.sin() > 0.0,
+                        "centre behind the circle"
+                    );
+                }
+            }
+        }
     }
 
     #[test]
@@ -829,10 +878,10 @@ mod tests {
         let base = place(&layout(1.0), 4000);
         let small = place(&layout(0.8), 5000);
         assert_eq!(base[0].direction, small[0].direction);
-        // A box at 1:5000 is 0.8 times as high: east box starts at 0.8 * (3 + 0.5).
+        // A box at 1:5000 is 0.8 times as high: east box starts at 0.8 * (3.175 + 0.5).
         let sizes = overprint_sizes(MapKind::Sprint);
         let r = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 0.8);
-        assert!((r.min_x - 0.8 * 3.5).abs() < 1e-9);
+        assert!((r.min_x - 0.8 * 3.675).abs() < 1e-9);
         assert!(((r.max_y - r.min_y) - 3.2).abs() < 1e-9);
     }
 
@@ -904,8 +953,8 @@ mod tests {
             ((at_double.max_y - at_double.min_y) - 2.0 * (at_base.max_y - at_base.min_y)).abs()
                 < 1e-9
         );
-        // East: centre at radius 3 + gap 0.5 + half width 1.2.
-        assert!(((at_base.min_x) - 3.5).abs() < 1e-9);
+        // East: the box starts at the outer edge of the circle line 3.175 + gap 0.5.
+        assert!(((at_base.min_x) - 3.675).abs() < 1e-9);
     }
 
     #[test]

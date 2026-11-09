@@ -317,7 +317,7 @@ cli-arg-control-describe-g = Symbol für Spalte G (IOF-Symbol-ID)
 cli-arg-control-describe-h = Symbol für Spalte H (IOF-Symbol-ID)
 cli-arg-control-describe-clear = Zuerst alle Spalten leeren; Spalten im selben Aufruf werden danach gesetzt
 cli-arg-control-number-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn; jeder Wert wird auf 0 bis 360 umgerechnet
-cli-arg-control-number-gap = Abstand zum Kreis in Druckmillimetern, mehr als 0 und höchstens 10
+cli-arg-control-number-gap = Abstand zwischen Kreislinie und Nummer in Druckmillimetern, mehr als 0 und höchstens 10
 cli-arg-control-number-clear = Zum Standardplatz zurückkehren
 cli-arg-special-add-kind = Was das Objekt ist
 cli-arg-special-add-id = ID des Objekts, eindeutig unter den Sonderobjekten
@@ -397,7 +397,7 @@ cli-arg-course-set-print-scale = Geplanter Druckmaßstab, zum Beispiel 3000 für
 cli-arg-course-set-no-print-scale = Den geplanten Druckmaßstab entfernen
 cli-arg-course-number-after = Position des Postens in der Bahn, ab 1 gezählt wie auf der Karte; Querungsstellen zählen als Positionen
 cli-arg-course-number-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn; jeder Wert wird auf 0 bis 360 umgerechnet
-cli-arg-course-number-gap = Abstand zum Kreis in Druckmillimetern, mehr als 0 und höchstens 10
+cli-arg-course-number-gap = Abstand zwischen Kreislinie und Nummer in Druckmillimetern, mehr als 0 und höchstens 10
 cli-arg-course-number-clear = Die Nummernlage der Bahn entfernen, sodass wieder die zentrale oder die automatische Lage gilt
 cli-arg-course-numbers-overwrite = Auch früher gesetzte Nummernlagen der Bahn ersetzen; Posten mit zentraler Nummernlage behalten sie [Standard: behalten]
 
@@ -512,7 +512,7 @@ mcp-tool-add-control = Einen Posten an einer Position in Kartenmillimetern anleg
 mcp-tool-move-control = Einen Posten an eine neue Position in Kartenmillimetern setzen. Die Position muss auf der Karte liegen.
 mcp-tool-remove-control = Einen Posten samt seinen Besuchen in Einzelbahnen entfernen. Das Ergebnis nennt die Bahnen, die er verlassen hat, und in cleared_legs die Strecken, die Knickpunkte und Abflaggung verloren haben, weil sie jetzt zu einem anderen Bahnpunkt führen.
 mcp-tool-describe-control = Die Beschreibungssymbole eines Postens setzen, Spalte C bis H, als IOF-Symbol-IDs. Spalten, die du weglässt, behalten ihr Symbol. clear leert zuerst alle Spalten.
-mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zum Kreis in Druckmillimetern. clear stellt den Standardplatz wieder her.
+mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zwischen Kreislinie und Nummer in Druckmillimetern. clear stellt den Standardplatz wieder her.
 mcp-tool-add-special = Ein Sonderobjekt anlegen. Start, Ziel, Erste-Hilfe-Stelle und Verpflegungsstelle sind ein einzelner Punkt (at). Pflichtstrecke, verbotene Route, Sperrgebiet und Gefahrenbereich werden durch Punkte gezeichnet (points). Die id muss neu sein.
 mcp-tool-remove-special = Ein Sonderobjekt anhand seiner id entfernen. Ein Start oder Ziel, den eine Bahn nutzt, lässt sich nicht entfernen.
 mcp-tool-set-special-courses = Festlegen, zu welchen Bahnen ein Sonderobjekt gehört: eine Liste von Bahnnamen oder all mit true für alle Bahnen. Nicht für Start und Ziel. remove_course entfernt die einzige Bahn eines Sonderobjekts nicht, also hier zuerst erweitern oder umhängen.
@@ -525,7 +525,7 @@ mcp-tool-set-course-controls = Die Posten einer Bahn ersetzen. Der n-te Besuch e
 mcp-tool-set-leg = Die Knickpunkte einer Strecke einer Einzelbahn setzen und festlegen, ob sie abgeflaggt ist: die Strecke ab dem Start (from_start) oder die nach einer Position (after, ab 1 gezählt wie auf der Karte, Querungsstellen eingeschlossen). Ohne bends verliert die Strecke ihre Knickpunkte.
 mcp-tool-set-course-details = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern. Parameter, die du weglässt, bleiben, wie sie sind.
 mcp-tool-place-numbers = Die Postennummern einer Bahn so setzen, dass sie Strecken, Kreise und andere Nummern frei lassen. Gibt zurück, wie viele Nummern es gesetzt hat. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen. Ein Posten mit zentraler Nummernlage (set_control_number) behält sie, und Nummernlagen der Bahn (set_course_number) bleiben, außer overwrite ist true.
-mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn setzen oder zurücksetzen, an einer Position ab 1 gezählt wie auf der Karte (Querungsstellen eingeschlossen). Sie geht der zentralen Lage aus set_control_number und place_numbers vor. Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn), Abstand zum Kreis in Druckmillimetern, mehr als 0 und höchstens 10. clear entfernt sie, dann gilt wieder die zentrale oder die automatische Lage.
+mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn setzen oder zurücksetzen, an einer Position ab 1 gezählt wie auf der Karte (Querungsstellen eingeschlossen). Sie geht der zentralen Lage aus set_control_number und place_numbers vor. Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn), Abstand zwischen Kreislinie und Nummer in Druckmillimetern, mehr als 0 und höchstens 10. clear entfernt sie, dann gilt wieder die zentrale oder die automatische Lage.
 mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
@@ -555,7 +555,7 @@ mcp-param-h = Symbol für Spalte H (IOF-Symbol-ID)
 mcp-param-set-control-number-clear = Zum Standardplatz zurückkehren; dann direction und gap_mm weglassen [Standard: false]
 mcp-param-describe-control-clear = Zuerst alle Spalten leeren; Spalten im selben Aufruf werden danach gesetzt [Standard: false]
 mcp-param-direction = Grad, 0 = Osten, gegen den Uhrzeigersinn; jeder Wert wird auf 0 bis 360 umgerechnet
-mcp-param-gap-mm = Abstand zum Kreis in Druckmillimetern, mehr als 0 und höchstens 10
+mcp-param-gap-mm = Abstand zwischen Kreislinie und Nummer in Druckmillimetern, mehr als 0 und höchstens 10
 mcp-param-kind = Was das Objekt ist: start, finish, marked_route, out_of_bounds, forbidden_route, dangerous_area, first_aid oder water
 mcp-param-id = ID des Objekts, eindeutig unter den Sonderobjekten
 mcp-param-points = Die Punkte von marked_route, forbidden_route, out_of_bounds oder dangerous_area in Reihenfolge; jeder ist ein Objekt mit x und y in Kartenmillimetern
