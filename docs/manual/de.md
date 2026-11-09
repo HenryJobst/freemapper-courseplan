@@ -94,6 +94,10 @@ dort an.
   hinführt. Knickt die Bahn kaum ab, läuft die weiterführende Strecke dort entlang, und die Nummer steht außen an
   der Spitze des Winkels. Auf Punkt- und Liniensymbolen der Karte steht sie nur, wenn kein freier Platz bleibt;
   Flächen darf sie überdecken. Gefällt dir die Lage nicht, setzt du sie selbst.
+- Die Nummer steht 0,5 bis 5 mm vom Kreis entfernt (Abstand der Kreislinie zum Nummernfeld, Regel
+  `wkb2026.number.gap`). Die automatische Platzierung beginnt bei 0,5 mm und rückt in 0,5-mm-Schritten nach
+  außen, bevor sie von der bevorzugten Richtung abweicht. `check` warnt, wenn ein gespeicherter Abstand außerhalb
+  liegt, etwa bei einer von Hand gesetzten Nummer mit 6 mm.
 - Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
 - Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das

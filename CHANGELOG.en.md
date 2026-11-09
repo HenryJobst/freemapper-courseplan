@@ -4,6 +4,20 @@
 
 This file lists all notable changes to freemapper-courseplan, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `check` warns when the gap between a control number and its circle is outside 0.5 to 5 mm
+  (`wkb2026.number.gap`, values `min_gap_mm` and `max_gap_mm`). No standard gives a value; the user set the
+  limits (ADR 0032). Stored numbers stay where they are; old gaps above 5 mm are now reported.
+
+### Changed
+
+- Automatic placement tries gaps from the minimum of the rule profile upward in steps of 0.5 mm, up to the
+  maximum. A larger gap in the preferred direction beats another direction at a smaller gap. Without an
+  applicable rule it stays at 0.5 mm. Newly placed numbers can therefore stand farther out.
+
 ## [0.3.0] - 2026-11-09
 
 ### Added
