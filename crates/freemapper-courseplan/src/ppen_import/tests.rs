@@ -335,12 +335,13 @@ fn bend_in_column_g_moves_to_column_f() {
 }
 
 #[test]
-fn unmapped_2004_symbol_is_kept_and_noted() {
+fn unmapped_2004_symbol_is_only_noted_not_kept() {
     let d = r#"<description box="D" iof-2004-ref="1.99" /><description box="H" iof-2004-ref="12.3" /><description box="F">5x5|3</description>"#;
     let got = import(&format!("{}{}", controls(&[(3, d)]), plain_course()));
     let desc = &control(&got, "31").description;
-    assert_eq!(desc.d.as_deref(), Some("1.99"));
-    assert_eq!(desc.h.as_deref(), Some("12.3"));
+    // 2004 12.3 is not 2024 12.3 ("West part"): an id without a 2024 counterpart stays out of the column.
+    assert_eq!(desc.d, None);
+    assert_eq!(desc.h, None);
     assert_eq!(desc.f, None);
     assert_eq!(
         got.notes,
@@ -652,7 +653,7 @@ fn unknown_elements_arrive_as_notes() {
 }
 
 #[test]
-fn central_number_is_kept_with_a_placement_not_given_by_every_course() {
+fn a_number_left_to_purple_pen_in_one_course_keeps_the_others_per_course() {
     let right = r#"<number-location x="6" y="0" />"#;
     let body = format!(
         "{}{}{}",
@@ -724,4 +725,71 @@ fn every_purple_pen_id_has_a_2024_number_but_radio_control_and_map_issue() {
     for nonsense in ["", "1", "1.17", "11.1", "1.1N", "x.1", "11.7NE", "9.1wide"] {
         assert_eq!(to(nonsense), None, "{nonsense}");
     }
+}
+
+#[test]
+fn unused_control_without_a_position_is_dropped_with_a_note() {
+    let lost = r#"  <control id="9" kind="normal"><code>77</code></control>
+"#;
+    let got = import(&format!("{}{lost}{}", controls(&[]), plain_course()));
+    assert!(got.controls.iter().all(|c| c.code.0 != "77"));
+    assert!(
+        got.notes.contains(&ImportNote::ControlWithoutPosition {
+            control: "77".to_owned()
+        }),
+        "{:?}",
+        got.notes
+    );
+}
+
+#[test]
+fn a_far_number_gap_is_clamped_to_the_maximum_and_noted() {
+    let far = r#"<number-location x="90" y="0" />"#;
+    let got = import(&format!(
+        "{}{}",
+        controls(&[]),
+        course(
+            1,
+            "A",
+            1,
+            &[1, 3, 4, 2],
+            r#"<options print-scale="4000" />"#,
+            &[(3, far)]
+        )
+    ));
+    let n = control(&got, "31").number.clone().unwrap();
+    assert!(close(n.gap_mm, crate::numbers::MAX_GAP_MM), "{n:?}");
+    assert_eq!(
+        got.notes,
+        vec![ImportNote::NumberGapClamped {
+            control: "31".to_owned()
+        }]
+    );
+}
+
+#[test]
+fn courses_with_one_name_get_distinct_names_and_the_special_notes_it() {
+    let water = r#"  <special-object id="5" kind="water"><location x="80" y="80" /><courses><course course="2" /></courses></special-object>
+"#;
+    let second = course(2, "A", 11, &[1, 4, 2], "", &[]);
+    let got = import(&format!(
+        "{}{}{second}{water}",
+        controls(&[]),
+        plain_course()
+    ));
+    let names: Vec<&str> = got.courses.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(names, ["A", "A (2)"]);
+    let SpecialObject::Water { courses, .. } = got.specials.last().unwrap() else {
+        panic!("{:?}", got.specials);
+    };
+    // The file names the course twice as "A", so the special goes to both.
+    assert_eq!(courses, &["A".to_owned(), "A (2)".to_owned()]);
+    assert!(got.notes.contains(&ImportNote::CourseRenamed {
+        from: "A".to_owned(),
+        to: "A (2)".to_owned()
+    }));
+    assert!(got.notes.contains(&ImportNote::SpecialCourseAmbiguous {
+        kind: "water",
+        name: "A".to_owned()
+    }));
 }

@@ -490,6 +490,73 @@ export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beis
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
 
+## Purple-Pen-Import (init --ppen, import --ppen)
+
+cli-help-import = Posten und Bahnen eines Purple-Pen-Events (.ppen) übernehmen
+cli-arg-import-project = Die Projektdatei
+cli-arg-import-ppen = Das zu importierende Purple-Pen-Event; es muss für die Karte des Projekts gezeichnet sein
+cli-arg-import-replace = Die Posten, Bahnen und Sonderobjekte ersetzen, die das Projekt schon hat; Kategorien und akzeptierte Befunde bleiben
+cli-arg-init-ppen = Von einem Purple-Pen-Event (.ppen) ausgehen, das für diese Karte gezeichnet ist
+import-ppen-done = { $controls ->
+    [one] 1 Posten
+   *[other] { $controls } Posten
+} und { $courses ->
+    [one] 1 Bahn
+   *[other] { $courses } Bahnen
+} aus { $path } übernommen
+import-ppen-note-line = Hinweis: { $note }
+import-ppen-needs-replace = { $path } hat schon Posten, Bahnen oder Sonderobjekte; mit --replace erneut aufrufen, um sie durch den Inhalt des Purple-Pen-Events zu ersetzen
+error-import-ppen-read = { $path } lässt sich nicht lesen: { $source }
+error-import-ppen-scale-mismatch = das Purple-Pen-Event ist für 1:{ $file } gezeichnet, die Karte hat 1:{ $map }; die Bahnen für den Maßstab der Karte exportieren
+error-import-ppen-map-scale-unknown = das Purple-Pen-Event ist für 1:{ $file } gezeichnet, und die Karte nennt keinen Maßstab; den Maßstab in der Kartendatei setzen
+error-import-ppen-outside-map = nur { $inside } von { $total } Posten liegen auf der Karte; das Event gehört zu einer anderen Karte
+error-import-ppen-invalid = das Purple-Pen-Event lässt sich nicht lesen: { $source }
+error-import-ppen-fit = das Purple-Pen-Event passt nicht zur Karte: { $source }
+mcp-error-not-ppen = { $path } ist kein Purple-Pen-Event; diese Dateien enden auf .ppen
+import-ppen-note-unknown-element = unbekannt und ausgelassen: { $what }
+import-ppen-note-skipped = Bahn { $course } ausgelassen: { $why }
+import-ppen-note-gaps = Bahn { $course } hat Lücken in Kreisen oder Strecken; das Modell kennt keine, Kreise und Strecken sind daher ganz
+import-ppen-note-unmapped-symbol = Posten { $control }, Spalte { $column }: Symbol { $id } hat keine Nummer im Standard 2024 und wird ausgelassen
+import-ppen-note-number-into-circle = Posten { $control }: die Nummer reicht in den Kreis; die Platzierung bleibt
+import-ppen-note-fit-scale-unchecked = das Event nennt keinen Kartenmaßstab und wurde deshalb nicht mit dem der Karte verglichen
+import-ppen-note-fit-orientation-assumed = die Positionen passen mit y nach oben und mit y nach unten auf die Karte; es wurde y nach oben genommen, die Positionen daher prüfen
+import-ppen-note-fit-axis-against-format = die y-Achse im Projekt widerspricht dem Dateiformat; das Blatt kann gespiegelt gedruckt werden
+import-ppen-note-fit-other = { $note }
+import-ppen-note-map-exchange = Bahn { $course }: der Kartenwechsel { $control } wurde zu einem Knickpunkt der Strecke
+import-ppen-note-map-exchange-at-control = Bahn { $course }: der Kartenwechsel am Posten { $control } wird nicht übernommen
+import-ppen-note-secondary-title = Bahn { $course }: der zweite Titel „{ $title }“ wird nicht übernommen
+import-ppen-note-column-f-text = Posten { $control }: der Text „{ $text }“ in Spalte F wird nicht übernommen
+import-ppen-note-start-finish-description = { $id }: die Beschreibung eines Starts oder Ziels wird nicht übernommen
+import-ppen-note-map-issue-as-start = Kartenausgabe { $id } wurde als Start übernommen
+import-ppen-note-special-skipped = ein Sonderobjekt der Art { $kind } wird nicht unterstützt und ausgelassen
+import-ppen-note-special-without-course = ein Sonderobjekt der Art { $kind } gilt nur für Bahnen, die ausgelassen wurden, und entfällt daher auch
+import-ppen-note-course-renamed = Bahn „{ $from }“ heißt im Projekt „{ $to }“; Bahnnamen sind eindeutig und haben keine Leerzeichen an den Enden
+import-ppen-note-control-without-position = Posten { $control } hat keine Position und wird von keiner Bahn benutzt, er entfällt daher
+import-ppen-note-number-gap-clamped = Posten { $control }: die Nummer liegt weit vom Kreis; der Abstand wird auf { $max } mm gekürzt
+import-ppen-note-special-course-ambiguous = ein Sonderobjekt der Art { $kind } nennt die Bahn { $name }, aber mehrere Bahnen heißen so; es gilt für alle
+import-ppen-note-forked = die Bahnen { $variants } sind die Varianten der Gabelung { $family }
+import-ppen-note-notes-truncated = das Event hat mehr Hinweise, als der Leser behält; der Rest entfällt
+word-import-why-variations = sie hat Varianten
+word-import-why-alternative-controls = sie hat alternative Posten
+word-import-why-score-course = Score-Bahnen werden nicht übernommen
+word-import-why-no-start = sie beginnt nicht an einem Start
+word-import-why-no-finish = sie endet nicht an einem Ziel
+word-import-why-start-or-finish-inside-the-course = ein Start oder Ziel liegt mitten in der Bahn
+word-import-why-no-name = sie hat keinen Namen
+word-import-special-out-of-bounds = Sperrgebiet
+word-import-special-dangerous-area = Gefahrenbereich
+word-import-special-forbidden-route = verbotene Route
+word-import-special-boundary = Grenze
+word-import-special-marked-route = abgeflaggte Strecke
+word-import-special-first-aid = Erste-Hilfe-Stelle
+word-import-special-water = Verpflegungsstelle
+word-import-special-text = Text
+word-import-special-line = Linie
+word-import-special-white-out = Abdeckung
+mcp-tool-import-ppen = Die Posten, Bahnen und Sonderobjekte eines Purple-Pen-Events (.ppen) übernehmen, das für die Karte des Projekts gezeichnet ist. Erwartet project, path (die .ppen-Datei) und replace; ohne replace darf das Projekt noch keine Posten, Bahnen oder Sonderobjekte haben, mit replace werden sie durch die des Events ersetzt, Kategorien und akzeptierte Befunde bleiben. Gibt controls, courses und notes zurück, die Texte zu dem, was ausgelassen oder geändert wurde.
+mcp-param-import-ppen-path = Das Purple-Pen-Event, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .ppen
+mcp-param-import-ppen-replace = Vorhandenes ersetzen [Standard: false]
+
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
 cli-help-mcp = Das Bahnlegen über MCP auf stdin und stdout für KI-Assistenten anbieten

@@ -496,6 +496,73 @@ export-iof-xml-nothing-to-do = nothing to export; name a format, for example --i
 error-export-iof-xml-course = cannot export course { $course }: { $source }
 error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
 
+## Purple Pen import (init --ppen, import --ppen)
+
+cli-help-import = Take over the controls and courses of a Purple Pen event (.ppen)
+cli-arg-import-project = The project file
+cli-arg-import-ppen = The Purple Pen event to import; it must be drawn for the project's map
+cli-arg-import-replace = Replace the controls, courses and special objects the project already has; classes and accepted findings stay
+cli-arg-init-ppen = Start from a Purple Pen event (.ppen) drawn for this map
+import-ppen-done = { $controls ->
+    [one] imported 1 control
+   *[other] imported { $controls } controls
+} and { $courses ->
+    [one] 1 course
+   *[other] { $courses } courses
+} from { $path }
+import-ppen-note-line = note: { $note }
+import-ppen-needs-replace = { $path } already has controls, courses or special objects; run again with --replace to swap them for the content of the Purple Pen event
+error-import-ppen-read = cannot read { $path }: { $source }
+error-import-ppen-scale-mismatch = the Purple Pen event is drawn for 1:{ $file } and the map is 1:{ $map }; export the courses for the map's scale
+error-import-ppen-map-scale-unknown = the Purple Pen event is drawn for 1:{ $file }, and the map states no scale; set the scale in the map file
+error-import-ppen-outside-map = only { $inside } of { $total } controls lie on the map; the event belongs to another map
+error-import-ppen-invalid = the Purple Pen event cannot be read: { $source }
+error-import-ppen-fit = the Purple Pen event does not fit the map: { $source }
+mcp-error-not-ppen = { $path } is not a Purple Pen event; these files end in .ppen
+import-ppen-note-unknown-element = not known and left out: { $what }
+import-ppen-note-skipped = course { $course } is left out: { $why }
+import-ppen-note-gaps = course { $course } has circle or leg gaps; the model has none, so its circles and legs are whole
+import-ppen-note-unmapped-symbol = control { $control }, column { $column }: symbol { $id } has no number in the 2024 standard and is left out
+import-ppen-note-number-into-circle = control { $control }: the number reaches into the circle; the placement is kept
+import-ppen-note-fit-scale-unchecked = the event states no map scale, so it was not compared with the map's
+import-ppen-note-fit-orientation-assumed = the positions fit the map with y up and with y down; y up was taken, so check the positions
+import-ppen-note-fit-axis-against-format = the y axis in the project goes against the file format; the sheet may print mirrored
+import-ppen-note-fit-other = { $note }
+import-ppen-note-map-exchange = course { $course }: map exchange { $control } became a bend of the leg
+import-ppen-note-map-exchange-at-control = course { $course }: the map exchange at control { $control } is not kept
+import-ppen-note-secondary-title = course { $course }: the secondary title "{ $title }" is not kept
+import-ppen-note-column-f-text = control { $control }: the text "{ $text }" in column F is not kept
+import-ppen-note-start-finish-description = { $id }: the description of a start or finish is not kept
+import-ppen-note-map-issue-as-start = map issue point { $id } was imported as a start
+import-ppen-note-special-skipped = a special object of kind { $kind } is not supported and left out
+import-ppen-note-special-without-course = a special object of kind { $kind } applies only to courses that were left out, so it is left out too
+import-ppen-note-course-renamed = course "{ $from }" is called "{ $to }" in the project; course names are unique and have no white space at the ends
+import-ppen-note-control-without-position = control { $control } has no position and no course uses it, so it is left out
+import-ppen-note-number-gap-clamped = control { $control }: the number lies far from the circle; the gap is cut to { $max } mm
+import-ppen-note-special-course-ambiguous = a special object of kind { $kind } names the course { $name }, but several courses have that name; it applies to all of them
+import-ppen-note-forked = courses { $variants } are the variants of the fork { $family }
+import-ppen-note-notes-truncated = the event has more notes than the reader keeps; the rest is left out
+word-import-why-variations = it has variations
+word-import-why-alternative-controls = it has alternative controls
+word-import-why-score-course = score courses are not imported
+word-import-why-no-start = it does not begin at a start
+word-import-why-no-finish = it does not end at a finish
+word-import-why-start-or-finish-inside-the-course = a start or finish lies inside the course
+word-import-why-no-name = it has no name
+word-import-special-out-of-bounds = out-of-bounds area
+word-import-special-dangerous-area = dangerous area
+word-import-special-forbidden-route = forbidden route
+word-import-special-boundary = boundary
+word-import-special-marked-route = marked route
+word-import-special-first-aid = first aid
+word-import-special-water = water
+word-import-special-text = text
+word-import-special-line = line
+word-import-special-white-out = white-out
+mcp-tool-import-ppen = Take over the controls, courses and special objects of a Purple Pen event (.ppen) drawn for the project's map. Takes project, path, the .ppen file, and replace; without replace the project must hold no controls, courses or special objects yet, and with it they are swapped for the event's, while classes and accepted findings stay. Returns controls, courses and notes, the texts on what was left out or changed.
+mcp-param-import-ppen-path = The Purple Pen event, an absolute path or one starting with ~, ending in .ppen
+mcp-param-import-ppen-replace = Replace what the project already has [default: false]
+
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
 cli-help-mcp = Serve course setting to AI assistants over MCP on stdin and stdout

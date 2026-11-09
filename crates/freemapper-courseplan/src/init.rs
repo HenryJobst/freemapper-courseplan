@@ -90,6 +90,12 @@ pub fn init_project(
     title: Option<String>,
 ) -> Result<ProjectFile, InitError> {
     let event = new_event(map_path, project_path, title)?;
+    create_project(project_path, event)
+}
+
+/// Creates the project folder if needed and writes `event` as a new project file at `project_path`.
+/// Nothing is written when the event is invalid or the file exists.
+pub fn create_project(project_path: &Path, event: Event) -> Result<ProjectFile, InitError> {
     if let Some(dir) = project_path.parent().filter(|d| !d.as_os_str().is_empty()) {
         std::fs::create_dir_all(dir).map_err(|source| InitError::Io {
             path: dir.to_owned(),
@@ -97,6 +103,15 @@ pub fn init_project(
         })?;
     }
     Ok(ProjectFile::create(project_path, event)?)
+}
+
+/// `target` as a path relative to the folder of `project_path` (forward slashes where the platform
+/// allows), for a link stored in the project file such as `sources.ppen`. `None` when `target` does
+/// not exist.
+pub fn link_from_project(project_path: &Path, target: &Path) -> Option<PathBuf> {
+    let abs = target.canonicalize().ok()?;
+    let dir = absolute_dir(project_path.parent().unwrap_or(Path::new("")));
+    Some(relative_path(&dir, &abs))
 }
 
 /// The `title` key of `freemapper.toml` in `dir`. A missing or malformed file counts as none.

@@ -41,7 +41,9 @@ use crate::check::Place;
 use crate::course::CourseError;
 use crate::edit::EditError;
 use crate::init::InitError;
+use crate::numbers::MAX_GAP_MM;
 use crate::omap::OmapError;
+use crate::ppen_import::{ImportNote, PpenImportError};
 use crate::rules::RulesError;
 
 /// Program texts for a value, for example an error.
@@ -312,6 +314,146 @@ impl Localize for CourseError {
                 "error-course-unknown-reference",
                 &[("course", v(course)), ("id", v(id))],
             ),
+        }
+    }
+}
+
+impl Localize for PpenImportError {
+    fn localize(&self, lang: &Lang) -> String {
+        use freemapper_course::FitError;
+        match self {
+            PpenImportError::Read(error) => {
+                text(lang, "error-import-ppen-invalid", &[("source", v(error))])
+            }
+            PpenImportError::Fit(FitError::ScaleMismatch { file, map }) => text(
+                lang,
+                "error-import-ppen-scale-mismatch",
+                &[("file", v(file)), ("map", v(map))],
+            ),
+            PpenImportError::Fit(FitError::MapScaleUnknown { file }) => text(
+                lang,
+                "error-import-ppen-map-scale-unknown",
+                &[("file", v(file))],
+            ),
+            PpenImportError::Fit(FitError::OutsideMap { inside, total }) => text(
+                lang,
+                "error-import-ppen-outside-map",
+                &[("inside", v(inside)), ("total", v(total))],
+            ),
+            PpenImportError::Fit(other) => {
+                text(lang, "error-import-ppen-fit", &[("source", v(other))])
+            }
+        }
+    }
+}
+
+impl Localize for ImportNote {
+    fn localize(&self, lang: &Lang) -> String {
+        let t = |id: &str, args: &[(&str, FluentValue)]| text(lang, id, args);
+        match self {
+            ImportNote::UnknownElement(what) => {
+                t("import-ppen-note-unknown-element", &[("what", v(what))])
+            }
+            ImportNote::Skipped { course, why } => t(
+                "import-ppen-note-skipped",
+                &[
+                    ("course", v(course)),
+                    ("why", v(word(lang, "word-import-why", why))),
+                ],
+            ),
+            ImportNote::GapsNotSupported { course } => {
+                t("import-ppen-note-gaps", &[("course", v(course))])
+            }
+            ImportNote::UnmappedSymbol {
+                control,
+                column,
+                id,
+            } => t(
+                "import-ppen-note-unmapped-symbol",
+                &[
+                    ("control", v(control)),
+                    ("column", v(column)),
+                    ("id", v(id)),
+                ],
+            ),
+            ImportNote::NumberIntoCircle { control } => t(
+                "import-ppen-note-number-into-circle",
+                &[("control", v(control))],
+            ),
+            ImportNote::Fit(note) => {
+                use freemapper_course::FitNote;
+                match note {
+                    FitNote::ScaleUnchecked => t("import-ppen-note-fit-scale-unchecked", &[]),
+                    FitNote::OrientationAssumed => {
+                        t("import-ppen-note-fit-orientation-assumed", &[])
+                    }
+                    FitNote::AxisAgainstFormat { .. } => {
+                        t("import-ppen-note-fit-axis-against-format", &[])
+                    }
+                    other => t(
+                        "import-ppen-note-fit-other",
+                        &[("note", v(format!("{other:?}")))],
+                    ),
+                }
+            }
+            ImportNote::MapExchange { course, control } => t(
+                "import-ppen-note-map-exchange",
+                &[("course", v(course)), ("control", v(control))],
+            ),
+            ImportNote::MapExchangeAtControl { course, control } => t(
+                "import-ppen-note-map-exchange-at-control",
+                &[("course", v(course)), ("control", v(control))],
+            ),
+            ImportNote::SecondaryTitle { course, title } => t(
+                "import-ppen-note-secondary-title",
+                &[("course", v(course)), ("title", v(title))],
+            ),
+            ImportNote::ColumnFText {
+                control,
+                text: what,
+            } => t(
+                "import-ppen-note-column-f-text",
+                &[("control", v(control)), ("text", v(what))],
+            ),
+            ImportNote::StartFinishDescription { id } => t(
+                "import-ppen-note-start-finish-description",
+                &[("id", v(id))],
+            ),
+            ImportNote::MapIssueAsStart { id } => {
+                t("import-ppen-note-map-issue-as-start", &[("id", v(id))])
+            }
+            ImportNote::SpecialSkipped { kind } => t(
+                "import-ppen-note-special-skipped",
+                &[("kind", v(word(lang, "word-import-special", kind)))],
+            ),
+            ImportNote::SpecialWithoutCourse { kind } => t(
+                "import-ppen-note-special-without-course",
+                &[("kind", v(word(lang, "word-import-special", kind)))],
+            ),
+            ImportNote::CourseRenamed { from, to } => t(
+                "import-ppen-note-course-renamed",
+                &[("from", v(from)), ("to", v(to))],
+            ),
+            ImportNote::ControlWithoutPosition { control } => t(
+                "import-ppen-note-control-without-position",
+                &[("control", v(control))],
+            ),
+            ImportNote::NumberGapClamped { control } => t(
+                "import-ppen-note-number-gap-clamped",
+                &[("control", v(control)), ("max", v(MAX_GAP_MM))],
+            ),
+            ImportNote::SpecialCourseAmbiguous { kind, name } => t(
+                "import-ppen-note-special-course-ambiguous",
+                &[
+                    ("kind", v(word(lang, "word-import-special", kind))),
+                    ("name", v(name)),
+                ],
+            ),
+            ImportNote::Forked { family, variants } => t(
+                "import-ppen-note-forked",
+                &[("family", v(family)), ("variants", v(variants.join(", ")))],
+            ),
+            ImportNote::NotesTruncated => t("import-ppen-note-notes-truncated", &[]),
         }
     }
 }
@@ -593,6 +735,29 @@ mod tests {
             "length",
             "climb",
             "target",
+            "file",
+            "map",
+            "inside",
+            "total",
+            "what",
+            "why",
+            "note",
+            "from",
+            "to",
+            "title",
+            "family",
+            "variants",
+            "name",
+            "id",
+            "column",
+            "text",
+            "controls",
+            "courses",
+            "course",
+            "control",
+            "kind",
+            "path",
+            "source",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -608,7 +773,14 @@ mod tests {
     fn ids_in_source(source: &str) -> BTreeSet<String> {
         let mut ids =
             freemapper_text::ids_in_source(source, &["error-", "cli-", "word-", "mcp-", "check-"]);
-        for excluded in ["word-kind", "word-what", "word-name", "word-special"] {
+        for excluded in [
+            "word-kind",
+            "word-what",
+            "word-name",
+            "word-special",
+            "word-import-why",
+            "word-import-special",
+        ] {
             ids.remove(excluded);
         }
         ids
@@ -729,6 +901,31 @@ mod tests {
             "dangerous-area",
         ] {
             ids.insert(format!("word-special-{kind}"));
+        }
+        for why in [
+            "variations",
+            "alternative-controls",
+            "score-course",
+            "no-start",
+            "no-finish",
+            "start-or-finish-inside-the-course",
+            "no-name",
+        ] {
+            ids.insert(format!("word-import-why-{why}"));
+        }
+        for kind in [
+            "out-of-bounds",
+            "dangerous-area",
+            "forbidden-route",
+            "boundary",
+            "marked-route",
+            "first-aid",
+            "water",
+            "text",
+            "line",
+            "white-out",
+        ] {
+            ids.insert(format!("word-import-special-{kind}"));
         }
         let args = sample_args();
         for lang in available() {

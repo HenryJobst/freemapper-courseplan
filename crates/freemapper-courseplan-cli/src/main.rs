@@ -4,6 +4,7 @@
 mod check_cmd;
 mod edit_cmd;
 mod export_cmd;
+mod import_cmd;
 mod mcp;
 
 use std::ffi::OsString;
@@ -47,11 +48,25 @@ enum Command {
         /// Event title
         #[arg(long)]
         title: Option<String>,
+        /// Start from a Purple Pen event
+        #[arg(long, value_name = "FILE")]
+        ppen: Option<PathBuf>,
     },
     /// Print the title, map, controls, courses and classes of a project file
     Info {
         /// The project file
         project: PathBuf,
+    },
+    /// Take over a Purple Pen event
+    Import {
+        /// The project file
+        project: PathBuf,
+        /// The Purple Pen event
+        #[arg(long, value_name = "FILE")]
+        ppen: PathBuf,
+        /// Replace what the project has
+        #[arg(long)]
+        replace: bool,
     },
     /// Write the courses to a file for other programs
     Export {
@@ -195,6 +210,13 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .mut_arg("map", |a| with_help(a, "cli-arg-init-map"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-init-project"))
                 .mut_arg("title", |a| with_help(a, "cli-arg-init-title"))
+                .mut_arg("ppen", |a| with_help(a, "cli-arg-init-ppen"))
+        })
+        .mut_subcommand("import", |s| {
+            s.about(t("cli-help-import"))
+                .mut_arg("project", |a| with_help(a, "cli-arg-import-project"))
+                .mut_arg("ppen", |a| with_help(a, "cli-arg-import-ppen"))
+                .mut_arg("replace", |a| with_help(a, "cli-arg-import-replace"))
         })
         .mut_subcommand("info", |s| {
             s.about(t("cli-help-info"))
@@ -376,7 +398,13 @@ fn main() -> ExitCode {
             map,
             project,
             title,
-        } => init(&lang, &map, project, title).map_err(Failure::Error),
+            ppen,
+        } => init(&lang, &map, project, title, ppen),
+        Command::Import {
+            project,
+            ppen,
+            replace,
+        } => import_cmd::import(&lang, &project, &ppen, replace),
         Command::Info { project } => info(&lang, &project).map_err(Failure::Error),
         Command::Control { action } => edit_cmd::control(&lang, action),
         Command::Special { action } => edit_cmd::special(&lang, action),
@@ -433,10 +461,19 @@ fn init(
     map: &Path,
     project: Option<PathBuf>,
     title: Option<String>,
-) -> Result<(), String> {
+    ppen: Option<PathBuf>,
+) -> Result<(), Failure> {
     let project = project.unwrap_or_else(|| default_project_path(map));
-    let created = init_project(map, &project, title).map_err(|e| e.localize(lang))?;
+    let Some(ppen) = ppen else {
+        let created =
+            init_project(map, &project, title).map_err(|e| Failure::Error(e.localize(lang)))?;
+        println!("{}", created.path.display());
+        return Ok(());
+    };
+    let (created, report) = import_cmd::init_from_ppen(map, &project, title, &ppen)
+        .map_err(|e| import_cmd::failure(lang, e))?;
     println!("{}", created.path.display());
+    import_cmd::print_report(lang, &report, &ppen);
     Ok(())
 }
 
@@ -595,6 +632,7 @@ mod tests {
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),
+        ("import_cmd.rs", include_str!("import_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
     ];

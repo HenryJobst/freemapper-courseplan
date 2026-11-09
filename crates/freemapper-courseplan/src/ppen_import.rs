@@ -19,7 +19,9 @@
 //! - Descriptions: a `.ppen` stores Purple Pen's symbol ids, which are the 2004 numbers with suffixes for
 //!   direction and variant (`11.1NE`, `9.1high`, `10.1single`), also for 2018 descriptions. They map to the
 //!   numbers of IOF Control Descriptions 2024 by [`iof_2024`]; a direction suffix stays. An id without a
-//!   2024 number is kept as it is and noted.
+//!   2024 number is left out of the description and noted ([`ImportNote::UnmappedSymbol`]), because the
+//!   same number can mean another symbol in 2024. The instruction rows (such as 15.3 of a crossing point)
+//!   are stored in description column c, which the model uses for them.
 //!
 //! Terms follow `docs/glossary.md`.
 
@@ -37,7 +39,7 @@ use freemapper_courseplan_model::{
 };
 
 use crate::map::{MapKind, map_kind};
-use crate::numbers::{circle_outer_radius_mm, normalize_direction, number_box_mm};
+use crate::numbers::{MAX_GAP_MM, circle_outer_radius_mm, normalize_direction, number_box_mm};
 use crate::omap::{MapCoord, MapDocument};
 
 /// What an import brings into the project, with the notes on what it could not bring.
@@ -56,11 +58,11 @@ pub enum ImportNote {
     /// An element or attribute value the reader does not know, by name.
     UnknownElement(String),
     /// The course was left out, and why: "variations", "alternative controls", "score course",
-    /// "no start", "no finish", "start or finish inside the course", "no name", "duplicate name".
+    /// "no start", "no finish", "start or finish inside the course", "no name".
     Skipped { course: String, why: &'static str },
     /// The course has circle gaps or leg gaps; the model has none, so its circles and legs are whole.
     GapsNotSupported { course: String },
-    /// A description symbol id without an IOF 2024 number, kept as it is.
+    /// A description symbol id without an IOF 2024 number, left out of the description.
     UnmappedSymbol {
         control: String,
         column: char,
@@ -87,8 +89,17 @@ pub enum ImportNote {
     /// A special object for courses none of which was imported, left out so that it does not apply to
     /// all courses.
     SpecialWithoutCourse { kind: &'static str },
-    /// The course name had white space at its start or end, which project names may not have.
+    /// The course name had white space at its start or end, or another course of the file has the same
+    /// name; project course names are unique and trimmed.
     CourseRenamed { from: String, to: String },
+    /// An unused control without a position, which cannot be placed on the map and is left out.
+    ControlWithoutPosition { control: String },
+    /// The number of the control lies farther from the circle than the editors accept; the gap was
+    /// shortened to [`MAX_GAP_MM`].
+    NumberGapClamped { control: String },
+    /// A special object names a course whose name two or more courses of the file share. It applies to
+    /// all of them, since the file does not say which one it meant.
+    SpecialCourseAmbiguous { kind: &'static str, name: String },
     /// Courses of one family, the variants of a fork (IOF XML only).
     Forked {
         family: String,
@@ -132,15 +143,13 @@ pub fn import_ppen(bytes: &[u8], map: &MapDocument) -> Result<PpenImport, PpenIm
     Ok(import)
 }
 
-/// The fit notes an import reports: the unchecked scale and the warnings. The georeferencing notes say
-/// nothing for a `.ppen`, which has no latitude and longitude.
+/// The fit notes an import reports: the unchecked scale and the warnings about orientation and axis. The
+/// georeferencing notes (`PlacedByGeoref` and the like) are left out: a `.ppen` has no latitude and
+/// longitude, so they cannot occur.
 fn worth_reporting(note: &FitNote) -> bool {
     matches!(
         note,
-        FitNote::ScaleUnchecked
-            | FitNote::OrientationAssumed
-            | FitNote::AxisAgainstFormat { .. }
-            | FitNote::PlacedByGeoref(_)
+        FitNote::ScaleUnchecked | FitNote::OrientationAssumed | FitNote::AxisAgainstFormat { .. }
     )
 }
 
@@ -180,10 +189,10 @@ pub fn from_fitted(event: FittedEvent, kind: MapKind) -> PpenImport {
     for c in &event.controls {
         out.control(c);
     }
-    let mut names: HashMap<&str, String> = HashMap::new();
+    let mut names: HashMap<&str, Vec<String>> = HashMap::new();
     for course in &event.courses {
         if let Some(name) = out.course(course, kind) {
-            names.insert(course.name.as_str(), name);
+            names.entry(course.name.as_str()).or_default().push(name);
         }
     }
     out.central_numbers();
@@ -245,8 +254,11 @@ fn hundredths(v: f64) -> f64 {
 
 impl Builder {
     fn control(&mut self, c: &freemapper_course::Control<MapCoord>) {
-        // The fit gives every control a position; a `.ppen` control always has one.
+        // The fit places every control it can; a control no course uses may come without a position.
         let Some(at) = c.position.map(point) else {
+            self.notes.push(ImportNote::ControlWithoutPosition {
+                control: c.code.clone(),
+            });
             return;
         };
         self.kinds.insert(c.code.clone(), (c.kind, at.clone()));
@@ -315,7 +327,7 @@ impl Builder {
                         column,
                         id: id.clone(),
                     });
-                    cols[i] = Some(id.clone());
+                    // Not kept: a 2004 number may mean another symbol in 2024 (12.3 is "West part").
                 }
             }
         }
@@ -350,12 +362,15 @@ impl Builder {
         if pc.kind == PCourseKind::Score {
             return skip(&mut self.notes, "score course");
         }
-        let name = pc.name.trim().to_owned();
-        if name.is_empty() {
+        let trimmed = pc.name.trim();
+        if trimmed.is_empty() {
             return skip(&mut self.notes, "no name");
         }
-        if self.courses.iter().any(|c| c.name == name) {
-            return skip(&mut self.notes, "duplicate name");
+        let mut name = trimmed.to_owned();
+        let mut n = 1;
+        while self.courses.iter().any(|c| c.name == name) {
+            n += 1;
+            name = format!("{trimmed} ({n})");
         }
         let stop_kind = |s: &freemapper_course::Stop| {
             self.kinds
@@ -415,9 +430,16 @@ impl Builder {
             }
             if kinds[j] == PKind::Control {
                 number += 1;
-                let placement = stop
-                    .number_text_at
-                    .map(|o| placement(o, kind, number, ratio));
+                let placement = stop.number_text_at.map(|o| {
+                    let (placement, clamped) = placement(o, kind, number, ratio);
+                    let note = ImportNote::NumberGapClamped {
+                        control: stop.control.clone(),
+                    };
+                    if clamped && !self.notes.contains(&note) {
+                        self.notes.push(note);
+                    }
+                    placement
+                });
                 self.numbers
                     .entry(stop.control.clone())
                     .or_default()
@@ -511,7 +533,7 @@ impl Builder {
             .unwrap_or_default()
     }
 
-    fn special(&mut self, special: Special<MapCoord>, names: &HashMap<&str, String>) {
+    fn special(&mut self, special: Special<MapCoord>, names: &HashMap<&str, Vec<String>>) {
         let (pp_kind, filter) = match &special {
             Special::OutOfBounds { courses, .. } => ("out-of-bounds", courses),
             Special::Dangerous { courses, .. } => ("dangerous-area", courses),
@@ -538,10 +560,25 @@ impl Builder {
         let courses: Vec<String> = match filter {
             CourseFilter::All => Vec::new(),
             CourseFilter::Only(list) => {
-                let kept: Vec<String> = list
-                    .iter()
-                    .filter_map(|n| names.get(n.as_str()).cloned())
-                    .collect();
+                let mut kept: Vec<String> = Vec::new();
+                for n in list {
+                    let Some(found) = names.get(n.as_str()) else {
+                        continue;
+                    };
+                    if found.len() > 1 {
+                        self.notes.push(ImportNote::SpecialCourseAmbiguous {
+                            kind: pp_kind,
+                            name: n.clone(),
+                        });
+                    }
+                    kept.extend(
+                        found
+                            .iter()
+                            .filter(|f| !kept.contains(f))
+                            .cloned()
+                            .collect::<Vec<_>>(),
+                    );
+                }
                 if kept.is_empty() {
                     // An empty list would mean all courses.
                     self.notes
@@ -635,17 +672,20 @@ fn close_leg(
 
 /// The placement of number `number` whose box centre the file puts at `offset` (map mm, y down), with
 /// the overprint sizes of `kind` at nominal size and `ratio` map mm per nominal mm.
-fn placement(offset: Offset, kind: MapKind, number: u32, ratio: f64) -> NumberPlacement {
+/// A gap beyond [`MAX_GAP_MM`] is shortened to it; the flag says so.
+fn placement(offset: Offset, kind: MapKind, number: u32, ratio: f64) -> (NumberPlacement, bool) {
     let p = placement_from_offset(
         offset,
         circle_outer_radius_mm(kind),
         number_box_mm(kind, number),
         ratio,
     );
-    NumberPlacement {
+    let clamped = p.gap_mm > MAX_GAP_MM;
+    let placement = NumberPlacement {
         direction: hundredths(normalize_direction(p.direction)) % 360.0,
-        gap_mm: hundredths(p.gap_mm),
-    }
+        gap_mm: hundredths(p.gap_mm.min(MAX_GAP_MM)),
+    };
+    (placement, clamped)
 }
 
 /// The IOF 2024 number of the bend (column F).
