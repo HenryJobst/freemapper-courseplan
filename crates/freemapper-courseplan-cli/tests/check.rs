@@ -98,7 +98,7 @@ fn check_of_a_clean_event_exits_0() {
     let text = stdout(&all);
     assert!(text.contains("skipped:"), "{text}");
     assert!(
-        text.contains("wkb2026.start.capacity, event: this check is not implemented yet"),
+        text.contains("wkb2026.start.capacity, event: the event has no start window"),
         "{text}"
     );
 }
@@ -114,7 +114,7 @@ fn check_speaks_german() {
     assert_eq!(code(&out), Some(0), "{}", stderr(&out));
     let text = stdout(&out);
     assert!(text.contains("übersprungen"), "{text}");
-    assert!(text.contains("noch nicht umgesetzt"), "{text}");
+    assert!(text.contains("kein Startfenster"), "{text}");
     assert!(text.contains("0 Fehler, 0 Warnungen, 0 Hinweise"), "{text}");
 }
 
@@ -379,14 +379,15 @@ fn finding_accept_refusals() {
     );
     assert_eq!(std::fs::read(&project).unwrap(), before);
 
-    // A start-capacity finding can sit at the event.
-    let event = accept(&["wkb2026.start.capacity", "--note", "one start box"]);
+    // A start-capacity finding sits at its start, which counts as a control.
+    let event = accept(&[
+        "wkb2026.start.capacity",
+        "--controls",
+        "S1",
+        "--note",
+        "one start box",
+    ]);
     assert_eq!(code(&event), Some(0), "{}", stderr(&event));
-    assert!(
-        stdout(&event).contains("at the event"),
-        "{}",
-        stdout(&event)
-    );
 }
 
 #[test]

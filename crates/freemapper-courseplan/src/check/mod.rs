@@ -15,6 +15,7 @@ mod context;
 mod distance;
 mod geometry;
 mod legs;
+mod start;
 mod stops;
 
 pub use context::{CheckContext, CourseContext};
@@ -312,6 +313,10 @@ pub const SKIP_CLASS_NOT_MAPPED: &str = "check-skip-class-not-mapped";
 pub const SKIP_CLIMB_MISSING: &str = "check-skip-climb-missing";
 /// Reason: the rule lacks a value its check needs; argument `name`.
 pub const SKIP_VALUE_MISSING: &str = "check-skip-value-missing";
+/// Reason: the event has no start window, so the starters per minute cannot be computed.
+pub const SKIP_START_WINDOW_MISSING: &str = "check-skip-start-window-missing";
+/// Reason: a class at the start has no expected number of starters; arguments `start`, `classes`.
+pub const SKIP_STARTERS_MISSING: &str = "check-skip-starters-missing";
 /// Reason: the map has no features, so it has no extent.
 pub const SKIP_NO_MAP_EXTENT: &str = "check-skip-no-map-extent";
 
@@ -535,8 +540,12 @@ pub const CHECKS: &[Check] = &[
         codes::same_objects_in_circle,
         &[Place::Control],
     ),
-    Check::event_level("start_capacity", not_implemented),
-    Check::new("first_leg_angle", not_implemented),
+    Check::at("start_capacity", start::start_capacity, &[Place::Control]),
+    Check::at(
+        "first_leg_angle",
+        start::first_leg_angle,
+        &[Place::Controls],
+    ),
     Check::new("length_table", not_implemented),
     Check::new("difficulty_mix", not_implemented),
     Check::new("nor_lkm", not_implemented),

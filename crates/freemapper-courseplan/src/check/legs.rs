@@ -12,7 +12,7 @@ use super::{
 use crate::course::LegGeometry;
 
 /// Whole degrees, rounded down, so an angle below its limit never shows as the limit.
-fn degrees_below(degrees: f64) -> ArgValue {
+pub(super) fn degrees_below(degrees: f64) -> ArgValue {
     ArgValue::Int((degrees + 1e-9).floor() as i64)
 }
 

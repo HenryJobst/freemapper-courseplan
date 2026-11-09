@@ -49,6 +49,14 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Posten trennt deren Paar nicht. Ein Posten an einem Punktsymbol, das im Postenkreis noch einmal vorkommt, ergibt
   eine Warnung, wenn Spalte C der Postenbeschreibung leer ist; Linien und Flächen werden nicht verglichen. Jeder
   Code und jedes Paar wird einmal gemeldet, auch wenn mehrere Bahnen sie nutzen.
+- `check` prüft jetzt den Start. Bahnen teilen sich eine Startminute nur am selben Start. Für jeden Start ergeben
+  die erwarteten Starter der Kategorien auf seinen Bahnen, geteilt durch das Startfenster, die Zahl der
+  verschiedenen ersten Posten, die pro Minute nötig sind. Haben die Bahnen weniger, meldet eine Warnung am Start
+  die ersten Posten, die mehrere Bahnen teilen. Ohne Startfenster wird die Prüfregel übersprungen, ein Start mit
+  einer Kategorie ohne erwartete Starter mit den Namen der Kategorien. Als Hinweis wird gemeldet, wenn zwei
+  Bahnen am selben Start mit verschiedenen ersten Posten in der Richtung der ersten Strecke um weniger als 30°
+  abweichen, einmal je Paar erster Posten. Die Richtung führt zum ersten Knickpunkt am Start, sonst zum ersten
+  Bahnpunkt.
 
 ## [0.1.0] - 2026-11-09
 

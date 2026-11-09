@@ -724,6 +724,9 @@ mod tests {
             "min",
             "max",
             "symbol",
+            "start",
+            "shared",
+            "classes",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

@@ -145,6 +145,8 @@ check-skip-class-not-mapped = class { $name } has no rule category
 check-skip-climb-missing = the course has no climb
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
+check-skip-start-window-missing = the event has no start window
+check-skip-starters-missing = start { $start }: classes without an expected number of starters: { $classes }
 check-distance-min = { $first_kind ->
         [start] start
         [finish] finish
@@ -185,6 +187,9 @@ check-code-pair = codes { $first } and { $second } must not both be used in one 
 check-code-confusable-rotated = codes { $first } and { $second } look alike when turned upside down and follow each other
 check-code-confusable-six-nine = codes { $first } and { $second } differ only by 6 and 9 and follow each other
 check-same-objects-in-circle = control { $code } stands at symbol { $symbol }, which occurs again within its circle, and column C of the description is empty
+check-start-capacity = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use
+check-start-capacity-shared = start { $start }: { $needed } different first controls are needed for the starters per minute, but only { $available } in use; first controls shared by several courses: { $shared }
+check-first-leg-angle = start { $start }: the first legs to controls { $first } and { $second } differ in direction by only { $degrees }°, at least { $limit }° are wanted
 
 ## Command line
 

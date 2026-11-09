@@ -145,6 +145,8 @@ check-skip-class-not-mapped = Kategorie { $name } ist keiner WKB-Kategorie zugeo
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
+check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster
+check-skip-starters-missing = Start { $start }: Kategorien ohne erwartete Starterzahl: { $classes }
 check-distance-min = { $first_kind ->
         [start] Start
         [finish] Ziel
@@ -185,6 +187,9 @@ check-code-pair = Die Codes { $first } und { $second } dürfen nicht beide in ei
 check-code-confusable-rotated = Die Codes { $first } und { $second } sehen auf dem Kopf gleich aus und folgen aufeinander
 check-code-confusable-six-nine = Die Codes { $first } und { $second } unterscheiden sich nur durch 6 und 9 und folgen aufeinander
 check-same-objects-in-circle = Der Posten { $code } steht an Symbol { $symbol }, das im Postenkreis noch einmal vorkommt, und Spalte C der Postenbeschreibung ist leer
+check-start-capacity = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }
+check-start-capacity-shared = Start { $start }: Für die Starter pro Minute braucht es { $needed } verschiedene erste Posten, belegt sind aber nur { $available }; erste Posten mehrerer Bahnen: { $shared }
+check-first-leg-angle = Start { $start }: Die ersten Strecken zu den Posten { $first } und { $second } unterscheiden sich in der Richtung nur um { $degrees }°, gewünscht sind mindestens { $limit }°
 
 ## Kommandozeile
 

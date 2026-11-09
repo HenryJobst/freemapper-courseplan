@@ -910,11 +910,11 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
     accept_finding(&mut e, &rules, opposing).unwrap();
     let stored = e.accepted_findings.last().unwrap();
     assert_eq!(stored.legs, [leg_ref("A", 0), leg_ref("A", 2)]);
-    // A start-capacity finding can sit at the event.
+    // A start-capacity finding sits at its start.
     accept_finding(
         &mut e,
         &rules,
-        acceptance("wkb2026.start.capacity", &[], "n"),
+        acceptance("wkb2026.start.capacity", &["S1"], "n"),
     )
     .unwrap();
     assert_eq!(e.accepted_findings.len(), 7);

@@ -944,7 +944,7 @@ fn check_speaks_german() {
         .map(|s| s["text"].as_str().unwrap())
         .collect();
     assert!(
-        texts.contains(&"Diese Prüfung ist noch nicht umgesetzt"),
+        texts.contains(&"Die Veranstaltung hat kein Startfenster"),
         "{texts:?}"
     );
     let (error, text) = session.call(

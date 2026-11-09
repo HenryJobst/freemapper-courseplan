@@ -46,6 +46,13 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   point between two controls does not break their pair. A control at a point symbol that occurs again within
   its circle gives a warning when column C of the control description is empty; lines and areas are not
   compared. Each code or pair is reported once, even when several courses use it.
+- `check` now looks at the start. Courses use the same start minute only at the same start. For each start, the
+  expected starters of the classes on its courses, divided by the start window, give the number of different
+  first controls needed per minute; if the courses have fewer, a warning at the start names the first controls
+  shared by several courses. Without a start window the rule is skipped, and a start with a class that has no
+  expected starters is skipped with the class names. As a hint, two courses at one start with different first
+  controls whose first legs differ in direction by less than 30° are reported once per pair of first controls.
+  The direction runs to the first start bend, or else to the first stop.
 
 ## [0.1.0] - 2026-11-09
 
