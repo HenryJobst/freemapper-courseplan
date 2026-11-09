@@ -6,7 +6,7 @@ kein Rechnungsbetrag, sondern ein Gegenwert.
 
 Ein stündlicher Job auf dem Rechner des Autors rechnet die Zahl aus den lokalen Session-Logs neu aus. Ändert sie
 sich, kommt eine Zeile in `history.csv`, `latest.json` wird ersetzt und das Badge aktualisiert. Die Preise liest
-das Skript bei jedem Lauf von der Preisseite der Claude-API.
+das Skript bei jedem Lauf von der [Preisseite der Claude-API](https://platform.claude.com/docs/en/about-claude/pricing).
 
 ---
 
@@ -16,4 +16,4 @@ equivalent.
 
 An hourly job on the author's machine recomputes the number from the local session logs. When it changes, a line
 is added to `history.csv`, `latest.json` is replaced and the badge is updated. The script reads the prices from
-the Claude API pricing page on every run.
+the [Claude API pricing page](https://platform.claude.com/docs/en/about-claude/pricing) on every run.
