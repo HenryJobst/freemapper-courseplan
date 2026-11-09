@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-09
+
 ### Added
 
 - `freemapper-courseplan export <project> --iof-xml <file>` writes the individual courses as IOF XML 3.0
