@@ -255,8 +255,20 @@ Workspace with three crates *(Claude's call)*:
 
 - Levels, the more specific winning: automatic placement, central position per control, position per course
   *(agreed with freemapper-print)*.
-- Automatic placement runs when a control is created, when a leg changes and on request. It avoids the
-  course's circles, legs and numbers and weighs covered map detail *(Claude's call)*.
+- Automatic placement runs when a control is created, when a leg changes and on request. It follows
+  these rules (ADR 0031):
+  1. The number covers no point or line symbol of the map in the control area; area symbols may be covered.
+     This wins over rules 2–4 *(user, 2026-11-09)*.
+  2. Preferred direction "behind": the continuation of the incoming connecting line past the control
+     *(user, 2026-11-09)*.
+  3. If "behind" is blocked by the outgoing line (almost straight angle), the preferred direction is exactly
+     outside: the bisector of the larger sector between the two lines *(user, 2026-11-09)*. "Blocked" means the
+     box at the behind direction, at the placement's gap, comes within half an overprint line width of the
+     outgoing line; for the first control the incoming line comes from the start triangle *(agreed with
+     freemapper-print)*.
+  4. If the preferred place is blocked, the free place that deviates least from it wins *(user,
+     2026-11-09)*. Candidates lie on a 15° grid around the preferred direction *(Claude's call)*.
+  The course's own circles, legs and numbers stay hard conflicts as before *(Claude's call)*.
 - freemapper-print develops the shared placement module (§5.7 there) and extracts it later. Until then this
   project uses a simple placement of its own behind an interface that the shared module can replace
   *(agreed with freemapper-print)*.
@@ -337,6 +349,7 @@ routing *(Claude's call: selection)*.
 | Several identical objects in the circle without column C | TD11 |
 | Column G "edge"/side on a line object | TD11 |
 | Acute angle at a control (dog leg) and opposing traffic on overlapping legs | WKB26 B 7.2.6, BL12, SOA |
+| Almost straight angle at a control (above 170°, hint) *(user, 2026-11-09)* | user |
 | Straight leg line through a forbidden or impassable area without bends | WKB26 B 7.2.6, IOF-R 17.2 |
 | Leg line through start, finish or another control | BL02 |
 | Control too close to the map edge | BL02 |

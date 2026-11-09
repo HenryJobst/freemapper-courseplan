@@ -87,6 +87,10 @@ there.
   control stands at the right feature.
 - The program places control numbers only when the assistant asks for it. If the assistant then changes legs or
   the order, it has to have them placed again. A number placement set for a control or in a course stays.
+- Automatic placement puts a number behind the circle, in line with the leg that leads to the control. If the
+  course hardly turns, the next leg runs there, and the number goes outside, at the tip of the angle. It stands on
+  a point or line symbol of the map only when no free place is left; it may cover areas. If you dislike the
+  position, set it yourself.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
   flag. The assistant gets a list of these legs.
 - Only individual courses can be edited and measured so far. For team, relay and score courses the program
@@ -103,6 +107,10 @@ finding as an intended exception.
 freemapper-courseplan check hall.courseplan.toml
 freemapper-courseplan check hall.courseplan.toml --all
 ```
+
+`check` tests angles in both directions. It reports an acute angle as a hint below 90° and as a warning below
+45°. If the course runs almost straight at a control, with an angle above 170° between the legs, it gives a hint
+(`wkb2026.leg.straight_angle_hint`), because the control is hard to read as a change of direction there.
 
 The program does not check team, relay and score courses yet. For each of them it reports once that it was not
 checked.

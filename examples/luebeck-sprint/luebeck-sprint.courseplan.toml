@@ -61,49 +61,49 @@ kind = "individual"
 code = 31
 
 [courses.controls.number]
-direction = 315.0
+direction = 0.0
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 32
 
 [courses.controls.number]
-direction = 135.0
+direction = 87.50101101426645
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 33
 
 [courses.controls.number]
-direction = 67.5
+direction = 3.0528825147924294
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 34
 
 [courses.controls.number]
-direction = 337.5
+direction = 290.0437476488562
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 35
 
 [courses.controls.number]
-direction = 135.0
+direction = 138.5126684721998
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 36
 
 [courses.controls.number]
-direction = 292.5
+direction = 237.0947570770121
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 37
 
 [courses.controls.number]
-direction = 112.5
+direction = 157.67623463562836
 gap_mm = 0.5
 
 [[accepted_findings]]

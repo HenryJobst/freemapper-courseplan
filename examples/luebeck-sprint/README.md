@@ -9,7 +9,7 @@ Eine Sprintbahn mit sieben Posten auf der Karte der Lübecker Altstadt aus den
 
 <img src="preview.jpg" width="400" alt="Skizze der Bahn auf der Karte der Lübecker Altstadt">
 
-Das Bild ist eine Skizze. Die Karte hat freemapper-print v0.1.0 gerendert, Kreise, Linien und Nummern hat
+Das Bild ist eine Skizze. Die Karte hat freemapper-print v0.2.0 gerendert, Kreise, Linien und Nummern hat
 `make-preview.py` aus der Projektdatei darübergezeichnet. Den echten Bahnaufdruck liefert freemapper-print, sobald
 es Bahnen aus einer `.ppen` drucken kann; dann ersetzt das Druck-PDF diese Skizze.
 

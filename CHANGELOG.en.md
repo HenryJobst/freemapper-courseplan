@@ -6,8 +6,19 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## Unreleased
 
+### Added
+
+- `check` hints at almost straight angles at controls: when the legs at a control form an angle above 170°,
+  it gives a hint (`wkb2026.leg.straight_angle_hint`). Crossing points are left out.
+
 ### Changed
 
+- Automatic placement puts a control number behind the circle, in line with the leg that leads to the control.
+  When the next leg runs along that line (an almost straight angle), the number goes outside, at the tip of the
+  angle. The number covers no point or line symbol of the map as long as a free place is left; it may cover
+  areas. If the preferred place is taken, placement picks the free place that deviates least, in steps of 15°.
+  Newly placed numbers therefore often stand differently than before (ADR 0031). freemapper-print builds the
+  same rules into its shared placement module.
 - The gap of a control number (`--gap`, `gap_mm`) now starts at the outer edge of the circle line and means
   the shortest distance to the number box, in every direction. It used to start at the centre of the circle
   line, and on the diagonals the number stood farther away than given. freemapper-print computes it the same
