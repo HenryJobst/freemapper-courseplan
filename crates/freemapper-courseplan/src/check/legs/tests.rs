@@ -21,6 +21,13 @@ fn hint_rule() -> Rule {
     )
 }
 
+fn straight_rule() -> Rule {
+    with_values(
+        rule("t.leg.straight", "straight_angle", Severity::Hint),
+        "degrees = 170.0",
+    )
+}
+
 fn opposing_rule() -> Rule {
     with_values(
         rule("t.leg.opposing", "opposing_legs", Severity::Warning),
@@ -54,6 +61,20 @@ fn angle_event(degrees: f64) -> Event {
         vec![course("A", &["31", "32"])],
     );
     set_finish(&mut e, 50.0 + 80.0 * dx, 80.0 * dy);
+    e
+}
+
+/// As `angle_event`, but the finish turns 90 degrees at 32, so only the angle at 31 is a candidate
+/// for a straight angle (the angle at 32 is 90 degrees).
+fn straight_event(degrees: f64) -> Event {
+    let theta = (180.0 - degrees).to_radians();
+    let (dx, dy) = (theta.cos(), theta.sin());
+    let (x, y) = (50.0 + 40.0 * dx, 40.0 * dy);
+    let mut e = event(
+        &[("31", 50.0, 0.0), ("32", x, y)],
+        vec![course("A", &["31", "32"])],
+    );
+    set_finish(&mut e, x - 40.0 * dy, y + 40.0 * dx);
     e
 }
 
@@ -751,4 +772,101 @@ fn the_wkb_profile_warns_about_opposing_legs() {
     let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
     assert!(r.findings.iter().all(|f| f.rule != "wkb2026.leg.opposing"));
     assert_eq!(r.accepted.len(), 1);
+}
+
+// ---------------------------------------------------------------------------------------------
+// straight_angle
+
+#[test]
+fn a_straight_angle_at_a_control_is_reported_at_the_incoming_leg() {
+    let r = report(
+        &straight_event(175.0),
+        &map(4000, vec![]),
+        vec![straight_rule()],
+    );
+    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+    assert_eq!(r.findings[0].location, leg("A", 0));
+    assert_eq!(
+        en(&r.findings[0]),
+        "the legs at control 31 form an angle of 175°, at most 170° wanted"
+    );
+    assert_eq!(
+        de(&r.findings[0]),
+        "Die Strecken am Posten 31 bilden einen Winkel von 175°, erwünscht sind höchstens 170°"
+    );
+    let r = report(
+        &straight_event(160.0),
+        &map(4000, vec![]),
+        vec![straight_rule()],
+    );
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
+fn a_straight_angle_shows_rounded_up() {
+    let r = report(
+        &straight_event(170.4),
+        &map(4000, vec![]),
+        vec![straight_rule()],
+    );
+    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+    assert_eq!(
+        en(&r.findings[0]),
+        "the legs at control 31 form an angle of 171°, at most 170° wanted"
+    );
+}
+
+#[test]
+fn straight_angle_skips_crossing_points() {
+    let mut e = straight_event(175.0);
+    crossing(&mut e, "31");
+    let r = report(&e, &map(4000, vec![]), vec![straight_rule()]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
+fn only_the_most_extreme_straight_rule_reports() {
+    let warning = with_values(
+        rule(
+            "t.leg.straight_warning",
+            "straight_angle",
+            Severity::Warning,
+        ),
+        "degrees = 175.0",
+    );
+    let r = report(
+        &straight_event(178.0),
+        &map(4000, vec![]),
+        vec![straight_rule(), warning.clone()],
+    );
+    let found: Vec<(&str, Severity)> = r
+        .findings
+        .iter()
+        .map(|f| (f.rule.as_str(), f.severity))
+        .collect();
+    assert_eq!(found, [("t.leg.straight_warning", Severity::Warning)]);
+    // 172° breaks only the hint.
+    let r = report(
+        &straight_event(172.0),
+        &map(4000, vec![]),
+        vec![straight_rule(), warning],
+    );
+    let rules: Vec<&str> = r.findings.iter().map(|f| f.rule.as_str()).collect();
+    assert_eq!(rules, ["t.leg.straight"]);
+}
+
+#[test]
+fn the_wkb_profile_hints_at_straight_angles() {
+    let rules = load_rule_set("wkb-2026", &[]).unwrap();
+    let e = straight_event(175.0);
+    let map = map(4000, vec![]);
+    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    let found: Vec<&Finding> = r
+        .findings
+        .iter()
+        .filter(|f| f.rule.starts_with("wkb2026.leg.straight"))
+        .collect();
+    assert_eq!(found.len(), 1, "{:?}", r.findings);
+    assert_eq!(found[0].rule, "wkb2026.leg.straight_angle_hint");
+    assert_eq!(found[0].severity, Severity::Hint);
 }
