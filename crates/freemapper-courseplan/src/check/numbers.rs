@@ -6,8 +6,8 @@ use freemapper_courseplan_model::NumberPlacement;
 
 use super::{
     ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_VALUE_MISSING, Skipped, above, below,
-    value_number,
 };
+use crate::numbers::rule_sides;
 
 /// `number_gap`: the gap between the circle and the stored number is below `min_gap_mm` or above
 /// `max_gap_mm`. Each value may be missing, at least one is needed. Controls without a stored
@@ -25,8 +25,7 @@ pub(super) fn number_gap(
     findings: &mut Vec<Finding>,
     skipped: &mut Vec<Skipped>,
 ) {
-    let min = value_number(run.rule(), "min_gap_mm");
-    let max = value_number(run.rule(), "max_gap_mm");
+    let (min, max) = rule_sides(run.rule());
     if min.is_none() && max.is_none() {
         skipped.push(run.skipped(
             Location::Event,
@@ -42,20 +41,24 @@ pub(super) fn number_gap(
             if let Some(limit) = min.filter(|m| below(gap, *m)) {
                 let beaten = siblings
                     .iter()
-                    .filter_map(|r| value_number(r, "min_gap_mm"))
+                    .filter_map(|r| rule_sides(r).0)
                     .any(|m| above(m, limit) && below(gap, m));
                 return (!beaten).then_some(("check-number-gap-small", limit));
             }
             if let Some(limit) = max.filter(|m| above(gap, *m)) {
                 let beaten = siblings
                     .iter()
-                    .filter_map(|r| value_number(r, "max_gap_mm"))
+                    .filter_map(|r| rule_sides(r).1)
                     .any(|m| below(m, limit) && above(gap, m));
                 return (!beaten).then_some(("check-number-gap-large", limit));
             }
             None
         };
         for (k, course_control) in course.controls.iter().enumerate() {
+            // Crossing points print no number; they get no gap check, as in placement.
+            if course.numbers.get(k).copied().flatten().is_none() {
+                continue;
+            }
             let own = course_control.number.as_ref();
             let central = || -> Option<&NumberPlacement> {
                 ctx.event

@@ -138,3 +138,81 @@ fn controls_without_placement_are_skipped() {
     );
     assert!(r.findings.is_empty(), "{:?}", r.findings);
 }
+
+#[test]
+fn crossing_point_with_a_stored_number_is_skipped() {
+    let mut e = gap_event(None, Some(8.0));
+    crossing(&mut e, "31");
+    let r = report(&e, &map(4000, vec![]), vec![range_rule()]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
+fn rule_with_max_below_min_is_raised_like_placement() {
+    let rule = gap_rule("t.swap", "min_gap_mm = 6.0\nmax_gap_mm = 5.0");
+    let r = report(&gap_event(None, Some(6.0)), &map(4000, vec![]), vec![rule]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
+fn invalid_rule_values_are_ignored() {
+    let rule = gap_rule("t.nan", "min_gap_mm = nan\nmax_gap_mm = -2.0");
+    let r = report(&gap_event(None, Some(8.0)), &map(4000, vec![]), vec![rule]);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+    assert_eq!(r.skipped.len(), 1, "{:?}", r.skipped);
+}
+
+#[test]
+fn placement_with_the_profile_range_passes_the_check() {
+    use crate::course::control_numbers;
+    use crate::map::{MapIndex, MapKind};
+    use crate::numbers::{auto_place, gap_range};
+    use crate::rules::load_rule_set;
+    use freemapper_courseplan_model::Discipline;
+
+    let set = load_rule_set("wkb-2026", &[]).unwrap();
+    let range = gap_range(&set, MapKind::Sprint, Discipline::Sprint, 4000);
+    let mut e = event(
+        &[("31", 30.0, 10.0), ("32", 60.0, 10.0), ("33", 62.0, 10.0)],
+        vec![course("A", &["31", "32", "33"])],
+    );
+    crossing(&mut e, "32");
+    // Symbols near the first control force gaps beyond the minimum.
+    let doc = map(
+        4000,
+        vec![
+            point_object(POINT_113, 34.6, 10.0),
+            line_object(LINE_502, &[(33.0, 12.0), (33.0, 5.0)]),
+        ],
+    );
+    let index = MapIndex::from_document(&doc);
+    let placed = auto_place(
+        &e,
+        &e.courses[0],
+        &index,
+        4000,
+        MapKind::Sprint,
+        range,
+        false,
+    )
+    .unwrap();
+    assert_eq!(placed.len(), 2);
+    let numbers = control_numbers(&e, &e.courses[0]);
+    let mut next = placed.into_iter();
+    if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
+        for (k, cc) in controls.iter_mut().enumerate() {
+            if numbers[k].is_some() {
+                cc.number = next.next();
+            }
+        }
+    }
+    let rules: Vec<Rule> = set
+        .rules
+        .iter()
+        .filter(|r| r.rule.key == "number_gap")
+        .map(|r| r.rule.clone())
+        .collect();
+    assert!(!rules.is_empty());
+    let r = report(&e, &doc, rules);
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+}

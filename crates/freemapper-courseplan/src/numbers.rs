@@ -24,6 +24,8 @@ use crate::rules::RuleSet;
 
 /// Step between two candidate gaps in print mm (agreed with freemapper-print).
 const GAP_STEP_MM: f64 = 0.5;
+/// Upper bound of the steps in `candidate_gaps`; 10 mm in steps of 0.5 mm need 20.
+const MAX_GAP_STEPS: u32 = 1000;
 /// The range of gaps between circle and number in print mm that the rules want.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GapRange {
@@ -43,7 +45,9 @@ impl GapRange {
 /// The gap range of the active `number_gap` rules that apply to a course. The strictest wins:
 /// the largest `min_gap_mm` and the smallest `max_gap_mm`. A value a rule leaves out keeps that
 /// side open. Without a rule the range is [`GapRange::FIXED`]; with only a max the min is 0.5,
-/// with only a min the max equals it. A max below the min is raised to the min.
+/// with only a min the max equals it. A rule value that is not finite or not above 0 counts as
+/// missing, the others are clamped into [0.01, 10] mm, and a max below the min is raised to the
+/// min (the check reads each rule the same way, see `normalise_sides`).
 pub fn gap_range(
     rules: &RuleSet,
     map_kind: MapKind,
@@ -55,18 +59,17 @@ pub fn gap_range(
         .iter()
         .filter(|r| r.rule.key == "number_gap" && r.rule.applies(map_kind, discipline, print_scale))
         .collect();
-    if applying.is_empty() {
-        return GapRange::FIXED;
-    }
-    let min = applying
+    let sides: Vec<(Option<f64>, Option<f64>)> =
+        applying.iter().map(|r| rule_sides(&r.rule)).collect();
+    let min = sides
         .iter()
-        .filter_map(|r| value_number(&r.rule, "min_gap_mm"))
+        .filter_map(|(min, _)| *min)
         .fold(None, |acc: Option<f64>, v| {
             Some(acc.map_or(v, |a| a.max(v)))
         });
-    let max = applying
+    let max = sides
         .iter()
-        .filter_map(|r| value_number(&r.rule, "max_gap_mm"))
+        .filter_map(|(_, max)| *max)
         .fold(None, |acc: Option<f64>, v| {
             Some(acc.map_or(v, |a| a.min(v)))
         });
@@ -80,6 +83,36 @@ pub fn gap_range(
         min_mm: min,
         max_mm: max.max(min),
     }
+}
+
+/// Smallest gap a rule value may have, in print mm (the grid of the stored gaps).
+const MIN_RULE_GAP_MM: f64 = 0.01;
+
+/// A rule gap value made usable: a value that is not finite or not above 0 counts as missing,
+/// the others are clamped into [0.01, [`MAX_GAP_MM`]].
+fn clean_gap(value: Option<f64>) -> Option<f64> {
+    value
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .map(|v| v.clamp(MIN_RULE_GAP_MM, MAX_GAP_MM))
+}
+
+/// The sides of one `number_gap` rule, normalised the way placement and the check both read them:
+/// invalid values are dropped, the others clamped, and a max below the min is raised to it.
+pub(crate) fn normalise_sides(min: Option<f64>, max: Option<f64>) -> (Option<f64>, Option<f64>) {
+    let min = clean_gap(min);
+    let max = clean_gap(max);
+    match (min, max) {
+        (Some(min), Some(max)) => (Some(min), Some(max.max(min))),
+        other => other,
+    }
+}
+
+/// The normalised sides (min, max) of a `number_gap` rule, see [`normalise_sides`].
+pub(crate) fn rule_sides(rule: &crate::rules::Rule) -> (Option<f64>, Option<f64>) {
+    normalise_sides(
+        value_number(rule, "min_gap_mm"),
+        value_number(rule, "max_gap_mm"),
+    )
 }
 
 /// Width of one digit relative to the number height.
@@ -283,19 +316,22 @@ impl Rank {
 }
 
 /// The gaps tried for each direction, in print mm: from the minimum in steps of 0.5 mm, the last
-/// one being exactly the maximum. Rounded to 0.01 so that the stored value is the one evaluated.
+/// one being exactly the maximum. Rounded to 0.01 so that the stored value is the one evaluated:
+/// the minimum up and the maximum down, so no gap leaves the range. The loop is bounded, so
+/// whatever the range holds, it ends.
 fn candidate_gaps(gaps: GapRange) -> Vec<f64> {
+    let up = |v: f64| ((v - EPS) * 100.0).ceil() / 100.0;
+    let down = |v: f64| ((v + EPS) * 100.0).floor() / 100.0;
     let round = |v: f64| (v * 100.0).round() / 100.0;
-    let (min, max) = (round(gaps.min_mm), round(gaps.max_mm.max(gaps.min_mm)));
+    let min = up(clean_gap(Some(gaps.min_mm)).unwrap_or(GapRange::FIXED.min_mm));
+    let max = down(clean_gap(Some(gaps.max_mm)).unwrap_or(min)).max(min);
     let mut out = vec![min];
-    let mut k = 1.0;
-    loop {
-        let g = round(min + GAP_STEP_MM * k);
+    for k in 1..=MAX_GAP_STEPS {
+        let g = round(min + GAP_STEP_MM * f64::from(k));
         if g >= max - EPS {
             break;
         }
         out.push(g);
-        k += 1.0;
     }
     if max > min + EPS {
         out.push(max);
@@ -420,7 +456,8 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// the minimum gap. Stored numbers keep their gap even outside the range; only `check` warns.
 /// Overprint conflicts are a box on another circle, on a leg widened by half the line width, or on
 /// a number placed before; map conflicts are covered point or line symbols, each counting once.
-/// Areas and magnetic north lines (601 and its sub-codes) never count. Overprint outweighs any number of map conflicts (rulings R3 to R5).
+/// Areas and magnetic north lines (601 and its sub-codes) never count. Overprint outweighs any
+/// number of map conflicts (rulings R3 to R5).
 ///
 /// Kept numbers follow the levels of design §5.3, the more specific winning: automatic placement,
 /// then the central number of the control (`Control.number`), then the number of the course
@@ -1615,6 +1652,87 @@ mod tests {
         );
         assert_eq!(gaps(0.5, 1.2), vec![0.5, 1.0, 1.2]);
         assert_eq!(candidate_gaps(GapRange::FIXED), vec![0.5]);
+    }
+
+    #[test]
+    fn candidate_gaps_round_inwards_and_always_end() {
+        let gaps = |min_mm, max_mm| candidate_gaps(GapRange { min_mm, max_mm });
+        // The minimum rounds up, so the first gap is never below it.
+        assert_eq!(gaps(0.333, 0.333)[0], 0.34);
+        // The maximum rounds down, so the last gap is never above it.
+        assert_eq!(*gaps(0.5, 1.237).last().unwrap(), 1.23);
+        for (min_mm, max_mm) in [
+            (f64::NAN, f64::NAN),
+            (f64::INFINITY, f64::INFINITY),
+            (0.0, f64::INFINITY),
+            (-3.0, 1e300),
+            (50.0, 50.0),
+        ] {
+            let list = candidate_gaps(GapRange { min_mm, max_mm });
+            assert!(!list.is_empty() && list.len() <= 1001, "{min_mm} {max_mm}");
+            assert!(
+                list.iter().all(|g| (0.01..=MAX_GAP_MM).contains(g)),
+                "{list:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn gap_range_ignores_invalid_values_and_clamps() {
+        let mut set = load_rule_set("wkb-2026", &[]).unwrap();
+        set.rules.retain(|r| r.rule.key != "number_gap");
+        // Not finite or not above 0 counts as missing.
+        set.rules
+            .push(gap_rule("t.bad", "min_gap_mm = nan\nmax_gap_mm = inf"));
+        assert_eq!(range_of(&set), GapRange::FIXED);
+        set.rules.clear();
+        set.rules
+            .push(gap_rule("t.neg", "min_gap_mm = -1.0\nmax_gap_mm = 0.0"));
+        assert_eq!(range_of(&set), GapRange::FIXED);
+        // 50 mm is clamped to the largest gap the CLI accepts.
+        set.rules.clear();
+        set.rules
+            .push(gap_rule("t.big", "min_gap_mm = 50.0\nmax_gap_mm = 50.0"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: MAX_GAP_MM,
+                max_mm: MAX_GAP_MM
+            }
+        );
+        // A tiny positive value is lifted to 0.01.
+        set.rules.clear();
+        set.rules.push(gap_rule("t.tiny", "min_gap_mm = 0.000001"));
+        assert_eq!(range_of(&set).min_mm, 0.01);
+        // An invalid value of one rule leaves the valid one of another alone.
+        set.rules.clear();
+        set.rules
+            .push(gap_rule("t.ok", "min_gap_mm = 1.0\nmax_gap_mm = 3.0"));
+        set.rules.push(gap_rule("t.nan", "max_gap_mm = nan"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 1.0,
+                max_mm: 3.0
+            }
+        );
+    }
+
+    #[test]
+    fn line_along_the_preferred_direction_blocks_every_gap() {
+        // In from the west, out to the south: preferred is east. A 502 line runs outward along
+        // 0 degrees through all gaps from 0.5 to 5 mm, so the number turns away.
+        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
+        let line = index(vec![line_object(
+            LINE_502,
+            &[(103.0, 100.0), (130.0, 100.0)],
+        )]);
+        let range = GapRange {
+            min_mm: 0.5,
+            max_mm: 5.0,
+        };
+        let d = place_in(&e, &line, 4000, range)[0].direction;
+        assert!(angle_diff(d, 0.0) >= 15.0, "direction {d}");
     }
 
     #[test]
