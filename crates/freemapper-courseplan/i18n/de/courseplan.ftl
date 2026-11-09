@@ -90,6 +90,10 @@ error-edit-special-would-cover-all-courses = { $count ->
    *[other] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälten diese Sonderobjekte für alle Bahnen. Ordne sie zuerst einer anderen Bahn zu oder lösche sie
 }
 error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start oder Ziel; jede Bahn nennt ihren Start und ihr Ziel selbst
+error-edit-unknown-rule = Prüfregel { $name } ist im Regelprofil { $id } nicht aktiv
+error-edit-finding-needs-place = Befunde der Prüfregel { $name } betreffen eine Bahn, Posten oder eine Strecke; gib diesen Ort an
+error-edit-finding-has-one-place = ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder eine Strecke an
+error-edit-accepted-not-found = an diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
 
 ## OOM-Karten lesen (OmapError)
 
@@ -98,6 +102,42 @@ error-omap-missing-element = Das Element <{ $name }> fehlt
 error-omap-io = Lesefehler: { $message }
 error-omap-binary-format = Diese Datei hat das alte Binärformat von OpenOrienteering Mapper, das dieses Programm nicht lesen kann. Öffne sie in Mapper und speichere sie als aktuelle .omap- oder .xmap-Datei neu.
 error-omap-unsupported = { $message }
+
+## Prüfen (check)
+
+check-severity-error = Fehler
+check-severity-warning = Warnung
+check-severity-hint = Hinweis
+check-location-event = Veranstaltung
+check-location-course = Bahn { $course }
+check-location-control = Posten { $code }
+check-location-controls = Posten { $codes }
+check-location-leg = Bahn { $course }, Strecke nach { $index }
+check-location-start-leg = Bahn { $course }, Strecke vom Start
+check-skip-not-implemented = diese Prüfung ist noch nicht umgesetzt
+check-skip-training = wird beim Training nicht geprüft
+check-skip-discipline = die Prüfregel gilt nicht für { $discipline ->
+        [sprint] den Sprint
+        [middle] die Mitteldistanz
+        [long] die Langdistanz
+        [ultralong] die Ultralangdistanz
+       *[other] { $discipline }
+    }
+check-skip-map-kind = die Prüfregel gilt nicht für { $kind ->
+        [sprint] Sprintkarten
+        [schoolyard] Schulhofkarten
+        [forest] Waldkarten
+       *[other] Karten der Art { $kind }
+    }
+check-skip-print-scale = keine Prüfregel dieser Art für den Druckmaßstab 1:{ $scale }
+check-skip-course-kind = { $kind ->
+        [team] Mannschaftsbahnen
+        [relay] Staffelbahnen
+        [score] Score-Bahnen
+       *[other] Bahnen der Art { $kind }
+    } werden noch nicht geprüft
+check-skip-class-not-mapped = Kategorie { $name } ist keiner WKB-Kategorie zugeordnet
+check-skip-climb-missing = für die Bahn ist kein Anstieg angegeben
 
 ## Kommandozeile
 
@@ -276,6 +316,56 @@ cli-arg-course-number-gap = Abstand zum Kreis in Druckmillimetern, mehr als 0 un
 cli-arg-course-number-clear = Die Nummernlage der Bahn entfernen, sodass wieder die zentrale oder die automatische Lage gilt
 cli-arg-course-numbers-overwrite = Auch früher gesetzte Nummernlagen der Bahn ersetzen; Posten mit zentraler Nummernlage behalten sie [Standard: behalten]
 
+## Prüfbefehle
+
+cli-help-check = Die Einzelbahnen gegen das Regelprofil und seine Aufsätze prüfen
+cli-help-check-exit-codes =
+    Exit-Code 0: kein Befund der Schwere Fehler; akzeptierte Befunde zählen nicht.
+    Exit-Code 1: mindestens ein Befund der Schwere Fehler, oder die Prüfung wurde abgelehnt, etwa weil Projektdatei oder Karte nicht lesbar sind.
+    Exit-Code 2: falscher Aufruf, etwa eine unbekannte Option.
+cli-arg-check-all = Auch die akzeptierten Befunde mit Begründung und die übersprungenen Prüfregeln mit dem Grund zeigen
+cli-check-group-event = Veranstaltung:
+cli-check-group-course = Bahn { $course }:
+cli-check-heading-accepted = akzeptiert:
+cli-check-heading-skipped = übersprungen:
+cli-check-note = Begründung: { $note }
+cli-check-summary = { $errors } Fehler, { $warnings ->
+        [one] 1 Warnung
+       *[other] { $warnings } Warnungen
+    }, { $hints ->
+        [one] 1 Hinweis
+       *[other] { $hints } Hinweise
+    }; { $accepted } akzeptiert, { $skipped } übersprungen
+cli-check-show-all = check --all zeigt auch die akzeptierten Befunde und die übersprungenen Prüfregeln
+cli-info-rule-profile = Regelprofil: { $value }
+cli-info-rule-profile-overlays = Regelprofil: { $value }, Aufsätze: { $list }
+
+cli-help-finding = Befunde als gewollte Ausnahme akzeptieren oder wieder melden lassen
+cli-help-finding-accept = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Gib seinen Ort so an, wie check ihn zeigt: --controls, --leg oder --course, oder nichts davon für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung
+cli-help-finding-remove = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Gib ihn so an wie beim Akzeptieren
+cli-arg-finding-accept-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
+cli-arg-finding-accept-controls = Die Posten des Befunds, durch Kommas getrennt
+cli-arg-finding-accept-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start
+cli-arg-finding-accept-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
+cli-arg-finding-accept-note = Warum die Ausnahme gewollt ist
+cli-arg-finding-remove-rule = Kennung der Prüfregel, wie check sie zeigt, zum Beispiel wkb2026.distance.min
+cli-arg-finding-remove-controls = Die Posten des Befunds, durch Kommas getrennt
+cli-arg-finding-remove-leg = Die Strecke des Befunds als Bahn:N, die Strecke nach Position N; 0 ist die Strecke vom Start
+cli-arg-finding-remove-course = Die Bahn eines Befunds, der die ganze Bahn betrifft
+cli-finding-bad-leg = { $value } ist keine Strecke; schreibe Bahn:N, zum Beispiel A:3, wobei 0 die Strecke vom Start ist
+cli-finding-at = bei { $location }
+cli-finding-at-event = für die Veranstaltung
+cli-finding-accepted = Befund { $rule } { $location } akzeptiert
+cli-finding-note-replaced = Begründung des akzeptierten Befunds { $rule } { $location } ersetzt
+cli-finding-removed = akzeptierten Befund { $rule } { $location } entfernt
+
+cli-help-event = Einstellungen der ganzen Veranstaltung: das Regelprofil
+cli-help-event-profile = Basis-Regelprofil und Aufsätze setzen. Die Profile werden vorher geladen; ein unbekanntes wird mit der Liste der verfügbaren Profile abgelehnt. Ohne --overlay hat die Veranstaltung keine Aufsätze
+cli-arg-event-profile-base = Das Basis-Regelprofil, zum Beispiel wkb-2026
+cli-arg-event-profile-overlay = Ein Aufsatz auf das Basisprofil, zum Beispiel nor-bb-2021; für mehrere wiederholen, sie gelten in dieser Reihenfolge
+cli-event-profile-set = Regelprofil { $value } gesetzt
+cli-event-profile-set-overlays = Regelprofil { $value } mit den Aufsätzen { $list } gesetzt
+
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
 cli-help-mcp = Das Bahnlegen über MCP auf stdin und stdout für KI-Assistenten anbieten
@@ -288,7 +378,9 @@ mcp-instructions =
     geschrieben. Ablauf: event_info, dann map_extent und map_features_near, um Positionen zu finden, dann
     add_special für Start und Ziel, add_control für jeden Posten, add_course, place_numbers und noch einmal
     event_info, um die Länge zu lesen. Jeder Aufruf speichert seine Änderung. Eine abgelehnte Änderung lässt die
-    Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten und messen.
+    Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten, messen und prüfen. check prüft die Bahnen
+    gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Einen Befund, den der Bahnleger so haben
+    will, bekommt accept_finding mit Begründung; remove_accepted_finding nimmt das zurück.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
 mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
@@ -330,6 +422,10 @@ mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn s
 mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
+mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc und section, und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; und die übersprungenen Prüfregeln mit dem Grund. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
+mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, eine Strecke in legs oder course. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
+mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren.
+mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 
 mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
 mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
@@ -382,3 +478,15 @@ mcp-param-set-course-number-after = Position des Postens in der Bahn, ab 1 gezä
 mcp-param-set-course-number-clear = Die Nummernlage der Bahn entfernen, sodass wieder die zentrale oder die automatische Lage gilt; dann direction und gap_mm weglassen [Standard: false]
 mcp-param-radius-mm = Suchradius in Kartenmillimetern
 mcp-param-limit = Höchstzahl der Objekte [Standard: 20, höchstens 200]
+mcp-param-rule = Kennung der Prüfregel, wie check sie meldet, zum Beispiel wkb2026.distance.min
+mcp-param-note = Warum die Ausnahme gewollt ist
+mcp-param-accept-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check [Standard: keine]
+mcp-param-remove-accepted-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check [Standard: keine]
+mcp-param-accept-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]
+mcp-param-remove-accepted-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]
+mcp-param-accept-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
+mcp-param-remove-accepted-finding-course = Name der Bahn; für einen Befund, der die ganze Bahn betrifft, und in legs für die Bahn der Strecke
+mcp-param-accept-finding-after = Position, von der die Strecke abgeht, ab 1 gezählt wie auf der Karte; 0 ist die Strecke vom Start
+mcp-param-remove-accepted-finding-after = Position, von der die Strecke abgeht, ab 1 gezählt wie auf der Karte; 0 ist die Strecke vom Start
+mcp-param-base = Das Basis-Regelprofil, zum Beispiel wkb-2026
+mcp-param-overlays = Aufsätze auf das Basisprofil in der Reihenfolge, in der sie gelten, zum Beispiel nor-bb-2021 [Standard: keine]

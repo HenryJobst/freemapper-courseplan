@@ -1,0 +1,97 @@
+//! What every check reads: the event, the map index, the map kind and scale, and per individual
+//! course its legs, control numbers and print scale. Built once per `check` run.
+
+use freemapper_courseplan_model::{Control, ControlCode, Course, CourseControl, CourseKind, Event};
+
+use crate::course::{LegGeometry, control_numbers, course_legs};
+use crate::map::{MapIndex, MapKind, map_kind};
+use crate::numbers::{OverprintSizes, base_scale, overprint_sizes};
+use crate::omap::MapDocument;
+use crate::rules::print_scale_of;
+
+/// Shared data of one check run.
+pub struct CheckContext<'a> {
+    pub event: &'a Event,
+    pub map: &'a MapDocument,
+    /// Terrain features of the map; sheet content is left out (`MapIndex`).
+    pub index: MapIndex,
+    pub map_kind: MapKind,
+    /// Scale denominator of the map.
+    pub map_scale: u32,
+    /// Overprint sizes in print mm at [`base_scale`] of the map kind.
+    pub sizes: OverprintSizes,
+    /// The individual courses of the event, in file order. Other kinds are not checked.
+    pub courses: Vec<CourseContext<'a>>,
+}
+
+/// One individual course as the checks see it.
+pub struct CourseContext<'a> {
+    pub course: &'a Course,
+    /// The course controls in running order; crossing points included.
+    pub controls: &'a [CourseControl],
+    /// The legs from the start through every stop to the finish (`course::course_legs`).
+    pub legs: Vec<LegGeometry>,
+    /// The printed number of each course control; `None` for crossing points.
+    pub numbers: Vec<Option<u32>>,
+    /// The print scale the rule filters see (`rules::print_scale_of`).
+    pub print_scale: u32,
+}
+
+impl<'a> CheckContext<'a> {
+    pub fn new(event: &'a Event, map: &'a MapDocument) -> CheckContext<'a> {
+        let map_scale = map.georef.scale_denominator;
+        let kind = map_kind(map);
+        let courses = event
+            .courses
+            .iter()
+            .filter_map(|course| {
+                let CourseKind::Individual { controls } = &course.kind else {
+                    return None;
+                };
+                Some(CourseContext {
+                    course,
+                    controls,
+                    // A loaded project file is consistent, so its courses always resolve.
+                    legs: course_legs(event, course).unwrap_or_default(),
+                    numbers: control_numbers(event, course),
+                    print_scale: print_scale_of(course, map_scale),
+                })
+            })
+            .collect();
+        CheckContext {
+            event,
+            map,
+            index: MapIndex::from_document(map),
+            map_kind: kind,
+            map_scale,
+            sizes: overprint_sizes(kind),
+            courses,
+        }
+    }
+
+    /// The control with this code.
+    pub fn control(&self, code: &ControlCode) -> Option<&'a Control> {
+        self.event.controls.iter().find(|c| &c.code == code)
+    }
+
+    /// A length on the map in metres on the ground: `map_mm × map_scale / 1000`.
+    pub fn metres(&self, map_mm: f64) -> f64 {
+        map_mm * f64::from(self.map_scale) / 1000.0
+    }
+
+    /// A length on the ground in map millimetres.
+    pub fn map_mm(&self, metres: f64) -> f64 {
+        metres * 1000.0 / f64::from(self.map_scale)
+    }
+
+    /// A print size of the overprint in map millimetres: `print_mm × base_scale / map_scale`
+    /// (ADR 0024).
+    pub fn print_to_map_mm(&self, print_mm: f64) -> f64 {
+        print_mm * f64::from(base_scale(self.map_kind)) / f64::from(self.map_scale)
+    }
+
+    /// Radius of the control circle in map millimetres.
+    pub fn circle_radius_mm(&self) -> f64 {
+        self.print_to_map_mm(self.sizes.circle_diameter_mm) / 2.0
+    }
+}

@@ -65,7 +65,7 @@ fn init_creates_project_next_to_map() {
     assert!(info.status.success(), "{}", stderr(&info));
     assert_eq!(
         stdout(&info),
-        "title: luebeck\nmap: luebeck.omap\nmap kind: sprint\ncontrols: 0, crossing points: 0\n\
+        "title: luebeck\nmap: luebeck.omap\nmap kind: sprint\nrule profile: wkb-2026\ncontrols: 0, crossing points: 0\n\
          courses: 0 (individual 0, team 0, relay 0, score 0)\nclasses: 0\n"
     );
 }
@@ -246,7 +246,7 @@ fn info_prints_german_labels() {
     assert!(out.status.success(), "{}", stderr(&out));
     assert_eq!(
         stdout(&out),
-        "Titel: luebeck\nKarte: luebeck.omap\nKartenart: Sprintkarte\nPosten: 0, Querungsstellen: 0\n\
+        "Titel: luebeck\nKarte: luebeck.omap\nKartenart: Sprintkarte\nRegelprofil: wkb-2026\nPosten: 0, Querungsstellen: 0\n\
          Bahnen: 0 (einzeln 0, Mannschaft 0, Staffel 0, Score 0)\nKategorien: 0\n"
     );
 }
@@ -369,7 +369,7 @@ fn info_lines_from_m1_unchanged() {
     let out = run(dir.path(), &["info", project.to_str().unwrap()]);
     assert_eq!(
         stdout(&out),
-        "title: luebeck\nmap: luebeck.omap\nmap kind: sprint\ncontrols: 0, crossing points: 0\n\
+        "title: luebeck\nmap: luebeck.omap\nmap kind: sprint\nrule profile: wkb-2026\ncontrols: 0, crossing points: 0\n\
          courses: 0 (individual 0, team 0, relay 0, score 0)\nclasses: 0\n"
     );
 }

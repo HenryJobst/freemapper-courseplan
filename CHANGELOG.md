@@ -6,6 +6,26 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `check <PROJEKT>` prüft die Einzelbahnen gegen das Regelprofil der Veranstaltung und seine Aufsätze. Die
+  Befunde stehen nach Bahnen geordnet, jeder mit Schwere, Ort, Erklärung, Kennung der Prüfregel und Quelle,
+  danach eine Zusammenfassung. `--all` zeigt auch die akzeptierten Befunde mit Begründung und die übersprungenen
+  Prüfregeln mit dem Grund. Eine Prüfregel, deren Filter (Disziplin, Kartenart, Druckmaßstab) nicht passt, gilt
+  als übersprungen und wird so gemeldet. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft. Der
+  Exit-Code ist 0 ohne Befund der Schwere Fehler, 1 mit einem solchen Befund oder bei abgelehnter Prüfung und 2
+  bei falschem Aufruf. Die einzelnen Prüfungen kommen mit den nächsten Schritten; bis dahin meldet `check` sie
+  als noch nicht umgesetzt.
+- `finding accept <PROJEKT> <REGEL> --note TEXT` akzeptiert einen Befund als gewollte Ausnahme. Den Ort gibst du
+  mit `--controls 31,32`, `--leg A:3` oder `--course A` an, für einen Befund der ganzen Veranstaltung mit nichts
+  davon. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. `finding remove` nimmt das zurück;
+  einen nicht vorhandenen akzeptierten Befund lehnt es ab.
+- `event profile <PROJEKT> <BASIS> [--overlay ID …]` setzt Regelprofil und Aufsätze, nachdem es sie geladen hat.
+  `info` zeigt beides an.
+- MCP: die Werkzeuge `check`, `accept_finding`, `remove_accepted_finding` und `set_rule_profile`. `check` gibt
+  Befunde, akzeptierte Befunde und übersprungene Prüfregeln als JSON zurück, mit Maschinenfeldern und dem Text in
+  der Sprache des Servers. `event_info` nennt Regelprofil und Aufsätze.
+
 ## [0.1.0] - 2026-11-09
 
 ### Hinzugefügt

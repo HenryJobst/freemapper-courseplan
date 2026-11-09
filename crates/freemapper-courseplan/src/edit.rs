@@ -5,9 +5,13 @@
 //! edited in M2a. Terms follow `docs/glossary.md`.
 
 use freemapper_courseplan_model::{
-    Class, Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
-    CourseKind, Event, MapPoint, ModelError, NumberPlacement, SpecialObject, validate,
+    AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
+    CourseControl, CourseKind, Event, FindingKey, MapPoint, ModelError, NumberPlacement,
+    SpecialObject, validate,
 };
+
+use crate::check::check_of;
+use crate::rules::{RuleSet, RulesError, load_rule_set};
 
 /// Why an edit was refused.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -58,6 +62,22 @@ pub enum EditError {
         "special object {0} is a start or finish; each course names its start and finish itself"
     )]
     StartOrFinishHasNoCourses(String),
+    /// The rule is not active in the event's rule profile and overlays.
+    #[error("rule {rule} is not an active rule of rule profile {profile}")]
+    UnknownRule { rule: String, profile: String },
+    /// An accepted finding without course, controls and legs is a finding of the whole event,
+    /// which this rule never reports.
+    #[error("findings of rule {rule} sit at a course, at controls or at a leg; name that place")]
+    FindingNeedsPlace { rule: String },
+    /// A finding sits at one place, so its key names at most one of course, controls and one leg.
+    #[error("a finding of rule {rule} has one place: give a course, controls or one leg")]
+    FindingHasOnePlace { rule: String },
+    /// No accepted finding has this key.
+    #[error("there is no accepted finding of rule {rule} at this place")]
+    AcceptedNotFound { rule: String },
+    /// The rule profile or an overlay cannot be loaded.
+    #[error(transparent)]
+    Rules(#[from] RulesError),
 }
 
 fn cover_all_text(course: &str, specials: &[String]) -> String {
@@ -620,4 +640,110 @@ pub fn remove_class(event: &mut Event, name: &str) -> Result<(), EditError> {
         }
         Ok(())
     })
+}
+
+/// What [`accept_finding`] did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Accepted {
+    Added,
+    /// An accepted finding with the same key existed; its note is replaced.
+    NoteReplaced,
+}
+
+/// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
+/// controls and leg must exist. The key names one place: nothing for a finding of the whole event
+/// (only for rules whose findings can sit there), a course, controls, or one leg. Controls and
+/// legs are stored in the order of their key. Accepting a key again replaces the note.
+pub fn accept_finding(
+    event: &mut Event,
+    rules: &RuleSet,
+    finding: AcceptedFinding,
+) -> Result<Accepted, EditError> {
+    let Some(set_rule) = rules.rule(&finding.rule) else {
+        let mut profile = vec![rules.base.as_str()];
+        profile.extend(rules.overlays.iter().map(String::as_str));
+        return Err(EditError::UnknownRule {
+            rule: finding.rule,
+            profile: profile.join(" + "),
+        });
+    };
+    let places = usize::from(finding.course.is_some())
+        + usize::from(!finding.controls.is_empty())
+        + usize::from(!finding.legs.is_empty());
+    let one_place = || EditError::FindingHasOnePlace {
+        rule: finding.rule.clone(),
+    };
+    if places > 1 || finding.legs.len() > 1 {
+        return Err(one_place());
+    }
+    let event_level = check_of(&set_rule.rule.key).is_some_and(|c| c.event_level);
+    if places == 0 && !event_level {
+        return Err(EditError::FindingNeedsPlace { rule: finding.rule });
+    }
+    let key = finding.key();
+    apply(event, |e| {
+        if let Some(name) = &key.course {
+            course_mut(e, name)?;
+        }
+        for code in &key.controls {
+            control_mut(e, code)?;
+        }
+        for leg in &key.legs {
+            let controls = individual_mut(course_mut(e, &leg.course)?)?;
+            if leg.after as usize > controls.len() {
+                return Err(EditError::BadIndex {
+                    course: leg.course.clone(),
+                    index: leg.after as usize,
+                });
+            }
+        }
+        if let Some(existing) = e.accepted_findings.iter_mut().find(|a| a.key() == key) {
+            existing.note = finding.note;
+            return Ok(Accepted::NoteReplaced);
+        }
+        e.accepted_findings.push(AcceptedFinding {
+            rule: key.rule.clone(),
+            controls: key.controls.clone(),
+            course: key.course.clone(),
+            legs: key.legs.clone(),
+            note: finding.note,
+        });
+        Ok(Accepted::Added)
+    })
+}
+
+/// Removes the accepted findings with this key, so the finding is reported again.
+pub fn remove_accepted_finding(event: &mut Event, key: &FindingKey) -> Result<(), EditError> {
+    apply(event, |e| {
+        let before = e.accepted_findings.len();
+        e.accepted_findings.retain(|a| &a.key() != key);
+        if e.accepted_findings.len() == before {
+            return Err(EditError::AcceptedNotFound {
+                rule: key.rule.clone(),
+            });
+        }
+        Ok(())
+    })
+}
+
+/// Sets the base rule profile and the overlays of the event, after loading them together with
+/// [`load_rule_set`]. An overlay named twice counts once. Returns the loaded rule set.
+pub fn set_rule_profile(
+    event: &mut Event,
+    base: &str,
+    overlays: &[String],
+) -> Result<RuleSet, EditError> {
+    let mut unique: Vec<String> = Vec::new();
+    for overlay in overlays {
+        if !unique.contains(overlay) {
+            unique.push(overlay.clone());
+        }
+    }
+    let set = load_rule_set(base, &unique)?;
+    apply(event, |e| {
+        e.event.rule_profile = base.to_owned();
+        e.event.rule_overlays = unique;
+        Ok(())
+    })?;
+    Ok(set)
 }

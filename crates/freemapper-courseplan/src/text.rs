@@ -485,6 +485,23 @@ impl Localize for EditError {
                 "error-edit-start-or-finish-has-no-courses",
                 &[("id", v(id))],
             ),
+            EditError::UnknownRule { rule, profile } => text(
+                lang,
+                "error-edit-unknown-rule",
+                &[("name", v(rule)), ("id", v(profile))],
+            ),
+            EditError::FindingNeedsPlace { rule } => {
+                text(lang, "error-edit-finding-needs-place", &[("name", v(rule))])
+            }
+            EditError::FindingHasOnePlace { rule } => text(
+                lang,
+                "error-edit-finding-has-one-place",
+                &[("name", v(rule))],
+            ),
+            EditError::AcceptedNotFound { rule } => {
+                text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
+            }
+            EditError::Rules(e) => e.localize(lang),
         }
     }
 }
@@ -652,6 +669,18 @@ mod tests {
             "specials",
             "values",
             "crossings",
+            "discipline",
+            "scale",
+            "warnings",
+            "hints",
+            "accepted",
+            "skipped",
+            "note",
+            "rule",
+            "location",
+            "reason",
+            "doc",
+            "section",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -757,7 +786,7 @@ mod tests {
             .skip(1)
             .step_by(2)
             .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-"]
+                ["error-", "cli-", "word-", "mcp-", "check-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
@@ -771,6 +800,16 @@ mod tests {
     #[test]
     fn ids_used_in_code_exist() {
         let mut ids = ids_in_source(include_str!("text.rs"));
+        for source in [
+            include_str!("check/mod.rs"),
+            include_str!("check/context.rs"),
+        ] {
+            ids.extend(ids_in_source(source));
+        }
+        assert!(
+            ids.contains("check-skip-print-scale"),
+            "the scanner sees the check module"
+        );
         assert!(ids.len() > 30, "scanner found only {}", ids.len());
         for kind in ["individual", "team", "relay", "score"] {
             ids.insert(format!("word-kind-{kind}"));
@@ -1012,6 +1051,20 @@ mod tests {
                 specials: vec![s("W1"), s("M2")],
             },
             EditError::StartOrFinishHasNoCourses(s("S1")),
+            EditError::UnknownRule {
+                rule: s("wkb2026.no.such"),
+                profile: s("wkb-2026 + nor-bb-2021"),
+            },
+            EditError::FindingNeedsPlace {
+                rule: s("wkb2026.distance.min"),
+            },
+            EditError::FindingHasOnePlace {
+                rule: s("wkb2026.distance.min"),
+            },
+            EditError::AcceptedNotFound {
+                rule: s("wkb2026.distance.min"),
+            },
+            EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
         for what in [
             "control",

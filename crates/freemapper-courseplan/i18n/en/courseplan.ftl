@@ -90,6 +90,10 @@ error-edit-special-would-cover-all-courses = { $count ->
    *[other] course { $course } is the only course of { $specials }; without it, they would apply to all courses. Assign them to another course first or remove them
 }
 error-edit-start-or-finish-has-no-courses = special object { $id } is a start or finish; each course names its start and finish itself
+error-edit-unknown-rule = rule { $name } is not an active rule of rule profile { $id }
+error-edit-finding-needs-place = findings of rule { $name } sit at a course, at controls or at a leg; name that place
+error-edit-finding-has-one-place = a finding of rule { $name } has one place: give a course, controls or one leg
+error-edit-accepted-not-found = there is no accepted finding of rule { $name } at this place
 
 ## Reading OOM maps (OmapError)
 
@@ -98,6 +102,42 @@ error-omap-missing-element = element <{ $name }> not found
 error-omap-io = { $message }
 error-omap-binary-format = This file is in the old binary format of OpenOrienteering Mapper, which this program cannot read. Open it in Mapper and save it again as a current .omap or .xmap file.
 error-omap-unsupported = { $message }
+
+## Checking (check)
+
+check-severity-error = error
+check-severity-warning = warning
+check-severity-hint = hint
+check-location-event = event
+check-location-course = course { $course }
+check-location-control = control { $code }
+check-location-controls = controls { $codes }
+check-location-leg = course { $course }, leg after { $index }
+check-location-start-leg = course { $course }, leg from the start
+check-skip-not-implemented = this check is not implemented yet
+check-skip-training = not checked at a training
+check-skip-discipline = the rule is not for { $discipline ->
+        [sprint] sprint
+        [middle] middle distance
+        [long] long distance
+        [ultralong] ultralong distance
+       *[other] { $discipline }
+    } events
+check-skip-map-kind = the rule is not for { $kind ->
+        [sprint] sprint maps
+        [schoolyard] schoolyard maps
+        [forest] forest maps
+       *[other] { $kind } maps
+    }
+check-skip-print-scale = no rule of this kind for print scale 1:{ $scale }
+check-skip-course-kind = { $kind ->
+        [team] team courses
+        [relay] relay courses
+        [score] score courses
+       *[other] { $kind } courses
+    } are not checked yet
+check-skip-class-not-mapped = class { $name } has no rule category
+check-skip-climb-missing = the course has no climb
 
 ## Command line
 
@@ -279,6 +319,59 @@ cli-arg-course-number-gap = Gap to the circle in print millimetres, more than 0 
 cli-arg-course-number-clear = Remove the placement of the course, so the central or the automatic placement applies again
 cli-arg-course-numbers-overwrite = Also replace course numbers placed before; controls with a central number keep it [default: keep them]
 
+## Check commands
+
+cli-help-check = Check the individual courses against the rule profile and its overlays
+cli-help-check-exit-codes =
+    Exit code 0: no finding of severity error; accepted findings do not count.
+    Exit code 1: at least one error finding, or the check was refused, for example because the project file or the map cannot be read.
+    Exit code 2: wrong call, for example an unknown option.
+cli-arg-check-all = Also list the accepted findings with their notes and the skipped rules with the reason
+cli-check-group-event = event:
+cli-check-group-course = course { $course }:
+cli-check-heading-accepted = accepted:
+cli-check-heading-skipped = skipped:
+cli-check-note = note: { $note }
+cli-check-summary = { $errors ->
+        [one] 1 error
+       *[other] { $errors } errors
+    }, { $warnings ->
+        [one] 1 warning
+       *[other] { $warnings } warnings
+    }, { $hints ->
+        [one] 1 hint
+       *[other] { $hints } hints
+    }; { $accepted } accepted, { $skipped } skipped
+cli-check-show-all = check --all also lists the accepted findings and the skipped rules
+cli-info-rule-profile = rule profile: { $value }
+cli-info-rule-profile-overlays = rule profile: { $value }, overlays: { $list }
+
+cli-help-finding = Accept findings as intended exceptions, or let check report them again
+cli-help-finding-accept = Accept a finding as an intended exception, with a note. Name its place as check shows it: --controls, --leg or --course, or none of them for a finding of the whole event. Accepting the same finding again replaces the note
+cli-help-finding-remove = Remove an accepted finding, so check reports it again. Name it as when it was accepted
+cli-arg-finding-accept-rule = Id of the rule as check shows it, for example wkb2026.distance.min
+cli-arg-finding-accept-controls = The controls of the finding, separated by commas
+cli-arg-finding-accept-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start
+cli-arg-finding-accept-course = The course of a finding about a whole course
+cli-arg-finding-accept-note = Why the exception is intended
+cli-arg-finding-remove-rule = Id of the rule as check shows it, for example wkb2026.distance.min
+cli-arg-finding-remove-controls = The controls of the finding, separated by commas
+cli-arg-finding-remove-leg = The leg of the finding as COURSE:N, the leg after position N; 0 is the leg from the start
+cli-arg-finding-remove-course = The course of a finding about a whole course
+cli-finding-bad-leg = { $value } is not a leg; write COURSE:N, for example A:3, where 0 is the leg from the start
+cli-finding-at = at { $location }
+cli-finding-at-event = at the event
+cli-finding-accepted = accepted finding { $rule } { $location }
+cli-finding-note-replaced = replaced the note of accepted finding { $rule } { $location }
+cli-finding-removed = removed accepted finding { $rule } { $location }
+
+cli-help-event = Settings of the whole event: the rule profile
+cli-help-event-profile = Set the base rule profile and its overlays. The profiles are loaded first, and an unknown one is refused with the list of available profiles. Without --overlay the event has no overlays
+cli-arg-event-profile-base = The base rule profile, for example wkb-2026
+cli-arg-event-profile-overlay = An overlay on the base profile, for example nor-bb-2021; repeat it for more, they apply in this order
+cli-event-profile-set = set rule profile { $value }
+cli-event-profile-set-overlays = set rule profile { $value } with overlays { $list }
+
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
 cli-help-mcp = Serve course setting to AI assistants over MCP on stdin and stdout
@@ -290,7 +383,9 @@ mcp-instructions =
     with y pointing down, written as objects with the numbers x and y. Workflow: event_info, then map_extent and
     map_features_near to find positions, then add_special for the start and the finish, add_control for each
     control, add_course, place_numbers and event_info again to read the length. Each call saves its change. A
-    refused change leaves the file as it was. Only individual courses can be edited and measured yet.
+    refused change leaves the file as it was. Only individual courses can be edited, measured and checked yet.
+    check tests the courses against the rule profile of the event, which set_rule_profile changes. A finding the
+    course setter wants as it is gets accept_finding with a note; remove_accepted_finding takes that back.
 mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
 mcp-error-not-toml = { $path } is not a project file; project files end in .toml
 mcp-error-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
@@ -332,6 +427,10 @@ mcp-tool-set-course-number = Set or clear the number placement of one control in
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
+mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc and section, and text; accepted findings with the note of the course setter; and skipped rules with the reason. Team, relay and score courses are not checked yet.
+mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, one leg or the course. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
+mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted.
+mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 
 mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
 mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
@@ -384,3 +483,15 @@ mcp-param-set-course-number-after = Position of the control in the course, count
 mcp-param-set-course-number-clear = Remove the placement of the course, so the central or the automatic placement applies again; then leave out direction and gap_mm [default: false]
 mcp-param-radius-mm = Search radius in map millimetres
 mcp-param-limit = Most features to return [default: 20, at most 200]
+mcp-param-rule = Id of the rule as check reports it, for example wkb2026.distance.min
+mcp-param-note = Why the exception is intended
+mcp-param-accept-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check [default: none]
+mcp-param-remove-accepted-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check [default: none]
+mcp-param-accept-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]
+mcp-param-remove-accepted-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]
+mcp-param-accept-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
+mcp-param-remove-accepted-finding-course = Name of the course; for a finding about a whole course, and inside legs for the course of the leg
+mcp-param-accept-finding-after = Position the leg leaves, counted from 1 as on the map; 0 is the leg from the start
+mcp-param-remove-accepted-finding-after = Position the leg leaves, counted from 1 as on the map; 0 is the leg from the start
+mcp-param-base = The base rule profile, for example wkb-2026
+mcp-param-overlays = Overlays on the base profile in the order they apply, for example nor-bb-2021 [default: none]

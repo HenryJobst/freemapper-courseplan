@@ -337,3 +337,40 @@ pub(super) struct InitEvent {
     pub(super) project: Option<String>,
     pub(super) title: Option<String>,
 }
+
+/// A leg of a course: the leg after position `after`, counted from 1; 0 is the leg from the start.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LegArg {
+    pub(super) course: Name,
+    pub(super) after: u32,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AcceptFinding {
+    pub(super) project: String,
+    pub(super) rule: Name,
+    pub(super) controls: Option<Vec<Code>>,
+    pub(super) legs: Option<Vec<LegArg>>,
+    pub(super) course: Option<Name>,
+    pub(super) note: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RemoveAcceptedFinding {
+    pub(super) project: String,
+    pub(super) rule: Name,
+    pub(super) controls: Option<Vec<Code>>,
+    pub(super) legs: Option<Vec<LegArg>>,
+    pub(super) course: Option<Name>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetRuleProfile {
+    pub(super) project: String,
+    pub(super) base: Name,
+    pub(super) overlays: Option<Vec<Name>>,
+}

@@ -6,6 +6,25 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `check <PROJECT>` checks the individual courses against the rule profile of the event and its overlays. The
+  findings are grouped by course, each with severity, place, explanation, rule id and source, followed by a
+  summary. `--all` also lists the accepted findings with their notes and the skipped rules with the reason. A
+  rule whose filters (discipline, map kind, print scale) do not fit counts as skipped and is reported as such.
+  Team, relay and score courses are not checked yet. The exit code is 0 without an error finding, 1 with one or
+  when the check is refused, and 2 for a wrong call. The individual checks come with the next steps; until then
+  `check` reports them as not implemented yet.
+- `finding accept <PROJECT> <RULE> --note TEXT` accepts a finding as an intended exception. Give its place with
+  `--controls 31,32`, `--leg A:3` or `--course A`, or none of them for a finding of the whole event. Accepting
+  the same finding again replaces the note. `finding remove` takes it back and refuses an accepted finding that
+  does not exist.
+- `event profile <PROJECT> <BASE> [--overlay ID …]` sets the rule profile and the overlays after loading them.
+  `info` shows both.
+- MCP: the tools `check`, `accept_finding`, `remove_accepted_finding` and `set_rule_profile`. `check` returns
+  findings, accepted findings and skipped rules as JSON, with machine fields and the text in the server's
+  language. `event_info` names the rule profile and the overlays.
+
 ## [0.1.0] - 2026-11-09
 
 ### Added

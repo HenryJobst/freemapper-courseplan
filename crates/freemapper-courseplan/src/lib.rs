@@ -5,6 +5,7 @@
 //! `freemapper-courseplan-cli` holds the CLI, the MCP server and the course editor (ADR 0001). Terms
 //! follow `docs/glossary.md`.
 
+pub mod check;
 pub mod course;
 pub mod edit;
 pub mod init;
