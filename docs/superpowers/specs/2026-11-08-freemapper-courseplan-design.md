@@ -209,9 +209,8 @@ sequence number.
 
 On relay and score maps the control code may follow the number, as "1-31" or "1 (31)". The event setting is
 `number_label = "number" | "number_dash_code" | "number_paren_code"`, with an override per course. The default
-is `number` *(user, 2026-11-09)* *(agreed with freemapper-print)*. ISSkiOM 2019 and ISMTBOM 2022 symbol 704
-"control number with control code" use the dash form; ISOM and ISSprOM do not standardise a code after the
-number. The label text sets the width of the number box, for placement and for drawing. This is built with the
+is `number` *(user, 2026-11-09)* *(agreed with freemapper-print)*. ISSkiOM 2019 symbol 704 puts a
+hyphen between number and code; ISOM and ISSprOM do not standardise a code after the number. The label text sets the width of the number box, for placement and for drawing. This is built with the
 team, relay and score milestone, not before.
 
 ## 5. Architecture

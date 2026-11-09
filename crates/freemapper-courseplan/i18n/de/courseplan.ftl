@@ -379,7 +379,7 @@ cli-help-course-remove = Eine Bahn samt ihrem Namen in den Sonderobjekten entfer
 cli-help-course-leg = Die Knickpunkte einer Strecke setzen und festlegen, ob sie abgeflaggt ist
 cli-help-course-set = Kategorien, Anstieg oder geplanten Druckmaßstab einer Bahn ändern
 cli-help-course-number = Die Nummernlage eines Postens in einer Bahn setzen oder zurücksetzen; sie geht der zentralen und der automatischen Lage vor
-cli-help-course-numbers = Die Postennummern einer Bahn hinter dem Kreis platzieren, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen sowie Punkt- und Liniensymbolen der Karte. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen; zentrale Nummernlagen und die der Bahn bleiben. Die Nummer rückt bis zum größten Abstand des Regelprofils nach außen, bevor sie von der bevorzugten Richtung abweicht.
+cli-help-course-numbers = Die Postennummern einer Bahn hinter dem Kreis platzieren, von der ankommenden Strecke aus gesehen, frei von Strecken, Kreisen sowie Punkt- und Liniensymbolen der Karte. Läuft nur auf Aufruf, also nach Änderungen an Strecken erneut aufrufen; zentrale Nummernlagen und die der Bahn bleiben. Die Nummer rückt bis zum größten Abstand des Regelprofils nach außen, bevor sie von der bevorzugten Richtung abweicht
 
 cli-arg-edit-course = Name der Bahn
 cli-arg-course-add-start = ID des Start-Sonderobjekts

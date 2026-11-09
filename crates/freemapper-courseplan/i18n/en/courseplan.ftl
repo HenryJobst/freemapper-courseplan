@@ -382,7 +382,7 @@ cli-help-course-remove = Remove a course and its name from the special objects
 cli-help-course-leg = Set the bends and the marked-route flag of one leg
 cli-help-course-set = Change classes, climb or planned print scale of a course
 cli-help-course-number = Set or clear the number placement of one control in a course; it wins over the central and the automatic placement
-cli-help-course-numbers = Place the control numbers of a course behind the circle as seen from the incoming leg, clear of legs, circles and point and line symbols of the map. Runs only when called, so call it again after changing legs; central and course numbers stay. The number moves outward up to the maximum gap of the rule profile before it turns away from the preferred direction.
+cli-help-course-numbers = Place the control numbers of a course behind the circle as seen from the incoming leg, clear of legs, circles and point and line symbols of the map. Runs only when called, so call it again after changing legs; central and course numbers stay. The number moves outward up to the maximum gap of the rule profile before it turns away from the preferred direction
 
 cli-arg-edit-course = Name of the course
 cli-arg-course-add-start = Id of the start special object

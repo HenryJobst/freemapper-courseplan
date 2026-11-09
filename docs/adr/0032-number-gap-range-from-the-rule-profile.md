@@ -30,8 +30,16 @@ that number and code are clearly assigned to the circle. Both are qualitative.
   freemapper-print)*.
 - **Several rules.** The strictest wins: the largest minimum and the smallest maximum. If that leaves the maximum
   below the minimum, the maximum is raised to the minimum *(agreed with freemapper-print)*.
-- **Input.** `--gap` and `set_control_number` still accept 0 < gap <= 10 mm *(agreed with freemapper-print)*. The
-  range is a wish, not a limit on input.
+- **Input.** Every manual input still accepts 0 < gap <= 10 mm: `--gap` of `control number` and `course number`,
+  and the MCP tools `set_control_number` and `set_course_number` *(agreed with freemapper-print)*. The range is a
+  wish, not a limit on input.
+- **Rounding.** Candidate gaps are rounded to 0.01 mm, the minimum up and the maximum down, so no gap leaves the
+  range *(Claude's call)*.
+- **Invalid values.** A rule value that is not finite or not above 0 is ignored, as if the rule had left it out.
+  Other values are clamped into 0.01 to 10 mm *(Claude's call)*.
+- **Same range in the check.** The check reads each rule with the same normalisation as placement, so a rule with
+  a maximum below its minimum does not flag a gap equal to the minimum. Crossing points print no number and get
+  no check *(Claude's call)*.
 - **Overlays.** If an overlay applies the rule to only some courses, one control can get a finding from two
   rules, from a stricter overlay rule and the base rule. This is rare and left as it is *(Claude's call)*.
 
