@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 31] = [
+const TOOLS: [&str; 32] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -34,6 +34,7 @@ const TOOLS: [&str; 31] = [
     "map_extent",
     "init_event",
     "check",
+    "export_iof_xml",
     "accept_finding",
     "remove_accepted_finding",
     "set_rule_profile",
@@ -1286,4 +1287,33 @@ fn start_window_and_class_settings() {
         assert!(error, "{tool}: {text}");
         assert!(!text.contains("sesame"), "{tool}: {text}");
     }
+}
+
+#[test]
+fn export_iof_xml_writes_the_file() {
+    let (dir, map, project) = workspace();
+    let target = dir.path().join("out.xml");
+    let mut session = Session::start();
+    session.ok(
+        "init_event",
+        json!({ "map": map, "project": project, "title": "Test" }),
+    );
+    let done = session.ok(
+        "export_iof_xml",
+        json!({ "project": project, "path": target }),
+    );
+    assert_eq!(done["courses"], 0, "{done}");
+    assert_eq!(done["skipped"], json!([]), "{done}");
+    assert_eq!(done["path"], json!(target.display().to_string()), "{done}");
+    assert!(
+        std::fs::read_to_string(&target)
+            .unwrap()
+            .contains("<CourseData")
+    );
+    let (error, text) = session.call(
+        "export_iof_xml",
+        json!({ "project": project, "path": dir.path().join("out.txt") }),
+    );
+    assert!(error);
+    assert!(text.contains(".xml"), "{text}");
 }

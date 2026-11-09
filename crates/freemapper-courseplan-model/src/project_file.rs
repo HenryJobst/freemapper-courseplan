@@ -362,8 +362,9 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
     }
 }
 
-/// Writes next to the target and renames over it, so a failed write leaves the old file.
-fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
+/// Writes next to the target and renames over it, so a failed write leaves the old file. Also used for
+/// exported files.
+pub fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);

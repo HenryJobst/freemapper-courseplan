@@ -8,6 +8,6 @@ mod project_file;
 mod types;
 mod validate;
 
-pub use project_file::{ModelError, ProjectError, ProjectFile};
+pub use project_file::{ModelError, ProjectError, ProjectFile, write_atomic};
 pub use types::*;
 pub use validate::validate;

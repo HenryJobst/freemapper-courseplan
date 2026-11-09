@@ -250,3 +250,31 @@ remove`, `set_rule_profile` entspricht `event profile`, `set_start_window` und `
 start-window` und `class set`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, jeden Befund in einem Satz zu
 erklären und dich zu fragen, bevor er einen akzeptiert. Die Begründung schreibst du oder diktierst sie ihm. Er soll
 sie nicht erfinden.
+
+## 10. Weitergeben: IOF-XML für OE
+
+Mit `export` gibst du die Bahnen an Auswertungsprogramme weiter, die IOF-XML 3.0 lesen:
+
+```sh
+freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+```
+
+Das Programm schreibt alle Einzelbahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
+Postenfolge jeder Bahn, Streckenlängen, Anstieg, die Lage der Postennummern und die Zuordnung der Bahnen zu
+Kategorien. Eine vorhandene Datei ersetzt es erst, wenn die neue vollständig geschrieben ist. Ohne `--iof-xml` tut
+`export` nichts und endet mit Fehlercode 2.
+
+Was du wissen solltest:
+
+- Mannschafts-, Staffel- und Score-Bahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
+  ihrer Art.
+- Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
+  unberührt.
+- Geopositionen und abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
+- Die Uhrzeit `createTime` ist UTC und trägt das Zeichen `Z`. Für die Bahnen spielt sie keine Rolle.
+- Ob OE12 die Datei so einliest, wie gedacht, ist noch nicht getestet. Das Beispiel
+  [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema geprüft. Wer es in
+  OE12 importiert, soll melden, was ankommt.
+
+Der KI-Assistent hat dafür das Werkzeug `export_iof_xml` mit `project` und `path`; der Pfad muss auf `.xml` enden.
+Die Entscheidungen dahinter stehen in ADR 0033.

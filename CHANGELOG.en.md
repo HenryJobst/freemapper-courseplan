@@ -6,6 +6,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `freemapper-courseplan export <project> --iof-xml <file>` writes the individual courses as IOF XML 3.0
+  (`CourseData`) for scoring software. The AI assistant has the tool `export_iof_xml` for it. Team, relay and
+  score courses are skipped and named. Geo positions and taped legs are missing for now (ADR 0033). The output is
+  checked against the IOF schema; an import into OE is still to be tested. An example is in
+  `examples/luebeck-sprint/course-data.xml`.
+
 ### Changed
 
 - Program texts now come from `freemapper-text` (freemapper-core 0.1.0) instead of a copy of the code in this

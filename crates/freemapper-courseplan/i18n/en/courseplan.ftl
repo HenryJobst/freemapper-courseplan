@@ -479,6 +479,20 @@ cli-event-profile-set-overlays = set rule profile { $value } with { $count ->
        *[other] overlays
     } { $list }
 
+## Export commands
+
+cli-help-export = Write the courses to a file for other programs
+cli-arg-export-project = The project file
+cli-arg-export-iof-xml = Write the individual courses as IOF XML 3.0 CourseData for result software such as OE; an existing file is replaced
+export-iof-xml-written = { $count ->
+    [one] wrote 1 course to { $path }
+   *[other] wrote { $count } courses to { $path }
+}
+export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
+export-iof-xml-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE
+error-export-iof-xml-course = cannot export course { $course }: { $source }
+error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
+
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
 cli-help-mcp = Serve course setting to AI assistants over MCP on stdin and stdout
@@ -498,6 +512,7 @@ mcp-instructions =
 mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
 mcp-error-not-toml = { $path } is not a project file; project files end in .toml
 mcp-error-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
+mcp-error-not-xml = { $path } is not an XML file; the export file ends in .xml
 mcp-error-project-parse = { $path } is not a valid project file; the first problem is at line { $line }, column { $column }
 mcp-error-project-parse-nopos = { $path } is not a valid project file
 mcp-error-map-invalid = { $path } is not a valid OOM map
@@ -543,8 +558,10 @@ mcp-tool-accept-finding = Accept a finding as an intended exception, with a note
 mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted. A leg is given by course and after. The entry for the leg as it runs now is removed first; if there is none, every entry at that position goes, so an entry from unmatched can be removed after its leg or course changed. Returns the removed entries.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 mcp-tool-set-start-window = Set the start window of the event, the minutes from the first to the last start, at least 1. The start capacity check divides the expected starters by it.
+mcp-tool-export-iof-xml = Write the individual courses of the event as IOF XML 3.0 CourseData for result software such as OE. Takes project and path, the file to write, which ends in .xml; an existing file is replaced. Returns path, courses, the number of courses written, and skipped, the team, relay and score courses left out, each with name and kind.
 
 mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
+mcp-param-export-iof-xml-path = The file to write, an absolute path or one starting with ~, ending in .xml
 mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
 mcp-param-map = The OOM map (sprint or schoolyard), an absolute path or one starting with ~
 mcp-param-title = Event title [default: the title in freemapper.toml next to the map, else the map name]

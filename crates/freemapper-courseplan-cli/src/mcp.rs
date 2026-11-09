@@ -415,6 +415,10 @@ fn resolve_project(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     resolve_kind(lang, path, &["toml"], "mcp-error-not-toml")
 }
 
+fn resolve_xml(lang: &Lang, path: &str) -> Result<PathBuf, String> {
+    resolve_kind(lang, path, &["xml"], "mcp-error-not-xml")
+}
+
 fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     resolve_kind(lang, path, &["omap", "xmap"], "mcp-error-not-map")
 }
@@ -1253,6 +1257,39 @@ impl CoursePlanServer {
         })())
     }
 
+    #[tool(description = "Export the courses as IOF XML 3.0")]
+    async fn export_iof_xml(
+        &self,
+        Parameters(req): Parameters<ExportIofXml>,
+    ) -> Result<CallToolResult, McpError> {
+        reply((|| {
+            let project = resolve_project(&self.lang, &req.project)?;
+            let target = resolve_xml(&self.lang, &req.path)?;
+            let report = crate::export_cmd::export_iof_xml_file(
+                &project,
+                &target,
+                &crate::export_cmd::now_iso(),
+            )
+            .map_err(|e| {
+                e.message(
+                    &self.lang,
+                    |e| project_error(&self.lang, e),
+                    |p, e| map_error(&self.lang, p, e),
+                )
+            })?;
+            let skipped: Vec<Value> = report
+                .skipped
+                .iter()
+                .map(|s| json!({ "name": s.name, "kind": s.kind }))
+                .collect();
+            Ok(json!({
+                "path": target.display().to_string(),
+                "courses": report.courses,
+                "skipped": skipped,
+            }))
+        })())
+    }
+
     #[tool(description = "Accept a finding")]
     async fn accept_finding(
         &self,
@@ -1611,7 +1648,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 31);
+            assert_eq!(tools.len(), 32);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

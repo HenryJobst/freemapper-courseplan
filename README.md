@@ -29,7 +29,7 @@ Geplant ist für die erste Version:
   spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
   mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);
 - Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind;
-- Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE;
+- Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser, über die Kommandozeile oder über einen KI-Assistenten (MCP).
 
@@ -85,6 +85,13 @@ es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründe
 Werkzeuge `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`, `set_start_window` und
 `set_class`. Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht, und die Routenanalyse
 fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
+
+`freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzelbahnen als IOF-XML 3.0 für die
+Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
+geprüft, ein fertiges Beispiel ist [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Ob OE12 die
+Datei wie gewollt liest, ist noch offen: Bisher hat sie dort niemand importiert. Geopositionen und abgeflaggte Strecken
+schreibt das Programm noch nicht, Mannschafts-, Staffel- und Score-Bahnen überspringt es. Kapitel 10 des
+[Handbuchs](docs/manual/de.md#10-weitergeben-iof-xml-für-oe) nennt die Einzelheiten.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine
