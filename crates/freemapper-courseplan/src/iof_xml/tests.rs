@@ -6,7 +6,7 @@ use freemapper_courseplan_model::{
 use quick_xml::Reader;
 use quick_xml::events::Event as Ev;
 
-const CREATED: &str = "2026-11-09T12:00:00";
+const CREATED: &str = "2026-11-09T12:00:00Z";
 
 fn p(x: f64, y: f64) -> MapPoint {
     MapPoint { x, y }
@@ -189,11 +189,11 @@ fn root_has_namespace_version_and_creator() {
 }
 
 #[test]
-fn controls_are_written_once_with_mirrored_y() {
+fn controls_are_written_once_with_y_unmirrored() {
     let mut e = event();
     e.courses = vec![individual("A", &["31", "32"]), individual("B", &["31"])];
     let xml = export(&e);
-    assert!(xml.contains("<MapPosition x=\"10\" y=\"-20\" unit=\"mm\"/>"));
+    assert!(xml.contains("<MapPosition x=\"10\" y=\"20\" unit=\"mm\"/>"));
     assert_eq!(count(&xml, "<Id>31</Id>"), 1);
     // Both courses refer to the control.
     assert_eq!(count(&xml, "<Control>31</Control>"), 2);
@@ -237,7 +237,7 @@ fn number_position_becomes_map_text_position() {
     // The second control has no placement, so no position.
     assert_eq!(count(&xml, "<MapTextPosition"), 1);
 
-    // A course override wins: north, so the centre is above the control (y up: positive).
+    // A course override wins: north, so the centre is above the control (y points down: negative).
     if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
         controls[0].number = Some(NumberPlacement {
             direction: 90.0,
@@ -247,7 +247,7 @@ fn number_position_becomes_map_text_position() {
     let xml = export(&e);
     // 3.675 + half box height 2 = 5.675
     assert!(
-        xml.contains("<MapTextPosition x=\"0\" y=\"5.68\" unit=\"mm\"/>"),
+        xml.contains("<MapTextPosition x=\"0\" y=\"-5.68\" unit=\"mm\"/>"),
         "{xml}"
     );
 }
@@ -390,32 +390,35 @@ fn output_is_deterministic_and_matches_snapshot() {
         env!("CARGO_MANIFEST_DIR"),
         "/tests/snapshots/iof_xml_luebeck.xml"
     );
+    let example = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../examples/luebeck-sprint/course-data.xml"
+    );
     if std::env::var_os("UPDATE_SNAPSHOT").is_some() {
         std::fs::write(path, &xml).unwrap();
+        std::fs::write(example, &xml).unwrap();
     }
     let expected = std::fs::read_to_string(path).unwrap();
     assert!(
         xml == expected,
         "the IOF XML of the Lübeck example changed; rerun with UPDATE_SNAPSHOT=1 if intended"
     );
+    let committed = std::fs::read_to_string(example).unwrap();
+    assert!(
+        xml == committed,
+        "examples/luebeck-sprint/course-data.xml is stale; rerun with UPDATE_SNAPSHOT=1"
+    );
 }
 
-#[test]
-fn output_validates_against_schema() {
+/// Validates `xml` against the IOF schema with `xmllint`; skipped with a note where it is missing.
+fn assert_valid(xml: &str) {
     let schema = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/fixtures/iof-xml/IOF.xsd"
     );
-    let mut e = luebeck();
-    e.courses.push(individual("Leer", &[]));
-    e.courses[1].start = "S1".to_owned();
-    e.courses[1].finish = "F1".to_owned();
-    let xml = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
-        .unwrap()
-        .xml;
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("out.xml");
-    std::fs::write(&file, &xml).unwrap();
+    std::fs::write(&file, xml).unwrap();
     match std::process::Command::new("xmllint")
         .args(["--noout", "--schema", schema])
         .arg(&file)
@@ -428,4 +431,42 @@ fn output_validates_against_schema() {
         ),
         Err(_) => eprintln!("note: xmllint not on PATH, schema validation skipped"),
     }
+}
+
+#[test]
+fn output_validates_against_schema() {
+    let mut e = luebeck();
+    e.courses.push(individual("Leer", &[]));
+    e.courses[1].start = "S1".to_owned();
+    e.courses[1].finish = "F1".to_owned();
+    assert_valid(&export(&e));
+}
+
+#[test]
+fn crossing_point_event_validates_against_schema() {
+    let mut e = event();
+    e.controls[0].number = Some(NumberPlacement {
+        direction: 0.0,
+        gap_mm: 0.5,
+    });
+    e.courses = vec![individual("A", &["31", "33", "32"])];
+    let xml = export(&e);
+    assert!(xml.contains("CrossingPoint"));
+    assert_valid(&xml);
+}
+
+#[test]
+fn event_with_only_skipped_courses_validates_against_schema() {
+    let mut e = event();
+    e.courses = vec![course(
+        "Team",
+        CourseKind::Team {
+            team_size: 3,
+            mandatory: vec![],
+            free: vec![],
+        },
+    )];
+    let xml = export(&e);
+    assert_eq!(count(&xml, "<Course>"), 0);
+    assert_valid(&xml);
 }

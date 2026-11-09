@@ -2,7 +2,7 @@
 //!
 //! The writer turns an [`Event`] and the map scale into one XML string. Only individual courses are
 //! written; other kinds are skipped and named in the result. Positions are map mm at the map scale
-//! with the y axis pointing up, as the standard defines it, so project y is mirrored. Geographic
+//! with the y axis pointing down (the schema counts y in units below the centre), as the project stores them, so y is written unmirrored. Geographic
 //! positions are not written (they need `freemapper-georef`, ADR 0033). Terms follow
 //! `docs/glossary.md`.
 
@@ -52,7 +52,7 @@ struct Stop {
     code: String,
     kind: &'static str,
     leg_m: Option<f64>,
-    /// Number text and the offset of its centre from the control, in IOF map mm (y up).
+    /// Number text and the offset of its centre from the control, in IOF map mm (y down).
     map_text: Option<(u32, MapPoint)>,
 }
 
@@ -131,7 +131,7 @@ fn plan_course<'a>(
             let centre = number_centre(&control.map_mm, p, n, kind, map_scale);
             let offset = MapPoint {
                 x: centre.x - control.map_mm.x,
-                y: -(centre.y - control.map_mm.y),
+                y: centre.y - control.map_mm.y,
             };
             (n, offset)
         });
@@ -180,7 +180,7 @@ fn control_element(w: &mut Out, kind: &str, id: &str, at: &MapPoint) -> io::Resu
         .with_attribute(("type", kind))
         .write_inner_content(|w| {
             text_element(w, "Id", id)?;
-            position(w, "MapPosition", at.x, -at.y)
+            position(w, "MapPosition", at.x, at.y)
         })?;
     Ok(())
 }
@@ -270,7 +270,7 @@ fn write_document(
 ///
 /// `map_scale` is the scale denominator and `map_kind` the kind of the map (it sets the overprint sizes
 /// for the number positions), `created` an ISO 8601 date and time such as
-/// `2026-11-09T12:00:00` for `createTime`. Team, relay and score courses are left out and named in
+/// `2026-11-09T12:00:00Z` for `createTime`. Team, relay and score courses are left out and named in
 /// [`IofXmlExport::skipped`].
 ///
 /// # Errors

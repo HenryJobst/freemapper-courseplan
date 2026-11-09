@@ -137,8 +137,8 @@ pub(crate) fn export(lang: &Lang, project: &Path, iof_xml: Option<PathBuf>) -> R
     Ok(())
 }
 
-/// The current UTC date and time as `YYYY-MM-DDTHH:MM:SS`, for `createTime`. The standard library
-/// has no time zones, so this is UTC and not local time.
+/// The current UTC date and time as `YYYY-MM-DDTHH:MM:SSZ`, for `createTime`. The standard library
+/// has no time zones, so this is UTC and the `Z` says so.
 pub(crate) fn now_iso() -> String {
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -146,7 +146,7 @@ pub(crate) fn now_iso() -> String {
     iso_from_unix(secs)
 }
 
-/// `YYYY-MM-DDTHH:MM:SS` for seconds since 1970-01-01 00:00:00 UTC.
+/// `YYYY-MM-DDTHH:MM:SSZ` for seconds since 1970-01-01 00:00:00 UTC.
 fn iso_from_unix(secs: u64) -> String {
     let days = i64::try_from(secs / 86_400).unwrap_or(0);
     let rest = secs % 86_400;
@@ -166,7 +166,7 @@ fn iso_from_unix(secs: u64) -> String {
     };
     let year = year_of_era + era * 400 + i64::from(month <= 2);
     format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}",
+        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}Z",
         rest / 3600,
         rest % 3600 / 60,
         rest % 60
@@ -179,10 +179,10 @@ mod tests {
 
     #[test]
     fn formats_known_instants() {
-        assert_eq!(iso_from_unix(0), "1970-01-01T00:00:00");
-        assert_eq!(iso_from_unix(951_782_400), "2000-02-29T00:00:00");
-        assert_eq!(iso_from_unix(1_000_000_000), "2001-09-09T01:46:40");
-        assert_eq!(iso_from_unix(1_762_689_045), "2025-11-09T11:50:45");
-        assert_eq!(iso_from_unix(4_102_444_799), "2099-12-31T23:59:59");
+        assert_eq!(iso_from_unix(0), "1970-01-01T00:00:00Z");
+        assert_eq!(iso_from_unix(951_782_400), "2000-02-29T00:00:00Z");
+        assert_eq!(iso_from_unix(1_000_000_000), "2001-09-09T01:46:40Z");
+        assert_eq!(iso_from_unix(1_762_689_045), "2025-11-09T11:50:45Z");
+        assert_eq!(iso_from_unix(4_102_444_799), "2099-12-31T23:59:59Z");
     }
 }
