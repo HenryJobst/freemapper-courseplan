@@ -57,7 +57,7 @@ fn metres_below(metres: f64) -> ArgValue {
 
 /// Two stops in the order of their finding key, which is also the order the location shows.
 // The key order (numeric codes first) lives in `AcceptedFinding::key`; reuse it, do not copy it.
-fn in_key_order<'s>(a: &'s Stop, b: &'s Stop) -> (&'s Stop, &'s Stop) {
+pub(super) fn in_key_order<'s>(a: &'s Stop, b: &'s Stop) -> (&'s Stop, &'s Stop) {
     let key = AcceptedFinding {
         rule: String::new(),
         controls: vec![ControlCode(a.id.clone()), ControlCode(b.id.clone())],
@@ -143,15 +143,15 @@ pub(super) fn min_distance(
 
 /// The control feature of a stop: its symbol code and whether it is a point symbol.
 #[derive(Debug, Clone, Copy)]
-struct Feature<'m> {
-    code: &'m str,
-    point: bool,
+pub(super) struct Feature<'m> {
+    pub(super) code: &'m str,
+    pub(super) point: bool,
 }
 
 /// The feature a control stands at: the nearest map feature within
 /// `search_mm` of its centre. An area counts by its outline, so the area a control merely stands
 /// in (paved area, open land) is not its feature unless the edge is near.
-fn control_feature<'m>(
+pub(super) fn control_feature<'m>(
     features: &'m [MapFeature],
     at: &MapPoint,
     search_mm: f64,

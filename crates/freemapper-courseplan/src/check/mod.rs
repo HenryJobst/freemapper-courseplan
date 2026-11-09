@@ -10,6 +10,7 @@
 //! Findings and skip reasons are plain data with a Fluent message id and arguments; the CLI and
 //! the MCP server localize them. Terms follow `docs/glossary.md`.
 
+mod codes;
 mod context;
 mod distance;
 mod geometry;
@@ -388,6 +389,20 @@ impl RuleRun<'_> {
         }
     }
 
+    /// A finding of this rule with a severity of its own, for a rule that grades its findings.
+    pub fn finding_with_severity(
+        &self,
+        severity: Severity,
+        location: Location,
+        message_id: &'static str,
+        args: Args,
+    ) -> Finding {
+        Finding {
+            severity,
+            ..self.finding(location, message_id, args)
+        }
+    }
+
     /// A skip of this rule.
     pub fn skipped(&self, location: Location, reason_id: &'static str, args: Args) -> Skipped {
         skip_of(self.set_rule, location, reason_id, args)
@@ -508,10 +523,18 @@ pub const CHECKS: &[Check] = &[
     ),
     Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
     Check::at("opposing_legs", legs::opposing_legs, &[Place::Legs]),
-    Check::new("code_range", not_implemented),
-    Check::new("code_pairs", not_implemented),
-    Check::new("code_confusable_next", not_implemented),
-    Check::new("same_objects_in_circle", not_implemented),
+    Check::at("code_range", codes::code_range, &[Place::Control]),
+    Check::at("code_pairs", codes::code_pairs, &[Place::Controls]),
+    Check::at(
+        "code_confusable_next",
+        codes::code_confusable_next,
+        &[Place::Controls],
+    ),
+    Check::at(
+        "same_objects_in_circle",
+        codes::same_objects_in_circle,
+        &[Place::Control],
+    ),
     Check::event_level("start_capacity", not_implemented),
     Check::new("first_leg_angle", not_implemented),
     Check::new("length_table", not_implemented),

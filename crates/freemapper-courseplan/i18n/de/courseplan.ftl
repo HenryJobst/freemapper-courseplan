@@ -179,6 +179,12 @@ check-opposing-legs = { $first ->
         [0] Die Strecke vom Start
        *[other] Die Strecke nach { $first }
     } und die Strecke nach { $second } verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
+check-code-range = Der Code { $code } liegt außerhalb des erlaubten Bereichs { $min } bis { $max }
+check-code-not-numeric = Der Code { $code } ist keine Zahl
+check-code-pair = Die Codes { $first } und { $second } dürfen nicht beide in einer Veranstaltung vorkommen
+check-code-confusable-rotated = Die Codes { $first } und { $second } sehen auf dem Kopf gleich aus und folgen aufeinander
+check-code-confusable-six-nine = Die Codes { $first } und { $second } unterscheiden sich nur durch 6 und 9 und folgen aufeinander
+check-same-objects-in-circle = Der Posten { $code } steht an Symbol { $symbol }, das im Postenkreis noch einmal vorkommt, und Spalte C der Postenbeschreibung ist leer
 
 ## Kommandozeile
 

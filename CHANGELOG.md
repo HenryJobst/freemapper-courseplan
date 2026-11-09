@@ -41,6 +41,14 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   voneinander entfernt gegenläufig verlaufen, ergeben eine Warnung, die beide Strecken nennt. Um einen Posten,
   an dem sich beide treffen, zählen die ersten 10 m nicht mit, auch in der Mitte einer Schmetterlingsschleife.
   Einen solchen Befund akzeptierst du mit beiden Strecken: `finding accept … --leg A:2 --leg A:5`.
+- `check` prüft jetzt die Codes der Posten: Ein numerischer Code außerhalb von 31 bis 599 ist ein Fehler, ein
+  Code, der keine Zahl ist, eine Warnung. Beide Codes eines verbotenen Paars (66 und 99, 68 und 89, 86 und 98)
+  in der Veranstaltung sind ein Fehler, auch wenn sie in verschiedenen Bahnen stehen. Zwei aufeinanderfolgende
+  Posten, deren Codes auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden, ergeben eine
+  Warnung. Querungsstellen, Start und Ziel haben keinen Code und zählen nicht; eine Querungsstelle zwischen zwei
+  Posten trennt deren Paar nicht. Ein Posten an einem Punktsymbol, das im Postenkreis noch einmal vorkommt, ergibt
+  eine Warnung, wenn Spalte C der Postenbeschreibung leer ist; Linien und Flächen werden nicht verglichen. Jeder
+  Code und jedes Paar wird einmal gemeldet, auch wenn mehrere Bahnen sie nutzen.
 
 ## [0.1.0] - 2026-11-09
 

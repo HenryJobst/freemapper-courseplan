@@ -179,6 +179,12 @@ check-opposing-legs = { $first ->
         [0] the leg from the start
        *[other] the leg after { $first }
     } and the leg after { $second } run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
+check-code-range = code { $code } is outside the allowed range { $min } to { $max }
+check-code-not-numeric = code { $code } is not a number
+check-code-pair = codes { $first } and { $second } must not both be used in one event
+check-code-confusable-rotated = codes { $first } and { $second } look alike when turned upside down and follow each other
+check-code-confusable-six-nine = codes { $first } and { $second } differ only by 6 and 9 and follow each other
+check-same-objects-in-circle = control { $code } stands at symbol { $symbol }, which occurs again within its circle, and column C of the description is empty
 
 ## Command line
 

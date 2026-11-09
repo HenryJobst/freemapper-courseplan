@@ -39,6 +39,13 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   two. Two legs of one course that run in opposite directions at most 10 m apart for 30 m or more give a
   warning that names both legs. The first 10 m around a control where both meet do not count, also at the
   centre of a butterfly loop. Accept such a finding with both legs: `finding accept … --leg A:2 --leg A:5`.
+- `check` now looks at control codes: a numeric code outside 31 to 599 is an error and a code that is no number
+  a warning; both codes of a forbidden pair (66 and 99, 68 and 89, 86 and 98) used anywhere in the event are an
+  error, also in different courses; two consecutive controls whose codes look alike upside down or differ only
+  by 6 and 9 give a warning. Crossing points, start and finish have no code and are left out, and a crossing
+  point between two controls does not break their pair. A control at a point symbol that occurs again within
+  its circle gives a warning when column C of the control description is empty; lines and areas are not
+  compared. Each code or pair is reported once, even when several courses use it.
 
 ## [0.1.0] - 2026-11-09
 

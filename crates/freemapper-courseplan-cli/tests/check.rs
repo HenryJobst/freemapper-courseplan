@@ -98,7 +98,7 @@ fn check_of_a_clean_event_exits_0() {
     let text = stdout(&all);
     assert!(text.contains("skipped:"), "{text}");
     assert!(
-        text.contains("wkb2026.code.range, event: this check is not implemented yet"),
+        text.contains("wkb2026.start.capacity, event: this check is not implemented yet"),
         "{text}"
     );
 }

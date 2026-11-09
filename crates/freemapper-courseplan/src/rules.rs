@@ -126,7 +126,7 @@ impl Severity {
         }
     }
 
-    fn parse(text: &str) -> Option<Severity> {
+    pub(crate) fn parse(text: &str) -> Option<Severity> {
         [Severity::Error, Severity::Warning, Severity::Hint]
             .into_iter()
             .find(|s| s.as_str() == text)

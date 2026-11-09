@@ -721,6 +721,9 @@ mod tests {
             "legs",
             "degrees",
             "min_length",
+            "min",
+            "max",
+            "symbol",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -842,6 +845,7 @@ mod tests {
         let mut ids = ids_in_source(include_str!("text.rs"));
         for source in [
             include_str!("check/mod.rs"),
+            include_str!("check/codes.rs"),
             include_str!("check/context.rs"),
             include_str!("check/distance.rs"),
             include_str!("check/legs.rs"),
