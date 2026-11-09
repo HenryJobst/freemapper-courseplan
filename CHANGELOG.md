@@ -29,9 +29,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   Querungsstellen zählen mit), Posten an ähnlichen Objekten zu nah beieinander, Posten, Start und Ziel nah am
   Kartenrand, Strecken, die durch einen anderen Posten derselben Bahn führen, und gerade Strecken durch ein
   Sperrgebiet als Warnung, dass die Optimalroute hindurchführen könnte. Abgeflaggte Strecken dürfen durch
-  Sperrgebiete führen. Gebäude, Mauern, Zäune und Wasser prüft erst die spätere Routenanalyse. Jeder Befund nennt den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m
-  auseinander, mindestens 15 m“. Ein Paar oder ein Posten wird einmal gemeldet, auch wenn mehrere Bahnen ihn
-  nutzen. Start und Ziel können Ort eines Befunds sein: `finding accept … --controls 31,S1`.
+  Sperrgebiete führen. Gebäude, Mauern, Zäune und Wasser prüft erst die spätere Routenanalyse. Jeder Befund nennt
+  den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m auseinander, mindestens 15 m“.
+  Ein Paar oder ein Posten wird einmal gemeldet, auch wenn mehrere Bahnen ihn nutzen. Start und Ziel können Ort
+  eines Befunds sein: `finding accept … --controls 31,S1`.
 - `finding accept` lehnt einen Ort ab, an dem die Prüfregel nie einen Befund meldet, etwa `--course A` für den
   Mindestabstand, der immer zwei Posten betrifft.
 

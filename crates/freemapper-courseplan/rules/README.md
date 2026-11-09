@@ -121,8 +121,8 @@ Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees
 Meter im Gelände oder Millimeter auf der Karte gemeint sind.
 
 Texte, true/false und Listen von Texten brauchen keine Einheit. Symbolnummern sind Texte:
-`impassable = ["520", "709"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer
-hat oder eine Unternummer davon: `505.1` passt zu `505`, `5051` nicht.
+`impassable = ["520", "709"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer hat
+oder eine Unternummer davon: `505.1` passt zu `505`, `5051` nicht.
 
 Tabellen und Zeilenlisten haben keine einzelne Einheit. Jede steht mit ihrer Form in
 `TABLE_VALUES` in `src/rules.rs`, und die Profildatei beschreibt ihre Tabellen in einem Kommentar
@@ -198,7 +198,11 @@ ISOM-Nummern stammen aus dem ISOM-2017-2-Text; eine Testkarte dafür gibt es noc
 - 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area;
   auf Sprintkarten auch 714 temporary construction or closed area
 
+Zwei Posten am gleichen Punktsymbol sind immer ähnlich. Linien und Flächen mit gleichem Symbol
+sind nur ähnlich, wenn eine Gruppe sie nennt, denn Höhenlinien, Vegetationsgrenzen und
+Gebäudeumrisse gibt es überall. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben
+kein eigenes Symbol; keine Gruppe enthält sie.
+
 `leg_through_forbidden` betrachtet nur diese Sperrgebiet-Symbole und die Sperrgebiete der Bahn.
 Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune, Gebäude, Brücken) und verbotene
-Routen bleiben der späteren Routenanalyse überlassen. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben kein eigenes Symbol; keine
-Gruppe enthält sie.
+Routen bleiben der späteren Routenanalyse überlassen.

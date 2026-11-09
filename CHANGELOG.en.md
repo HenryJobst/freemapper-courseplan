@@ -24,15 +24,16 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 - MCP: the tools `check`, `accept_finding`, `remove_accepted_finding` and `set_rule_profile`. `check` returns
   findings, accepted findings and skipped rules as JSON, with machine fields and the text in the server's
   language. `event_info` names the rule profile and the overlays.
-- `check` now measures distances on the map: controls closer together than the minimum distance (the start
-  and crossing points count), controls at similar features too close together, controls, start and finish
-  near the map edge, legs that pass through another control of the same course, and straight legs through
-  an out-of-bounds area, as a warning that the best route may lead through it. Taped legs may lead through
-  out-of-bounds areas. Buildings, walls, fences and water wait for the later route analysis. Each finding gives the measured value and the limit, such as "control 31 and control 32 are 12 m
-  apart, at least 15 m". A pair or a control is reported once, even when several courses use it. Start and
-  finish can be the place of a finding: `finding accept … --controls 31,S1`.
-- `finding accept` refuses a place where the rule never reports a finding, such as `--course A` for the
-  minimum distance, which always concerns two controls.
+- `check` now measures distances on the map: controls closer together than the minimum distance (the start and
+  crossing points count), controls at similar features too close together, controls, start and finish near the
+  map edge, legs that pass through another control of the same course, and straight legs through an out-of-bounds
+  area, as a warning that the best route may lead through it. Taped legs may lead through out-of-bounds areas.
+  Buildings, walls, fences and water wait for the later route analysis. Each finding gives the measured value and
+  the limit, such as "control 31 and control 32 are 12 m apart, at least 15 m". A pair or a control is reported
+  once, even when several courses use it. Start and finish can be the place of a finding: `finding accept …
+  --controls 31,S1`.
+- `finding accept` refuses a place where the rule never reports a finding, such as `--course A` for the minimum
+  distance, which always concerns two controls.
 
 ## [0.1.0] - 2026-11-09
 

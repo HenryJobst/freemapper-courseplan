@@ -679,7 +679,8 @@ pub enum Accepted {
 /// controls and leg must exist. The key names one place: nothing for a finding of the whole event
 /// (only for rules whose findings can sit there), a course, one control, several controls, or one
 /// leg; a place kind the rule's check never reports is refused (`Check::places`, ADR 0026). A
-/// control may also be a start or finish. Controls and legs are stored in the order of their key. Accepting a key again replaces the note.
+/// control may also be a start or finish id, for every rule. Controls and legs are stored in the
+/// order of their key. Accepting a key again replaces the note.
 pub fn accept_finding(
     event: &mut Event,
     rules: &RuleSet,

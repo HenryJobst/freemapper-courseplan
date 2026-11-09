@@ -14,12 +14,14 @@ use crate::omap::{
 };
 use crate::rules::{Rule, RuleSet, SetRule, Severity, Source, SourceRef};
 
-/// An ISSprOM symbol set: by id, 101 point, 502 line, 520 area, 521 area, 505.1 line, 109 point,
-/// 110 point, 5051 line (not a sub-code of 505), 518 line, 709 area, 708 line.
-const SYMBOLS: &str = r#"<map><georeferencing scale="4000"/><colors count="0"></colors><symbols count="11" id="ISSprOM 2019"><symbol type="1" id="0" code="101" name="pt"><point_symbol/></symbol><symbol type="2" id="1" code="502" name="ln"><line_symbol/></symbol><symbol type="4" id="2" code="520" name="ar"><area_symbol/></symbol><symbol type="4" id="3" code="521" name="building"><area_symbol/></symbol><symbol type="2" id="4" code="505.1" name="path"><line_symbol/></symbol><symbol type="1" id="5" code="109" name="knoll"><point_symbol/></symbol><symbol type="1" id="6" code="110" name="elongated knoll"><point_symbol/></symbol><symbol type="2" id="7" code="5051" name="other"><line_symbol/></symbol><symbol type="2" id="8" code="518" name="fence"><line_symbol/></symbol><symbol type="4" id="9" code="709" name="oob"><area_symbol/></symbol><symbol type="2" id="10" code="708" name="oob boundary"><line_symbol/></symbol></symbols><view><grid/></view></map>"#;
+/// An ISSprOM symbol set: by id, 113 point, 502 line, 520 area, 521 area, 505.1 line, 109 point,
+/// 110 point, 5051 line (not a sub-code of 505), 518 line, 709 area, 708 line,
+/// 101 line (contour).
+const SYMBOLS: &str = r#"<map><georeferencing scale="4000"/><colors count="0"></colors><symbols count="12" id="ISSprOM 2019"><symbol type="1" id="0" code="113" name="pt"><point_symbol/></symbol><symbol type="2" id="1" code="502" name="ln"><line_symbol/></symbol><symbol type="4" id="2" code="520" name="ar"><area_symbol/></symbol><symbol type="4" id="3" code="521" name="building"><area_symbol/></symbol><symbol type="2" id="4" code="505.1" name="path"><line_symbol/></symbol><symbol type="1" id="5" code="109" name="knoll"><point_symbol/></symbol><symbol type="1" id="6" code="110" name="elongated knoll"><point_symbol/></symbol><symbol type="2" id="7" code="5051" name="other"><line_symbol/></symbol><symbol type="2" id="8" code="518" name="fence"><line_symbol/></symbol><symbol type="4" id="9" code="709" name="oob"><area_symbol/></symbol><symbol type="2" id="10" code="708" name="oob boundary"><line_symbol/></symbol><symbol type="2" id="11" code="101" name="contour"><line_symbol/></symbol></symbols><view><grid/></view></map>"#;
 
 /// Symbol ids of [`map`].
-pub(crate) const POINT_101: u32 = 0;
+pub(crate) const POINT_113: u32 = 0;
+pub(crate) const LINE_502: u32 = 1;
 pub(crate) const AREA_520: u32 = 2;
 pub(crate) const AREA_521: u32 = 3;
 pub(crate) const LINE_505_1: u32 = 4;
@@ -29,6 +31,7 @@ pub(crate) const LINE_5051: u32 = 7;
 pub(crate) const LINE_518: u32 = 8;
 pub(crate) const AREA_709: u32 = 9;
 pub(crate) const LINE_708: u32 = 10;
+pub(crate) const LINE_101: u32 = 11;
 
 /// An ISOM symbol set: 711 line (id 0), 520 area (id 1).
 const FOREST_SYMBOLS: &str = r#"<map><georeferencing scale="10000"/><colors count="0"></colors><symbols count="2" id="ISOM 2017-2"><symbol type="2" id="0" code="711" name="route"><line_symbol/></symbol><symbol type="4" id="1" code="520" name="ar"><area_symbol/></symbol></symbols><view><grid/></view></map>"#;

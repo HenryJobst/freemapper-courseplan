@@ -227,7 +227,7 @@ fn the_wkb_profile_halves_the_distance_on_sprint_maps() {
 fn similar_rule() -> Rule {
     with_values(
         rule("t.distance.similar", "similar_features", Severity::Warning),
-        "metres = 30.0\nfeature_search_mm = 1.0\ngroups = [[\"109\", \"110\"], [\"505\", \"101\"]]",
+        "metres = 30.0\nfeature_search_mm = 1.0\ngroups = [[\"109\", \"110\"], [\"505\", \"113\"], [\"502\", \"518\"]]",
     )
 }
 
@@ -264,7 +264,7 @@ fn controls_at_similar_features_closer_than_the_limit_are_a_warning() {
 }
 
 #[test]
-fn identical_symbols_are_similar_and_sub_codes_match_their_group() {
+fn sub_codes_match_their_group_and_identical_areas_are_not_similar() {
     let e = event(
         &[
             ("31", 10.0, 10.0),
@@ -288,16 +288,69 @@ fn identical_symbols_are_similar_and_sub_codes_match_their_group() {
         ),
         // 505.1 is a sub-code of 505, grouped with 101.
         line_object(LINE_505_1, &[(60.0, 0.0), (60.0, 20.0)]),
-        point_object(POINT_101, 64.0, 10.0),
+        point_object(POINT_113, 64.0, 10.0),
         // 5051 is not a sub-code of 505.
         line_object(LINE_5051, &[(110.0, 0.0), (110.0, 20.0)]),
-        point_object(POINT_101, 114.0, 10.0),
+        point_object(POINT_113, 114.0, 10.0),
     ];
     let r = report(&e, &map(4000, objects), vec![similar_rule()]);
     let places: Vec<Vec<&str>> = r.findings.iter().map(|f| codes(&f.location)).collect();
-    assert_eq!(places, [vec!["31", "32"], vec!["41", "42"]]);
-    assert!(en(&r.findings[0]).contains("(521, 521)"));
-    assert!(en(&r.findings[1]).contains("(505.1, 101)"));
+    // The building corners share symbol 521, an area: not similar by itself (ruling R14).
+    assert_eq!(places, [vec!["41", "42"]], "{:?}", r.findings);
+    assert!(en(&r.findings[0]).contains("(505.1, 113)"));
+}
+
+#[test]
+fn identical_point_symbols_are_similar_identical_lines_only_through_a_group() {
+    let e = event(
+        &[
+            ("31", 10.0, 10.0),
+            ("32", 15.0, 10.0),
+            ("41", 60.0, 10.0),
+            ("42", 64.0, 10.0),
+            ("51", 110.0, 10.0),
+            ("52", 115.0, 10.0),
+        ],
+        vec![course("A", &["31", "32", "41", "42", "51", "52"])],
+    );
+    let objects = vec![
+        // Two contours (101, lines) 20 m apart: not similar.
+        line_object(LINE_101, &[(10.0, 0.0), (10.0, 20.0)]),
+        line_object(LINE_101, &[(15.0, 0.0), (15.0, 20.0)]),
+        // The same point symbol at both controls: similar.
+        point_object(POINT_113, 60.0, 10.0),
+        point_object(POINT_113, 64.0, 10.0),
+        // Two line symbols of one group (502, 518): similar.
+        line_object(LINE_502, &[(110.0, 0.0), (110.0, 20.0)]),
+        line_object(LINE_518, &[(115.0, 0.0), (115.0, 20.0)]),
+    ];
+    let r = report(&e, &map(4000, objects), vec![similar_rule()]);
+    let found: Vec<(Vec<&str>, String)> = r
+        .findings
+        .iter()
+        .map(|f| (codes(&f.location), en(f)))
+        .collect();
+    assert_eq!(found.len(), 2, "{found:?}");
+    assert_eq!(found[0].0, ["41", "42"]);
+    assert!(found[0].1.contains("(113, 113)"), "{}", found[0].1);
+    assert_eq!(found[1].0, ["51", "52"]);
+    assert!(found[1].1.contains("(502, 518)"), "{}", found[1].1);
+}
+
+#[test]
+fn a_butterfly_control_is_not_similar_to_itself() {
+    // 31 is visited twice; its knoll pairs once with the knoll of 32, never with itself.
+    let e = event(
+        &[("31", 10.0, 10.0), ("32", 15.0, 10.0), ("33", 60.0, 60.0)],
+        vec![course("A", &["31", "33", "31", "32"])],
+    );
+    let objects = vec![
+        point_object(POINT_109, 10.0, 10.0),
+        point_object(POINT_110, 15.0, 10.0),
+    ];
+    let r = report(&e, &map(4000, objects), vec![similar_rule()]);
+    let places: Vec<Vec<&str>> = r.findings.iter().map(|f| codes(&f.location)).collect();
+    assert_eq!(places, [vec!["31", "32"]], "{:?}", r.findings);
 }
 
 #[test]
@@ -385,6 +438,39 @@ fn controls_and_the_finish_near_the_map_edge_are_a_warning() {
 }
 
 #[test]
+fn a_crossing_point_near_the_edge_is_named_as_such() {
+    let mut e = event(&[("35", 10.0, 49.0)], vec![course("A", &["35"])]);
+    crossing(&mut e, "35");
+    let r = report(&e, &framed(vec![]), vec![edge_rule()]);
+    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+    assert_eq!(
+        de(&r.findings[0]),
+        "Querungsstelle 35 liegt 4 m vom Kartenrand entfernt, mindestens 10 m"
+    );
+}
+
+#[test]
+fn start_and_finish_of_a_course_without_controls_near_the_edge() {
+    let mut e = event(&[], vec![course("A", &[])]);
+    for special in &mut e.specials {
+        match special {
+            SpecialObject::Start { map_mm, .. } => *map_mm = pt(-49.0, 0.0),
+            SpecialObject::Finish { map_mm, .. } => *map_mm = pt(149.5, 0.0),
+            _ => {}
+        }
+    }
+    let r = report(&e, &framed(vec![]), vec![edge_rule()]);
+    let found: Vec<String> = r.findings.iter().map(en).collect();
+    assert_eq!(
+        found,
+        [
+            "start S1 is 4 m from the map edge, at least 10 m",
+            "finish F1 is 2 m from the map edge, at least 10 m",
+        ]
+    );
+}
+
+#[test]
 fn a_control_outside_the_map_is_0_m_from_its_edge() {
     let e = event(&[("31", 200.0, 20.0)], vec![course("A", &["31"])]);
     let r = report(&e, &framed(vec![]), vec![edge_rule()]);
@@ -439,6 +525,34 @@ fn a_leg_through_another_control_of_the_course_is_a_warning() {
     assert_eq!(
         de(f),
         "Die Strecke führt 4 m am Posten 33 vorbei, innerhalb des Kreisradius von 12 m"
+    );
+}
+
+#[test]
+fn a_taped_leg_is_still_checked_for_controls_it_passes() {
+    // Taping exempts a leg from the forbidden-area check only; a marked route through another
+    // control's circle is still confusing.
+    let mut a = course("A", &["31", "32", "33"]);
+    taped_after(&mut a, 0);
+    let e = event(
+        &[("31", 10.0, 30.0), ("32", 50.0, 30.0), ("33", 30.0, 31.0)],
+        vec![a],
+    );
+    let r = report(&e, &map(4000, vec![]), vec![through_rule()]);
+    let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
+    assert_eq!(places, [&leg("A", 1)], "{:?}", r.findings);
+}
+
+#[test]
+fn a_one_control_course_whose_leg_passes_the_finish() {
+    // S1 at (0, 0), 31 beyond F1 at (100, 0): the leg to 31 runs through the finish.
+    let e = event(&[("31", 150.0, 0.0)], vec![course("A", &["31"])]);
+    let r = report(&e, &map(4000, vec![]), vec![through_rule()]);
+    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+    assert_eq!(r.findings[0].location, leg("A", 0));
+    assert_eq!(
+        en(&r.findings[0]),
+        "the leg passes 0 m from finish F1, inside its circle radius of 12 m"
     );
 }
 
@@ -611,6 +725,46 @@ fn a_taped_leg_or_a_bend_around_the_area_gives_no_finding() {
     });
     let r = report(&e, &map(4000, vec![blocked()]), vec![forbidden_rule()]);
     assert!(r.findings.is_empty(), "{:?}", r.findings);
+}
+
+#[test]
+fn both_legs_of_a_butterfly_loop_through_an_area_are_found() {
+    // A runs S1, 31, 32, 31, 33, F1; the area lies between 31 and 32.
+    let e = event(
+        &[("31", 10.0, 30.0), ("32", 50.0, 30.0), ("33", 10.0, 60.0)],
+        vec![course("A", &["31", "32", "31", "33"])],
+    );
+    let r = report(&e, &map(4000, vec![blocked()]), vec![forbidden_rule()]);
+    let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
+    assert_eq!(places, [&leg("A", 1), &leg("A", 2)], "{:?}", r.findings);
+}
+
+#[test]
+fn a_rule_without_its_symbol_list_is_skipped() {
+    let mut e = two_controls(vec![course("A", &["31", "32"])]);
+    e.specials.push(SpecialObject::OutOfBoundsArea {
+        id: "oob".to_owned(),
+        polygon: vec![
+            pt(28.0, 20.0),
+            pt(32.0, 20.0),
+            pt(32.0, 40.0),
+            pt(28.0, 40.0),
+        ],
+        courses: vec![],
+    });
+    let bare = rule(
+        "t.leg.forbidden",
+        "leg_through_forbidden",
+        Severity::Warning,
+    );
+    let r = report(&e, &map(4000, vec![blocked()]), vec![bare]);
+    // The whole rule is skipped, the special included.
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
+    assert_eq!(r.skipped.len(), 1);
+    assert_eq!(
+        r.skipped[0].text(&lang_of("en")),
+        "the rule has no value impassable"
+    );
 }
 
 #[test]

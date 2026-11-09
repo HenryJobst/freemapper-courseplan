@@ -124,9 +124,17 @@ fn texts(value: &toml::Value) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// A list of symbol codes of the rule's values; missing means none.
-fn codes(run: &RuleRun<'_>, name: &str) -> Vec<String> {
-    run.rule().values.get(name).map(texts).unwrap_or_default()
+/// A list of symbol codes of the rule's values; a missing one skips the rule with the reason.
+fn codes(run: &RuleRun<'_>, name: &'static str, skipped: &mut Vec<Skipped>) -> Option<Vec<String>> {
+    let value = run.rule().values.get(name).map(texts);
+    if value.is_none() {
+        skipped.push(run.skipped(
+            Location::Event,
+            SKIP_VALUE_MISSING,
+            vec![("name", ArgValue::Text(name.to_owned()))],
+        ));
+    }
+    value
 }
 
 /// Whether a map code matches one of the rule codes.
@@ -145,6 +153,7 @@ fn below(metres: f64, limit: f64) -> bool {
 }
 
 /// Two stops in the order of their finding key, which is also the order the location shows.
+// The key order (numeric codes first) lives in `AcceptedFinding::key`; reuse it, do not copy it.
 fn in_key_order<'s>(a: &'s Stop, b: &'s Stop) -> (&'s Stop, &'s Stop) {
     let key = AcceptedFinding {
         rule: String::new(),
@@ -229,15 +238,22 @@ pub(super) fn min_distance(
     }
 }
 
-/// The symbol code of the feature a control stands at: the nearest map feature within
+/// The control feature of a stop: its symbol code and whether it is a point symbol.
+#[derive(Debug, Clone, Copy)]
+struct Feature<'m> {
+    code: &'m str,
+    point: bool,
+}
+
+/// The feature a control stands at: the nearest map feature within
 /// `search_mm` of its centre. An area counts by its outline, so the area a control merely stands
 /// in (paved area, open land) is not its feature unless the edge is near.
 fn control_feature<'m>(
     features: &'m [MapFeature],
     at: &MapPoint,
     search_mm: f64,
-) -> Option<&'m str> {
-    let mut best: Option<(&str, f64)> = None;
+) -> Option<Feature<'m>> {
+    let mut best: Option<(Feature<'m>, f64)> = None;
     for feature in features {
         let Some(code) = feature.symbol_code.as_deref() else {
             continue;
@@ -251,22 +267,25 @@ fn control_feature<'m>(
                 .fold(f64::INFINITY, f64::min),
         };
         if d <= search_mm && best.is_none_or(|(_, b)| d < b) {
-            best = Some((code, d));
+            let point = matches!(feature.geometry, FeatureGeometry::Point(_));
+            best = Some((Feature { code, point }, d));
         }
     }
-    best.map(|(code, _)| code)
+    best.map(|(feature, _)| feature)
 }
 
-/// Whether two symbol codes are similar: identical, or both in one group.
-fn similar(a: &str, b: &str, groups: &[Vec<String>]) -> bool {
-    a == b
+/// Whether two control features are similar: the same point symbol, or both in one group. Lines and
+/// areas with the same symbol are not similar by themselves (ruling R14): contours, vegetation
+/// edges and building outlines are everywhere.
+fn similar(a: Feature<'_>, b: Feature<'_>, groups: &[Vec<String>]) -> bool {
+    (a.point && b.point && a.code == b.code)
         || groups
             .iter()
-            .any(|g| matches_any(a, g) && matches_any(b, g))
+            .any(|g| matches_any(a.code, g) && matches_any(b.code, g))
 }
 
 /// `similar_features`: two controls whose features are similar closer than `metres`
-/// (WKB26 B 7.2.1). Crossing points, start and finish have no control feature.
+/// (WKB26 B 7.2.1). A missing `groups` value means no groups. Crossing points, start and finish have no control feature.
 pub(super) fn similar_features(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -290,7 +309,7 @@ pub(super) fn similar_features(
     let own = stops_of(ctx, run.courses.iter().copied(), keep);
     let of_event = stops_of(ctx, &ctx.courses, keep);
     let features = ctx.index.features();
-    let feature_of: Vec<Option<&str>> = of_event
+    let feature_of: Vec<Option<Feature<'_>>> = of_event
         .iter()
         .map(|s| control_feature(features, &s.at, search))
         .collect();
@@ -307,8 +326,11 @@ pub(super) fn similar_features(
             let (first, _) = in_key_order(a, b);
             let (first_symbol, second_symbol) = if first.id == a.id { (fa, fb) } else { (fb, fa) };
             let args = vec![
-                ("first_symbol", ArgValue::Text(first_symbol.to_owned())),
-                ("second_symbol", ArgValue::Text(second_symbol.to_owned())),
+                ("first_symbol", ArgValue::Text(first_symbol.code.to_owned())),
+                (
+                    "second_symbol",
+                    ArgValue::Text(second_symbol.code.to_owned()),
+                ),
                 ("metres", metres_below(metres)),
                 ("limit", ArgValue::Number(limit)),
             ];
@@ -451,9 +473,13 @@ pub(super) fn leg_through_forbidden(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
     findings: &mut Vec<Finding>,
-    _: &mut Vec<Skipped>,
+    skipped: &mut Vec<Skipped>,
 ) {
-    let impassable = codes(run, "impassable");
+    // Without the symbol list the rule is skipped as a whole, specials included, so a broken
+    // profile shows as a skip and never as a partial pass.
+    let Some(impassable) = codes(run, "impassable", skipped) else {
+        return;
+    };
     let symbols: Vec<Obstacle<'_>> = ctx
         .index
         .features()

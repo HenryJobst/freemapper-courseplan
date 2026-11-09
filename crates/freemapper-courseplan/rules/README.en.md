@@ -188,7 +188,11 @@ the ISOM 2017-2 text and have no test map yet:
 - 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area;
   on sprint maps also 714 temporary construction or closed area
 
+Two controls at the same point symbol are always similar. Lines and areas with the same symbol are
+similar only when a group lists them, since contours, vegetation edges and building outlines are
+everywhere. Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their
+own, so no group contains them.
+
 `leg_through_forbidden` looks only at these out-of-bounds symbols and at out-of-bounds areas of
 the course. Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) and
-forbidden routes are left to the later route analysis. Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their own, so no
-group contains them.
+forbidden routes are left to the later route analysis.
