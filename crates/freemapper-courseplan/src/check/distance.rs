@@ -1,5 +1,5 @@
 //! Map-based distance checks (plan M2b, Task 4): controls too close to each other or to similar
-//! features, controls near the map edge, legs through other controls and through forbidden
+//! features, controls near the map edge, legs through other controls and through out-of-bounds
 //! areas.
 //!
 //! Distances are measured in map mm and compared in metres on the ground. Measured values in the
@@ -19,9 +19,6 @@ use super::{
     SKIP_VALUE_MISSING, Skipped, symbol_matches,
 };
 use crate::map::{FeatureGeometry, MapFeature, distance_to_polyline};
-
-/// The ISOM/ISSprOM code of an out-of-bounds route; a forbidden route special stands for it.
-const FORBIDDEN_ROUTE_CODE: &str = "711";
 
 /// What a stop of a course is; the selector of the finding texts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -405,16 +402,12 @@ pub(super) fn leg_through_control(
     }
 }
 
-/// Something a leg must not cross.
+/// An out-of-bounds area the straight leg should not cross.
 enum Obstacle<'a> {
     OutOfBounds {
         id: &'a str,
         /// The polygon as the one ring of an area.
         rings: Vec<Vec<MapPoint>>,
-    },
-    ForbiddenRoute {
-        id: &'a str,
-        points: &'a [MapPoint],
     },
     Symbol {
         code: &'a str,
@@ -426,7 +419,6 @@ impl Obstacle<'_> {
     fn met_by(&self, leg: &[MapPoint]) -> bool {
         match self {
             Obstacle::OutOfBounds { rings, .. } => polyline_meets_area(leg, rings),
-            Obstacle::ForbiddenRoute { points, .. } => polylines_meet(leg, points, false),
             Obstacle::Symbol { geometry, .. } => match geometry {
                 // A point symbol has no extent a leg could cross.
                 FeatureGeometry::Point(_) => false,
@@ -439,8 +431,7 @@ impl Obstacle<'_> {
     fn finding(&self, run: &RuleRun<'_>, location: Location) -> Finding {
         let (id, args) = match self {
             Obstacle::OutOfBounds { id, .. } => ("check-leg-out-of-bounds", ("id", id)),
-            Obstacle::ForbiddenRoute { id, .. } => ("check-leg-forbidden-route", ("id", id)),
-            Obstacle::Symbol { code, .. } => ("check-leg-impassable", ("code", code)),
+            Obstacle::Symbol { code, .. } => ("check-leg-out-of-bounds-symbol", ("code", code)),
         };
         run.finding(
             location,
@@ -450,11 +441,12 @@ impl Obstacle<'_> {
     }
 }
 
-/// `leg_through_forbidden`: the drawn part of a leg crosses an out-of-bounds area or a forbidden
-/// route of the course, or a map feature whose symbol is in `impassable` (WKB26 B 7.2.6,
-/// IOF-R 17.2). Codes in `crossing_allowed` may be crossed; whether a leg runs along such a
-/// feature is not checked, so they never give a finding. A forbidden route special counts as
-/// symbol 711. Taped legs are exempt. One finding per leg, naming the first obstacle.
+/// `leg_through_forbidden`: the drawn part of a straight leg crosses an out-of-bounds area special
+/// of the course, or a map feature whose symbol is in `impassable` (520, 708, 709, 714 in WKB
+/// 2026). The straight leg stands in for the best route, which WKB26 B 7.2.6 says must not tempt
+/// runners through out-of-bounds areas; it is a hint, not proof. Uncrossable lines and objects,
+/// and forbidden routes (they may be crossed, IOF-R 17.2), need the route analysis and are not
+/// checked. Taped legs are exempt. One finding per leg, naming the first area.
 pub(super) fn leg_through_forbidden(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -462,47 +454,38 @@ pub(super) fn leg_through_forbidden(
     _: &mut Vec<Skipped>,
 ) {
     let impassable = codes(run, "impassable");
-    let allowed = codes(run, "crossing_allowed");
     let symbols: Vec<Obstacle<'_>> = ctx
         .index
         .features()
         .iter()
         .filter_map(|f| {
             let code = f.symbol_code.as_deref()?;
-            (matches_any(code, &impassable) && !matches_any(code, &allowed)).then_some(
-                Obstacle::Symbol {
-                    code,
-                    geometry: &f.geometry,
-                },
-            )
+            matches_any(code, &impassable).then_some(Obstacle::Symbol {
+                code,
+                geometry: &f.geometry,
+            })
         })
         .collect();
-    let routes_blocked = !matches_any(FORBIDDEN_ROUTE_CODE, &allowed);
     let radius = ctx.circle_radius_mm();
     for course in &run.courses {
         let name = &course.course.name;
         let for_course = |courses: &[String]| courses.is_empty() || courses.contains(name);
-        let mut obstacles: Vec<Obstacle<'_>> = Vec::new();
-        for special in &ctx.event.specials {
-            match special {
+        let obstacles: Vec<Obstacle<'_>> = ctx
+            .event
+            .specials
+            .iter()
+            .filter_map(|special| match special {
                 SpecialObject::OutOfBoundsArea {
                     id,
                     polygon,
                     courses,
-                } if for_course(courses) => obstacles.push(Obstacle::OutOfBounds {
+                } if for_course(courses) => Some(Obstacle::OutOfBounds {
                     id,
                     rings: vec![polygon.clone()],
                 }),
-                SpecialObject::ForbiddenRoute {
-                    id,
-                    points,
-                    courses,
-                } if routes_blocked && for_course(courses) => {
-                    obstacles.push(Obstacle::ForbiddenRoute { id, points })
-                }
-                _ => {}
-            }
-        }
+                _ => None,
+            })
+            .collect();
         for (i, leg) in course.legs.iter().enumerate() {
             if leg.taped {
                 continue;

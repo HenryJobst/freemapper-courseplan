@@ -26,16 +26,19 @@ of a profile, and what to do with features that may be crossed.
   file format does not change.
 - Leg findings sit at `Location::Leg { course, after }`, one per leg and rule, naming the nearest stop or the
   first obstacle. Legs run through their bends. Both leg checks measure only the drawn part of the leg: the
-  polyline without one circle radius at either end. A leg that starts at a fence end or passes a fence at a
-  crossing point therefore does not touch the fence, and a control just beside a leg end is the business of
+  polyline without one circle radius at either end. A leg that starts at the edge of an out-of-bounds area or
+  passes its boundary at a crossing point therefore does not touch it, and a control just beside a leg end is the business of
   `min_distance`, not of `leg_through_control`.
 - A map symbol code matches a profile code when it is equal or a sub-code of it: `505.1` matches `505`, `5051`
   does not (ruling R9). One helper, `check::symbol_matches`, does this for every check.
-- `leg_through_forbidden` cannot tell crossing a line from running along it. Codes in `crossing_allowed`
-  therefore never give a finding. A forbidden route special counts as symbol 711, so it gives a finding only
-  where 711 is not in `crossing_allowed`; in the WKB 2026 profile that is the sprint rule. Point symbols have no
-  extent and never block a leg. Taped legs are exempt. Out-of-bounds areas and forbidden routes apply to a
-  course when their course list is empty or names it.
+- `leg_through_forbidden` warns when the drawn part of a straight leg crosses an out-of-bounds area special
+  of the course (its course list empty or naming the course) or a map feature whose symbol is in `impassable`:
+  520, 708, 709, and 714 on sprint maps (ruling R11). The straight leg stands in for the best route, which
+  WKB26 B 7.2.6 says must not tempt runners through out-of-bounds areas, so the severity is `warning`.
+  Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) need the route analysis and
+  are not checked; nor are forbidden routes and symbol 711, which may be crossed (IOF-R 17.2) and are only
+  wrong to run along. The `crossing_allowed` value is gone with them. Point symbols never block a leg. Taped
+  legs are exempt.
 - The control feature is the nearest map feature within `feature_search_mm`, an area counted by its outline.
   Otherwise every control inside one large paved area would stand at the same symbol.
 - The map edge is the box around all map features the map index holds; sheet objects are left out. A point
@@ -48,8 +51,8 @@ of a profile, and what to do with features that may be crossed.
 
 - The print area of a course is not the map edge yet. A course printed on a smaller sheet can have a control
   close to its sheet edge without a finding.
-- Running along a route that may be crossed goes unreported until a check can compare directions along a
-  stretch.
+- Running along a forbidden route, and legs through buildings, walls or water, go unreported until the route
+  analysis exists.
 - Cost if wrong: the place kinds are one line per key in the check table; the drawn part is one call per leg.
 
-Source: plan M2b Task 4; controller rulings R4, R9 and R10 and the rulings for Task 4, 2026-11-09.
+Source: plan M2b Task 4; controller rulings R4, R9, R10 and R11 and the rulings for Task 4, 2026-11-09.

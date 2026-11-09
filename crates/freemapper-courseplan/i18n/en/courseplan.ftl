@@ -166,9 +166,8 @@ check-leg-through-control = the leg passes { $metres } m from { $stop_kind ->
         [crossing] crossing point
        *[control] control
     } { $stop }, inside its circle radius of { $limit } m
-check-leg-out-of-bounds = the leg crosses out-of-bounds area { $id }
-check-leg-forbidden-route = the leg crosses forbidden route { $id }
-check-leg-impassable = the leg crosses map symbol { $code }, which must not be crossed
+check-leg-out-of-bounds = the straight leg crosses out-of-bounds area { $id }, so the best route may lead through it
+check-leg-out-of-bounds-symbol = the straight leg crosses map symbol { $code } (out of bounds), so the best route may lead through it
 
 ## Command line
 
@@ -465,7 +464,7 @@ mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
 mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc and section, and text; accepted findings with the note of the course setter; and skipped rules with the reason. Team, relay and score courses are not checked yet.
-mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, one leg or the course. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
+mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, one leg or the course. A start or finish id may stand in controls, as check reports it. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
 mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 
@@ -522,7 +521,7 @@ mcp-param-radius-mm = Search radius in map millimetres
 mcp-param-limit = Most features to return [default: 20, at most 200]
 mcp-param-rule = Id of the rule as check reports it, for example wkb2026.distance.min
 mcp-param-note = Why the exception is intended
-mcp-param-accept-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check [default: none]
+mcp-param-accept-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check; start and finish ids are allowed [default: none]
 mcp-param-remove-accepted-finding-controls = The controls of the finding, strings or whole numbers, as in the location of check [default: none]
 mcp-param-accept-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]
 mcp-param-remove-accepted-finding-legs = The leg of the finding: one object with course and after, as in the location of check [default: none]

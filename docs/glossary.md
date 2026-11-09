@@ -81,7 +81,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Ortsart | place kind | Art des Orts eines Befunds: Veranstaltung, Bahn, ein Posten, zwei oder mehr Posten, Strecke. Jede Prüfung nennt die Ortsarten ihrer Befunde; `finding accept` lehnt andere ab, weil ein solcher akzeptierter Befund nie passen würde. | `Place` |
 | Postenobjekt | control feature | Das Kartenobjekt, an dem ein Posten steht: das nächste Kartenobjekt mit Symbolnummer innerhalb von `feature_search_mm` um die Postenmitte. Eine Fläche zählt mit ihrem Rand, die Fläche, in der der Posten nur liegt, ist also nicht sein Objekt. | `control_feature` |
 | Kartenrand | map edge | Rand des Rechtecks um alle Geländeobjekte des Kartenindex, ohne Blatt-Objekte. | `MapIndex::extent` |
-| unpassierbares Symbol | impassable symbol | Kartensymbol, das eine Strecke nicht queren darf (IOF-R 17.2), als Symbolnummer in `impassable`. Eine Unternummer gehört zu ihrer Nummer: 521.1 zu 521, 5211 nicht. | `impassable`, `symbol_matches` |
+| Sperrgebiet-Symbol | out-of-bounds symbol | Kartensymbol eines Sperrgebiets (ISOM/ISSprOM 520, 708, 709, auf Sprintkarten auch 714), als Symbolnummer in `impassable` von `leg_through_forbidden`. Eine Unternummer gehört zu ihrer Nummer: 709.1 zu 709, 7091 nicht. | `impassable`, `symbol_matches` |
 | gezeichneter Teil einer Strecke | drawn part of a leg | Streckenlinienzug ohne je einen Kreisradius an beiden Enden, so wie der Bahnaufdruck ihn zeichnet. Die Streckenprüfungen messen nur diesen Teil. | `drawn_part` |
 
 ## Austausch / exchange

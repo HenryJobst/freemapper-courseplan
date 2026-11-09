@@ -26,9 +26,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   language. `event_info` names the rule profile and the overlays.
 - `check` now measures distances on the map: controls closer together than the minimum distance (the start
   and crossing points count), controls at similar features too close together, controls, start and finish
-  near the map edge, legs that pass through another control of the same course, and legs through
-  out-of-bounds areas, forbidden routes or uncrossable map symbols. Taped legs may lead through forbidden
-  ground. Each finding gives the measured value and the limit, such as "control 31 and control 32 are 12 m
+  near the map edge, legs that pass through another control of the same course, and straight legs through
+  an out-of-bounds area, as a warning that the best route may lead through it. Taped legs may lead through
+  out-of-bounds areas. Buildings, walls, fences and water wait for the later route analysis. Each finding gives the measured value and the limit, such as "control 31 and control 32 are 12 m
   apart, at least 15 m". A pair or a control is reported once, even when several courses use it. Start and
   finish can be the place of a finding: `finding accept … --controls 31,S1`.
 - `finding accept` refuses a place where the rule never reports a finding, such as `--course A` for the

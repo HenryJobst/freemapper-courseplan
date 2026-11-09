@@ -76,7 +76,7 @@ Schlüssel:
 | `similar_features` | Zwei Posten auf ähnlichen Objekten näher als `metres` |
 | `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
 | `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
-| `leg_through_forbidden` | Eine Strecke quert ein Sperrgebiet oder ein unpassierbares Objekt |
+| `leg_through_forbidden` | Eine gerade Strecke quert ein Sperrgebiet, die Optimalroute könnte hindurchführen |
 | `acute_angle` | Winkel zwischen den Strecken an einem Posten unter `degrees` |
 | `opposing_legs` | Zwei Strecken einer Bahn laufen dicht nebeneinander gegeneinander |
 | `code_range` | Ein Postencode außerhalb von `range` |
@@ -121,7 +121,7 @@ Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees
 Meter im Gelände oder Millimeter auf der Karte gemeint sind.
 
 Texte, true/false und Listen von Texten brauchen keine Einheit. Symbolnummern sind Texte:
-`impassable = ["520", "708"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer
+`impassable = ["520", "709"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer
 hat oder eine Unternummer davon: `505.1` passt zu `505`, `5051` nicht.
 
 Tabellen und Zeilenlisten haben keine einzelne Einheit. Jede steht mit ihrer Form in
@@ -183,7 +183,7 @@ PDF-Seiten verglichen. Diese Zellen sollte jemand mit den gedruckten Regeln noch
 
 ## Symbolnummern, die zu prüfen sind
 
-Die Gruppen ähnlicher Objekte und die unpassierbaren Symbole nutzen auf Sprint- und Schulhofkarten
+Die Gruppen ähnlicher Objekte und die Sperrgebiet-Symbole nutzen auf Sprint- und Schulhofkarten
 ISSprOM-2019-2-Nummern und auf Waldkarten ISOM-2017-2-Nummern. Die ISSprOM-Nummern sind mit dem
 Symbolsatz von `tests/fixtures/maps/luebeck.omap` und dem ISSprOM-Text abgeglichen. Die
 ISOM-Nummern stammen aus dem ISOM-2017-2-Text; eine Testkarte dafür gibt es noch nicht:
@@ -195,9 +195,10 @@ ISOM-Nummern stammen aus dem ISOM-2017-2-Text; eine Testkarte dafür gibt es noc
 - 516 fence, 517 ruined fence
 - 505 footpath, 506 small footpath, 507 less distinct small footpath, 508 narrow ride or linear
   trace
-- 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area,
-  711 out-of-bounds route (IOF-R 17.2)
+- 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area;
+  auf Sprintkarten auch 714 temporary construction or closed area
 
-Die Lübeck-Karte zeichnet unpassierbare Vegetation mit 410, ISSprOM 2019-2 und IOF-R 17.2 nennen
-411. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben kein eigenes Symbol; keine
+`leg_through_forbidden` betrachtet nur diese Sperrgebiet-Symbole und die Sperrgebiete der Bahn.
+Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune, Gebäude, Brücken) und verbotene
+Routen bleiben der späteren Routenanalyse überlassen. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben kein eigenes Symbol; keine
 Gruppe enthält sie.

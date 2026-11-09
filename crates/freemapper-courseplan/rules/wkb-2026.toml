@@ -201,33 +201,28 @@ note = { de = "Abstand ist der Radius des Postenkreises im Bahnaufdruck.", en = 
 [[rules]]
 id = "wkb2026.leg.through_forbidden"
 key = "leg_through_forbidden"
-severity = "error"
+severity = "warning"
 map_kinds = ["forest"]
 source = { doc = "WKB26", section = "B 7.2.6" }
-note = { de = "Unpassierbare Symbole nach IOF-R 17.2 (Wald). Eine Pflichtstrecke darf hindurchführen.", en = "Uncrossable symbols after IOF-R 17.2 (forest). A marked route may lead through." }
+note = { de = "Die Prüfung nimmt die gerade Strecke als Hinweis, dass die Optimalroute durch ein Sperrgebiet führen könnte (WKB26 B 7.2.6). Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune, Gebäude, Brücken) bleiben der späteren Routenanalyse überlassen. Vorschlag (Claude's call, Plan M2b). Eine abgeflaggte Strecke darf hindurchführen.", en = "The check takes the straight leg as a hint that the best route could lead through an out-of-bounds area (WKB26 B 7.2.6). Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) are left to the later route analysis. A proposal (Claude's call, plan M2b). A taped leg may lead through." }
 
 [rules.values]
-# IOF-R 17.2, forest: ISOM 520 area that shall not be entered, 708 out-of-bounds boundary,
-# 709 out-of-bounds area, 711 out-of-bounds route.
-impassable = ["520", "708", "709", "711"]
-# IOF-R 17.2: competitors may cross an out-of-bounds route (711) directly.
-crossing_allowed = ["711"]
+# Out-of-bounds symbols of ISOM 2017-2: 520 area that shall not be entered, 708 out-of-bounds
+# boundary, 709 out-of-bounds area.
+impassable = ["520", "708", "709"]
 
 [[rules]]
 id = "wkb2026.leg.through_forbidden_sprint"
 key = "leg_through_forbidden"
-severity = "error"
+severity = "warning"
 map_kinds = ["sprint", "schoolyard"]
 source = { doc = "WKB26", section = "B 7.2.6" }
-note = { de = "Unpassierbare Symbole nach IOF-R 17.2 (Sprint). Eine Pflichtstrecke darf hindurchführen.", en = "Uncrossable symbols after IOF-R 17.2 (sprint). A marked route may lead through." }
+note = { de = "Die Prüfung nimmt die gerade Strecke als Hinweis, dass die Optimalroute durch ein Sperrgebiet führen könnte (WKB26 B 7.2.6). Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune, Gebäude, Brücken) bleiben der späteren Routenanalyse überlassen. Vorschlag (Claude's call, Plan M2b). Eine abgeflaggte Strecke darf hindurchführen.", en = "The check takes the straight leg as a hint that the best route could lead through an out-of-bounds area (WKB26 B 7.2.6). Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) are left to the later route analysis. A proposal (Claude's call, plan M2b). A taped leg may lead through." }
 
 [rules.values]
-# IOF-R 17.2, sprint: ISSprOM 201 uncrossable cliff, 301 uncrossable body of water, 307
-# uncrossable marsh, 411 uncrossable vegetation, 512.1 bridge or tunnel entrance (pass under
-# only), 515 uncrossable wall, 518 uncrossable fence or railing, 520 area that shall not be
-# entered, 521 building, 529 prominent uncrossable line feature, 708 out-of-bounds boundary,
-# 709 out-of-bounds area, 714 temporary construction or closed area.
-impassable = ["201", "301", "307", "411", "512.1", "515", "518", "520", "521", "529", "708", "709", "714"]
+# Out-of-bounds symbols of ISSprOM 2019-2: 520 area that shall not be entered, 708 out-of-bounds
+# boundary, 709 out-of-bounds area, 714 temporary construction or closed area.
+impassable = ["520", "708", "709", "714"]
 
 # ---------------------------------------------------------------------------------------------
 # Leg shapes (plan M2b, Task 5)

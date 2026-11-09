@@ -27,9 +27,9 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   der Sprache des Servers. `event_info` nennt Regelprofil und Aufsätze.
 - `check` prüft jetzt Abstände auf der Karte: Posten näher beieinander als der Mindestabstand (Start und
   Querungsstellen zählen mit), Posten an ähnlichen Objekten zu nah beieinander, Posten, Start und Ziel nah am
-  Kartenrand, Strecken, die durch einen anderen Posten derselben Bahn führen, und Strecken durch Sperrgebiete,
-  verbotene Routen oder unpassierbare Kartensymbole. Abgeflaggte Strecken dürfen durch verbotene Bereiche
-  führen. Jeder Befund nennt den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m
+  Kartenrand, Strecken, die durch einen anderen Posten derselben Bahn führen, und gerade Strecken durch ein
+  Sperrgebiet als Warnung, dass die Optimalroute hindurchführen könnte. Abgeflaggte Strecken dürfen durch
+  Sperrgebiete führen. Gebäude, Mauern, Zäune und Wasser prüft erst die spätere Routenanalyse. Jeder Befund nennt den gemessenen Wert und die Grenze, etwa „Posten 31 und Posten 32 liegen 12 m
   auseinander, mindestens 15 m“. Ein Paar oder ein Posten wird einmal gemeldet, auch wenn mehrere Bahnen ihn
   nutzen. Start und Ziel können Ort eines Befunds sein: `finding accept … --controls 31,S1`.
 - `finding accept` lehnt einen Ort ab, an dem die Prüfregel nie einen Befund meldet, etwa `--course A` für den

@@ -166,9 +166,8 @@ check-leg-through-control = Die Strecke führt { $metres } m { $stop_kind ->
         [crossing] an der Querungsstelle
        *[control] am Posten
     } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
-check-leg-out-of-bounds = Die Strecke quert das Sperrgebiet { $id }
-check-leg-forbidden-route = Die Strecke quert die verbotene Route { $id }
-check-leg-impassable = Die Strecke quert das Kartensymbol { $code }, das nicht überquert werden darf
+check-leg-out-of-bounds = Die gerade Strecke quert das Sperrgebiet { $id }; die Optimalroute könnte hindurchführen
+check-leg-out-of-bounds-symbol = Die gerade Strecke quert das Kartensymbol { $code } (Sperrgebiet); die Optimalroute könnte hindurchführen
 
 ## Kommandozeile
 
@@ -460,7 +459,7 @@ mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
 mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc und section, und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; und die übersprungenen Prüfregeln mit dem Grund. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
-mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, eine Strecke in legs oder course. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
+mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, eine Strecke in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
 mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren.
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 
@@ -517,7 +516,7 @@ mcp-param-radius-mm = Suchradius in Kartenmillimetern
 mcp-param-limit = Höchstzahl der Objekte [Standard: 20, höchstens 200]
 mcp-param-rule = Kennung der Prüfregel, wie check sie meldet, zum Beispiel wkb2026.distance.min
 mcp-param-note = Warum die Ausnahme gewollt ist
-mcp-param-accept-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check [Standard: keine]
+mcp-param-accept-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check; ids von Start und Ziel sind erlaubt [Standard: keine]
 mcp-param-remove-accepted-finding-controls = Die Posten des Befunds, als Texte oder ganze Zahlen, wie in location von check [Standard: keine]
 mcp-param-accept-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]
 mcp-param-remove-accepted-finding-legs = Die Strecke des Befunds: ein Objekt mit course und after, wie in location von check [Standard: keine]

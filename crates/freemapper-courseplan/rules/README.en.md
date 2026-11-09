@@ -71,7 +71,7 @@ the findings that were accepted for it are reported again.
 | `similar_features` | Two controls on similar features closer than `metres` |
 | `map_edge` | A control, start or finish closer than `metres` to the map edge |
 | `leg_through_control` | A leg passing through another control of the same course |
-| `leg_through_forbidden` | A leg crossing a forbidden area or an uncrossable feature |
+| `leg_through_forbidden` | A straight leg crossing an out-of-bounds area, so the best route may lead through it |
 | `acute_angle` | The angle between the legs at a control below `degrees` |
 | `opposing_legs` | Two legs of a course running close to each other in opposite directions |
 | `code_range` | A control code outside `range` |
@@ -115,7 +115,7 @@ A name like `distance = 30` is refused, because nobody can tell whether it means
 ground or millimetres on the map.
 
 Texts, true/false and lists of texts need no unit. Symbol codes are texts: `impassable = ["520",
-"708"]`. A map symbol matches a code when it has that code or a sub-code of it: `505.1` matches
+"709"]`. A map symbol matches a code when it has that code or a sub-code of it: `505.1` matches
 `505`, `5051` does not.
 
 Tables and lists of rows have no single unit. Each one is listed with its shape in
@@ -173,7 +173,7 @@ These cells need a second look by someone with the printed rules:
 
 ## Symbol codes to verify
 
-The similar-feature groups and uncrossable symbols use ISSprOM 2019-2 codes on sprint and
+The similar-feature groups and out-of-bounds symbols use ISSprOM 2019-2 codes on sprint and
 schoolyard maps and ISOM 2017-2 codes on forest maps. The ISSprOM codes were checked against the
 symbol set of `tests/fixtures/maps/luebeck.omap` and the ISSprOM text. The ISOM codes come from
 the ISOM 2017-2 text and have no test map yet:
@@ -185,9 +185,10 @@ the ISOM 2017-2 text and have no test map yet:
 - 516 fence, 517 ruined fence
 - 505 footpath, 506 small footpath, 507 less distinct small footpath, 508 narrow ride or linear
   trace
-- 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area,
-  711 out-of-bounds route (IOF-R 17.2)
+- 520 area that shall not be entered, 708 out-of-bounds boundary, 709 out-of-bounds area;
+  on sprint maps also 714 temporary construction or closed area
 
-The Lübeck map draws uncrossable vegetation with 410, while ISSprOM 2019-2 and IOF-R 17.2 use 411.
-Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their own, so no
+`leg_through_forbidden` looks only at these out-of-bounds symbols and at out-of-bounds areas of
+the course. Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) and
+forbidden routes are left to the later route analysis. Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their own, so no
 group contains them.
