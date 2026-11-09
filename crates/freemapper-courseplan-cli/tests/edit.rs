@@ -1327,25 +1327,7 @@ fn footpath_across_number(baseline: f64) -> [(f64, f64); 2] {
 }
 
 /// The map reaches automatic placement: a footpath under the box of the number of control 32
-/// makes `course numbers` leave the covered position, here by a larger gap (the profile allows
-/// up to 5 mm).
-#[test]
-fn course_numbers_avoid_map_symbols() {
-    let (dir, project) = project();
-    numbers_on_course_a(dir.path(), project.to_str().unwrap());
-    let (baseline, base_gap) = course_numbers_of(&project)[1].unwrap();
-
-    let (dir2, project2) = project_with_footpath(footpath_across_number(baseline));
-    numbers_on_course_a(dir2.path(), project2.to_str().unwrap());
-    let (moved, gap) = course_numbers_of(&project2)[1].unwrap();
-    let diff = (moved - baseline + 540.0).rem_euclid(360.0) - 180.0;
-    assert!(
-        diff.abs() >= 15.0 || gap > base_gap,
-        "baseline {baseline}, with footpath {moved} at {gap}"
-    );
-}
-
-/// The same footpath: the number keeps its direction and moves outward within the profile's
+/// makes `course numbers` keep the direction and move the number outward within the profile's
 /// range (0.5 to 5 mm) instead of turning away.
 #[test]
 fn course_numbers_move_outward_within_the_range() {

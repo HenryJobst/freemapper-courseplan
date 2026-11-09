@@ -32,7 +32,8 @@ pub struct GapRange {
 }
 
 impl GapRange {
-    /// The range without an applicable rule: the fixed gap of 0.5 mm.
+    /// The range without an applicable rule: the fixed gap of 0.5 mm. This equals `GAP_STEP_MM`
+    /// on purpose: the old fixed gap is the first step of the grid.
     pub const FIXED: GapRange = GapRange {
         min_mm: 0.5,
         max_mm: 0.5,
@@ -416,10 +417,10 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// `candidate_gaps`) and compared as (overprint conflicts, map conflicts, distance to the
 /// preferred direction, gap, distance to the outer bisector, direction), so a larger gap in the
 /// preferred direction beats a smaller one in another direction. "Behind is blocked" is tested at
-/// the minimum gap. Stored numbers keep their gap even outside the range; only `check` warns. Overprint conflicts are a box on another circle, on a leg
-/// widened by half the line width, or on a number placed before; map conflicts are covered point
-/// or line symbols, each counting once. Areas and magnetic north lines (601 and its sub-codes)
-/// never count. Overprint outweighs any number of map conflicts (rulings R3 to R5).
+/// the minimum gap. Stored numbers keep their gap even outside the range; only `check` warns.
+/// Overprint conflicts are a box on another circle, on a leg widened by half the line width, or on
+/// a number placed before; map conflicts are covered point or line symbols, each counting once.
+/// Areas and magnetic north lines (601 and its sub-codes) never count. Overprint outweighs any number of map conflicts (rulings R3 to R5).
 ///
 /// Kept numbers follow the levels of design §5.3, the more specific winning: automatic placement,
 /// then the central number of the control (`Control.number`), then the number of the course
