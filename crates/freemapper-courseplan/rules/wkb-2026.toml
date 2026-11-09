@@ -248,7 +248,7 @@ key = "straight_angle"
 severity = "hint"
 values = { degrees = 170.0 }
 source = { doc = "claude", section = "number placement plan, Task 3" }
-note = { de = "Läuft die Bahn am Posten fast geradeaus weiter, ändert er die Laufrichtung kaum, und hinter dem Kreis ist kein Platz für die Nummer. Die 170° hat der Nutzer festgelegt.", en = "When the course runs almost straight on at a control, the control hardly changes the running direction, and there is no room for the number behind the circle. The user set the 170°." }
+note = { de = "Läuft die Bahn am Posten fast geradeaus weiter, ändert der Posten die Laufrichtung kaum, und hinter dem Kreis ist kein Platz für die Nummer. Die 170° hat der Nutzer festgelegt.", en = "When the course runs almost straight on at a control, the control hardly changes the running direction, and there is no room for the number behind the circle. The user set the 170°." }
 
 [[rules]]
 id = "wkb2026.leg.opposing"

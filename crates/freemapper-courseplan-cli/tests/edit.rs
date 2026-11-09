@@ -1276,3 +1276,67 @@ fn refused_special_removal_leaves_the_file_byte_identical() {
     );
     assert_eq!(std::fs::read(&project).unwrap(), before);
 }
+
+/// A project on a copy of the Luebeck map with one footpath (505.1) segment added; `line` is the
+/// two end points in map mm.
+fn project_with_footpath(line: [(f64, f64); 2]) -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let source =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/maps/luebeck.omap");
+    let text = std::fs::read_to_string(source).unwrap();
+    let object = format!(
+        "<object type=\"1\" symbol=\"120\"><coords count=\"2\">{} {};{} {};</coords></object>\n",
+        (line[0].0 * 1000.0).round(),
+        (line[0].1 * 1000.0).round(),
+        (line[1].0 * 1000.0).round(),
+        (line[1].1 * 1000.0).round(),
+    );
+    assert!(text.contains("</objects></part>"));
+    let text = text.replacen(
+        "</objects></part>",
+        &format!("{object}</objects></part>"),
+        1,
+    );
+    let map = dir.path().join("luebeck.omap");
+    std::fs::write(&map, text).unwrap();
+    let out = run(dir.path(), &["init", map.to_str().unwrap()]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let project = dir.path().join("luebeck.courseplan.toml");
+    (dir, project)
+}
+
+fn numbers_on_course_a(d: &Path, p: &str) {
+    course_setup(d, p);
+    ok(
+        d,
+        &["course", "add", p, "A", "--start", "S1", "--finish", "F1"],
+    );
+    ok(d, &["course", "controls", p, "A", "31,32,33"]);
+    ok(d, &["course", "numbers", p, "A"]);
+}
+
+/// The map reaches automatic placement: a footpath under the box of the number of control 32
+/// makes `course numbers` choose another direction.
+#[test]
+fn course_numbers_avoid_map_symbols() {
+    let (dir, project) = project();
+    numbers_on_course_a(dir.path(), project.to_str().unwrap());
+    let baseline = course_numbers_of(&project)[1].unwrap().0;
+
+    // A segment across the box of control 32 (at 90,40): 5 mm out along the baseline direction
+    // (the box spans about 3.7 to 6.1 mm there), 6 mm long, at right angles to that direction.
+    let (ux, uy) = (baseline.to_radians().cos(), -baseline.to_radians().sin());
+    let (cx, cy) = (90.0 + 5.0 * ux, 40.0 + 5.0 * uy);
+    let line = [
+        (cx - 3.0 * uy, cy + 3.0 * ux),
+        (cx + 3.0 * uy, cy - 3.0 * ux),
+    ];
+    let (dir2, project2) = project_with_footpath(line);
+    numbers_on_course_a(dir2.path(), project2.to_str().unwrap());
+    let moved = course_numbers_of(&project2)[1].unwrap().0;
+    let diff = (moved - baseline + 540.0).rem_euclid(360.0) - 180.0;
+    assert!(
+        diff.abs() >= 15.0,
+        "baseline {baseline}, with footpath {moved}"
+    );
+}

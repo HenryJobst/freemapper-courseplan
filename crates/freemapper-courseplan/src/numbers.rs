@@ -1,11 +1,12 @@
 //! Automatic placement of control numbers.
 //!
-//! A deterministic first version without map detail: a number goes where it touches the fewest
-//! legs, circles and other numbers. Among equals it goes behind the circle, in line with the
-//! incoming leg, unless the outgoing leg is there; then it takes the nearest free direction in
-//! steps of 15 degrees, and at an almost straight angle it points straight out of the bend (the
-//! outer bisector). The shared `freemapper-placement` module replaces this later (ADR 0013,
-//! ADR 0014).
+//! A deterministic placement that weighs the map: a number goes where its box touches the fewest
+//! circles, legs and other numbers (overprint), then the fewest point and line symbols of the map
+//! (areas and magnetic north lines never count). Among equals it goes behind the circle, in line
+//! with the incoming leg, unless the outgoing leg is there; then it takes the nearest free
+//! direction in steps of 15 degrees, rounded to 0.1 degrees, and at an almost straight angle it
+//! points straight out of the bend (the outer bisector). The shared `freemapper-placement`
+//! module replaces this later (ADR 0013, ADR 0014).
 //!
 //! Conventions: map coordinates are millimetres with y down, so "north" on screen is -y. A
 //! direction is in degrees, 0 = east, counter-clockwise, hence 90 degrees points to -y (north).
@@ -14,6 +15,7 @@
 
 use freemapper_courseplan_model::{CourseKind, Event, MapPoint, NumberPlacement};
 
+use crate::check::symbol_matches;
 use crate::course::{CourseError, control_numbers, course_legs};
 use crate::edit::{EditError, apply, course_mut, individual_mut};
 use crate::map::{FeatureGeometry, MapFeature, MapIndex, MapKind};
@@ -29,6 +31,9 @@ const CANDIDATE_STEPS: i32 = 12;
 const EPS: f64 = 1e-9;
 /// A point symbol is covered when the number box comes within this distance of its position
 /// (map mm; map symbols do not scale with the overprint factor).
+/// Symbol code of magnetic north lines, which never count as covered (ruling R5).
+const NORTH_LINE_SYMBOL: &str = "601";
+
 const POINT_SYMBOL_RADIUS_MM: f64 = 0.5;
 /// A line symbol is covered when a segment of it comes within this distance of the number box
 /// (map mm).
@@ -172,6 +177,14 @@ fn point_segment_distance(p: (f64, f64), a: (f64, f64), b: (f64, f64)) -> f64 {
 
 /// Whether the box covers a point or line symbol of the map; areas, outlines included, never count.
 fn feature_covered(rect: &Rect, feature: &MapFeature) -> bool {
+    // Magnetic north lines (601 and its sub-codes) run over the whole map and never count (R5).
+    if feature
+        .symbol_code
+        .as_deref()
+        .is_some_and(|code| symbol_matches(code, NORTH_LINE_SYMBOL))
+    {
+        return false;
+    }
     match &feature.geometry {
         FeatureGeometry::Point(p) => rect.distance_to_point(p.x, p.y) <= POINT_SYMBOL_RADIUS_MM,
         FeatureGeometry::Line(points) => points.windows(2).any(|w| {
@@ -180,6 +193,36 @@ fn feature_covered(rect: &Rect, feature: &MapFeature) -> bool {
         }),
         FeatureGeometry::Area(_) => false,
     }
+}
+
+/// The key a candidate is ranked by, smaller being better: overprint conflicts (circles, legs,
+/// other numbers), map conflicts (covered point and line symbols), distance to the preferred
+/// direction, distance to the outer bisector, direction (ruling R4).
+struct Rank {
+    overprint: usize,
+    map: usize,
+    off_preferred: f64,
+    off_outer: f64,
+    direction: f64,
+}
+
+impl Rank {
+    fn beats(&self, other: &Rank) -> bool {
+        let (mine, theirs) = ((self.overprint, self.map), (other.overprint, other.map));
+        mine < theirs
+            || (mine == theirs
+                && (self.off_preferred < other.off_preferred - EPS
+                    || ((self.off_preferred - other.off_preferred).abs() <= EPS
+                        && (self.off_outer < other.off_outer - EPS
+                            || ((self.off_outer - other.off_outer).abs() <= EPS
+                                && self.direction < other.direction)))))
+    }
+}
+
+/// The candidate direction `step` steps from `preferred`, rounded to 0.1 degrees (ruling R3) so
+/// that the stored value is exactly the one evaluated.
+fn candidate_direction(preferred: f64, step: i32) -> f64 {
+    normalize_direction(((preferred + CANDIDATE_STEP_DEG * f64::from(step)) * 10.0).round() / 10.0)
 }
 
 fn digits(n: u32) -> usize {
@@ -285,12 +328,12 @@ fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
 /// the circle, in line with the incoming leg (its last segment, so after the last bend); if the
 /// box there touches the outgoing leg, or there is no incoming leg, it is the outer bisector
 /// (the middle of the larger area between the legs). Tried are the 24 directions
-/// `preferred + 15 * k` degrees. The one with the fewest hard conflicts wins (box on another
-/// circle, on a leg widened by half the line width, on a number placed before, or on a point or
-/// line symbol of the map, each symbol counting once; areas never count), then the one
-/// nearest to the preferred direction, then the one nearest to the outer bisector, then the
-/// lowest direction value: candidates are compared as (conflicts, distance to the preferred
-/// direction, distance to the outer bisector, direction).
+/// `preferred + 15 * k` degrees, each rounded to 0.1 degrees and returned as evaluated. They are
+/// compared as (overprint conflicts, map conflicts, distance to the preferred direction, distance
+/// to the outer bisector, direction). Overprint conflicts are a box on another circle, on a leg
+/// widened by half the line width, or on a number placed before; map conflicts are covered point
+/// or line symbols, each counting once. Areas and magnetic north lines (601 and its sub-codes)
+/// never count. Overprint outweighs any number of map conflicts (rulings R3 to R5).
 ///
 /// Kept numbers follow the levels of design §5.3, the more specific winning: automatic placement,
 /// then the central number of the control (`Control.number`), then the number of the course
@@ -414,6 +457,7 @@ pub fn auto_place(
         // Point and line symbols near enough for any candidate box to cover them.
         let box_h = sizes.number_height_mm * factor;
         let box_w = DIGIT_WIDTH_FACTOR * box_h * digits(number) as f64;
+        // Farthest a candidate box can reach from the control, plus a symbol's own extent.
         let reach = radius
             + half_line
             + GAP_PRINT_MM * factor
@@ -421,14 +465,12 @@ pub fn auto_place(
             + POINT_SYMBOL_RADIUS_MM;
         let features = map.features_near(here.clone(), reach);
 
-        // Best so far: (conflicts, distance to the preferred direction, distance to the outer
-        // bisector, direction).
-        let mut best: Option<(usize, f64, f64, f64)> = None;
+        let mut best: Option<Rank> = None;
         for step in -(CANDIDATE_STEPS - 1)..=CANDIDATE_STEPS {
-            let direction =
-                (preferred_dir + CANDIDATE_STEP_DEG * f64::from(step)).rem_euclid(360.0);
+            let direction = candidate_direction(preferred_dir, step);
             let rect = number_rect(here, direction, number, GAP_PRINT_MM, &sizes, factor);
-            let mut conflicts = 0;
+            // Circles, legs and other numbers (overprint) weigh more than map symbols (ruling R4).
+            let mut overprint = 0;
             for (j, pos) in positions.iter().enumerate() {
                 let is_circle = numbers[j].is_some();
                 let same_place = (pos.x - here.x).hypot(pos.y - here.y) < EPS;
@@ -437,40 +479,34 @@ pub fn auto_place(
                     && !same_place
                     && rect.distance_to_point(pos.x, pos.y) < radius + half_line
                 {
-                    conflicts += 1;
+                    overprint += 1;
                 }
             }
             for line in &lines {
                 if line.windows(2).any(|w| {
                     rect.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y)) <= half_line
                 }) {
-                    conflicts += 1;
+                    overprint += 1;
                 }
             }
-            conflicts += features
+            overprint += placed.iter().filter(|r| rect.overlaps(r)).count();
+            let map_conflicts = features
                 .iter()
                 .filter(|(feature, _)| feature_covered(&rect, feature))
                 .count();
-            conflicts += placed.iter().filter(|r| rect.overlaps(r)).count();
 
-            let off_preferred = angle_diff(direction, preferred_dir);
-            let off_outer = angle_diff(direction, outer);
-            let better = match best {
-                None => true,
-                Some((c, op, oo, d)) => {
-                    conflicts < c
-                        || (conflicts == c
-                            && (off_preferred < op - EPS
-                                || ((off_preferred - op).abs() <= EPS
-                                    && (off_outer < oo - EPS
-                                        || ((off_outer - oo).abs() <= EPS && direction < d)))))
-                }
+            let rank = Rank {
+                overprint,
+                map: map_conflicts,
+                off_preferred: angle_diff(direction, preferred_dir),
+                off_outer: angle_diff(direction, outer),
+                direction,
             };
-            if better {
-                best = Some((conflicts, off_preferred, off_outer, direction));
+            if best.as_ref().is_none_or(|b| rank.beats(b)) {
+                best = Some(rank);
             }
         }
-        let direction = best.map_or(preferred_dir, |(_, _, _, d)| d);
+        let direction = best.map_or(preferred_dir, |r| r.direction);
         placed.push(number_rect(
             here,
             direction,
@@ -568,7 +604,7 @@ pub fn place_numbers(
 mod tests {
     use super::*;
     use crate::check::testing::{
-        AREA_520, LINE_502, POINT_113, area_object, line_object, map, point_object,
+        AREA_520, LINE_502, LINE_601, POINT_113, area_object, line_object, map, point_object,
     };
     use freemapper_courseplan_model::{
         Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl, EventMeta,
@@ -1150,7 +1186,7 @@ mod tests {
             true,
         )
         .unwrap();
-        assert_ne!(with_kept[0].direction, baseline);
+        assert!(angle_diff(with_kept[0].direction, baseline) > 1.0);
     }
 
     #[test]
@@ -1238,6 +1274,68 @@ mod tests {
         );
         let placed = place_on(&e, &map, 4000);
         assert!(angle_diff(placed[0].direction, target) < 1e-9);
+    }
+
+    #[test]
+    fn overprint_conflicts_weigh_more_than_map_symbols() {
+        let rank = |overprint, map| Rank {
+            overprint,
+            map,
+            off_preferred: 0.0,
+            off_outer: 0.0,
+            direction: 0.0,
+        };
+        // On its own leg and one line symbol (two conflicts in all) loses against three line
+        // symbols and no overprint.
+        assert!(rank(0, 3).beats(&rank(1, 1)));
+        assert!(!rank(1, 1).beats(&rank(0, 3)));
+        // Equal overprint: fewer map conflicts win, then the later keys decide.
+        assert!(rank(1, 1).beats(&rank(1, 2)));
+        let near = Rank {
+            off_preferred: 15.0,
+            ..rank(0, 0)
+        };
+        assert!(rank(0, 0).beats(&near));
+        let low = Rank {
+            direction: 15.0,
+            ..rank(0, 0)
+        };
+        assert!(rank(0, 0).beats(&low));
+        assert!(!rank(0, 0).beats(&rank(0, 0)));
+    }
+
+    #[test]
+    fn magnetic_north_lines_never_count_as_covered() {
+        let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
+        let east = sprint_rect(&e, 0.0);
+        let cy = (east.min_y + east.max_y) / 2.0;
+        let north_lines = index(vec![line_object(
+            LINE_601,
+            &[(east.min_x - 3.0, cy), (east.max_x + 3.0, cy)],
+        )]);
+        assert!(angle_diff(place_on(&e, &north_lines, 4000)[0].direction, 0.0) < 1e-9);
+        let same_geometry = index(vec![line_object(
+            LINE_502,
+            &[(east.min_x - 3.0, cy), (east.max_x + 3.0, cy)],
+        )]);
+        assert!(angle_diff(place_on(&e, &same_geometry, 4000)[0].direction, 0.0) >= 15.0);
+    }
+
+    #[test]
+    fn candidate_directions_are_rounded_to_a_tenth_and_never_360() {
+        assert_eq!(candidate_direction(359.96, 0), 0.0);
+        for step in -(CANDIDATE_STEPS - 1)..=CANDIDATE_STEPS {
+            let d = candidate_direction(123.456_789, step);
+            assert!((0.0..360.0).contains(&d), "{d}");
+            assert!((d * 10.0 - (d * 10.0).round()).abs() < 1e-9, "{d}");
+        }
+        // Through auto_place: incoming from 3 degrees off west, so behind is not a round value.
+        let e = event((70.0, 100.0), &[n("31", 100.0, 101.7)], (100.0, 140.0));
+        let d = place(&e, 4000)[0].direction;
+        assert!(
+            d < 360.0 && (d * 10.0 - (d * 10.0).round()).abs() < 1e-9,
+            "{d}"
+        );
     }
 
     #[test]
