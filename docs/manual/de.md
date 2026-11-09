@@ -268,9 +268,10 @@ Was du wissen solltest:
 
 - Mannschafts-, Staffel- und Score-Bahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
   ihrer Art.
-- Geopositionen und Bandstrecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
-- Die Uhrzeit `createTime` ist UTC und hat keine Zonenangabe. Ein Leseprogramm zeigt sie vielleicht ein bis zwei
-  Stunden verschoben an. Für die Bahnen spielt das keine Rolle.
+- Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
+  unberührt.
+- Geopositionen und abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
+- Die Uhrzeit `createTime` ist UTC und trägt das Zeichen `Z`. Für die Bahnen spielt sie keine Rolle.
 - Ob OE12 die Datei so einliest, wie gedacht, ist noch nicht getestet. Das Beispiel
   [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema geprüft. Wer es in
   OE12 importiert, soll melden, was ankommt.

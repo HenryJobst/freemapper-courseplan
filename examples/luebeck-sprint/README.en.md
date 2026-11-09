@@ -106,7 +106,7 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-d
 ```
 
 The file validates against the IOF schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
-course-data.xml`). Its `createTime` is the time of the run in UTC. Still open: nobody has imported the file
+course-data.xml`). Its `createTime` is fixed at `2026-11-09T12:00:00Z` so a test can compare the file; a run of your own writes the current time in UTC. Still open: nobody has imported the file
 into OE12 yet. If you do, please report what arrives.
 
 ## Making the sketch again

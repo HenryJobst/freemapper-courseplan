@@ -338,11 +338,13 @@ Claude's call.)*
 ### 5.5b IOF XML 3.0 export
 
 - `CourseData`: controls with map and geo position, courses, control order,
-  `MapTextPosition`, leg lengths, class assignments. Y axis as the standard defines it.
+  `MapTextPosition`, leg lengths, class assignments. Y axis as the schema defines it: units below the centre, so
+  project coordinates (y down) are written unmirrored. Purple Pen, OCAD and Condes write y up against the standard
+  (freemapper-print ADR 0010); whether OE12 tolerates the standard's direction is part of the open OE test.
 - **Built** (ADR 0033, `export PROJECT --iof-xml FILE` and the MCP tool `export_iof_xml`): individual courses
-  with map positions in millimetres (y mirrored), control order, leg lengths, climb, `MapTextPosition` relative
+  with map positions in millimetres (y unmirrored, down as in the schema), control order, leg lengths, climb, `MapTextPosition` relative
   to the circle centre, and class assignments. Team, relay and score courses are skipped and named. `createTime`
-  is UTC without a zone marker. Not yet written: geo positions (they wait for `freemapper-georef`), taped legs,
+  is UTC with a `Z` marker. Not yet written: geo positions (they wait for `freemapper-georef`), taped legs,
   the map extent (written as 0/0 mm) *(Claude's call)*. The output validates against `IOF.xsd`; the example is
   `examples/luebeck-sprint/course-data.xml`.
 - **OE**: how OE12 imports courses, and later how it learns which controls are mandatory and which are free

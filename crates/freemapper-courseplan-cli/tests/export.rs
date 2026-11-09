@@ -191,6 +191,7 @@ code = 99
     );
     assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
     assert!(stderr(&result).contains("99"), "{}", stderr(&result));
+    assert!(stderr(&result).contains("Bad"), "{}", stderr(&result));
     assert_eq!(std::fs::read_to_string(&out).unwrap(), "old");
     assert!(!dir.path().join("out.xml.tmp").exists());
 }

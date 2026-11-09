@@ -258,9 +258,9 @@ does nothing and exits with code 2.
 Things to know:
 
 - Team, relay and score courses are not written. The program names each skipped course with its kind.
+- If the target is the project file or the map, `export` stops with an error and leaves both untouched.
 - Geo positions and taped legs are missing for now. The map extent is written as 0/0 mm.
-- The time `createTime` is UTC and has no zone marker. A reader may show it one or two hours off. It does not
-  affect the courses.
+- The time `createTime` is UTC and carries the marker `Z`. It does not affect the courses.
 - Whether OE12 reads the file as intended is not tested yet. The example
   [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) validates against the IOF schema. If you
   import it into OE12, please report what arrives.

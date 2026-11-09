@@ -10,7 +10,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 - `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzelbahnen als IOF-XML 3.0
   (`CourseData`) für die Auswertung. Der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Mannschafts-,
-  Staffel- und Score-Bahnen werden übersprungen und genannt. Geopositionen und Bandstrecken fehlen noch (ADR 0033). Die
+  Staffel- und Score-Bahnen werden übersprungen und genannt. Geopositionen und abgeflaggte Strecken fehlen noch (ADR 0033). Die
   Ausgabe ist gegen das IOF-Schema geprüft, ein Import in OE steht noch aus. Ein Beispiel liegt unter
   `examples/luebeck-sprint/course-data.xml`.
 

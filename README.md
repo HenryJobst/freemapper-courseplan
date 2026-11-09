@@ -89,7 +89,7 @@ fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnu
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzelbahnen als IOF-XML 3.0 für die
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
 geprüft, ein fertiges Beispiel ist [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Ob OE12 die
-Datei wie gewollt liest, ist noch offen: Bisher hat sie dort niemand importiert. Geopositionen und Bandstrecken
+Datei wie gewollt liest, ist noch offen: Bisher hat sie dort niemand importiert. Geopositionen und abgeflaggte Strecken
 schreibt das Programm noch nicht, Mannschafts-, Staffel- und Score-Bahnen überspringt es. Kapitel 10 des
 [Handbuchs](docs/manual/de.md#10-weitergeben-iof-xml-für-oe) nennt die Einzelheiten.
 
