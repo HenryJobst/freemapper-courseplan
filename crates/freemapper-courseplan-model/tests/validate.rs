@@ -120,7 +120,7 @@ courses = ["A", "A"]
 }
 
 #[test]
-fn lines_need_two_points_and_areas_three() {
+fn lines_need_two_points_areas_three_and_a_forbidden_route_one() {
     let e = event(
         r#"
 [[specials]]
@@ -152,6 +152,11 @@ points = [[1.0, 1.0], [2.0, 2.0]]
 kind = "dangerous_area"
 id = "D2"
 polygon = [[1.0, 1.0], [2.0, 2.0], [3.0, 1.0]]
+
+[[specials]]
+kind = "forbidden_route"
+id = "R2"
+points = [[1.0, 1.0]]
 "#,
     );
     let few = |id: &str, kind: &'static str, needed: usize| ModelError::TooFewPoints {
@@ -163,7 +168,7 @@ polygon = [[1.0, 1.0], [2.0, 2.0], [3.0, 1.0]]
         validate(&e),
         vec![
             few("M1", "marked route", 2),
-            few("R1", "forbidden route", 2),
+            few("R1", "forbidden route", 1),
             few("O1", "out-of-bounds area", 3),
             few("D1", "dangerous area", 3),
         ]
@@ -196,6 +201,15 @@ fn new_errors_read_well_in_english() {
         }
         .to_string(),
         "out-of-bounds area O1 needs at least 3 points"
+    );
+    assert_eq!(
+        ModelError::TooFewPoints {
+            id: "R1".to_owned(),
+            kind: "forbidden route",
+            needed: 1
+        }
+        .to_string(),
+        "forbidden route R1 needs at least 1 point"
     );
 }
 

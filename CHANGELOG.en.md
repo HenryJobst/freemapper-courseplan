@@ -6,6 +6,20 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `freemapper-courseplan init <map> --ppen <file>` and `import <project> --ppen <file> [--replace]` take over a
+  Purple Pen event: controls, descriptions (renumbered to the 2024 standard), individual courses, bends, marked
+  routes, number positions and special objects. The AI assistant has the tool `import_ppen`. What the model cannot
+  hold is named in a note. Without `--replace`, `import` refuses to overwrite a project that has content (ADR 0034).
+- Controls and courses remember their Purple Pen id (`ppen_id`) for the later sync.
+
+### Changed
+
+- The map is now read by `freemapper-omap` and the `.ppen` by `freemapper-course` from freemapper-core 0.3.0,
+  instead of a local copy. `freemapper-text` and `freemapper-rules` are on the same tag.
+- A forbidden route may consist of one point, as Purple Pen stores it.
+
 ## [0.5.0] - 2026-11-09
 
 ### Added

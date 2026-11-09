@@ -110,6 +110,8 @@ fn map_with(symbols: &str, scale: u32, objects: Vec<MapObject>) -> MapDocument {
             grivation_deg: 0.0,
             ref_projected: None,
             crs_spec: None,
+            combined_scale_factor: 1.0,
+            map_ref_mm: (0.0, 0.0),
         },
         symbol_set: SymbolSet::from_omap_xml(symbols).expect("test symbols parse"),
         parts: vec![MapPart {
@@ -117,6 +119,7 @@ fn map_with(symbols: &str, scale: u32, objects: Vec<MapObject>) -> MapDocument {
             objects,
         }],
         templates: vec![],
+        unknown_objects: 0,
     }
 }
 
@@ -140,6 +143,7 @@ pub(crate) fn course_control(s: &str) -> CourseControl {
 /// An individual course from start S1 to finish F1 over `codes`.
 pub(crate) fn course(name: &str, codes: &[&str]) -> Course {
     Course {
+        ppen_id: None,
         name: name.to_owned(),
         classes: vec![],
         start: "S1".to_owned(),
@@ -180,6 +184,7 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         controls: controls
             .iter()
             .map(|(c, x, y)| Control {
+                ppen_id: None,
                 code: code(c),
                 kind: ControlKind::Control,
                 map_mm: pt(*x, *y),

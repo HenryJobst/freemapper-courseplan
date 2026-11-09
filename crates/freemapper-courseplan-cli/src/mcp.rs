@@ -419,6 +419,10 @@ fn resolve_xml(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     resolve_kind(lang, path, &["xml"], "mcp-error-not-xml")
 }
 
+fn resolve_ppen(lang: &Lang, path: &str) -> Result<PathBuf, String> {
+    resolve_kind(lang, path, &["ppen"], "mcp-error-not-ppen")
+}
+
 fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
     resolve_kind(lang, path, &["omap", "xmap"], "mcp-error-not-map")
 }
@@ -1023,6 +1027,7 @@ impl CoursePlanServer {
                 .map(edit_cmd::course_control)
                 .collect();
             let course = Course {
+                ppen_id: None,
                 name: req.name.0.clone(),
                 classes: name_list(req.classes.unwrap_or_default()),
                 start: req.start.0,
@@ -1286,6 +1291,35 @@ impl CoursePlanServer {
                 "path": target.display().to_string(),
                 "courses": report.courses,
                 "skipped": skipped,
+            }))
+        })())
+    }
+
+    #[tool(description = "Import a Purple Pen event")]
+    async fn import_ppen(
+        &self,
+        Parameters(req): Parameters<ImportPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply((|| {
+            let project = resolve_project(&self.lang, &req.project)?;
+            let ppen = resolve_ppen(&self.lang, &req.path)?;
+            let report = crate::import_cmd::import_ppen_file(&project, &ppen, flag(req.replace))
+                .map_err(|e| {
+                    e.message(
+                        &self.lang,
+                        |e| project_error(&self.lang, e),
+                        |p, e| map_error(&self.lang, p, e),
+                    )
+                })?;
+            let notes: Vec<String> = report
+                .notes
+                .iter()
+                .map(|n| n.localize(&self.lang))
+                .collect();
+            Ok(json!({
+                "controls": report.controls,
+                "courses": report.courses,
+                "notes": notes,
             }))
         })())
     }
@@ -1648,7 +1682,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 32);
+            assert_eq!(tools.len(), 33);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

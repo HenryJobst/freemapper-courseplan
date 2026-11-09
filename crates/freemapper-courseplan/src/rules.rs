@@ -386,6 +386,7 @@ source = { doc = "DOC", section = "1.2" }
             [FilterItem::Int(3000), FilterItem::Int(4000)]
         );
         let course = |planned: Option<u32>| Course {
+            ppen_id: None,
             name: s("A"),
             classes: vec![],
             start: s("S1"),
@@ -528,6 +529,7 @@ source = { doc = "DOC", section = "1.2" }
         }
         // A course printed at 1:4000 from a 1:10000 map gets the halved rule.
         let course = Course {
+            ppen_id: None,
             name: s("A"),
             classes: vec![],
             start: s("S1"),

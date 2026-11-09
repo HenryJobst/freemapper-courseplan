@@ -306,8 +306,14 @@ Workspace with three crates *(Claude's call)*:
 ### 5.5 Import and export
 
 - **`.ppen` import**: controls, codes, descriptions, courses, bends, gaps, number positions, special objects.
-  Purple Pen writes the y axis upward against the standard (found by freemapper-print); the reader detects
+  Purple Pen writes the y axis upward against the standard (found by freemapper-print); the import flips
   it. Print area and print scale are kept only as hints for freemapper-print.
+  **Built (one way):** `init --ppen`, `import --ppen [--replace]` and the MCP tool `import_ppen`, on the
+  freemapper-core v0.3.0 reader and fit; a `.ppen` always counts y upward and the fit flips it, and a file whose
+  controls then do not lie on the map is refused; descriptions are mapped from the 2004 to the
+  2024 numbering; what the model cannot hold (variations, score courses, column F text, descriptions on start and
+  finish, gaps) is named in the import notes, never dropped silently *(Claude's call)*. A forbidden route may
+  have one point, as Purple Pen stores a cross. `ppen_id` is kept for the sync. See ADR 0034.
 - **`.ppen` export**: everything the model can express in `.ppen`, so freemapper-print and Purple Pen read
   the event. Formats Purple Pen cannot represent (team) are refused with a clear message.
 - **IOF XML 3.0 export**: see §5.5b.
@@ -489,6 +495,10 @@ The builder may start the editor earlier if placing controls through the CLI tur
 - **Elevation data** for the route analysis (§5.4): decided with the route analysis.
 - **Rule values to verify in the original documents** before they become data: overprint line widths of
   symbols 702, 709, 710; IOF texts were read from mirrors (research §5).
+
+- **`.ppen` import against real events** (§5.5): tested with three core fixtures on generated maps; a real file
+  on the Lübeck map is still open. `sync` and the `.ppen` export (§5.5a) are not built; freemapper-print is to be
+  told when the export exists *(agreed with freemapper-print)*.
 
 ## 10. Left to the builder
 

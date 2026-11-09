@@ -132,6 +132,14 @@ pub(super) struct ExportIofXml {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ImportPpen {
+    pub(super) project: String,
+    pub(super) path: String,
+    pub(super) replace: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddControl {
     pub(super) project: String,
     pub(super) at: Point,

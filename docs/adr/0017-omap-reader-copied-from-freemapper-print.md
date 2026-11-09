@@ -1,7 +1,7 @@
 # 0017. The .omap reader is copied from freemapper-print
 
 Date: 2026-11-08
-Status: Accepted
+Status: Superseded by 0034
 
 ## Context
 

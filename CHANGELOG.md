@@ -6,6 +6,21 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `freemapper-courseplan init <Karte> --ppen <Datei>` und `import <Projekt> --ppen <Datei> [--replace]` übernehmen
+  ein Purple-Pen-Event: Posten, Beschreibungen (auf den Standard 2024 umnummeriert), Einzelbahnen, Knickpunkte,
+  abgeflaggte Strecken, Nummernlagen und Sonderobjekte. Der KI-Assistent hat das Werkzeug `import_ppen`. Was das
+  Modell nicht fassen kann, nennt das Programm als Hinweis. Ohne `--replace` weigert sich `import`, ein Projekt mit
+  Inhalt zu überschreiben (ADR 0034).
+- Posten und Bahnen merken sich ihre Purple-Pen-Kennung (`ppen_id`) für den späteren Abgleich.
+
+### Geändert
+
+- Die Karte liest jetzt `freemapper-omap` und die `.ppen` `freemapper-course` aus freemapper-core 0.3.0, statt
+  einer eigenen Kopie. `freemapper-text` und `freemapper-rules` stehen auf demselben Stand.
+- Eine verbotene Route darf aus einem Punkt bestehen, wie Purple Pen sie speichert.
+
 ## [0.5.0] - 2026-11-09
 
 ### Hinzugefügt

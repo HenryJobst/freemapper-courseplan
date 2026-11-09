@@ -38,7 +38,10 @@ error-model-blank-name = { $what } "{ $value }" ist leer oder beginnt oder endet
 error-model-blank-note = Die Begründung des akzeptierten Befunds { $name } ist leer
 error-model-code-clashes-with-special = Postencode { $code } ist auch die ID eines Sonderobjekts
 error-model-duplicate-course-in-special = Sonderobjekt { $id } nennt Bahn { $course } mehrfach
-error-model-too-few-points = { $kind } { $id } braucht mindestens { $needed } Punkte
+error-model-too-few-points = { $kind } { $id } braucht mindestens { $needed ->
+    [one] { $needed } Punkt
+   *[other] { $needed } Punkte
+}
 error-model-date-not-a-date = Das Veranstaltungsdatum { $date } ist kein Datum. Schreibe es als JJJJ-MM-TT, ohne Uhrzeit und Zeitzone
 error-model-unsupported-format = Das Format { $format } der Projektdatei ist neuer, als dieses Programm versteht
 error-model-unknown-key-top = Unbekannter Schlüssel { $key } auf oberster Ebene
@@ -487,6 +490,74 @@ export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beis
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
 
+## Purple-Pen-Import (init --ppen, import --ppen)
+
+cli-help-import = Posten und Bahnen eines Purple-Pen-Events (.ppen) übernehmen
+cli-arg-import-project = Die Projektdatei
+cli-arg-import-ppen = Das zu importierende Purple-Pen-Event; es muss für die Karte des Projekts gezeichnet sein
+cli-arg-import-replace = Die Posten, Bahnen und Sonderobjekte ersetzen, die das Projekt schon hat; Kategorien und akzeptierte Befunde bleiben
+cli-arg-init-ppen = Von einem Purple-Pen-Event (.ppen) ausgehen, das für diese Karte gezeichnet ist
+import-ppen-done = { $controls ->
+    [one] 1 Posten
+   *[other] { $controls } Posten
+} und { $courses ->
+    [one] 1 Bahn
+   *[other] { $courses } Bahnen
+} aus { $path } übernommen
+import-ppen-note-line = Hinweis: { $note }
+import-ppen-needs-replace = { $path } hat schon Posten, Bahnen oder Sonderobjekte; mit --replace erneut aufrufen, um sie durch den Inhalt des Purple-Pen-Events zu ersetzen
+error-import-ppen-read = { $path } lässt sich nicht lesen: { $source }
+error-import-ppen-scale-mismatch = das Purple-Pen-Event ist für 1:{ $file } gezeichnet, die Karte hat 1:{ $map }; die Bahnen für den Maßstab der Karte exportieren
+error-import-ppen-map-scale-unknown = das Purple-Pen-Event ist für 1:{ $file } gezeichnet, und die Karte nennt keinen Maßstab; den Maßstab in der Kartendatei setzen
+error-import-ppen-outside-map = nur { $inside } von { $total } Posten liegen auf der Karte; das Event gehört zu einer anderen Karte
+error-import-ppen-invalid = das Purple-Pen-Event lässt sich nicht lesen: { $source }
+error-import-ppen-fit = das Purple-Pen-Event passt nicht zur Karte: { $source }
+mcp-error-not-ppen = { $path } ist kein Purple-Pen-Event; diese Dateien enden auf .ppen
+import-ppen-note-unknown-element = unbekannt und ausgelassen: { $what }
+import-ppen-note-skipped = Bahn { $course } ausgelassen: { $why }
+import-ppen-note-gaps = Bahn { $course } hat Lücken in Kreisen oder Strecken; das Modell kennt keine Lücken, Kreise und Strecken bleiben ganz
+import-ppen-note-unmapped-symbol = Posten { $control }, Spalte { $column }: Symbol { $id } gibt es im Standard 2024 nicht und wird ausgelassen
+import-ppen-note-number-into-circle = Posten { $control }: die Nummer berührt den Kreis oder reicht hinein; die Editoren verlangen einen Abstand über 0, die Platzierung bleibt wie in der Datei
+import-ppen-note-fit-scale-unchecked = das Event nennt keinen Kartenmaßstab und wurde deshalb nicht mit dem der Karte verglichen
+import-ppen-note-fit-orientation-assumed = die Positionen passen mit y nach oben und mit y nach unten auf die Karte; es gilt y nach oben, prüfe die Positionen daher
+import-ppen-note-fit-axis-against-format = die y-Achse im Projekt widerspricht dem Dateiformat; das Blatt kann gespiegelt gedruckt werden
+import-ppen-note-fit-other = die Anpassung an die Karte meldet etwas, wofür dieses Programm keinen Text hat
+import-ppen-note-map-exchange = Bahn { $course }: der Kartenwechsel { $control } wurde zu einem Knickpunkt der Strecke
+import-ppen-note-map-exchange-at-control = Bahn { $course }: der Kartenwechsel am Posten { $control } wird nicht übernommen
+import-ppen-note-secondary-title = Bahn { $course }: der zweite Titel „{ $title }“ wird nicht übernommen
+import-ppen-note-column-f-text = Posten { $control }: der Text „{ $text }“ in Spalte F wird nicht übernommen
+import-ppen-note-start-finish-description = { $id }: die Beschreibung eines Starts oder Ziels wird nicht übernommen
+import-ppen-note-map-issue-as-start = Kartenausgabe { $id } wurde als Start übernommen
+import-ppen-note-special-skipped = ein Sonderobjekt der Art { $kind } wird nicht unterstützt und ausgelassen
+import-ppen-note-special-without-course = ein Sonderobjekt der Art { $kind } gilt nur für ausgelassene Bahnen und entfällt auch
+import-ppen-note-course-renamed = Bahn „{ $from }“ heißt im Projekt „{ $to }“; Bahnnamen sind eindeutig und haben keine Leerzeichen an den Enden
+import-ppen-note-control-without-position = Posten { $control } hat keine Position und wird von keiner Bahn benutzt und entfällt
+import-ppen-note-special-off-map = ein Sonderobjekt der Art { $kind } hat einen Punkt außerhalb der Karte und entfällt
+import-ppen-note-number-gap-clamped = Posten { $control }: die Nummer liegt weit vom Kreis; der Abstand wird auf { $max } mm gekürzt
+import-ppen-note-special-course-ambiguous = ein Sonderobjekt der Art { $kind } nennt die Bahn { $name }, aber mehrere Bahnen heißen so; es gilt für alle
+import-ppen-note-forked = die Bahnen { $variants } sind die Varianten der Gabelung { $family }
+import-ppen-note-notes-truncated = das Event hat mehr Hinweise, als der Import aufnimmt; der Rest entfällt
+word-import-why-variations = sie hat Varianten
+word-import-why-alternative-controls = sie hat alternative Posten
+word-import-why-score-course = Score-Bahnen werden nicht übernommen
+word-import-why-no-start = sie beginnt nicht an einem Start
+word-import-why-no-finish = sie endet nicht an einem Ziel
+word-import-why-start-or-finish-inside-the-course = ein Start oder Ziel liegt mitten in der Bahn
+word-import-why-no-name = sie hat keinen Namen
+word-import-special-out-of-bounds = Sperrgebiet
+word-import-special-dangerous-area = Gefahrenbereich
+word-import-special-forbidden-route = verbotene Route
+word-import-special-boundary = Grenze
+word-import-special-marked-route = abgeflaggte Strecke
+word-import-special-first-aid = Erste-Hilfe-Stelle
+word-import-special-water = Verpflegungsstelle
+word-import-special-text = Text
+word-import-special-line = Linie
+word-import-special-white-out = Abdeckung
+mcp-tool-import-ppen = Die Posten, Bahnen und Sonderobjekte eines Purple-Pen-Events (.ppen) übernehmen, das für die Karte des Projekts gezeichnet ist. Erwartet project, path (die .ppen-Datei) und replace; ohne replace darf das Projekt noch keine Posten, Bahnen oder Sonderobjekte haben, mit replace werden sie durch die des Events ersetzt, Kategorien und akzeptierte Befunde bleiben. Gibt controls, courses und notes zurück, die Texte zu dem, was ausgelassen oder geändert wurde.
+mcp-param-import-ppen-path = Das Purple-Pen-Event, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .ppen
+mcp-param-import-ppen-replace = Vorhandenes ersetzen [Standard: false]
+
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
 cli-help-mcp = Das Bahnlegen über MCP auf stdin und stdout für KI-Assistenten anbieten
@@ -506,6 +577,7 @@ mcp-instructions =
     Begründung; remove_accepted_finding nimmt das zurück.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
+error-import-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
 mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
 mcp-error-not-xml = { $path } ist keine XML-Datei. Die Exportdatei endet auf .xml
 mcp-error-project-parse = { $path } ist keine gültige Projektdatei. Das erste Problem liegt in Zeile { $line }, Spalte { $column }

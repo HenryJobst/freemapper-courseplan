@@ -251,6 +251,35 @@ start-window` und `class set`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, je
 erklären und dich zu fragen, bevor er einen akzeptiert. Die Begründung schreibst du oder diktierst sie ihm. Er soll
 sie nicht erfinden.
 
+## 9. Mit Purple Pen abgleichen
+
+Bisher geht nur der Weg hinein: `import` übernimmt ein Purple-Pen-Event (`.ppen`), das für dieselbe Karte gezeichnet
+ist. Die Karte muss in OOM vorliegen und denselben Maßstab haben wie das Event.
+
+```sh
+freemapper-courseplan init karte.omap --ppen event.ppen
+freemapper-courseplan import projekt.courseplan.toml --ppen event.ppen
+```
+
+`init --ppen` legt ein neues Projekt aus dem Event an. `import` füllt ein bestehendes. Hat das Projekt schon Posten,
+Bahnen oder Sonderobjekte, bricht `import` ab. Mit `--replace` ersetzt es diese durch den Inhalt des Events;
+Kategorien und akzeptierte Befunde bleiben. Der Pfad der `.ppen` steht danach relativ zur Projektdatei im Projekt.
+
+Was ankommt: Posten mit Code, Lage und Beschreibung (nach dem Standard 2024 umnummeriert), Einzelbahnen mit
+Knickpunkten und abgeflaggten Strecken, die Lage der Postennummern, Sperrgebiete, Gefahrenbereiche, verbotene
+Routen, Erste-Hilfe- und Verpflegungsstellen. Purple Pen zählt die y-Achse nach oben; der Import dreht sie um.
+Liegen die Posten dann nicht auf der Karte, bricht er ab. Ein Sonderobjekt mit einem Punkt außerhalb der Karte
+entfällt mit einem Hinweis.
+
+Was nicht ankommt, steht nach dem Import als Hinweis auf dem Terminal: Varianten und alternative Posten,
+Score-Bahnen, Text in Spalte F der Beschreibung, Beschreibungen an Start und Ziel, Lücken in Kreisen und Strecken.
+Auch Begrenzungen, Linien, Texte, Weißflächen und der Untertitel einer Bahn kommen nicht an. Ein Kartenwechsel wird zum Knickpunkt. Gleiche Bahnnamen bekommen eine Nummer. Der Abstand einer Nummer zum Kreis
+ist nur ungefähr richtig, die Richtung stimmt. Ein Symbol ohne Gegenstück im Standard 2024, etwa die Funkstelle,
+fehlt in der Beschreibung und steht im Hinweis.
+
+Der KI-Assistent hat dafür das Werkzeug `import_ppen` mit `project`, `path` und `replace`. Die Entscheidungen
+dahinter stehen in ADR 0034.
+
 ## 10. Weitergeben: IOF-XML für OE
 
 Mit `export` gibst du die Bahnen an Auswertungsprogramme weiter, die IOF-XML 3.0 lesen:

@@ -51,7 +51,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Erste-Hilfe-Stelle | first aid | Ort der Ersten Hilfe, auf der Karte eingezeichnet. | `SpecialObject::FirstAid` |
 | Verpflegungsstelle | water | Ort mit Getränken für die Läufer, auf der Karte eingezeichnet. | `SpecialObject::Water` |
 | Sperrgebiet | out-of-bounds area | Fläche, die nicht betreten werden darf (ISOM/ISSprOM 709). | `OutOfBoundsArea` |
-| verbotene Route | forbidden route | Linie, die nicht begangen werden darf (ISOM/ISSprOM 711). | `ForbiddenRoute` |
+| verbotene Route | forbidden route | Linie, die nicht begangen werden darf (ISOM/ISSprOM 711). Ein einzelner Punkt ist ein einzelnes Kreuz, wie Purple Pen es setzt. | `ForbiddenRoute` |
 
 ## Veranstaltung / event
 
@@ -109,6 +109,9 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Partnerdatei | linked Purple Pen file | Die `.ppen`, mit der eine Veranstaltung abgeglichen wird. | `linked_ppen` |
 | Abgleichsbasis | sync base | Kopie der `.ppen` vom letzten Abgleich; dritte Fassung beim Zusammenführen. | `SyncBase` |
 | Konflikt | conflict | Objekt, das seit dem letzten Abgleich auf beiden Seiten verschieden geändert wurde. | `SyncConflict` |
+| Import | import | Einmaliges Übernehmen einer `.ppen` in die Veranstaltung: Posten, Beschreibungen, Bahnen, Knickpunkte, abgeflaggte Strecken, Nummernlagen und Sonderobjekte. Was das Modell nicht fassen kann, wird nie stillschweigend weggelassen, sondern als Importhinweis genannt. | `import_ppen`, `PpenImport` |
+| Importhinweis | import note | Meldung des Imports über etwas, das er nicht oder nur verändert übernimmt: übersprungene Bahn, Lücken, unbekanntes Beschreibungssymbol, Nummer im Kreis, Sonderobjekt ohne Gegenstück. | `ImportNote` |
+| Purple-Pen-Kennung | Purple Pen id | Die interne Nummer eines Postens oder einer Bahn in der `.ppen` (`control/@id`, `course/@id`), beim Import mitgespeichert. Zweiter Schlüssel beim Abgleich, damit ein geänderter Code oder Bahnname als Änderung erkannt wird. | `ppen_id` |
 
 ## Später / later
 

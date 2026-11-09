@@ -139,6 +139,10 @@ pub struct Control {
     pub description: ControlDescription,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub number: Option<NumberPlacement>,
+    /// Purple Pen's id of the control (`control/@id`), kept by the `.ppen` import as a second key
+    /// for the sync.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ppen_id: Option<u32>,
 }
 
 /// A course object that is not a control. `courses` names the courses the object belongs to; empty
@@ -304,6 +308,10 @@ pub struct Course {
     pub climb_m: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub planned_print_scale: Option<u32>,
+    /// Purple Pen's id of the course (`course/@id`), kept by the `.ppen` import as a second key
+    /// for the sync.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ppen_id: Option<u32>,
     #[serde(flatten)]
     pub kind: CourseKind,
 }
@@ -541,6 +549,7 @@ mod tests {
     #[test]
     fn every_course_kind_round_trips() {
         let course = |name: &str, kind| Course {
+            ppen_id: Some(3),
             name: name.to_owned(),
             classes: vec!["H21".to_owned()],
             start: "S1".to_owned(),
@@ -572,6 +581,7 @@ mod tests {
                 expected_starters: Some(12),
             }],
             controls: vec![Control {
+                ppen_id: Some(4_000_000_000),
                 code: code("31"),
                 kind: ControlKind::Control,
                 map_mm: MapPoint { x: 12.4, y: -33.1 },
@@ -865,6 +875,7 @@ controls = [
 "#;
         let got: Course = toml::from_str(text).unwrap();
         let want = Course {
+            ppen_id: None,
             name: "A".to_owned(),
             classes: vec!["H21".to_owned(), "D21".to_owned()],
             start: "S1".to_owned(),

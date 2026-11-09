@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 32] = [
+const TOOLS: [&str; 33] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -35,6 +35,7 @@ const TOOLS: [&str; 32] = [
     "init_event",
     "check",
     "export_iof_xml",
+    "import_ppen",
     "accept_finding",
     "remove_accepted_finding",
     "set_rule_profile",
@@ -1317,3 +1318,67 @@ fn export_iof_xml_writes_the_file() {
     assert!(error);
     assert!(text.contains(".xml"), "{text}");
 }
+
+#[test]
+fn import_ppen_takes_over_the_event_and_returns_counts_and_notes() {
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("park.omap");
+    std::fs::write(&map, PARK_MAP).unwrap();
+    let ppen = dir.path().join("park.ppen");
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/ppen/lincoln-park.ppen"),
+        &ppen,
+    )
+    .unwrap();
+    let project = dir.path().join("park.courseplan.toml");
+    let mut session = Session::start();
+    session.ok(
+        "init_event",
+        json!({ "map": map, "project": project, "title": "Park" }),
+    );
+    let done = session.ok("import_ppen", json!({ "project": project, "path": ppen }));
+    assert_eq!(done["controls"], 2, "{done}");
+    assert_eq!(done["courses"], 1, "{done}");
+    let notes = done["notes"].as_array().unwrap();
+    assert!(
+        notes.iter().any(|n| n
+            .as_str()
+            .unwrap()
+            .contains("course Short has circle or leg gaps")),
+        "{done}"
+    );
+    let before = std::fs::read_to_string(&project).unwrap();
+    let (error, text) = session.call("import_ppen", json!({ "project": project, "path": ppen }));
+    assert!(error);
+    assert!(text.contains("replace"), "{text}");
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    let again = session.ok(
+        "import_ppen",
+        json!({ "project": project, "path": ppen, "replace": true }),
+    );
+    assert_eq!(again["courses"], 1, "{again}");
+    let (error, text) = session.call(
+        "import_ppen",
+        json!({ "project": project, "path": dir.path().join("x.txt") }),
+    );
+    assert!(error);
+    assert!(text.contains(".ppen"), "{text}");
+}
+
+/// A 1:5000 sprint map around the controls of `lincoln-park.ppen`.
+const PARK_MAP: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<map xmlns="http://openorienteering.org/apps/mapper/xml/v2" version="9">
+<notes></notes>
+<georeferencing scale="5000"></georeferencing>
+<colors count="0"></colors>
+<barrier version="6" required="0.6.0">
+<symbols count="1" id="ISSprOM 2019"><symbol type="1" id="0" code="999" name="corner"><point_symbol/></symbol></symbols>
+<parts count="1" current="0"><part name="default part"><objects count="2">
+<object type="0" symbol="0"><coords count="1">60000 -130000;</coords></object>
+<object type="0" symbol="0"><coords count="1">150000 -30000;</coords></object>
+</objects></part></parts>
+<templates count="0"></templates>
+<view><grid/></view>
+</barrier>
+</map>
+"#;

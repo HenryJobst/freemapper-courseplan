@@ -843,6 +843,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 codes(controls).into_iter().map(course_control).collect();
             let mut file = load(lang, &project)?;
             let course = Course {
+                ppen_id: None,
                 name: name.clone(),
                 classes: codes(classes),
                 start,

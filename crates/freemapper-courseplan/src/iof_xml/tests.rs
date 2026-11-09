@@ -14,6 +14,7 @@ fn p(x: f64, y: f64) -> MapPoint {
 
 fn ctrl(code: &str, x: f64, y: f64, kind: ControlKind) -> Control {
     Control {
+        ppen_id: None,
         code: ControlCode(code.to_owned()),
         kind,
         map_mm: p(x, y),
@@ -33,6 +34,7 @@ fn cc(code: &str) -> CourseControl {
 
 fn course(name: &str, kind: CourseKind) -> Course {
     Course {
+        ppen_id: None,
         name: name.to_owned(),
         classes: vec![],
         start: "S1".to_owned(),

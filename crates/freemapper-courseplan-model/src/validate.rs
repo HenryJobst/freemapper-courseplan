@@ -193,11 +193,12 @@ fn check_name(errors: &mut Vec<ModelError>, what: &'static str, value: &str) {
     }
 }
 
-/// For a line or area kind: its English name, the fewest points it needs and the points it has.
+/// For a line or area kind: its English name, the fewest points it needs and the points it has. A
+/// forbidden route of one point is a single cross, as Purple Pen places it.
 fn shape(special: &SpecialObject) -> Option<(&'static str, usize, usize)> {
     match special {
         SpecialObject::MarkedRoute { points, .. } => Some(("marked route", 2, points.len())),
-        SpecialObject::ForbiddenRoute { points, .. } => Some(("forbidden route", 2, points.len())),
+        SpecialObject::ForbiddenRoute { points, .. } => Some(("forbidden route", 1, points.len())),
         SpecialObject::OutOfBoundsArea { polygon, .. } => {
             Some(("out-of-bounds area", 3, polygon.len()))
         }
