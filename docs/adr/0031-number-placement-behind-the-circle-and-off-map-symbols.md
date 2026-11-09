@@ -23,6 +23,8 @@ above 170° between incoming and outgoing line. freemapper-print builds the same
   outer bisector of the outgoing line alone is used.
 - **Blocked behind.** The number box at the behind direction, at the gap of 0.5 mm, comes within half an overprint
   line width of the outgoing line *(agreed with freemapper-print)*. Then the preferred direction is the outer bisector.
+  If the next circle overlaps this one, the outgoing line lies inside the circles and blocks nothing; `check`
+  already reports such controls as too close (R2, *Claude's call*).
 - **Candidates.** 15° steps around the preferred direction, up to the opposite one *(Claude's call)*. Each
   candidate is rounded to 0.1° inside `auto_place` (R3), and that rounded value is evaluated, placed as an
   obstacle and stored. A candidate never comes out as 360°.
