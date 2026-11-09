@@ -573,17 +573,50 @@ mod tests {
         }
     }
 
+    /// The CLI source files that the id scanner reads, by path below `src/`.
+    const SCANNED_SOURCES: &[(&str, &str)] = &[
+        ("main.rs", include_str!("main.rs")),
+        ("edit_cmd.rs", include_str!("edit_cmd.rs")),
+        ("check_cmd.rs", include_str!("check_cmd.rs")),
+        ("mcp.rs", include_str!("mcp.rs")),
+        ("mcp/params.rs", include_str!("mcp/params.rs")),
+    ];
+
+    #[test]
+    fn every_cli_module_is_scanned_for_message_ids() {
+        fn walk(dir: &std::path::Path, root: &std::path::Path, out: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    walk(&path, root, out);
+                } else if path.extension().is_some_and(|e| e == "rs") {
+                    let rel = path.strip_prefix(root).unwrap();
+                    out.push(rel.to_string_lossy().replace('\\', "/"));
+                }
+            }
+        }
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut files = Vec::new();
+        walk(&root, &root, &mut files);
+        let missing: Vec<&String> = files
+            .iter()
+            .filter(|f| {
+                let name = f.rsplit('/').next().unwrap_or(f);
+                !(name == "tests.rs" || name.ends_with("_tests.rs"))
+                    && !SCANNED_SOURCES.iter().any(|(n, _)| n == f)
+            })
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "add to SCANNED_SOURCES in main.rs: {missing:?}"
+        );
+    }
+
     #[test]
     fn ids_used_in_the_cli_exist() {
-        let sources = [
-            include_str!("main.rs"),
-            include_str!("edit_cmd.rs"),
-            include_str!("check_cmd.rs"),
-            include_str!("mcp.rs"),
-        ];
-        let ids: Vec<&str> = sources
+        let ids: Vec<&str> = SCANNED_SOURCES
             .iter()
-            .filter_map(|s| s.split("#[cfg(test)]").next())
+            .filter_map(|(_, s)| s.split("#[cfg(test)]").next())
             .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
                 ["error-", "cli-", "word-", "mcp-", "check-"]
