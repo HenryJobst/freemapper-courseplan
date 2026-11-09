@@ -339,9 +339,16 @@ Claude's call.)*
 
 - `CourseData`: controls with map and geo position, courses, control order,
   `MapTextPosition`, leg lengths, class assignments. Y axis as the standard defines it.
+- **Built** (ADR 0033, `export PROJECT --iof-xml FILE` and the MCP tool `export_iof_xml`): individual courses
+  with map positions in millimetres (y mirrored), control order, leg lengths, climb, `MapTextPosition` relative
+  to the circle centre, and class assignments. Team, relay and score courses are skipped and named. `createTime`
+  is UTC without a zone marker. Not yet written: geo positions (they wait for `freemapper-georef`), taped legs,
+  the map extent (written as 0/0 mm) *(Claude's call)*. The output validates against `IOF.xsd`; the example is
+  `examples/luebeck-sprint/course-data.xml`.
 - **OE**: how OE12 imports courses, and later how it learns which controls are mandatory and which are free
   for "Bahnen mit Aufteilung", is not documented on SportSoftware's site. The builder tests the IOF XML
-  export with a real OE import before M3 ends *(open, see §9)*.
+  export with a real OE import before M3 ends *(open, see §9)*. The import of the example file into OE12 has not
+  happened yet; the user does it and reports what arrives.
 
 ### 5.6 Checks in the first version
 

@@ -18,6 +18,7 @@ courses from a `.ppen`; its PDF then replaces this sketch.
 - `luebeck-sprint.courseplan.toml`: the project file
 - `transcript.en.txt`, `transcript.de.txt`: the commands and their output
 - `check.en.txt`, `check.de.txt`: checking the course, with one accepted hint
+- `course-data.xml`: the course as IOF XML 3.0, made by `export` (see below)
 - `preview.jpg`, `make-preview.py`: the sketch and its script
 
 ## How the course was set
@@ -97,6 +98,16 @@ rules are the length and difficulty rules of competitions, which do not apply to
 capacity, because the event has no start window. All commands and the output of `check --all` are in
 [`check.en.txt`](check.en.txt) and [`check.de.txt`](check.de.txt). The English file shows an English note; the
 project file holds the German one.
+
+## IOF XML export
+
+```text
+$ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+```
+
+The file validates against the IOF schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
+course-data.xml`). Its `createTime` is the time of the run in UTC. Still open: nobody has imported the file
+into OE12 yet. If you do, please report what arrives.
 
 ## Making the sketch again
 

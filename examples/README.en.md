@@ -4,7 +4,8 @@
 
 Finished events on maps from [freemapper's examples](https://github.com/HenryJobst/freemapper/tree/main/examples).
 Each one comes with its project file, the commands that made it and a preview image. The output of `check` is part of it. The IOF XML 3.0
-export for OE, the Purple Pen export (`.ppen`) and the print PDF from freemapper-print follow later.
+export is included as `course-data.xml`; whether OE12 reads it is not tested yet. The Purple Pen export (`.ppen`)
+and the print PDF from freemapper-print follow later.
 
 | Example | Map | Preview |
 |---|---|---|

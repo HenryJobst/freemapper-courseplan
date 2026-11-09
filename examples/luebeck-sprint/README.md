@@ -18,6 +18,7 @@ es Bahnen aus einer `.ppen` drucken kann; dann ersetzt das Druck-PDF diese Skizz
 - `luebeck-sprint.courseplan.toml`: die Projektdatei
 - `transcript.de.txt`, `transcript.en.txt`: die Befehle und ihre Ausgaben
 - `check.de.txt`, `check.en.txt`: die Prüfung der Bahn, mit einem akzeptierten Hinweis
+- `course-data.xml`: die Bahn als IOF-XML 3.0, erzeugt mit `export` (siehe unten)
 - `preview.jpg`, `make-preview.py`: die Skizze und das Skript dazu
 
 ## So entstand die Bahn
@@ -97,6 +98,16 @@ der Projektdatei steht die Ausnahme mit beiden Enden der Strecke. Danach meldet 
 und die Startkapazität, weil die Veranstaltung kein Startfenster hat. Alle Befehle und die Ausgabe von
 `check --all` stehen in [`check.de.txt`](check.de.txt) und [`check.en.txt`](check.en.txt). Die englische Datei
 zeigt eine englische Begründung; in der Projektdatei steht die deutsche.
+
+## Export nach IOF-XML
+
+```text
+$ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+```
+
+Die Datei besteht die Prüfung gegen das IOF-Schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
+course-data.xml`). Ihr `createTime` ist die Zeit des Laufs in UTC. Noch offen: Bisher hat niemand die Datei in
+OE12 importiert. Wer es tut, soll melden, was ankommt.
 
 ## Skizze neu erzeugen
 

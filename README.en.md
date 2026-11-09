@@ -29,7 +29,7 @@ Planned for the first version:
   control distances, acute and almost straight angles and enough different first controls for a compact start
   list, each with its source and with exceptions you can give reasons for (`check`, usable now);
 - exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side;
-- export to IOF XML 3.0 for result software, for example OE;
+- export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser, the command line or an AI assistant (MCP).
 
@@ -85,6 +85,13 @@ window, rule categories and expected starters that some checks need. Chapter 8 o
 assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
 `set_start_window` and `set_class` for it. The program does not check team, relay or score courses yet, and the
 route analysis is missing, so it reports a straight leg through an out-of-bounds area only as a warning.
+
+`freemapper-courseplan export <project> --iof-xml <file>` writes the individual courses as IOF XML 3.0 for result
+software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema, and a
+finished example is [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Whether OE12 reads it as intended
+is still open: nobody has imported the file there yet. Geo positions and taped legs are not written yet, and team,
+relay and score courses are skipped. Chapter 10 of the
+[user manual](docs/manual/en.md#10-handing-on-iof-xml-for-oe) has the details.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

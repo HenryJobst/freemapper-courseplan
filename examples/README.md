@@ -4,8 +4,9 @@
 
 Fertige Veranstaltungen auf Karten aus den
 [Beispielen von freemapper](https://github.com/HenryJobst/freemapper/tree/main/examples). Zu jeder gehören die
-Projektdatei, die Befehle, mit denen sie entstand, und ein Vorschaubild. Dazu gehört die Ausgabe von `check`. Später kommen der
-Export nach IOF-XML 3.0 für OE, der Export nach Purple Pen (`.ppen`) und das Druck-PDF von freemapper-print dazu.
+Projektdatei, die Befehle, mit denen sie entstand, und ein Vorschaubild. Dazu gehört die Ausgabe von `check`. Der Export nach IOF-XML 3.0
+liegt als `course-data.xml` bei; ob OE12 ihn liest, ist noch nicht getestet. Später kommen der Export nach
+Purple Pen (`.ppen`) und das Druck-PDF von freemapper-print dazu.
 
 | Beispiel | Karte | Vorschau |
 |---|---|---|

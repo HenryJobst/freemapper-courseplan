@@ -241,3 +241,29 @@ rules. `accept_finding` and `remove_accepted_finding` match `finding accept` and
 `set_rule_profile` matches `event profile`, and `set_start_window` and `set_class` match `event start-window` and
 `class set`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you before it
 accepts one. You write the note or dictate it. The assistant should not invent one.
+
+## 10. Handing on: IOF XML for OE
+
+`export` passes the courses to scoring software that reads IOF XML 3.0:
+
+```sh
+freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+```
+
+The program writes all individual courses of the event to the file: controls with map position, the control
+order of each course, leg lengths, climb, the position of the control numbers and the assignment of courses to
+classes. It replaces an existing file only once the new one is completely written. Without `--iof-xml`, `export`
+does nothing and exits with code 2.
+
+Things to know:
+
+- Team, relay and score courses are not written. The program names each skipped course with its kind.
+- Geo positions and taped legs are missing for now. The map extent is written as 0/0 mm.
+- The time `createTime` is UTC and has no zone marker. A reader may show it one or two hours off. It does not
+  affect the courses.
+- Whether OE12 reads the file as intended is not tested yet. The example
+  [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) validates against the IOF schema. If you
+  import it into OE12, please report what arrives.
+
+The AI assistant has the tool `export_iof_xml` for this, with `project` and `path`; the path must end in `.xml`.
+The decisions behind it are in ADR 0033.
