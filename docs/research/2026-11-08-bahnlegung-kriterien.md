@@ -73,7 +73,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
    Optimierung, die die beste Aufteilung für eine Mannschaft schätzt, wäre neu.
 3. **Zu Postensetzer-Touren gibt es keine deutsche Regel.** International gibt es nur Praxistipps (SOA,
    IOF-SG). Diese Planung ist ein klassisches Optimierungsproblem (Tourenplanung mit Zeitlimit).
-4. **Score-OL steht seit 1.4.2025 nicht mehr in den Bundes-WKB.** In Landes- und Trainingsläufen kommt er
+4. **Score-OL steht seit 1.4.2025 nicht mehr in den Bundes-WKB.** In Läufen der Bundesländer und in Trainingsläufen kommt er
    vor; brauchbare Regeln liefert BOF B12.
 5. **Etwa zwei Drittel der Kriterien sind fest prüfbar (A)**, wenn die Anwendung Karte und Höhenmodell kennt
    und Routen auf der Karte berechnen kann (Laufbarkeit, Sperrflächen). Die B-Kriterien betreffen vor allem
@@ -90,7 +90,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 |---|---|---|---|
 | Mindestabstand zwischen zwei Posten (Startflagge mitgezählt) | DE: ≥ 30 m, bei 1:3000/1:4000 15 m · IOF Wald: ≥ 30 m · IOF Sprint: ≥ 15 m Luftlinie **und** ≥ 25 m Laufdistanz | WKB26 B 7.2.1; IOF-R 19.4 | A |
 | Ähnliche Objekte nicht zu nah beieinander | DE: < 60 m, Sprint 30 m · IOF Wald 60 m · IOF Sprint: keine Zusatzregel | WKB26 B 7.2.1; IOF-R 19.4 | A (Abstand) + B (was „ähnlich“ ist) |
-| Abstand zweier Posten **derselben** Bahn (Landesempfehlung) | ≥ 90 m | BL12 | A |
+| Abstand zweier Posten **derselben** Bahn (Empfehlung eines Bundeslandes) | ≥ 90 m | BL12 | A |
 | Beispiele ähnlicher Objekte: Bach/Graben, Senke/Grube, Kuppe/Sporn, Zaun/verfallener Zaun | – | BOF B6.1.3 | A (Symbolgruppen) |
 | Codes | DE: > 30 und < 600, nicht 66/99, 68/89, 86/98 · IOF: ≥ 31 | WKB26 B 7.2.10; IOF-R 19.6 | A |
 | Verwechselbare Codes (113/118, 121/151) nicht benachbart oder in Folge; Codes ohne Bezug zur Postennummer | – | IOF-SG; SOA | A |
@@ -98,7 +98,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | „Rand“ und Seitenangaben nur bei Flächen- und runden Objekten; Linienobjekte nicht als Postenstandort | – | TD11 | A |
 | Posten eindeutig: Karte, Beschreibung und Gelände stimmen überein; keine Suchposten; nie versteckt | – | TD11; BL02; IOF-A2 3.5 | B |
 | Objekt sichtbar innerhalb von 10 m oder 10 % der Distanz vom Angriffspunkt | – | BOF B6.2.1 | A (Distanz) + B |
-| Spitzer Winkel: Abgehende führen Ankommende zum Posten | DE-Land: < 90° vermeiden | IOF-A2 3.5.4; BL12 | A |
+| Spitzer Winkel: Abgehende führen Ankommende zum Posten | DE-Bundesland: < 90° vermeiden | IOF-A2 3.5.4; BL12 | A |
 | Sprint: nicht durch unpassierbare Objekte hindurch stempelbar | – | IOF-SG; BOF B10.9.8 | A/B |
 | Posten nicht zu nah am Kartenrand | – | BL02 | A |
 | Viel angelaufene Posten: mehrere Stationen | – | WKB26 B 7.2.10 | A (Frequenz aus Bahnen × Teilnehmer) |
@@ -134,7 +134,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Bahnlänge in % der HE-Länge je Kategorie | Tabellen | WKB26 Anlage 5 | A |
 | Kinder und Schüler nie auf Seniorenbahnen | – | WKB26 B 7.2.4 | A |
 | Sprint-Tempo der Besten: H 3,5 min/km, D 4,1 min/km; 100 m Steigung ≙ 1 km | – | IOF-SG | A |
-| Landesvarianten: Bayern Lkm mit Steigungsfaktor 10, Toleranzen ±10/15/20 %; NDS Luftlinien-km; Berlin/Brandenburg Lkm-Tabellen (§3.3a) | – | BY25; NDS25; BB-Lkm21 | A |
+| Varianten der Bundesländer: Bayern Lkm mit Steigungsfaktor 10, Toleranzen ±10/15/20 %; NDS Luftlinien-km; Berlin/Brandenburg Lkm-Tabellen (§3.3a) | – | BY25; NDS25; BB-Lkm21 | A |
 | Verpflegung: DE ab Richtzeit > 60 min mindestens alle 35 min · IOF ab 30 min alle 25 min | – | WKB26 B 7.2.1; IOF-R 19.8 | A |
 
 ### 3.3a Berlin/Brandenburg: Bahnempfehlungen für die Ranglistenläufe (NOR-Bereich)
@@ -188,7 +188,7 @@ Nutzers, 2026-11-08). Die neueste Empfehlung ist BB-Lkm21; Neueres ist dort nich
 | Massenstart: Butterfly- oder Phi-Schleife, danach langer Schenkel; erste Schenkel nicht eng oder steil | – | IOF-A6 3.2; BOF B11.9 | A |
 | Belastung der Posten in der Massenstartphase | – | BOF B11.8 | A (Simulation) |
 | Richtzeiten DE: DE/HE 95–110 min Teamzeit; Sprintstaffel 12–15 min je Läufer; Deutschland-Cup 5er-Staffel mit Längenvorgaben je Strecke | – | WKB26 Anlage 4, B 3.4.5 | B |
-| Länderformate: Bayern „Doppelstaffel“ A-B-A-B; BB 2er oder 3er; NDS max. 30 min pro Bahn | – | BY25; BB-WO26; NDS25 | A |
+| Formate der Bundesländer: Bayern „Doppelstaffel“ A-B-A-B; BB 2er oder 3er; NDS max. 30 min pro Bahn | – | BY25; BB-WO26; NDS25 | A |
 
 ### 3.6 Mannschafts-OL (Aufgeteilter Mannschafts-OL mit Pflichtposten)
 
@@ -211,7 +211,7 @@ gibt es keine DM, sondern Deutsche Bestenkämpfe (DBK).
 | Maßstab 1:10 000 bis 130T; 1:7500 für 12T, 160T, 190T | – | WKB26 B 3.3.2.3.1 | A |
 | Kategorien nach Alterssumme (130/160/190T) | – | WKB26 Anlage 2b | A |
 | Prüfliste BB: alle Wahlposten im Druckbild; Codes verdecken nichts; 25 bis über 35 Posten je Bahn; bis 100 Posten Material | – | BLM-BB | A |
-| Länder: NDS Zweierteams (nur H19-T zu dritt), D/H-14T geschlossen · BB 2er oder 3er nach Wahl des Ausrichters, Kategorien 105/145/175T · Bayern ohne Mannschafts-OL | – | NDS25; BB-WO26; BY25 | A |
+| Bundesländer: NDS Zweierteams (nur H19-T zu dritt), D/H-14T geschlossen · BB 2er oder 3er nach Wahl des Ausrichters, Kategorien 105/145/175T · Bayern ohne Mannschafts-OL | – | NDS25; BB-WO26; BY25 | A |
 | Schweiz Team-OL: jeder läuft ≥ 1/3 der Bahnlänge; gemeinsame Posten möglich | – | SOLV Art. 10, 68 | A |
 
 ### 3.7 Score und freie Reihenfolge

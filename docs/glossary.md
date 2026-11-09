@@ -71,10 +71,12 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 
 | Deutsch | English | Definition | Code |
 |---|---|---|---|
+| Bundesland | state | Deutsches Bundesland, etwa Berlin oder Bayern, mit eigenen Bestimmungen und Empfehlungen. In deutschen Texten nie „Land“ *(Nutzer, 2026-11-09)*. | – |
+| Land | country | Ein Staat, etwa Deutschland, Tschechien oder Polen. Nur in dieser Bedeutung *(Nutzer, 2026-11-09)*. | – |
 | Regelprofil | rule profile | Satz von Prüfregeln aus einem Regelwerk, zuerst WKB 2026. | `RuleProfile` |
 | Prüfregel | check rule | Eine Regel mit Kennung, Werten und Quelle (Dokument und Abschnitt), als Daten gespeichert. | `Rule` |
 | Prüfregel-Schlüssel | rule key | Name der Prüfung, die eine Prüfregel ausführt, etwa `min_distance` oder `length_table`. Das Programm kennt eine feste Liste; ein Regelprofil mit einem anderen Schlüssel wird abgelehnt. | `key` |
-| Regelprofil-Aufsatz | rule overlay | Regelprofil, das ein Basisprofil ergänzt oder einzelne Regeln ersetzt, zum Beispiel für ein Landesregelwerk; der Veranstaltung zugeordnet über `rule_overlays`. | `rule_overlays` |
+| Regelprofil-Aufsatz | rule overlay | Regelprofil, das ein Basisprofil ergänzt oder einzelne Regeln ersetzt, zum Beispiel für das Regelwerk eines Bundeslandes; der Veranstaltung zugeordnet über `rule_overlays`. | `rule_overlays` |
 | Befund | finding | Ergebnis einer Prüfregel an einem Posten, einer Strecke oder einer Bahn. | `Finding` |
 | akzeptierter Befund | accepted finding | Befund, den der Bahnleger mit Begründung als gewollte Ausnahme markiert hat; wird nicht mehr gemeldet. | `AcceptedFinding` |
 | nicht zugeordnete Ausnahme | unmatched acceptance | Akzeptierter Befund, zu dem `check` keinen Befund mehr findet, etwa weil sein Posten oder seine Bahn fehlt oder seine Strecke jetzt zwischen anderen Posten läuft. `check --all` listet ihn, er zählt nie als Fehler. | `CheckReport::unmatched` |
