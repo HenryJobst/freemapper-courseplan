@@ -346,7 +346,7 @@ Claude's call.)*
 - `CourseData`: controls with map and geo position, courses, control order,
   `MapTextPosition`, leg lengths, class assignments. Y axis as the schema defines it: units below the centre, so
   project coordinates (y down) are written unmirrored. Purple Pen, OCAD and Condes write y up against the standard
-  (freemapper-print ADR 0010); whether OE12 tolerates the standard's direction is part of the open OE test.
+  (freemapper-print ADR 0010); whether OE12 tolerates the standard's direction is unknown (ADR 0033, addendum).
 - **Built** (ADR 0033, `export PROJECT --iof-xml FILE` and the MCP tool `export_iof_xml`): individual courses
   with map positions in millimetres (y unmirrored, down as in the schema), control order, leg lengths, climb, `MapTextPosition` relative
   to the circle centre, and class assignments. Team, relay and score courses are skipped and named. `createTime`
@@ -354,9 +354,9 @@ Claude's call.)*
   the map extent (written as 0/0 mm) *(Claude's call)*. The output validates against `IOF.xsd`; the example is
   `examples/luebeck-sprint/course-data.xml`.
 - **OE**: how OE12 imports courses, and later how it learns which controls are mandatory and which are free
-  for "Bahnen mit Aufteilung", is not documented on SportSoftware's site. The builder tests the IOF XML
-  export with a real OE import before M3 ends *(open, see §9)*. The import of the example file into OE12 has not
-  happened yet; the user does it and reports what arrives.
+  for "Bahnen mit Aufteilung", is not documented on SportSoftware's site. Nobody on the project has OE, so
+  the export is not tested with a real OE import *(user, 2026-11-09)*. It validates against the IOF schema and
+  reads back through freemapper-course's IOF reader (ADR 0033, addendum); reports from people with OE are welcome.
 
 ### 5.6 Checks in the first version
 
@@ -461,7 +461,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 ## 7. Testing and quality
 
 - Readers and writers test-first with small fixtures and real files: `.ppen` from Purple Pen 3.x, IOF XML
-  round trip, and an IOF XML import into OE. Real `.ppen` files from the author (Purple Pen 4.0.0) become
+  read-back through freemapper-course's reader (an import into OE is not tested, see §5.5b). Real `.ppen` files from the author (Purple Pen 4.0.0) become
   fixtures only with the author's consent, with absolute paths removed.
 - Sync: a `.ppen` written here opens in Purple Pen unchanged, is edited there and merges back; one test per
   merge case (one side changed, both sides changed, deleted on one side, renamed).
@@ -491,7 +491,7 @@ The builder may start the editor earlier if placing controls through the CLI tur
 ## 9. Open points
 
 - **OE import** (§5.5): how OE12 reads courses and, for team orienteering, mandatory and free controls.
-  Answer by a test import; the user has OE *(user: results usually in OE)*.
+  Not testable by the project: nobody here has OE *(user, 2026-11-09)*; answered only by reports from OE users.
 - **Elevation data** for the route analysis (§5.4): decided with the route analysis.
 - **Rule values to verify in the original documents** before they become data: overprint line widths of
   symbols 702, 709, 710; IOF texts were read from mirrors (research §5).

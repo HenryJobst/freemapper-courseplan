@@ -6,6 +6,16 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Ein Test liest den IOF-XML-Export (Lübeck-Beispiel und ein Ereignis mit Wechselpunkt) mit dem IOF-Leser von
+  freemapper-course wieder ein und vergleicht Posten, Positionen, Bahnen, Reihenfolge und Nummernlagen.
+
+### Geändert
+
+- Die Dokumentation sagt jetzt, was geprüft ist: Der Export besteht das IOF-Schema und lässt sich wieder einlesen.
+  Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat (ADR 0033, Nachtrag).
+
 ## [0.6.0] - 2026-11-09
 
 ### Hinzugefügt

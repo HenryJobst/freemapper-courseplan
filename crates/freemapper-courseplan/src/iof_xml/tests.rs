@@ -472,3 +472,193 @@ fn event_with_only_skipped_courses_validates_against_schema() {
     assert_eq!(count(&xml, "<Course>"), 0);
     assert_valid(&xml);
 }
+
+// Read-back through freemapper-course's IOF XML reader (freemapper-print's). The reader keeps the
+// positions as the file gives them, so they are compared in file coordinates.
+
+fn kind_of(event: &Event, code: &str) -> freemapper_course::ControlKind {
+    use freemapper_course::ControlKind as K;
+    if event
+        .specials
+        .iter()
+        .any(|s| matches!(s, SpecialObject::Start { id, .. } if id == code))
+    {
+        return K::Start;
+    }
+    if event
+        .specials
+        .iter()
+        .any(|s| matches!(s, SpecialObject::Finish { id, .. } if id == code))
+    {
+        return K::Finish;
+    }
+    match event
+        .controls
+        .iter()
+        .find(|c| c.code.0 == code)
+        .unwrap()
+        .kind
+    {
+        ControlKind::Control => K::Control,
+        ControlKind::CrossingPoint => K::CrossingPoint,
+    }
+}
+
+fn assert_reads_back(e: &Event, map_scale: u32, map_kind: MapKind) {
+    let xml = export_iof_xml(e, map_scale, map_kind, CREATED).unwrap().xml;
+    let raw =
+        freemapper_course::read_iof_xml(xml.as_bytes()).expect("the reader accepts our export");
+    assert_eq!(
+        raw.source.event_name.as_deref(),
+        Some(e.event.title.as_str())
+    );
+    assert_eq!(raw.source.map_scale, Some(map_scale));
+
+    // Every control and every start and finish, once, at the exported position (y not mirrored).
+    let mut expected: Vec<(String, MapPoint, freemapper_course::ControlKind)> = Vec::new();
+    for s in &e.specials {
+        if let Some((_, id, at)) = start_or_finish(s) {
+            expected.push((id.to_owned(), at.clone(), kind_of(e, id)));
+        }
+    }
+    for c in &e.controls {
+        expected.push((c.code.0.clone(), c.map_mm.clone(), kind_of(e, &c.code.0)));
+    }
+    assert_eq!(raw.controls.len(), expected.len());
+    for (code, at, kind) in &expected {
+        let c = raw
+            .controls
+            .iter()
+            .find(|c| &c.code == code)
+            .unwrap_or_else(|| panic!("control {code} missing"));
+        let pos = c
+            .position
+            .unwrap_or_else(|| panic!("control {code} has no position"));
+        assert!(
+            (pos.x_mm - at.x).abs() <= 0.01,
+            "{code}: x {} vs {}",
+            pos.x_mm,
+            at.x
+        );
+        assert!(
+            (pos.y_mm - at.y).abs() <= 0.01,
+            "{code}: y {} vs {}",
+            pos.y_mm,
+            at.y
+        );
+        assert_eq!(c.kind, *kind, "{code}");
+    }
+
+    let individual: Vec<&Course> = e
+        .courses
+        .iter()
+        .filter(|c| matches!(c.kind, CourseKind::Individual { .. }))
+        .collect();
+    assert_eq!(raw.courses.len(), individual.len());
+    for (course, back) in individual.iter().zip(&raw.courses) {
+        let CourseKind::Individual { controls } = &course.kind else {
+            unreachable!()
+        };
+        assert_eq!(back.name, course.name);
+        let codes: Vec<&str> = std::iter::once(course.start.as_str())
+            .chain(controls.iter().map(|c| c.code.0.as_str()))
+            .chain(std::iter::once(course.finish.as_str()))
+            .collect();
+        let got: Vec<&str> = back.stops.iter().map(|s| s.control.as_str()).collect();
+        assert_eq!(got, codes, "{}: order of stops", course.name);
+        assert_eq!(
+            back.legs.len(),
+            codes.len() - 1,
+            "{}: leg count",
+            course.name
+        );
+        let want_len = course_length_m(e, course, map_scale).unwrap();
+        let got_len = back.length_m.expect("length");
+        assert!(
+            (got_len - want_len).abs() <= 0.01,
+            "{}: length",
+            course.name
+        );
+        if let Some(climb) = course.climb_m {
+            assert_eq!(back.climb_m, Some(f64::from(climb)));
+        }
+
+        let numbers = control_numbers(e, course);
+        for (i, cc) in controls.iter().enumerate() {
+            let stop = &back.stops[i + 1];
+            let control = e.controls.iter().find(|c| c.code == cc.code).unwrap();
+            let placement = cc.number.as_ref().or(control.number.as_ref());
+            let number = numbers.get(i).copied().flatten();
+            match number.zip(placement) {
+                Some((n, p)) => {
+                    let centre = number_centre(&control.map_mm, p, n, map_kind, map_scale);
+                    let at = stop.number_text_at.unwrap_or_else(|| {
+                        panic!("{}: stop {} has no number offset", course.name, cc.code.0)
+                    });
+                    assert!((at.dx_mm - (centre.x - control.map_mm.x)).abs() <= 0.01);
+                    assert!((at.dy_mm - (centre.y - control.map_mm.y)).abs() <= 0.01);
+                }
+                None => assert!(
+                    stop.number_text_at.is_none(),
+                    "{}: {}",
+                    course.name,
+                    cc.code.0
+                ),
+            }
+        }
+        for (stop, code) in back.stops.iter().zip(&codes) {
+            // The reader sets a stop kind only where the course overrides it, or none.
+            if let Some(k) = stop.kind {
+                assert_eq!(k, kind_of(e, code), "{}: {code}", course.name);
+            }
+        }
+    }
+}
+
+#[test]
+fn luebeck_export_reads_back() {
+    let e = luebeck();
+    assert!(!e.courses.is_empty());
+    assert!(e.controls.iter().any(|c| c.number.is_some()) || e.courses.iter().any(|c| matches!(&c.kind, CourseKind::Individual { controls } if controls.iter().any(|cc| cc.number.is_some()))), "the example places at least one number");
+    assert_reads_back(&e, 4000, MapKind::Sprint);
+}
+
+#[test]
+fn crossing_point_export_reads_back() {
+    let mut e = event();
+    e.controls[0].number = Some(NumberPlacement {
+        direction: 0.0,
+        gap_mm: 0.5,
+    });
+    e.controls[1].number = Some(NumberPlacement {
+        direction: 135.0,
+        gap_mm: 0.3,
+    });
+    e.courses = vec![
+        individual("A", &["31", "33", "32"]),
+        individual("B", &["32", "31"]),
+    ];
+    assert_reads_back(&e, 4000, MapKind::Sprint);
+    let xml = export(&e);
+    let raw = freemapper_course::read_iof_xml(xml.as_bytes()).unwrap();
+    let a = &raw.courses[0];
+    assert_eq!(a.stops[2].control, "33");
+    assert!(a.stops[2].number_text_at.is_none());
+    let c33 = raw.controls.iter().find(|c| c.code == "33").unwrap();
+    assert_eq!(c33.kind, freemapper_course::ControlKind::CrossingPoint);
+}
+
+#[test]
+fn only_non_individual_courses_read_back_as_zero_courses() {
+    let mut e = event();
+    e.courses = vec![course(
+        "Team",
+        CourseKind::Team {
+            team_size: 3,
+            mandatory: vec![],
+            free: vec![],
+        },
+    )];
+    let raw = freemapper_course::read_iof_xml(export(&e).as_bytes()).unwrap();
+    assert!(raw.courses.is_empty());
+}

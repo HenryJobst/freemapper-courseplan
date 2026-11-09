@@ -301,9 +301,12 @@ Was du wissen solltest:
   unberührt.
 - Geopositionen und abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
 - Die Uhrzeit `createTime` ist UTC und trägt das Zeichen `Z`. Für die Bahnen spielt sie keine Rolle.
-- Ob OE12 die Datei so einliest, wie gedacht, ist noch nicht getestet. Das Beispiel
-  [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema geprüft. Wer es in
-  OE12 importiert, soll melden, was ankommt.
+- Das Beispiel [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema
+  geprüft, und ein Test liest den Export mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder
+  ein. Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Wer die Datei
+  dort importiert, soll melden, was ankommt.
+- Purple Pen, OCAD und Condes schreiben die y-Achse nach oben, entgegen dem Standard. Dieser Export folgt dem
+  Schema (y nach unten). Zeigt ein Programm die Posten gespiegelt, sag bitte, welches.
 
 Der KI-Assistent hat dafür das Werkzeug `export_iof_xml` mit `project` und `path`; der Pfad muss auf `.xml` enden.
 Die Entscheidungen dahinter stehen in ADR 0033.

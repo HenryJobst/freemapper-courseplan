@@ -19,7 +19,7 @@ validate the output with `xmllint`; where it is missing, the schema tests pass w
 - **y is written unmirrored.** The schema counts y in units below the centre, and the project stores y down, so
   no sign flips, also in `MapTextPosition`. The first draft mirrored y; that was wrong. Purple Pen, OCAD and
   Condes write y up against the standard (freemapper-print ADR 0010). Whether OE12 tolerates the standard's
-  direction is part of the open OE test *(Claude's call)*.
+  direction is unknown (see the addendum) *(Claude's call)*.
 - **Map positions only.** No geo positions until `freemapper-georef` exists. `Map` needs two corner positions;
   they are written as 0/0 mm because the extent is unknown. Taped legs are not written yet.
 - **Number positions** are the offset of the number box centre from the control, from the `number_rect` that
@@ -34,6 +34,16 @@ validate the output with `xmllint`; where it is missing, the schema tests pass w
 ## Consequences
 - The output validates against the schema, also the committed example `examples/luebeck-sprint/course-data.xml`,
   which a test compares with the generated output.
-- **Open: no real OE12 import has happened.** The user imports the example into OE12 and reports what arrives
-  (controls, order, lengths, classes, and whether the y direction is read as intended) *(user, 2026-11-09)*.
+- **No real OE12 import has happened** (see the addendum).
 - Names with characters XML forbids would still yield a file that readers refuse.
+
+## Addendum (2026-11-09): verification level
+Nobody on the project has OE, so no import there will happen from our side; the earlier plan that the user imports
+the example into OE12 is dropped *(user)*. What is verified: the output validates against `IOF.xsd`, and tests
+read the export of the Lübeck example and of a crossing-point event back through `freemapper_course::read_iof_xml`
+(freemapper-print's reader): codes, positions in file coordinates (y unmirrored), course names, order of stops,
+leg count, number offsets from `MapTextPosition`, kinds, and zero courses when only non-individual courses exist.
+Not verified: an import in OE, Purple Pen or Condes. The y axis stays uncertain: the schema counts y downward and we
+follow it, while Purple Pen, OCAD and Condes write y upward against the schema, so a program that expects their
+convention may show the controls mirrored. The reader above treats the direction as undetermined and leaves it to
+the fit, so the read-back says nothing about it. Reports from people with OE are welcome.
