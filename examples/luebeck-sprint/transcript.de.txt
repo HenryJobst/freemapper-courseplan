@@ -41,6 +41,7 @@ $ freemapper-courseplan info luebeck-sprint.courseplan.toml
 Titel: Sprinttraining Lübecker Altstadt
 Karte: ../../tests/fixtures/maps/luebeck.omap
 Kartenart: Sprintkarte
+Regelprofil: wkb-2026
 Posten: 7, Querungsstellen: 0
 Bahnen: 1 (einzeln 1, Mannschaft 0, Staffel 0, Score 0)
 Kategorien: 1

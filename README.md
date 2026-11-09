@@ -15,8 +15,9 @@ Geplant ist für die erste Version:
 
 - Posten mit Code und Postenbeschreibung, Einzelbahnen mit Knickpunkten, Pflichtstrecken und Sperrgebieten;
 - Lage der Postennummern zentral je Posten und je Bahn änderbar, mit automatischer Platzierung;
-- Prüfungen nach den Wettkampfbestimmungen 2026, etwa Postenabstände, spitze Winkel und genug verschiedene erste
-  Posten für eine kompakte Startliste, jeweils mit Quelle;
+- Prüfungen nach den Wettkampfbestimmungen 2026 mit Aufsätzen für regionale Empfehlungen, etwa Postenabstände,
+  spitze Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils mit Quelle und mit
+  begründeten Ausnahmen (`check`, schon nutzbar);
 - Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind;
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE;
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
@@ -61,7 +62,17 @@ Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im P
 Bahn. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten). Die Projektdatei ist
 TOML, du kannst sie auch von Hand bearbeiten. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
-bearbeiten oder messen. Prüfen und drucken kann es auch noch nicht, und Waldkarten liest es nicht.
+bearbeiten oder messen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
+
+`freemapper-courseplan check <Projekt>` prüft die Einzelbahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
+Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
+`nor-bb-2021` (Bahnempfehlungen Berlin/Brandenburg), `freemapper-courseplan event profile <Projekt> wkb-2026
+--overlay nor-bb-2021` wählt sie. Eine gewollte Ausnahme trägt `finding accept <Projekt> <Prüfregel> --note TEXT` mit
+Begründung ein, `finding remove` nimmt sie zurück, und `check --all` zeigt auch die akzeptierten Befunde und die
+übersprungenen Prüfregeln. Das Handbuch erklärt es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründen),
+und der KI-Assistent hat dafür die Werkzeuge `check`, `accept_finding`, `remove_accepted_finding` und
+`set_rule_profile`. Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht, und die Routenanalyse
+fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

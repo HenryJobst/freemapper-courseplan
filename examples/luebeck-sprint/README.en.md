@@ -17,6 +17,7 @@ courses from a `.ppen`; its PDF then replaces this sketch.
 
 - `luebeck-sprint.courseplan.toml`: the project file
 - `transcript.en.txt`, `transcript.de.txt`: the commands and their output
+- `check.en.txt`, `check.de.txt`: checking the course, with one accepted hint
 - `preview.jpg`, `make-preview.py`: the sketch and its script
 
 ## How the course was set
@@ -65,6 +66,7 @@ $ freemapper-courseplan info luebeck-sprint.courseplan.toml
 title: Sprint training Lübeck old town
 map: ../../tests/fixtures/maps/luebeck.omap
 map kind: sprint
+rule profile: wkb-2026
 controls: 7, crossing points: 0
 courses: 1 (individual 1, team 0, relay 0, score 0)
 classes: 1
@@ -72,6 +74,27 @@ course A: 7 controls, 1.3 km, climb 5 m
 ```
 
 Coordinates are map millimetres, with y pointing down. `course numbers` placed the control numbers.
+
+## Checking
+
+`check` finds exactly one hint on the course. At control 37 the legs form an angle of 85°, and the guideline is 90°.
+The course is a training, so the angle counts as intended here, and `finding accept` writes it into the project file
+with a note.
+
+```text
+$ freemapper-courseplan check luebeck-sprint.courseplan.toml
+course A:
+  hint course A, leg after 6: the legs at control 37 form an angle of 85°, at least 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+0 errors, 0 warnings, 1 hint; 0 accepted, 5 skipped
+
+$ freemapper-courseplan finding accept luebeck-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:6 --note "Training: the 85° angle at the last control is intended."
+accepted finding wkb2026.leg.acute_angle_hint at course A, leg after 6
+```
+
+After that, `check` reports nothing. The five skipped rules are the length and difficulty rules of competitions,
+which do not apply to a training, and the start capacity, because the event has no start window. All commands and the
+output of `check --all` are in [`check.en.txt`](check.en.txt) and [`check.de.txt`](check.de.txt). The English file
+shows an English note; the project file holds the German one.
 
 ## Making the sketch again
 

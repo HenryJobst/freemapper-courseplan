@@ -16,8 +16,9 @@ Planned for the first version:
 - controls with code and control description, individual courses with bends, marked routes and forbidden
   areas;
 - control number positions set once per control and changeable per course, with automatic placement;
-- checks against the German competition rules (WKB) 2026, such as control distances, acute angles and enough
-  different first controls for a compact start list, each with its source;
+- checks against the German competition rules (WKB) 2026 with overlays for regional recommendations, such as
+  control distances, acute angles and enough different first controls for a compact start list, each with its
+  source and with exceptions you can give reasons for (`check`, usable now);
 - exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side;
 - export to IOF XML 3.0 for result software, for example OE;
 - sprint and schoolyard maps; forest maps come later;
@@ -61,8 +62,18 @@ individual courses. `freemapper-courseplan init <map>` creates the project file.
 placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course.
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up. The project file is TOML, and
-you can edit it by hand too. The program cannot edit or measure team, relay or score courses yet. It cannot check
-or print courses either, and it does not read forest maps.
+you can edit it by hand too. The program cannot edit or measure team, relay or score courses yet. It cannot print
+courses either, and it does not read forest maps.
+
+`freemapper-courseplan check <project>` checks the individual courses against a rule profile, each finding with
+severity, place, rule and source. The built-in profile is `wkb-2026` (competition rules 2026) and the overlay
+`nor-bb-2021` (course recommendations for Berlin and Brandenburg); `freemapper-courseplan event profile <project>
+wkb-2026 --overlay nor-bb-2021` selects them. `finding accept <project> <rule> --note TEXT` records an intended
+exception with its reason, `finding remove` takes it back, and `check --all` also lists the accepted findings and
+the skipped rules. Chapter 8 of the [user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions)
+explains it, and the AI assistant has the tools `check`, `accept_finding`, `remove_accepted_finding` and
+`set_rule_profile` for it. The program does not check team, relay or score courses yet, and the route analysis is
+missing, so it reports a straight leg through an out-of-bounds area only as a warning.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

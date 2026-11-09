@@ -41,6 +41,7 @@ $ freemapper-courseplan info luebeck-sprint.courseplan.toml
 title: Sprint training Lübeck old town
 map: ../../tests/fixtures/maps/luebeck.omap
 map kind: sprint
+rule profile: wkb-2026
 controls: 7, crossing points: 0
 courses: 1 (individual 1, team 0, relay 0, score 0)
 classes: 1

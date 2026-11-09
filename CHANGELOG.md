@@ -65,6 +65,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   wird übersprungen, eine Kategorie ohne Zeile ergibt einen Hinweis. Trifft eine Bahn mit ihren Kategorien
   mehrere Zeilen, gibt es einen Befund, der jede verletzte Zeile nennt. Eine Klasse ohne Regelkategorie
   überspringt die Bahn und wird genannt.
+- Handbuch, Kapitel 8 „Prüfen: Hinweise lesen, Ausnahmen begründen“: wie man eine Zeile von `check` liest, was
+  Schwere, Exit-Code und übersprungene Prüfregeln bedeuten, wie man Ausnahmen akzeptiert und zurücknimmt und wie
+  man Profil und Aufsätze wählt. Das Lübecker Beispiel zeigt in `check.de.txt` und `check.en.txt` die Ausgabe von
+  `check` und einen akzeptierten Hinweis; die Projektdatei enthält ihn.
 
 ## [0.1.0] - 2026-11-09
 

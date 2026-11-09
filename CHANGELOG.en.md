@@ -60,6 +60,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   10 / 1000) outside the target of the category row ±6 % give a warning; a course without climb is skipped,
   and a category in no row gives a hint. A course whose categories hit several rows gets one finding that
   names every violated row. A class without rule category skips the course and is named.
+- User manual, chapter 8 "Checking: reading findings, giving reasons for exceptions": how to read a line of
+  `check`, what severity, exit code and skipped rules mean, how to accept and take back exceptions, and how to
+  choose the profile and overlays. The Lübeck example shows the output of `check` and one accepted hint in
+  `check.en.txt` and `check.de.txt`; the project file holds it.
 
 ## [0.1.0] - 2026-11-09
 

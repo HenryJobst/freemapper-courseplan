@@ -1,0 +1,24 @@
+$ freemapper-courseplan check luebeck-sprint.courseplan.toml --lang de
+Bahn A:
+  Hinweis Bahn A, Strecke nach 6: Die Strecken am Posten 37 bilden einen Winkel von 85°, mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan finding accept luebeck-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:6 --note "Training: Der Winkel von 85° am letzten Posten ist gewollt." --lang de
+Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke nach 6 akzeptiert
+
+$ freemapper-courseplan check luebeck-sprint.courseplan.toml --lang de
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check luebeck-sprint.courseplan.toml --all --lang de
+akzeptiert:
+  Hinweis Bahn A, Strecke nach 6: Die Strecken am Posten 37 bilden einen Winkel von 85°, mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    Begründung: Training: Der Winkel von 85° am letzten Posten ist gewollt.
+übersprungen:
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
