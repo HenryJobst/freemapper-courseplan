@@ -15,6 +15,7 @@ mod context;
 mod distance;
 mod geometry;
 mod legs;
+mod numbers;
 mod start;
 mod stops;
 mod tables;
@@ -577,7 +578,7 @@ fn number(run: &RuleRun<'_>, name: &'static str, skipped: &mut Vec<Skipped>) -> 
 }
 
 /// A number of a rule's values, an integer or a float.
-fn value_number(rule: &Rule, name: &str) -> Option<f64> {
+pub(crate) fn value_number(rule: &Rule, name: &str) -> Option<f64> {
     rule.values
         .get(name)
         .and_then(|v| v.as_float().or_else(|| v.as_integer().map(|i| i as f64)))
@@ -677,6 +678,11 @@ pub const CHECKS: &[Check] = &[
     ),
     Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
     Check::at("straight_angle", legs::straight_angle, &[Place::Leg]),
+    Check::at(
+        "number_gap",
+        numbers::number_gap,
+        &[Place::Leg, Place::Control],
+    ),
     Check::at("opposing_legs", legs::opposing_legs, &[Place::Legs]),
     Check::at("code_range", codes::code_range, &[Place::Control]),
     Check::at("code_pairs", codes::code_pairs, &[Place::Controls]),

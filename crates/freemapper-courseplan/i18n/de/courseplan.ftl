@@ -192,6 +192,8 @@ check-acute-angle = Die Strecken { $stop_kind ->
        *[control] am Posten
     } { $stop } bilden einen Winkel von { $degrees }°, gefordert sind mindestens { $limit }°
 check-straight-angle = Die Strecken am Posten { $stop } bilden einen Winkel von { $degrees }°, erwünscht sind höchstens { $limit }°
+check-number-gap-small = Die Nummer von Posten { $stop } steht { $gap } mm vom Kreis entfernt, erwünscht sind mindestens { $limit } mm
+check-number-gap-large = Die Nummer von Posten { $stop } steht { $gap } mm vom Kreis entfernt, erwünscht sind höchstens { $limit } mm
 check-opposing-legs = Die beiden Strecken verlaufen auf { $metres } m gegenläufig in höchstens { $limit } m Abstand, erlaubt sind weniger als { $min_length } m
 check-code-range = Der Code { $code } liegt außerhalb des erlaubten Bereichs { $min } bis { $max }
 check-code-not-numeric = Der Code { $code } ist keine Zahl

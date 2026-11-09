@@ -79,6 +79,7 @@ Schlüssel:
 | `leg_through_forbidden` | Eine gerade Strecke quert ein Sperrgebiet, die Optimalroute könnte hindurchführen |
 | `acute_angle` | Winkel zwischen den Strecken an einem Posten unter `degrees` |
 | `straight_angle` | Winkel zwischen den Strecken an einem Posten über `degrees`, fast geradeaus |
+| `number_gap` | Abstand der Nummer zum Kreis unter `min_gap_mm` oder über `max_gap_mm`; jeder Wert darf fehlen |
 | `opposing_legs` | Zwei Strecken einer Bahn laufen dicht nebeneinander gegeneinander |
 | `code_range` | Ein Postencode außerhalb von `range` |
 | `code_pairs` | Beide Codes eines verbotenen Paars in einer Veranstaltung |

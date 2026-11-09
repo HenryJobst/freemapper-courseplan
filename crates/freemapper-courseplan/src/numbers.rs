@@ -13,15 +13,73 @@
 //! Overprint sizes are print millimetres at the base scale of the map kind and grow to map
 //! millimetres by `map_mm = print_mm * base_scale / map_scale`. Terms follow `docs/glossary.md`.
 
-use freemapper_courseplan_model::{CourseKind, Event, MapPoint, NumberPlacement};
+use freemapper_courseplan_model::{CourseKind, Discipline, Event, MapPoint, NumberPlacement};
 
-use crate::check::symbol_matches;
+use crate::check::{symbol_matches, value_number};
 use crate::course::{CourseError, control_numbers, course_legs};
 use crate::edit::{EditError, apply, course_mut, individual_mut};
 use crate::map::{FeatureGeometry, MapFeature, MapIndex, MapKind};
+use crate::rules::RuleSet;
 
 /// Gap between circle and number box in print mm.
 const GAP_PRINT_MM: f64 = 0.5;
+/// The range of gaps between circle and number in print mm that the rules want.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GapRange {
+    pub min_mm: f64,
+    pub max_mm: f64,
+}
+
+impl GapRange {
+    /// The range without an applicable rule: the fixed gap of [`GAP_PRINT_MM`].
+    pub const FIXED: GapRange = GapRange {
+        min_mm: 0.5,
+        max_mm: 0.5,
+    };
+}
+
+/// The gap range of the active `number_gap` rules that apply to a course. The strictest wins:
+/// the largest `min_gap_mm` and the smallest `max_gap_mm`. A value a rule leaves out keeps that
+/// side open. Without a rule the range is [`GapRange::FIXED`]; with only a max the min is 0.5,
+/// with only a min the max equals it. A max below the min is raised to the min.
+pub fn gap_range(
+    rules: &RuleSet,
+    map_kind: MapKind,
+    discipline: Discipline,
+    print_scale: u32,
+) -> GapRange {
+    let applying: Vec<_> = rules
+        .rules
+        .iter()
+        .filter(|r| r.rule.key == "number_gap" && r.rule.applies(map_kind, discipline, print_scale))
+        .collect();
+    if applying.is_empty() {
+        return GapRange::FIXED;
+    }
+    let min = applying
+        .iter()
+        .filter_map(|r| value_number(&r.rule, "min_gap_mm"))
+        .fold(None, |acc: Option<f64>, v| {
+            Some(acc.map_or(v, |a| a.max(v)))
+        });
+    let max = applying
+        .iter()
+        .filter_map(|r| value_number(&r.rule, "max_gap_mm"))
+        .fold(None, |acc: Option<f64>, v| {
+            Some(acc.map_or(v, |a| a.min(v)))
+        });
+    let (min, max) = match (min, max) {
+        (None, None) => return GapRange::FIXED,
+        (Some(min), None) => (min, min),
+        (None, Some(max)) => (GapRange::FIXED.min_mm, max),
+        (Some(min), Some(max)) => (min, max),
+    };
+    GapRange {
+        min_mm: min,
+        max_mm: max.max(min),
+    }
+}
+
 /// Width of one digit relative to the number height.
 const DIGIT_WIDTH_FACTOR: f64 = 0.6;
 /// Directions tried around the preferred one: steps of 15 degrees, up to 12 in each direction
@@ -603,6 +661,91 @@ pub fn place_numbers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::check::testing::{rule, with_values};
+    use crate::rules::load_rule_set;
+    use crate::rules::{SetRule, Severity};
+
+    fn range_of(set: &RuleSet) -> GapRange {
+        gap_range(set, MapKind::Sprint, Discipline::Sprint, 4000)
+    }
+
+    fn gap_rule(id: &str, values: &str) -> SetRule {
+        SetRule {
+            rule: with_values(rule(id, "number_gap", Severity::Warning), values),
+            profile: "wkb-2026".to_owned(),
+        }
+    }
+
+    #[test]
+    fn gap_range_reads_the_profile() {
+        let set = load_rule_set("wkb-2026", &[]).unwrap();
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 0.5,
+                max_mm: 5.0
+            }
+        );
+    }
+
+    #[test]
+    fn gap_range_without_rule_is_fixed() {
+        let mut set = load_rule_set("wkb-2026", &[]).unwrap();
+        set.rules.retain(|r| r.rule.key != "number_gap");
+        assert_eq!(range_of(&set), GapRange::FIXED);
+    }
+
+    #[test]
+    fn gap_range_takes_the_strictest_rule() {
+        let mut set = load_rule_set("wkb-2026", &[]).unwrap();
+        set.rules
+            .push(gap_rule("t.gap", "min_gap_mm = 1.0\nmax_gap_mm = 3.0"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 1.0,
+                max_mm: 3.0
+            }
+        );
+    }
+
+    #[test]
+    fn gap_range_with_min_above_max_uses_min() {
+        let mut set = load_rule_set("wkb-2026", &[]).unwrap();
+        set.rules.retain(|r| r.rule.key != "number_gap");
+        set.rules
+            .push(gap_rule("t.gap", "min_gap_mm = 6.0\nmax_gap_mm = 5.0"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 6.0,
+                max_mm: 6.0
+            }
+        );
+    }
+
+    #[test]
+    fn gap_range_with_one_value_closes_the_other_side() {
+        let mut set = load_rule_set("wkb-2026", &[]).unwrap();
+        set.rules.retain(|r| r.rule.key != "number_gap");
+        set.rules.push(gap_rule("t.max", "max_gap_mm = 3.0"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 0.5,
+                max_mm: 3.0
+            }
+        );
+        set.rules.clear();
+        set.rules.push(gap_rule("t.min", "min_gap_mm = 2.0"));
+        assert_eq!(
+            range_of(&set),
+            GapRange {
+                min_mm: 2.0,
+                max_mm: 2.0
+            }
+        );
+    }
     use crate::check::testing::{
         AREA_520, LINE_502, LINE_601, POINT_113, area_object, line_object, map, point_object,
     };

@@ -36,6 +36,7 @@ pub const KNOWN_KEYS: &[&str] = &[
     "leg_through_forbidden",
     "acute_angle",
     "straight_angle",
+    "number_gap",
     "opposing_legs",
     "code_range",
     "code_pairs",

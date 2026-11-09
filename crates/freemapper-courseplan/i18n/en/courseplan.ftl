@@ -192,6 +192,8 @@ check-acute-angle = the legs at { $stop_kind ->
        *[control] control
     } { $stop } form an angle of { $degrees }°, at least { $limit }° required
 check-straight-angle = the legs at control { $stop } form an angle of { $degrees }°, at most { $limit }° wanted
+check-number-gap-small = the number of control { $stop } is { $gap } mm from the circle, at least { $limit } mm wanted
+check-number-gap-large = the number of control { $stop } is { $gap } mm from the circle, at most { $limit } mm wanted
 check-opposing-legs = the two legs run in opposite directions for { $metres } m at most { $limit } m apart, less than { $min_length } m allowed
 check-code-range = code { $code } is outside the allowed range { $min } to { $max }
 check-code-not-numeric = code { $code } is not a number
