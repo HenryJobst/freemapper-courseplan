@@ -875,27 +875,27 @@ fn new_tools_do_not_quote_the_file() {
     }
 }
 
-/// A project with start, finish, controls 31 and 32 and course A.
+/// A project with start, finish, controls 31 and 32 and course A. The points lie in an open part
+/// of the Lübeck map, so the map-based checks find nothing.
 fn checked_workspace(session: &mut Session) -> (tempfile::TempDir, PathBuf) {
     let (dir, map, project) = workspace();
     session.ok("init_event", json!({ "map": map, "project": project }));
-    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
-    let p = |fx, fy| point(&extent, fx, fy);
+    let p = |x: f64, y: f64| json!({ "x": x, "y": y });
     session.ok(
         "add_special",
-        json!({ "project": project, "kind": "start", "id": "S1", "at": p(0.4, 0.4) }),
+        json!({ "project": project, "kind": "start", "id": "S1", "at": p(88.0, 82.0) }),
     );
     session.ok(
         "add_special",
-        json!({ "project": project, "kind": "finish", "id": "F1", "at": p(0.6, 0.6) }),
+        json!({ "project": project, "kind": "finish", "id": "F1", "at": p(118.0, 82.0) }),
     );
     session.ok(
         "add_control",
-        json!({ "project": project, "at": p(0.45, 0.5) }),
+        json!({ "project": project, "at": p(93.0, 89.0) }),
     );
     session.ok(
         "add_control",
-        json!({ "project": project, "at": p(0.55, 0.45) }),
+        json!({ "project": project, "at": p(113.0, 89.0) }),
     );
     session.ok(
         "add_course",

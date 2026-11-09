@@ -10,6 +10,7 @@ use freemapper_courseplan_model::MapPoint;
 mod geometry;
 
 use crate::omap::{MapDocument, MapObjectKind, SymbolSet};
+pub(crate) use geometry::{distance_to_polyline, inside_area};
 use geometry::{feature_distance, push_area, push_lines, sub_paths, to_point};
 
 /// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart).
@@ -172,6 +173,11 @@ impl MapIndex {
             max.y = max.y.max(p.y);
         }
         Some((min, max))
+    }
+
+    /// Every feature, in map order.
+    pub fn features(&self) -> &[MapFeature] {
+        &self.features
     }
 
     pub fn len(&self) -> usize {

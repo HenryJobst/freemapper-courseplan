@@ -121,7 +121,8 @@ Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees
 Meter im Gelände oder Millimeter auf der Karte gemeint sind.
 
 Texte, true/false und Listen von Texten brauchen keine Einheit. Symbolnummern sind Texte:
-`impassable = ["520", "708"]`.
+`impassable = ["520", "708"]`. Ein Kartensymbol passt zu einer Nummer, wenn es dieselbe Nummer
+hat oder eine Unternummer davon: `505.1` passt zu `505`, `5051` nicht.
 
 Tabellen und Zeilenlisten haben keine einzelne Einheit. Jede steht mit ihrer Form in
 `TABLE_VALUES` in `src/rules.rs`, und die Profildatei beschreibt ihre Tabellen in einem Kommentar

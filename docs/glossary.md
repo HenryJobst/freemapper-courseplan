@@ -75,9 +75,14 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Befund | finding | Ergebnis einer Prüfregel an einem Posten, einer Strecke oder einer Bahn. | `Finding` |
 | akzeptierter Befund | accepted finding | Befund, den der Bahnleger mit Begründung als gewollte Ausnahme markiert hat; wird nicht mehr gemeldet. | `AcceptedFinding` |
 | übersprungene Prüfregel | skipped rule | Prüfregel, die `check` für eine Veranstaltung oder Bahn nicht ausführt, mit dem Grund: Filter (Disziplin, Kartenart, Druckmaßstab) passt nicht, Angabe fehlt, Prüfung noch nicht umgesetzt. Auch eine Bahn, die nicht Einzelbahn ist. Wird gemeldet, nie stillschweigend als bestanden gezählt. | `Skipped` |
-| Ort eines Befunds | finding location | Wo ein Befund sitzt: Veranstaltung, Bahn, ein Posten, mehrere Posten oder eine Strecke. Bestimmt mit der Kennung der Prüfregel, welcher akzeptierte Befund passt. | `Location` |
+| Ort eines Befunds | finding location | Wo ein Befund sitzt: Veranstaltung, Bahn, ein Posten, mehrere Posten oder eine Strecke. Start und Ziel zählen dabei als Posten. Bestimmt mit der Kennung der Prüfregel, welcher akzeptierte Befund passt. | `Location` |
 | Strecken-Bezug | leg reference | Verweis auf eine Strecke einer Bahn: Bahnname und Nummer des Postens, von dem die Strecke abgeht (ab 1; 0 ist die Strecke vom Start). | `LegRef` |
 | ähnliche Objekte | similar features | Postenobjekte, die im Gelände oder auf der Karte verwechselbar sind (WKB B 7.2.1). | `similar_features` |
+| Ortsart | place kind | Art des Orts eines Befunds: Veranstaltung, Bahn, ein Posten, zwei oder mehr Posten, Strecke. Jede Prüfung nennt die Ortsarten ihrer Befunde; `finding accept` lehnt andere ab, weil ein solcher akzeptierter Befund nie passen würde. | `Place` |
+| Postenobjekt | control feature | Das Kartenobjekt, an dem ein Posten steht: das nächste Kartenobjekt mit Symbolnummer innerhalb von `feature_search_mm` um die Postenmitte. Eine Fläche zählt mit ihrem Rand, die Fläche, in der der Posten nur liegt, ist also nicht sein Objekt. | `control_feature` |
+| Kartenrand | map edge | Rand des Rechtecks um alle Geländeobjekte des Kartenindex, ohne Blatt-Objekte. | `MapIndex::extent` |
+| unpassierbares Symbol | impassable symbol | Kartensymbol, das eine Strecke nicht queren darf (IOF-R 17.2), als Symbolnummer in `impassable`. Eine Unternummer gehört zu ihrer Nummer: 521.1 zu 521, 5211 nicht. | `impassable`, `symbol_matches` |
+| gezeichneter Teil einer Strecke | drawn part of a leg | Streckenlinienzug ohne je einen Kreisradius an beiden Enden, so wie der Bahnaufdruck ihn zeichnet. Die Streckenprüfungen messen nur diesen Teil. | `drawn_part` |
 
 ## Austausch / exchange
 

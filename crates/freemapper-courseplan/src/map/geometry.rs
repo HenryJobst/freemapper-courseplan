@@ -124,7 +124,8 @@ pub(super) fn feature_distance(geometry: &FeatureGeometry, p: &MapPoint) -> f64 
     }
 }
 
-fn distance_to_polyline(p: &MapPoint, points: &[MapPoint], closed: bool) -> f64 {
+/// Distance from `p` to a polyline; `closed` adds the edge from the last point to the first.
+pub(crate) fn distance_to_polyline(p: &MapPoint, points: &[MapPoint], closed: bool) -> f64 {
     if let [only] = points {
         return (p.x - only.x).hypot(p.y - only.y);
     }
@@ -151,7 +152,7 @@ fn distance_to_segment(p: &MapPoint, a: &MapPoint, b: &MapPoint) -> f64 {
 }
 
 /// Even-odd rule over all rings, so holes are outside.
-pub(super) fn inside_area(p: &MapPoint, rings: &[Vec<MapPoint>]) -> bool {
+pub(crate) fn inside_area(p: &MapPoint, rings: &[Vec<MapPoint>]) -> bool {
     let mut inside = false;
     for ring in rings {
         let mut previous = ring.last();

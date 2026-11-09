@@ -70,3 +70,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0024](0024-cli-editing-conventions.md) | CLI editing conventions | Accepted | 2026-11-08 |
 | [0025](0025-rule-profiles-as-data.md) | Rule profiles as data files | Accepted | 2026-11-09 |
 | [0026](0026-check-engine-skipped-rules-and-accepted-findings.md) | Check engine: skipped rules and accepted findings | Accepted | 2026-11-09 |
+| [0027](0027-distance-checks-places-drawn-legs-symbol-codes.md) | Distance checks: places, drawn legs and symbol codes | Accepted | 2026-11-09 |

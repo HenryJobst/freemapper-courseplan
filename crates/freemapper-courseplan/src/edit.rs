@@ -10,7 +10,7 @@ use freemapper_courseplan_model::{
     SpecialObject, validate,
 };
 
-use crate::check::check_of;
+use crate::check::{Place, check_of};
 use crate::rules::{RuleSet, RulesError, load_rule_set};
 
 /// Why an edit was refused.
@@ -72,6 +72,13 @@ pub enum EditError {
     /// A finding sits at one place, so its key names at most one of course, controls and one leg.
     #[error("a finding of rule {rule} has one place: give a course, controls or one leg")]
     FindingHasOnePlace { rule: String },
+    /// The rule's findings never sit at this kind of place, so the acceptance could never match.
+    #[error("findings of rule {rule} sit at {}, never at {}", place_list(places), place_words(*place))]
+    FindingWrongPlace {
+        rule: String,
+        place: Place,
+        places: Vec<Place>,
+    },
     /// No accepted finding has this key.
     #[error("there is no accepted finding of rule {rule} at this place")]
     AcceptedNotFound { rule: String },
@@ -200,6 +207,24 @@ fn check_inside(extent: &Option<(MapPoint, MapPoint)>, at: &MapPoint) -> Result<
         });
     }
     Ok(())
+}
+
+fn place_words(place: Place) -> &'static str {
+    match place {
+        Place::Event => "the event as a whole",
+        Place::Course => "a course",
+        Place::Control => "one control",
+        Place::Controls => "two or more controls",
+        Place::Leg => "a leg",
+    }
+}
+
+fn place_list(places: &[Place]) -> String {
+    let words: Vec<&str> = places.iter().map(|p| place_words(*p)).collect();
+    match words.split_last() {
+        Some((last, rest)) if !rest.is_empty() => format!("{} or {last}", rest.join(", ")),
+        _ => words.join(""),
+    }
 }
 
 fn not_found(what: &'static str, id: impl Into<String>) -> EditError {
@@ -652,9 +677,9 @@ pub enum Accepted {
 
 /// Marks a finding as an intended exception. The rule must be active in `rules`; the course,
 /// controls and leg must exist. The key names one place: nothing for a finding of the whole event
-/// (only for rules whose findings can sit there), a course, controls, or one leg. Which of the
-/// other place kinds a rule reports is not checked yet (ADR 0026). Controls and
-/// legs are stored in the order of their key. Accepting a key again replaces the note.
+/// (only for rules whose findings can sit there), a course, one control, several controls, or one
+/// leg; a place kind the rule's check never reports is refused (`Check::places`, ADR 0026). A
+/// control may also be a start or finish. Controls and legs are stored in the order of their key. Accepting a key again replaces the note.
 pub fn accept_finding(
     event: &mut Event,
     rules: &RuleSet,
@@ -677,17 +702,35 @@ pub fn accept_finding(
     if places > 1 || finding.legs.len() > 1 {
         return Err(one_place());
     }
-    let event_level = check_of(&set_rule.rule.key).is_some_and(|c| c.event_level);
-    if places == 0 && !event_level {
-        return Err(EditError::FindingNeedsPlace { rule: finding.rule });
-    }
     let key = finding.key();
+    if let Some(check) = check_of(&set_rule.rule.key) {
+        let place = Place::of_key(&key);
+        if place == Place::Event && !check.reports_at(place) {
+            return Err(EditError::FindingNeedsPlace { rule: finding.rule });
+        }
+        if !check.reports_at(place) {
+            return Err(EditError::FindingWrongPlace {
+                rule: finding.rule,
+                place,
+                places: check.places.to_vec(),
+            });
+        }
+    }
     apply(event, |e| {
         if let Some(name) = &key.course {
             course_mut(e, name)?;
         }
         for code in &key.controls {
-            control_mut(e, code)?;
+            // A start or finish can be one of the places of a distance finding.
+            let stop = e.specials.iter().any(|s| {
+                matches!(
+                    s,
+                    SpecialObject::Start { .. } | SpecialObject::Finish { .. }
+                ) && s.id() == code.0
+            });
+            if !stop {
+                control_mut(e, code)?;
+            }
         }
         for leg in &key.legs {
             let controls = individual_mut(course_mut(e, &leg.course)?)?;

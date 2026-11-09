@@ -115,7 +115,8 @@ A name like `distance = 30` is refused, because nobody can tell whether it means
 ground or millimetres on the map.
 
 Texts, true/false and lists of texts need no unit. Symbol codes are texts: `impassable = ["520",
-"708"]`.
+"708"]`. A map symbol matches a code when it has that code or a sub-code of it: `505.1` matches
+`505`, `5051` does not.
 
 Tables and lists of rows have no single unit. Each one is listed with its shape in
 `TABLE_VALUES` in `src/rules.rs`, and the profile file describes its tables in a comment at the

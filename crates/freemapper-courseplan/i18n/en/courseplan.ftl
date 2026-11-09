@@ -93,6 +93,7 @@ error-edit-start-or-finish-has-no-courses = special object { $id } is a start or
 error-edit-unknown-rule = rule { $name } is not an active rule of rule profile { $id }
 error-edit-finding-needs-place = findings of rule { $name } sit at a course, at controls or at a leg; name that place
 error-edit-finding-has-one-place = a finding of rule { $name } has one place: give a course, controls or one leg
+error-edit-finding-wrong-place = findings of rule { $name } sit at { $places }, never at { $place }
 error-edit-accepted-not-found = there is no accepted finding of rule { $name } at this place
 
 ## Reading OOM maps (OmapError)
@@ -139,6 +140,35 @@ check-skip-course-kind = { $kind ->
 check-skip-course-unresolved = the course refers to { $id }, which the event does not define; it is not checked
 check-skip-class-not-mapped = class { $name } has no rule category
 check-skip-climb-missing = the course has no climb
+check-skip-value-missing = the rule has no value { $name }
+check-skip-no-map-extent = the map has no objects, so it has no edge
+check-distance-min = { $first_kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $first } and { $second_kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $second } are { $metres } m apart, at least { $limit } m
+check-distance-similar = controls { $first } and { $second } stand at similar features ({ $first_symbol }, { $second_symbol }) and are { $metres } m apart, at least { $limit } m
+check-map-edge = { $kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $id } is { $metres } m from the map edge, at least { $limit } m
+check-leg-through-control = the leg passes { $metres } m from { $stop_kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $stop }, inside its circle radius of { $limit } m
+check-leg-out-of-bounds = the leg crosses out-of-bounds area { $id }
+check-leg-forbidden-route = the leg crosses forbidden route { $id }
+check-leg-impassable = the leg crosses map symbol { $code }, which must not be crossed
 
 ## Command line
 
@@ -272,6 +302,12 @@ cli-info-course-unmeasured = course { $name }: { $kind }, length not supported y
 word-decimal-point = .
 word-taped = taped
 word-not-taped = not taped
+word-place-event = the event as a whole
+word-place-course = a course
+word-place-control = one control
+word-place-controls = two or more controls
+word-place-leg = a leg
+word-or = or
 cli-edit-course-added = added course { $name }
 cli-edit-course-removed = removed course { $name }
 cli-edit-course-controls = course { $name } now visits { $codes }

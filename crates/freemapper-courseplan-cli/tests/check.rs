@@ -36,7 +36,8 @@ fn code(o: &Output) -> Option<i32> {
 }
 
 /// A temp dir with the Luebeck map and a project made by `init`, with start, finish, controls
-/// 31 and 32 and course A.
+/// 31 and 32 and course A. The points lie in an open part of the map, so the map-based checks
+/// find nothing.
 fn project() -> (tempfile::TempDir, PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let map = dir.path().join("luebeck.omap");
@@ -51,13 +52,13 @@ fn project() -> (tempfile::TempDir, PathBuf) {
     let p = project.to_str().unwrap();
     for args in [
         vec![
-            "special", "add", p, "--kind", "start", "--id", "S1", "--at", "10,10",
+            "special", "add", p, "--kind", "start", "--id", "S1", "--at", "88,82",
         ],
         vec![
-            "special", "add", p, "--kind", "finish", "--id", "F1", "--at", "40,10",
+            "special", "add", p, "--kind", "finish", "--id", "F1", "--at", "118,82",
         ],
-        vec!["control", "add", p, "--at", "15,20"],
-        vec!["control", "add", p, "--at", "30,20"],
+        vec!["control", "add", p, "--at", "93,89"],
+        vec!["control", "add", p, "--at", "113,89"],
         vec![
             "course",
             "add",
@@ -137,6 +138,64 @@ fn check_exit_codes() {
         "{}",
         stderr(&out)
     );
+}
+
+#[test]
+fn an_error_finding_exits_1_until_it_is_accepted() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    // Control 33 stands 1.5 mm (6 m at 1:4000) from 31; course B runs to it.
+    for args in [
+        vec!["control", "add", p, "--at", "93,90.5"],
+        vec![
+            "course",
+            "add",
+            p,
+            "B",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "33",
+        ],
+    ] {
+        let out = run(d, &args);
+        assert!(out.status.success(), "{args:?}: {}", stderr(&out));
+    }
+    let out = run(d, &["check", p]);
+    assert_eq!(code(&out), Some(1), "{}", stdout(&out));
+    assert!(
+        stdout(&out).contains(
+            "error controls 31, 33: control 31 and control 33 are 6 m apart, at least 15 m \
+             (wkb2026.distance.min_half, WKB26 B 7.2.1)"
+        ),
+        "{}",
+        stdout(&out)
+    );
+    let de = run_lang(d, "de", &["check", p]);
+    assert!(
+        stdout(&de).contains("Posten 31 und Posten 33 liegen 6 m auseinander, mindestens 15 m"),
+        "{}",
+        stdout(&de)
+    );
+
+    let accept = [
+        "finding",
+        "accept",
+        p,
+        "wkb2026.distance.min_half",
+        "--controls",
+        "33,31",
+        "--note",
+        "two flags on purpose",
+    ];
+    assert_eq!(code(&run(d, &accept)), Some(0));
+    let out = run(d, &["check", p]);
+    assert_eq!(code(&out), Some(0), "{}", stdout(&out));
+    assert!(stdout(&out).contains("0 errors"), "{}", stdout(&out));
+    assert!(stdout(&out).contains("1 accepted"), "{}", stdout(&out));
 }
 
 #[test]
@@ -264,6 +323,34 @@ fn finding_accept_refusals() {
     assert_eq!(code(&bad_leg), Some(2), "{}", stderr(&bad_leg));
     let no_note = accept(&["wkb2026.distance.min", "--controls", "31"]);
     assert_eq!(code(&no_note), Some(2));
+    // Distance findings sit at two controls, never at a course: such an acceptance could never
+    // match.
+    let at_course = accept(&["wkb2026.distance.min", "--course", "A", "--note", "n"]);
+    assert_eq!(code(&at_course), Some(1));
+    assert_eq!(
+        stderr(&at_course).trim(),
+        "error: findings of rule wkb2026.distance.min sit at two or more controls, never at a course"
+    );
+    let de = run_lang(
+        d,
+        "de",
+        &[
+            "finding",
+            "accept",
+            p,
+            "wkb2026.map.edge",
+            "--leg",
+            "A:1",
+            "--note",
+            "n",
+        ],
+    );
+    assert_eq!(code(&de), Some(1));
+    assert!(
+        stderr(&de).contains("betreffen einen Posten, nie eine Strecke"),
+        "{}",
+        stderr(&de)
+    );
     assert_eq!(std::fs::read(&project).unwrap(), before);
 
     // A start-capacity finding can sit at the event.

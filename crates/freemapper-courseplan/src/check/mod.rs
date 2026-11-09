@@ -11,6 +11,8 @@
 //! the MCP server localize them. Terms follow `docs/glossary.md`.
 
 mod context;
+mod distance;
+mod geometry;
 
 pub use context::{CheckContext, CourseContext};
 
@@ -38,7 +40,68 @@ pub enum Location {
     Leg { course: String, after: u32 },
 }
 
+/// The kind of a [`Location`]; [`Check::places`] lists the kinds a rule key reports at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Place {
+    Event,
+    Course,
+    /// Exactly one control, start or finish.
+    Control,
+    /// Two or more controls, starts or finishes.
+    Controls,
+    Leg,
+}
+
+impl Place {
+    /// Every place kind, in declaration order.
+    pub const ALL: [Place; 5] = [
+        Place::Event,
+        Place::Course,
+        Place::Control,
+        Place::Controls,
+        Place::Leg,
+    ];
+
+    /// The name in English messages and the suffix of its `word-place-*` text.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Place::Event => "event",
+            Place::Course => "course",
+            Place::Control => "control",
+            Place::Controls => "controls",
+            Place::Leg => "leg",
+        }
+    }
+
+    /// The place kind of an accepted finding's key: what it names, or the event when it names
+    /// nothing.
+    pub fn of_key(key: &FindingKey) -> Place {
+        if key.course.is_some() {
+            Place::Course
+        } else if !key.legs.is_empty() {
+            Place::Leg
+        } else {
+            match key.controls.len() {
+                0 => Place::Event,
+                1 => Place::Control,
+                _ => Place::Controls,
+            }
+        }
+    }
+}
+
 impl Location {
+    /// The kind of the location.
+    pub fn place(&self) -> Place {
+        match self {
+            Location::Event => Place::Event,
+            Location::Course(_) => Place::Course,
+            Location::Control { .. } => Place::Control,
+            Location::Controls { .. } => Place::Controls,
+            Location::Leg { .. } => Place::Leg,
+        }
+    }
+
     /// The course the location belongs to, for grouping the output.
     pub fn course(&self) -> Option<&str> {
         match self {
@@ -203,6 +266,18 @@ pub const SKIP_COURSE_UNRESOLVED: &str = "check-skip-course-unresolved";
 pub const SKIP_CLASS_NOT_MAPPED: &str = "check-skip-class-not-mapped";
 /// Reason: the course has no climb.
 pub const SKIP_CLIMB_MISSING: &str = "check-skip-climb-missing";
+/// Reason: the rule lacks a value its check needs; argument `name`.
+pub const SKIP_VALUE_MISSING: &str = "check-skip-value-missing";
+/// Reason: the map has no features, so it has no extent.
+pub const SKIP_NO_MAP_EXTENT: &str = "check-skip-no-map-extent";
+
+/// Whether the symbol code of a map feature matches a code of a rule: equal, or a sub-code of it
+/// (`505.1` matches `505`; `5051` does not). Ruling R9 of plan M2b.
+pub fn symbol_matches(map_code: &str, rule_code: &str) -> bool {
+    map_code
+        .strip_prefix(rule_code)
+        .is_some_and(|rest| rest.is_empty() || rest.starts_with('.'))
+}
 
 /// What `check` found.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -277,39 +352,64 @@ pub type CheckFn = fn(&CheckContext<'_>, &RuleRun<'_>, &mut Vec<Finding>, &mut V
 pub struct Check {
     pub key: &'static str,
     pub run: CheckFn,
-    /// Whether a finding of this key can sit at the event as a whole. Only then may an accepted
-    /// finding name neither course nor controls nor legs.
-    pub event_level: bool,
+    /// The place kinds the findings of this key sit at. `finding accept` refuses the others,
+    /// since an accepted finding there could never match (ADR 0026).
+    pub places: &'static [Place],
 }
 
+/// Place kinds of a key whose check does not say yet: anything but the event.
+const NOT_EVENT: &[Place] = &[Place::Course, Place::Control, Place::Controls, Place::Leg];
+
 impl Check {
-    /// A check whose findings sit at courses, controls or legs.
+    /// A check that has not narrowed its place kinds yet; its findings never sit at the event.
     pub const fn new(key: &'static str, run: CheckFn) -> Check {
         Check {
             key,
             run,
-            event_level: false,
+            places: NOT_EVENT,
         }
     }
 
-    /// A check whose findings can also sit at the event as a whole.
+    /// A check whose findings can sit anywhere, the event as a whole included.
     pub const fn event_level(key: &'static str, run: CheckFn) -> Check {
         Check {
             key,
             run,
-            event_level: true,
+            places: &Place::ALL,
         }
+    }
+
+    /// A check whose findings sit only at these place kinds.
+    pub const fn at(key: &'static str, run: CheckFn, places: &'static [Place]) -> Check {
+        Check { key, run, places }
+    }
+
+    /// Whether a finding of this key can sit at this place kind.
+    pub fn reports_at(&self, place: Place) -> bool {
+        self.places.contains(&place)
     }
 }
 
 /// Every rule key with its check, one line per key (ruling R2 of plan M2b). Tasks 4 to 8 replace
-/// the `not_implemented` stubs.
+/// the `not_implemented` stubs and name the place kinds of their findings with [`Check::at`].
 pub const CHECKS: &[Check] = &[
-    Check::new("min_distance", not_implemented),
-    Check::new("similar_features", not_implemented),
-    Check::new("map_edge", not_implemented),
-    Check::new("leg_through_control", not_implemented),
-    Check::new("leg_through_forbidden", not_implemented),
+    Check::at("min_distance", distance::min_distance, &[Place::Controls]),
+    Check::at(
+        "similar_features",
+        distance::similar_features,
+        &[Place::Controls],
+    ),
+    Check::at("map_edge", distance::map_edge, &[Place::Control]),
+    Check::at(
+        "leg_through_control",
+        distance::leg_through_control,
+        &[Place::Leg],
+    ),
+    Check::at(
+        "leg_through_forbidden",
+        distance::leg_through_forbidden,
+        &[Place::Leg],
+    ),
     Check::new("acute_angle", not_implemented),
     Check::new("opposing_legs", not_implemented),
     Check::new("code_range", not_implemented),

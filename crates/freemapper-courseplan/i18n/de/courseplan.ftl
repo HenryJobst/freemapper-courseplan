@@ -93,6 +93,7 @@ error-edit-start-or-finish-has-no-courses = Sonderobjekt { $id } ist ein Start o
 error-edit-unknown-rule = Prüfregel { $name } ist im Regelprofil { $id } nicht aktiv
 error-edit-finding-needs-place = Befunde der Prüfregel { $name } betreffen eine Bahn, Posten oder eine Strecke; gib diesen Ort an
 error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen Ort: gib eine Bahn, Posten oder eine Strecke an
+error-edit-finding-wrong-place = Befunde der Prüfregel { $name } betreffen { $places }, nie { $place }
 error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
 
 ## OOM-Karten lesen (OmapError)
@@ -139,6 +140,35 @@ check-skip-course-kind = { $kind ->
 check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
 check-skip-class-not-mapped = Kategorie { $name } ist keiner WKB-Kategorie zugeordnet
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
+check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
+check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
+check-distance-min = { $first_kind ->
+        [start] Start
+        [finish] Ziel
+        [crossing] Querungsstelle
+       *[control] Posten
+    } { $first } und { $second_kind ->
+        [start] Start
+        [finish] Ziel
+        [crossing] Querungsstelle
+       *[control] Posten
+    } { $second } liegen { $metres } m auseinander, mindestens { $limit } m
+check-distance-similar = Posten { $first } und { $second } stehen an ähnlichen Objekten ({ $first_symbol }, { $second_symbol }) und liegen { $metres } m auseinander, mindestens { $limit } m
+check-map-edge = { $kind ->
+        [start] Start
+        [finish] Ziel
+        [crossing] Querungsstelle
+       *[control] Posten
+    } { $id } liegt { $metres } m vom Kartenrand entfernt, mindestens { $limit } m
+check-leg-through-control = Die Strecke führt { $metres } m { $stop_kind ->
+        [start] am Start
+        [finish] am Ziel
+        [crossing] an der Querungsstelle
+       *[control] am Posten
+    } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
+check-leg-out-of-bounds = Die Strecke quert das Sperrgebiet { $id }
+check-leg-forbidden-route = Die Strecke quert die verbotene Route { $id }
+check-leg-impassable = Die Strecke quert das Kartensymbol { $code }, das nicht überquert werden darf
 
 ## Kommandozeile
 
@@ -269,6 +299,12 @@ cli-info-course-unmeasured = Bahn { $name }: { $kind }, Länge noch nicht unters
 word-decimal-point = ,
 word-taped = abgeflaggt
 word-not-taped = nicht abgeflaggt
+word-place-event = die ganze Veranstaltung
+word-place-course = eine Bahn
+word-place-control = einen Posten
+word-place-controls = zwei oder mehr Posten
+word-place-leg = eine Strecke
+word-or = oder
 cli-edit-course-added = Bahn { $name } angelegt
 cli-edit-course-removed = Bahn { $name } entfernt
 cli-edit-course-controls = Bahn { $name } führt jetzt über { $codes }

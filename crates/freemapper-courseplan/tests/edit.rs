@@ -1,5 +1,6 @@
 //! Tests of the edit operations.
 
+use freemapper_courseplan::check::Place;
 use freemapper_courseplan::edit::*;
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
@@ -762,7 +763,10 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         matches!(unknown, EditError::UnknownRule { .. }),
         "{unknown:?}"
     );
-    let missing = refused(&mut e, acceptance("wkb2026.distance.min", &["99"], "n"));
+    let missing = refused(
+        &mut e,
+        acceptance("wkb2026.distance.min", &["31", "99"], "n"),
+    );
     assert_eq!(
         missing,
         EditError::NotFound {
@@ -803,7 +807,52 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         refused(&mut e, no_course),
         EditError::NotFound { what: "course", .. }
     ));
-    let blank = refused(&mut e, acceptance("wkb2026.distance.min", &["31"], "  "));
+    // Each key reports at its own kind of place: a distance finding at two controls, a map
+    // edge finding at one, a leg finding at a leg.
+    let mut at_course = acceptance("wkb2026.distance.min", &[], "n");
+    at_course.course = Some("A".to_owned());
+    assert_eq!(
+        refused(&mut e, at_course),
+        EditError::FindingWrongPlace {
+            rule: "wkb2026.distance.min".to_owned(),
+            place: Place::Course,
+            places: vec![Place::Controls],
+        }
+    );
+    let one = refused(&mut e, acceptance("wkb2026.distance.min", &["31"], "n"));
+    assert!(
+        matches!(
+            one,
+            EditError::FindingWrongPlace {
+                place: Place::Control,
+                ..
+            }
+        ),
+        "{one:?}"
+    );
+    let two = refused(&mut e, acceptance("wkb2026.map.edge", &["31", "32"], "n"));
+    assert!(
+        matches!(two, EditError::FindingWrongPlace { .. }),
+        "{two:?}"
+    );
+    let at_controls = refused(
+        &mut e,
+        acceptance("wkb2026.leg.through_forbidden_sprint", &["31", "32"], "n"),
+    );
+    assert!(
+        matches!(
+            at_controls,
+            EditError::FindingWrongPlace {
+                place: Place::Controls,
+                ..
+            }
+        ),
+        "{at_controls:?}"
+    );
+    let blank = refused(
+        &mut e,
+        acceptance("wkb2026.distance.min", &["31", "32"], "  "),
+    );
     assert!(matches!(blank, EditError::Invalid(_)), "{blank:?}");
     assert_eq!(e, before, "refused edits leave the event as it was");
 
@@ -813,6 +862,14 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         ok.legs = vec![leg_ref("A", after)];
         accept_finding(&mut e, &rules, ok).unwrap();
     }
+    // A start or finish is a place of a distance or map edge finding.
+    accept_finding(
+        &mut e,
+        &rules,
+        acceptance("wkb2026.distance.min", &["31", "S1"], "n"),
+    )
+    .unwrap();
+    accept_finding(&mut e, &rules, acceptance("wkb2026.map.edge", &["F1"], "n")).unwrap();
     // A start-capacity finding can sit at the event.
     accept_finding(
         &mut e,
@@ -820,7 +877,7 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
         acceptance("wkb2026.start.capacity", &[], "n"),
     )
     .unwrap();
-    assert_eq!(e.accepted_findings.len(), 3);
+    assert_eq!(e.accepted_findings.len(), 5);
 }
 
 fn leg_ref(course: &str, after: u32) -> LegRef {

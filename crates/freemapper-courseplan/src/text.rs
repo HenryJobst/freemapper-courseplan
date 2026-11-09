@@ -40,6 +40,7 @@ use unic_langid::LanguageIdentifier;
 
 use freemapper_courseplan_model::{ModelError, ProjectError};
 
+use crate::check::Place;
 use crate::course::CourseError;
 use crate::edit::EditError;
 use crate::init::InitError;
@@ -498,6 +499,30 @@ impl Localize for EditError {
                 "error-edit-finding-has-one-place",
                 &[("name", v(rule))],
             ),
+            EditError::FindingWrongPlace {
+                rule,
+                place,
+                places,
+            } => {
+                let word = |p: &Place| text(lang, &format!("word-place-{}", p.as_str()), &[]);
+                let words: Vec<String> = places.iter().map(word).collect();
+                let list = match words.split_last() {
+                    Some((last, rest)) if !rest.is_empty() => {
+                        let or = text(lang, "word-or", &[]);
+                        format!("{} {or} {last}", rest.join(", "))
+                    }
+                    _ => words.concat(),
+                };
+                text(
+                    lang,
+                    "error-edit-finding-wrong-place",
+                    &[
+                        ("name", v(rule)),
+                        ("place", v(word(place))),
+                        ("places", v(list)),
+                    ],
+                )
+            }
             EditError::AcceptedNotFound { rule } => {
                 text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
             }
@@ -681,6 +706,18 @@ mod tests {
             "reason",
             "doc",
             "section",
+            "first",
+            "first_kind",
+            "second",
+            "second_kind",
+            "first_symbol",
+            "second_symbol",
+            "metres",
+            "limit",
+            "stop",
+            "stop_kind",
+            "place",
+            "places",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -803,6 +840,7 @@ mod tests {
         for source in [
             include_str!("check/mod.rs"),
             include_str!("check/context.rs"),
+            include_str!("check/distance.rs"),
         ] {
             ids.extend(ids_in_source(source));
         }
@@ -830,6 +868,9 @@ mod tests {
             "class-name",
         ] {
             ids.insert(format!("word-name-{what}"));
+        }
+        for place in Place::ALL {
+            ids.insert(format!("word-place-{}", place.as_str()));
         }
         for kind in [
             "marked-route",
@@ -1060,6 +1101,11 @@ mod tests {
             },
             EditError::FindingHasOnePlace {
                 rule: s("wkb2026.distance.min"),
+            },
+            EditError::FindingWrongPlace {
+                rule: s("wkb2026.distance.min"),
+                place: Place::Course,
+                places: vec![Place::Controls],
             },
             EditError::AcceptedNotFound {
                 rule: s("wkb2026.distance.min"),

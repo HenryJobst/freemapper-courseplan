@@ -26,10 +26,10 @@ Plan M2b implements the checks one task at a time.
   controls never matches.
 - `accept_finding` refuses an unknown or inactive rule id, more than one place or more than one leg, a course,
   control or leg position that does not exist, and an acceptance without place for a rule key whose findings
-  never sit at the event. The check table marks the keys whose findings can sit there; for now only
-  `start_capacity`. Other place kinds are not checked per key yet, so `--course A` for a rule that reports at
-  controls is stored and never matches. Tasks 4 to 8 extend `Check` with the location kinds each key reports,
-  and accept then refuses the others. Stored controls and legs follow the key's order, and accepting the same
+  never sit at the event. Each entry of the check table names the place kinds its findings sit at
+  (`Check::places`: event, course, one control, two or more controls, leg), and accept refuses the others with
+  `FindingWrongPlace`, so `--course A` for the minimum distance is refused instead of stored where it never
+  matches. Keys whose check is still a stub allow every kind but the event, `start_capacity` the event too. Stored controls and legs follow the key's order, and accepting the same
   key again replaces the note.
 - The MCP `check` result gives each finding, accepted finding and skip with machine fields (rule, profile,
   severity, location as a tagged object, message id, arguments, source with document title and link) and the
@@ -38,8 +38,8 @@ Plan M2b implements the checks one task at a time.
 
 ## Consequences
 
-- Tasks 4 to 8 replace one stub line each in the check table, set `event_level` where their findings can sit
-  at the event, and add the location kinds of their key.
+- Tasks 4 to 8 replace one stub line each in the check table with `Check::at(key, run, places)`, which names
+  the place kinds of the key (Task 4 did this for the five distance keys, ADR 0027).
 - Cost if wrong: a reviewer who wants every filtered rule listed changes one condition in `run_key`.
 
 Source: plan M2b Task 3; controller rulings R2 and R4 and the rulings for Task 3, 2026-11-09.
