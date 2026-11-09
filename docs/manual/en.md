@@ -242,6 +242,34 @@ rules. `accept_finding` and `remove_accepted_finding` match `finding accept` and
 `class set`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you before it
 accepts one. You write the note or dictate it. The assistant should not invent one.
 
+## 9. Exchanging with Purple Pen
+
+For now the way in works only: `import` takes over a Purple Pen event (`.ppen`) drawn for the same map. The map
+must be an OOM file at the same scale as the event.
+
+```sh
+freemapper-courseplan init map.omap --ppen event.ppen
+freemapper-courseplan import project.courseplan.toml --ppen event.ppen
+```
+
+`init --ppen` creates a new project from the event. `import` fills an existing one. If the project already has
+controls, courses or special objects, `import` stops. With `--replace` it swaps them for the content of the
+event; classes and accepted findings stay. The project then stores the path of the `.ppen` relative to the project
+file.
+
+What arrives: controls with code, position and description (renumbered to the 2024 standard), individual courses
+with bends and marked routes, the number positions, out-of-bounds areas, dangerous areas, forbidden routes, first
+aid and water points. How the positions fit the map decides whether the y axis counts up or down.
+
+What does not arrive is listed as notes on the terminal after the import: variations and alternative controls,
+score courses, column F text in a description, descriptions on start and finish, and gaps in circles and legs. A
+map exchange becomes a bend. Courses with equal names get a number. The distance of a number from its circle is
+only approximate, the direction is exact. A symbol with no counterpart in the 2024 standard, such as the radio
+control, is missing from the description and named in the note.
+
+The AI assistant has the tool `import_ppen` for this, with `project`, `path` and `replace`. The decisions behind
+it are in ADR 0034.
+
 ## 10. Handing on: IOF XML for OE
 
 `export` passes the courses to scoring software that reads IOF XML 3.0:

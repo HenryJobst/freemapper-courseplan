@@ -17,7 +17,7 @@ the competition rules and hands them on to result software and to printing:
 
 Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
-`freemapper-text` for the program texts. The programs use them in a fixed version instead of copying the code.
+`freemapper-text` for the program texts, `freemapper-omap` for reading the map and `freemapper-course` for reading Purple Pen files. The programs use them in a fixed version instead of copying the code.
 
 Planned for the first version:
 
@@ -28,7 +28,7 @@ Planned for the first version:
 - checks against the German competition rules (WKB) 2026 with overlays for regional recommendations, such as
   control distances, acute and almost straight angles and enough different first controls for a compact start
   list, each with its source and with exceptions you can give reasons for (`check`, usable now);
-- exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side;
+- exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side (the import is usable now, `import`);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser, the command line or an AI assistant (MCP).
@@ -92,6 +92,13 @@ finished example is [`course-data.xml`](examples/luebeck-sprint/course-data.xml)
 is still open: nobody has imported the file there yet. Geo positions and taped legs are not written yet, and team,
 relay and score courses are skipped. Chapter 10 of the
 [user manual](docs/manual/en.md#10-handing-on-iof-xml-for-oe) has the details.
+
+`freemapper-courseplan init <map> --ppen <file>` and `freemapper-courseplan import <project> --ppen <file>` take over
+controls, descriptions, courses, bends, marked routes, number positions and special objects from a Purple Pen event
+drawn for the same map; the AI assistant has the tool `import_ppen`. What the model cannot hold, such as variations,
+score courses or gaps, the program names in a note. `import` replaces a project that already has content only with
+`--replace`; classes and accepted findings stay. The way back (export and sync) is still missing. Chapter 9 of the
+[user manual](docs/manual/en.md#9-exchanging-with-purple-pen) explains it.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

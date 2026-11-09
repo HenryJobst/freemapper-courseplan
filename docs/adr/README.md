@@ -77,3 +77,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0031](0031-number-placement-behind-the-circle-and-off-map-symbols.md) | Number placement behind the circle and off map symbols | Accepted | 2026-11-09 |
 | [0032](0032-number-gap-range-from-the-rule-profile.md) | The number gap range comes from the rule profile | Accepted | 2026-11-09 |
 | [0033](0033-iof-xml-export-writes-individual-courses-from-the-project.md) | IOF XML export writes individual courses from the project | Accepted | 2026-11-09 |
+| [0034](0034-ppen-import-uses-the-core-course-crate.md) | The .ppen import uses the core course crate | Accepted | 2026-11-09 |
