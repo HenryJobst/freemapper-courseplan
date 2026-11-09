@@ -125,6 +125,13 @@ pub(super) struct ProjectOnly {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ExportIofXml {
+    pub(super) project: String,
+    pub(super) path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddControl {
     pub(super) project: String,
     pub(super) at: Point,

@@ -62,18 +62,6 @@ struct CourseOut<'a> {
     stops: Vec<Stop>,
 }
 
-/// Map kind from the scale: the export has no map at hand, so the overprint sizes for the number
-/// position are chosen by the scale denominator.
-fn kind_for_scale(map_scale: u32) -> MapKind {
-    if map_scale >= 10_000 {
-        MapKind::Forest
-    } else if map_scale <= 1_500 {
-        MapKind::Schoolyard
-    } else {
-        MapKind::Sprint
-    }
-}
-
 /// Formats a number with at most two decimals, without trailing zeros and without `-0`.
 fn fmt(value: f64) -> String {
     let rounded = (value * 100.0).round() / 100.0;
@@ -99,7 +87,7 @@ fn kind_label(kind: &CourseKind) -> &'static str {
     }
 }
 
-fn special_id(special: &SpecialObject) -> Option<(&str, &str, &MapPoint)> {
+fn start_or_finish(special: &SpecialObject) -> Option<(&str, &str, &MapPoint)> {
     match special {
         SpecialObject::Start { id, map_mm } => Some(("Start", id, map_mm)),
         SpecialObject::Finish { id, map_mm } => Some(("Finish", id, map_mm)),
@@ -248,7 +236,7 @@ fn write_document(
                         position(w, "MapPositionBottomRight", 0.0, 0.0)
                     })?;
                     for special in &event.specials {
-                        if let Some((kind, id, at)) = special_id(special) {
+                        if let Some((kind, id, at)) = start_or_finish(special) {
                             control_element(w, kind, id, at)?;
                         }
                     }
@@ -280,7 +268,8 @@ fn write_document(
 
 /// Writes the individual courses of `event` as IOF XML 3.0 `CourseData`.
 ///
-/// `map_scale` is the scale denominator of the map, `created` an ISO 8601 date and time such as
+/// `map_scale` is the scale denominator and `map_kind` the kind of the map (it sets the overprint sizes
+/// for the number positions), `created` an ISO 8601 date and time such as
 /// `2026-11-09T12:00:00` for `createTime`. Team, relay and score courses are left out and named in
 /// [`IofXmlExport::skipped`].
 ///
@@ -289,14 +278,14 @@ fn write_document(
 pub fn export_iof_xml(
     event: &Event,
     map_scale: u32,
+    map_kind: MapKind,
     created: &str,
 ) -> Result<IofXmlExport, IofXmlError> {
-    let kind = kind_for_scale(map_scale);
     let mut courses = Vec::new();
     let mut skipped = Vec::new();
     for course in &event.courses {
         if matches!(course.kind, CourseKind::Individual { .. }) {
-            let out = plan_course(event, course, map_scale, kind).map_err(|source| {
+            let out = plan_course(event, course, map_scale, map_kind).map_err(|source| {
                 IofXmlError::Course {
                     course: course.name.clone(),
                     source,

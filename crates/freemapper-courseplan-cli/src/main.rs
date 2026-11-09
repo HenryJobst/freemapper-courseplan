@@ -3,6 +3,7 @@
 
 mod check_cmd;
 mod edit_cmd;
+mod export_cmd;
 mod mcp;
 
 use std::ffi::OsString;
@@ -51,6 +52,14 @@ enum Command {
     Info {
         /// The project file
         project: PathBuf,
+    },
+    /// Write the courses to a file for other programs
+    Export {
+        /// The project file
+        project: PathBuf,
+        /// Write the individual courses as IOF XML 3.0 CourseData
+        #[arg(long, value_name = "FILE")]
+        iof_xml: Option<PathBuf>,
     },
     /// Add, move, describe, number and remove controls
     Control {
@@ -190,6 +199,11 @@ fn localized_command(lang: &Lang) -> clap::Command {
         .mut_subcommand("info", |s| {
             s.about(t("cli-help-info"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
+        })
+        .mut_subcommand("export", |s| {
+            s.about(t("cli-help-export"))
+                .mut_arg("project", |a| with_help(a, "cli-arg-export-project"))
+                .mut_arg("iof_xml", |a| with_help(a, "cli-arg-export-iof-xml"))
         })
         .mut_subcommand("check", |s| {
             s.about(t("cli-help-check"))
@@ -368,6 +382,7 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
+        Command::Export { project, iof_xml } => export_cmd::export(&lang, &project, iof_xml),
         Command::Check { project, all } => check_cmd::check(&lang, project, all),
         Command::Finding { action } => check_cmd::finding(&lang, action),
         Command::Event { action } => check_cmd::event(&lang, action),
@@ -579,6 +594,7 @@ mod tests {
         ("main.rs", include_str!("main.rs")),
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
+        ("export_cmd.rs", include_str!("export_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
     ];

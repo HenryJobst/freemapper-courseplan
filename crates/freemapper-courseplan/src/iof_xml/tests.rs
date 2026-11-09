@@ -93,7 +93,9 @@ fn event() -> Event {
 }
 
 fn export(e: &Event) -> String {
-    export_iof_xml(e, 4000, CREATED).unwrap().xml
+    export_iof_xml(e, 4000, MapKind::Sprint, CREATED)
+        .unwrap()
+        .xml
 }
 
 fn count(haystack: &str, needle: &str) -> usize {
@@ -118,12 +120,23 @@ fn parse_names(xml: &str) -> Vec<String> {
 
 /// Text content of the first element with this name, entity references resolved.
 fn first_text(xml: &str, name: &str) -> String {
+    nth_text(xml, name, 0)
+}
+
+/// Text content of the `n`th (from 0) element with this name, entity references resolved.
+fn nth_text(xml: &str, name: &str, n: usize) -> String {
     let mut reader = Reader::from_str(xml);
     let mut inside = false;
+    let mut seen = 0;
     let mut text = String::new();
     loop {
         match reader.read_event().unwrap() {
-            Ev::Start(e) if !inside && e.name().as_ref() == name => inside = true,
+            Ev::Start(e) if !inside && e.name().as_ref() == name => {
+                if seen == n {
+                    inside = true;
+                }
+                seen += 1;
+            }
             Ev::Text(t) if inside => text.push_str(&t.xml10_content()),
             Ev::GeneralRef(r) if inside => {
                 let r = r.xml10_content();
@@ -300,6 +313,8 @@ fn names_are_escaped() {
     assert!(xml.contains("A &amp; B &lt;1&gt;"));
     parse_names(&xml);
     assert_eq!(first_text(&xml, "Name"), "A & B <1>");
+    assert_eq!(nth_text(&xml, "Name", 1), "Bahn <A>");
+    assert_eq!(first_text(&xml, "CourseName"), "Bahn <A>");
     assert_eq!(first_text(&xml, "ClassName"), "Anfänger");
 }
 
@@ -317,7 +332,7 @@ fn non_individual_courses_are_skipped_and_named() {
             },
         ),
     ];
-    let out = export_iof_xml(&e, 4000, CREATED).unwrap();
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap();
     assert_eq!(
         out.skipped,
         [SkippedCourse {
@@ -329,7 +344,7 @@ fn non_individual_courses_are_skipped_and_named() {
     assert!(!out.xml.contains("Team"));
 
     e.courses.remove(0);
-    let out = export_iof_xml(&e, 4000, CREATED).unwrap();
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap();
     assert_eq!(count(&out.xml, "<Course>"), 0);
     assert_eq!(out.skipped.len(), 1);
 }
@@ -338,7 +353,7 @@ fn non_individual_courses_are_skipped_and_named() {
 fn unknown_code_names_the_course() {
     let mut e = event();
     e.courses = vec![individual("Lang", &["99"])];
-    let err = export_iof_xml(&e, 4000, CREATED).unwrap_err();
+    let err = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap_err();
     assert!(matches!(&err, IofXmlError::Course { course, .. } if course == "Lang"));
     assert!(err.to_string().starts_with("course Lang: "));
 }
@@ -362,8 +377,15 @@ fn luebeck() -> Event {
 #[test]
 fn output_is_deterministic_and_matches_snapshot() {
     let e = luebeck();
-    let xml = export_iof_xml(&e, 4000, CREATED).unwrap().xml;
-    assert_eq!(xml, export_iof_xml(&e, 4000, CREATED).unwrap().xml);
+    let xml = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
+        .unwrap()
+        .xml;
+    assert_eq!(
+        xml,
+        export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
+            .unwrap()
+            .xml
+    );
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/snapshots/iof_xml_luebeck.xml"
@@ -388,7 +410,9 @@ fn output_validates_against_schema() {
     e.courses.push(individual("Leer", &[]));
     e.courses[1].start = "S1".to_owned();
     e.courses[1].finish = "F1".to_owned();
-    let xml = export_iof_xml(&e, 4000, CREATED).unwrap().xml;
+    let xml = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
+        .unwrap()
+        .xml;
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("out.xml");
     std::fs::write(&file, &xml).unwrap();

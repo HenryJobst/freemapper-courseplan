@@ -8,6 +8,7 @@ use clap::{ArgGroup, Subcommand, ValueEnum};
 use freemapper_courseplan::edit::{self, LegStart};
 use freemapper_courseplan::map::{MapIndex, map_kind};
 use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
+use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::rules::print_scale_of;
@@ -419,16 +420,19 @@ pub fn save(lang: &Lang, project: &mut ProjectFile) -> Outcome {
 /// The project's map.
 pub fn read_map(lang: &Lang, project: &ProjectFile) -> Result<MapDocument, Failure> {
     let map_path = project.map_path();
-    read_map_file(&map_path).map_err(|e| {
-        Failure::Error(text(
-            lang,
-            "error-init-map",
-            &[
-                ("path", v(map_path.display().to_string())),
-                ("source", v(e.localize(lang))),
-            ],
-        ))
-    })
+    read_map_file(&map_path).map_err(|e| Failure::Error(map_load_error(lang, &map_path, e)))
+}
+
+/// The text for a map that cannot be read.
+pub fn map_load_error(lang: &Lang, map_path: &Path, error: OmapError) -> String {
+    text(
+        lang,
+        "error-init-map",
+        &[
+            ("path", v(map_path.display().to_string())),
+            ("source", v(error.localize(lang))),
+        ],
+    )
 }
 
 /// The extent of the project's map, for checking points against it.

@@ -473,6 +473,19 @@ cli-event-profile-set-overlays = Regelprofil { $value } mit { $count ->
        *[other] den Aufsätzen
     } { $list } gesetzt
 
+## Exportbefehle
+
+cli-help-export = Die Bahnen für andere Programme in eine Datei schreiben
+cli-arg-export-project = Die Projektdatei
+cli-arg-export-iof-xml = Die Einzelbahnen als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben; eine vorhandene Datei wird ersetzt
+export-iof-xml-written = { $count ->
+    [one] 1 Bahn nach { $path } geschrieben
+   *[other] { $count } Bahnen nach { $path } geschrieben
+}
+export-iof-xml-skipped = { $course } ausgelassen: { $kind }n werden nicht nach IOF XML exportiert
+export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI
+error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
+
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
 cli-help-mcp = Das Bahnlegen über MCP auf stdin und stdout für KI-Assistenten anbieten
@@ -493,6 +506,7 @@ mcp-instructions =
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
 mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
+mcp-error-not-xml = { $path } ist keine XML-Datei. Die Exportdatei endet auf .xml
 mcp-error-project-parse = { $path } ist keine gültige Projektdatei. Das erste Problem liegt in Zeile { $line }, Spalte { $column }
 mcp-error-project-parse-nopos = { $path } ist keine gültige Projektdatei
 mcp-error-map-invalid = { $path } ist keine gültige OOM-Karte
@@ -538,8 +552,10 @@ mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akz
 mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren. Eine Strecke wird mit course und after angegeben. Entfernt wird zuerst der Eintrag für die Strecke, wie sie jetzt verläuft; gibt es keinen, alle Einträge an dieser Position, sodass sich ein Eintrag aus unmatched auch dann entfernen lässt, wenn sich seine Strecke oder Bahn geändert hat. Gibt die entfernten Einträge zurück.
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 mcp-tool-set-start-window = Das Startfenster der Veranstaltung setzen, die Minuten vom ersten bis zum letzten Start, mindestens 1. Die Prüfung der Startkapazität teilt die erwarteten Starter dadurch.
+mcp-tool-export-iof-xml = Die Einzelbahnen der Veranstaltung als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben. Erwartet project und path, die zu schreibende Datei mit der Endung .xml; eine vorhandene Datei wird ersetzt. Gibt path, courses (die Zahl der geschriebenen Bahnen) und skipped zurück, die ausgelassenen Mannschafts-, Staffel- und Score-Bahnen mit name und kind.
 
 mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
+mcp-param-export-iof-xml-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .xml
 mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
 mcp-param-map = Die OOM-Karte (Sprint oder Schulhof), ein absoluter Pfad oder einer mit ~ am Anfang
 mcp-param-title = Titel der Veranstaltung [Standard: der Titel in freemapper.toml neben der Karte, sonst der Kartenname]
