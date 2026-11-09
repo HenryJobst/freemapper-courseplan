@@ -6,6 +6,16 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- A test reads the IOF XML export (the Lübeck example and an event with a crossing point) back through the IOF
+  reader of freemapper-course and compares controls, positions, courses, order of stops and number positions.
+
+### Changed
+
+- The documentation now states what is verified: the export passes the IOF schema and reads back. An import into
+  OE, Purple Pen or Condes has not been tested, because nobody on the project has OE (ADR 0033, addendum).
+
 ## [0.6.0] - 2026-11-09
 
 ### Added
