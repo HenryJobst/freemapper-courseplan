@@ -4,7 +4,7 @@
 
 Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zuerst. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
-## Unveröffentlicht
+## [0.3.0] - 2026-11-09
 
 ### Hinzugefügt
 
@@ -14,12 +14,13 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 ### Geändert
 
 - Die automatische Platzierung setzt eine Postennummer hinter den Kreis, in Verlängerung der Strecke, die zum
-  Posten führt. Läuft die weiterführende Strecke dort entlang (fast gerader Winkel), steht die Nummer außen, an
+  Posten führt. Läuft die weiterführende Strecke dort entlang (fast gestreckter Winkel), steht die Nummer außen, an
   der Spitze des Winkels. Die Nummer deckt keine Punkt- und Liniensymbole der Karte ab, solange ein freier Platz
   bleibt; Flächen und Nordlinien (Symbol 601) darf sie überdecken. Strecken, Kreise und andere Nummern zählen
   stärker als Kartensymbole. Ist der bevorzugte Platz belegt, nimmt die Platzierung den freien Platz mit der
   geringsten Abweichung, in Schritten von 15°; die Richtung ist auf 0,1° gerundet. Neu gesetzte Nummern stehen
-  daher oft anders als bisher (ADR 0031). freemapper-print baut dieselben Regeln in sein gemeinsames Platzierungsmodul ein.
+  daher oft anders als bisher (ADR 0031). freemapper-print baut dieselben Regeln in sein gemeinsames
+  Platzierungsmodul ein.
 - Der Abstand einer Postennummer (`--gap`, `gap_mm`) zählt jetzt ab der Außenkante der Kreislinie und meint
   den kürzesten Abstand zum Nummernfeld, in jeder Richtung. Bisher zählte er ab der Mitte der Kreislinie, und
   schräg zum Kreis stand die Nummer weiter weg als angegeben. freemapper-print rechnet ab seinem M3 genauso.
