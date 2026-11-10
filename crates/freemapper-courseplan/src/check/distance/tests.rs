@@ -457,6 +457,27 @@ fn sheet_objects_do_not_widen_the_map_edge() {
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
 }
 
+#[test]
+fn a_scale_bar_south_of_a_control_does_not_hide_the_map_edge() {
+    let e = event(&[("31", 148.0, 20.0)], vec![course("A", &["31"])]);
+    let bar = furniture(
+        area_object(
+            AREA_520,
+            &[(0.0, 80.0), (30.0, 80.0), (30.0, 85.0), (0.0, 85.0)],
+        ),
+        "scale-bar",
+    );
+    let base = furniture(
+        area_object(
+            AREA_520,
+            &[(-90.0, -90.0), (190.0, -90.0), (190.0, 90.0), (-90.0, 90.0)],
+        ),
+        "base",
+    );
+    let r = report(&e, &framed(vec![bar, base]), vec![edge_rule()]);
+    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
+}
+
 // ---------------------------------------------------------------------------------------------
 // leg_through_control
 

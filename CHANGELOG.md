@@ -6,6 +6,20 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.3] - 2026-11-10
+
+### Behoben
+
+- Der Maßstabsbalken und die Grundfläche, die freemapper 0.9.0 in die Karte schreibt (`freemapper:source=scale-bar`
+  und `base`), zählen nicht mehr als Kartenobjekte und verschieben den Kartenrand nicht mehr. Die Prüfung
+  `map_edge` findet Posten am südlichen Rand wieder.
+
+### Geändert
+
+- Die Kartenart kommt zuerst aus `map_kind` in der `freemapper.toml` neben der Karte, danach aus dem Namen des
+  Symbolsatzes (Groß- und Kleinschreibung egal) und dem Maßstab, wie freemapper-print sie bestimmt. Ein
+  unbekannter Wert oder eine fehlerhafte Datei wird übergangen, nicht gemeldet (ADR 0038).
+
 ## [0.7.2] - 2026-11-10
 
 ### Behoben

@@ -94,10 +94,15 @@ pub(crate) fn area_object(symbol_id: u32, points: &[(f64, f64)]) -> MapObject {
 }
 
 /// The object tagged as content of the map sheet, which the map index leaves out.
-pub(crate) fn sheet(mut object: MapObject) -> MapObject {
+pub(crate) fn sheet(object: MapObject) -> MapObject {
+    furniture(object, "sheet")
+}
+
+/// The object tagged `freemapper:source=<source>` (`sheet`, `scale-bar` or `base`).
+pub(crate) fn furniture(mut object: MapObject, source: &str) -> MapObject {
     object
         .tags
-        .push(("freemapper:source".to_owned(), "sheet".to_owned()));
+        .push(("freemapper:source".to_owned(), source.to_owned()));
     object
 }
 

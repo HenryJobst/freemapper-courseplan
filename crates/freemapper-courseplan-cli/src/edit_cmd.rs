@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use clap::{ArgGroup, Subcommand, ValueEnum};
 use freemapper_courseplan::edit::{self, LegStart};
-use freemapper_courseplan::map::{MapIndex, map_kind};
+use freemapper_courseplan::map::{MapIndex, map_kind_for_file};
 use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
@@ -1051,19 +1051,20 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                     let rules = crate::check_cmd::rule_set(lang, &file.event)?;
                     numbers::gap_range(
                         &rules,
-                        map_kind(&doc),
+                        map_kind_for_file(&doc, &file.map_path()),
                         file.event.event.discipline,
                         print_scale_of(course, doc.georef.scale_denominator),
                     )
                 }
                 None => numbers::GapRange::FIXED,
             };
+            let kind = map_kind_for_file(&doc, &file.map_path());
             let placed = numbers::place_numbers(
                 &mut file.event,
                 &name,
                 &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
-                map_kind(&doc),
+                kind,
                 gaps,
                 overwrite,
             )

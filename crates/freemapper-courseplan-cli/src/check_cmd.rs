@@ -6,9 +6,10 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 use freemapper_courseplan::check::{
-    CheckReport, Finding, Location, Skipped, check_event, source_text,
+    CheckReport, Finding, Location, Skipped, check_event_as, source_text,
 };
 use freemapper_courseplan::edit::{self, Accepted};
+use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::rules::{RuleSet, Severity, load_rule_set};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{AcceptedFinding, ControlCode, Event, LegRef, ProjectFile};
@@ -91,7 +92,12 @@ pub fn check(lang: &Lang, project: PathBuf, all: bool) -> Outcome {
     let file = load(lang, &project)?;
     let rules = rule_set(lang, &file.event)?;
     let map = read_map(lang, &file)?;
-    let report = check_event(&file.event, &map, &rules);
+    let report = check_event_as(
+        &file.event,
+        &map,
+        map_kind_for_file(&map, &file.map_path()),
+        &rules,
+    );
     for line in report_lines(lang, &file.event, &rules, &report, all) {
         println!("{line}");
     }
