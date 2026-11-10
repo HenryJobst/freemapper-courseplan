@@ -161,13 +161,14 @@ pub fn import_ppen_as(
     Ok(import)
 }
 
-/// The box around every object coordinate of the map (map mm), grown by the margin the fit allows for
+/// The box around every object coordinate of the map without the sheet furniture (scale bar, base area; map mm), grown by the margin the fit allows for
 /// controls; `None` for a map without objects.
 fn map_bounds(map: &MapDocument) -> Option<Bounds> {
     let mut coords = map
         .parts
         .iter()
         .flat_map(|p| &p.objects)
+        .filter(|o| !crate::map::is_sheet_furniture(&o.tags))
         .flat_map(|o| &o.coords);
     let first = coords.next()?;
     let (mut lo, mut hi) = ((first.x, first.y), (first.x, first.y));
