@@ -21,9 +21,7 @@ fn objects_in_parts(path: &str) -> usize {
 }
 
 fn is_sheet(o: &freemapper_courseplan::omap::MapObject) -> bool {
-    o.tags
-        .iter()
-        .any(|(k, v)| k == "freemapper:source" && v == "sheet")
+    freemapper_courseplan::map::is_sheet_furniture(&o.tags)
 }
 
 #[test]

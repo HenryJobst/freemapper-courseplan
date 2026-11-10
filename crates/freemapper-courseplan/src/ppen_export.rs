@@ -64,7 +64,7 @@ use crate::map::{MapKind, map_kind};
 use crate::numbers::{circle_outer_radius_mm, number_box_mm};
 use crate::omap::MapDocument;
 use crate::ppen_import::{DIRECTIONS, iof_2024};
-use crate::ppen_import::{PpenImport, PpenImportError, import_ppen};
+use crate::ppen_import::{PpenImport, PpenImportError};
 
 /// The project mapped onto a Purple Pen event, with what the mapping left out or changed.
 #[derive(Debug, Clone, PartialEq)]
@@ -185,7 +185,19 @@ pub fn export_ppen(
     map: &MapDocument,
     target: Target<'_>,
 ) -> Result<PpenExport, PpenExportError> {
-    let kind = map_kind(map);
+    export_ppen_as(event, map, map_kind(map), target)
+}
+
+/// Like [`export_ppen`], with the map kind decided by the caller (see `map_kind_for_file`).
+///
+/// # Errors
+/// As [`export_ppen`].
+pub fn export_ppen_as(
+    event: &Event,
+    map: &MapDocument,
+    kind: MapKind,
+    target: Target<'_>,
+) -> Result<PpenExport, PpenExportError> {
     let map_scale = map.georef.scale_denominator;
     // Project names of starts, finishes and crossing points paired by their order, by the base file's name.
     let mut back: HashMap<String, String> = HashMap::new();
@@ -223,7 +235,7 @@ pub fn export_ppen(
         }
         Some(bytes) => {
             let base = crate::ppen_import::read(bytes)?;
-            let import = import_ppen(bytes, map)?;
+            let import = crate::ppen_import::import_ppen_as(bytes, map, kind)?;
             let renames = if target.linked {
                 HashMap::new()
             } else {
