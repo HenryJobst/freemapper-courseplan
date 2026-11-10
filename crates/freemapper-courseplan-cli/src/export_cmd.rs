@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use freemapper_courseplan::init::link_from_project;
-use freemapper_courseplan::iof_xml::{IofXmlError, SkippedCourse, export_iof_xml};
+use freemapper_courseplan::iof_xml::{IofXmlError, MapGrid, SkippedCourse, export_iof_xml};
 use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
@@ -25,6 +25,8 @@ use crate::import_cmd::{ReadFileError, read_course_file};
 pub(crate) struct ExportReport {
     pub(crate) courses: usize,
     pub(crate) skipped: Vec<SkippedCourse>,
+    /// The controls carry a geographic `Position`; false when the map has no usable georeferencing.
+    pub(crate) geo_positions: bool,
 }
 
 /// Why an export failed. The caller turns it into text, because the MCP server words project and
@@ -118,10 +120,12 @@ pub(crate) fn export_iof_xml_file(
     created: &str,
 ) -> Result<ExportReport, ExportError> {
     let (file, doc) = open_inputs(project, target)?;
+    let grid = MapGrid::of(&doc.georef).ok();
     let exported = export_iof_xml(
         &file.event,
         doc.georef.scale_denominator,
         map_kind_for_file(&doc, &file.map_path()),
+        grid.as_ref(),
         created,
     )
     .map_err(ExportError::Course)?;
@@ -129,6 +133,7 @@ pub(crate) fn export_iof_xml_file(
     Ok(ExportReport {
         courses: file.event.courses.len() - exported.skipped.len(),
         skipped: exported.skipped,
+        geo_positions: exported.geo_positions,
     })
 }
 
@@ -358,6 +363,9 @@ pub(crate) fn export(
                     ],
                 )
             );
+        }
+        if !report.geo_positions {
+            println!("{}", text(lang, "export-iof-xml-no-geo", &[]));
         }
         println!(
             "{}",

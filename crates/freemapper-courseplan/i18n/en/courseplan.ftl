@@ -492,6 +492,7 @@ export-iof-xml-written = { $count ->
    *[other] wrote { $count } courses to { $path }
 }
 export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
+export-iof-xml-no-geo = the map has no usable georeferencing, so the controls carry no latitude and longitude, only map positions
 export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE or --ppen FILE
 error-export-iof-xml-course = cannot export course { $course }: { $source }
 error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file

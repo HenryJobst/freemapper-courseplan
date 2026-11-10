@@ -97,7 +97,7 @@ fn event() -> Event {
 }
 
 fn export(e: &Event) -> String {
-    export_iof_xml(e, 4000, MapKind::Sprint, CREATED)
+    export_iof_xml(e, 4000, MapKind::Sprint, None, CREATED)
         .unwrap()
         .xml
 }
@@ -336,7 +336,7 @@ fn non_individual_courses_are_skipped_and_named() {
             },
         ),
     ];
-    let out = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap();
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap();
     assert_eq!(
         out.skipped,
         [SkippedCourse {
@@ -348,7 +348,7 @@ fn non_individual_courses_are_skipped_and_named() {
     assert!(!out.xml.contains("Team"));
 
     e.courses.remove(0);
-    let out = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap();
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap();
     assert_eq!(count(&out.xml, "<Course>"), 0);
     assert_eq!(out.skipped.len(), 1);
 }
@@ -357,7 +357,7 @@ fn non_individual_courses_are_skipped_and_named() {
 fn unknown_code_names_the_course() {
     let mut e = event();
     e.courses = vec![individual("Lang", &["99"])];
-    let err = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED).unwrap_err();
+    let err = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap_err();
     assert!(matches!(&err, IofXmlError::Course { course, .. } if course == "Lang"));
     assert!(err.to_string().starts_with("course Lang: "));
 }
@@ -368,6 +368,22 @@ fn numbers_are_short_and_never_negative_zero() {
     assert_eq!(fmt(1200.0), "1200");
     assert_eq!(fmt(4.875), "4.88");
     assert_eq!(fmt(-20.5), "-20.5");
+}
+
+fn luebeck_grid() -> freemapper_course::MapGrid {
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/maps/luebeck.omap"
+    );
+    let doc = crate::omap::read::read_map_file(std::path::Path::new(path)).unwrap();
+    freemapper_course::MapGrid::of(&doc.georef).expect("the Lübeck map is georeferenced")
+}
+
+fn luebeck_xml() -> String {
+    let grid = luebeck_grid();
+    export_iof_xml(&luebeck(), 4000, MapKind::Sprint, Some(&grid), CREATED)
+        .unwrap()
+        .xml
 }
 
 fn luebeck() -> Event {
@@ -381,15 +397,14 @@ fn luebeck() -> Event {
 #[test]
 fn output_is_deterministic_and_matches_snapshot() {
     let e = luebeck();
-    let xml = export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
-        .unwrap()
-        .xml;
-    assert_eq!(
-        xml,
-        export_iof_xml(&e, 4000, MapKind::Sprint, CREATED)
+    let grid = luebeck_grid();
+    let write = || {
+        export_iof_xml(&e, 4000, MapKind::Sprint, Some(&grid), CREATED)
             .unwrap()
             .xml
-    );
+    };
+    let xml = write();
+    assert_eq!(xml, write());
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/snapshots/iof_xml_luebeck.xml"
@@ -443,6 +458,12 @@ fn output_validates_against_schema() {
     e.courses.push(individual("Leer", &[]));
     e.courses[1].start = "S1".to_owned();
     e.courses[1].finish = "F1".to_owned();
+    let grid = luebeck_grid();
+    let with_geo = export_iof_xml(&e, 4000, MapKind::Sprint, Some(&grid), CREATED)
+        .unwrap()
+        .xml;
+    assert!(with_geo.contains("<Position "));
+    assert_valid(&with_geo);
     assert_valid(&export(&e));
 }
 
@@ -507,7 +528,9 @@ fn kind_of(event: &Event, code: &str) -> freemapper_course::ControlKind {
 }
 
 fn assert_reads_back(e: &Event, map_scale: u32, map_kind: MapKind) {
-    let xml = export_iof_xml(e, map_scale, map_kind, CREATED).unwrap().xml;
+    let xml = export_iof_xml(e, map_scale, map_kind, None, CREATED)
+        .unwrap()
+        .xml;
     let raw =
         freemapper_course::read_iof_xml(xml.as_bytes()).expect("the reader accepts our export");
     assert_eq!(
@@ -663,4 +686,90 @@ fn only_non_individual_courses_read_back_as_zero_courses() {
     )];
     let raw = freemapper_course::read_iof_xml(export(&e).as_bytes()).unwrap();
     assert!(raw.courses.is_empty());
+}
+
+#[test]
+fn controls_carry_a_position_when_the_map_is_georeferenced() {
+    let xml = luebeck_xml();
+    let lines: Vec<&str> = xml.lines().map(str::trim).collect();
+    let controls: Vec<usize> = (0..lines.len())
+        .filter(|&i| lines[i].starts_with("<Control type="))
+        .collect();
+    assert!(controls.len() > 3);
+    for i in controls {
+        assert!(lines[i + 1].starts_with("<Id>"), "{}", lines[i + 1]);
+        let pos = lines[i + 2];
+        assert!(pos.starts_with("<Position lat=\""), "{pos}");
+        assert!(
+            lines[i + 3].starts_with("<MapPosition "),
+            "{}",
+            lines[i + 3]
+        );
+        // lat="53.866…" lng="10.68…" with exactly six decimals.
+        let values: Vec<&str> = pos.split('"').skip(1).step_by(2).collect();
+        assert_eq!(values.len(), 2, "{pos}");
+        for v in values {
+            assert_eq!(v.split('.').nth(1).map(str::len), Some(6), "{pos}");
+        }
+    }
+    assert_eq!(count(&xml, "<Position "), count(&xml, "<MapPosition "));
+}
+
+#[test]
+fn geo_positions_read_back_to_the_map_position() {
+    let e = luebeck();
+    let grid = luebeck_grid();
+    let xml = luebeck_xml();
+    let raw = freemapper_course::read_iof_xml(xml.as_bytes()).unwrap();
+    for c in &e.controls {
+        let r = raw.controls.iter().find(|r| r.code == c.code.0).unwrap();
+        let (lat, lng) = r.geo.expect("the control has a position");
+        let (x, y) = grid.map_mm_of(lat, lng);
+        assert!(
+            (x - c.map_mm.x).abs() < 0.01 && (y - c.map_mm.y).abs() < 0.01,
+            "control {}: ({x}, {y}) against ({}, {})",
+            c.code.0,
+            c.map_mm.x,
+            c.map_mm.y
+        );
+    }
+}
+
+#[test]
+fn east_and_north_increase_lng_and_lat() {
+    let grid = luebeck_grid();
+    let mut e = event();
+    // East is x to the right; north is y towards the top of the paper, so y decreases.
+    e.controls = vec![
+        ctrl("31", 100.0, 100.0, ControlKind::Control),
+        ctrl("32", 140.0, 60.0, ControlKind::Control),
+    ];
+    e.courses = vec![individual("A", &["31", "32"])];
+    let xml = export_iof_xml(&e, 4000, MapKind::Sprint, Some(&grid), CREATED)
+        .unwrap()
+        .xml;
+    let raw = freemapper_course::read_iof_xml(xml.as_bytes()).unwrap();
+    let geo = |code: &str| {
+        raw.controls
+            .iter()
+            .find(|c| c.code == code)
+            .unwrap()
+            .geo
+            .unwrap()
+    };
+    let (a, b) = (geo("31"), geo("32"));
+    assert!(b.0 > a.0, "lat {a:?} {b:?}");
+    assert!(b.1 > a.1, "lng {a:?} {b:?}");
+}
+
+#[test]
+fn no_position_without_georef() {
+    let mut e = event();
+    e.courses = vec![individual("A", &["31", "32"])];
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap();
+    assert!(!out.xml.contains("<Position "));
+    assert!(!out.geo_positions);
+    let grid = luebeck_grid();
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, Some(&grid), CREATED).unwrap();
+    assert!(out.geo_positions);
 }

@@ -11,38 +11,47 @@
     </Map>
     <Control type="Start">
       <Id>S1</Id>
+      <Position lat="53.866407" lng="10.681114"/>
       <MapPosition x="-97.4" y="-3.6" unit="mm"/>
     </Control>
     <Control type="Finish">
       <Id>F1</Id>
+      <Position lat="53.864253" lng="10.680921"/>
       <MapPosition x="-95.8" y="56.4" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>31</Id>
+      <Position lat="53.866272" lng="10.683981"/>
       <MapPosition x="-50.1" y="-3.6" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>32</Id>
+      <Position lat="53.868153" lng="10.684374"/>
       <MapPosition x="-47.8" y="-56.3" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>33</Id>
+      <Position lat="53.868125" lng="10.686201"/>
       <MapPosition x="-17.8" y="-57.9" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>34</Id>
+      <Position lat="53.866448" lng="10.686987"/>
       <MapPosition x="-1.2" y="-12.4" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>35</Id>
+      <Position lat="53.865715" lng="10.685242"/>
       <MapPosition x="-28.2" y="10.2" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>36</Id>
+      <Position lat="53.864444" lng="10.683594"/>
       <MapPosition x="-52.4" y="47.6" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>37</Id>
+      <Position lat="53.865073" lng="10.681495"/>
       <MapPosition x="-88.2" y="32.9" unit="mm"/>
     </Control>
     <Course>
