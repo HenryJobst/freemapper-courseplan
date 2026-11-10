@@ -6,6 +6,14 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+- Der Export nach Purple Pen schreibt nur Beschreibungssymbole, die der Standard der Datei kennt, etwa 2.10 nicht
+  in eine Datei von 2004, und nennt das ausgelassene Symbol (ADR 0037).
+- Dasselbe Merkmal in den Spalten D und E über einer Kreuzung oder Einmündung in Spalte F wird als
+  Variante `single` geschrieben. Die Richtungen `0.1` und `0.2` werden vereinheitlicht, 9.1 und 9.3 stehen als
+  `9.1high` und `9.3high` in der Datei, mit Hinweis.
+
 ### Geändert
 
 - Die Nummernlage kommt jetzt aus `freemapper-course` (0.6.0), derselben Suche, die freemapper-print nutzt. Die

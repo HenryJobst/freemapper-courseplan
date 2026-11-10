@@ -6,6 +6,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Fixed
+
+- The Purple Pen export writes only description symbols that the standard of the file knows, such as 2.10 not
+  into a 2004 file, and says which symbol it left out (ADR 0037).
+- The same feature in columns D and E over a crossing or junction in column F is written as the variant
+  `single`. Directions `0.1` and `0.2` are normalised, and 9.1 and 9.3 are written as `9.1high` and
+  `9.3high` with a note.
+
 ### Changed
 
 - Number placement now comes from `freemapper-course` (0.6.0), the same search freemapper-print uses. Positions
