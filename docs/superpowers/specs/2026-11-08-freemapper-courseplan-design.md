@@ -358,8 +358,9 @@ Claude's call.)*
   Open conflicts write nothing, also not the clean part *(Claude's call)*. `--take SIDE` settles all conflicts for one
   call; `--take KEY=SIDE` and the MCP tool `resolve_sync_conflict` store a decision that holds while both values stay
   the same. `--dry-run` writes nothing. Write order: `.ppen`, project, base copy; an interrupted sync converges or
-  is repaired on the next run. Known limit: central number placements are written into every course that visits
-  the control.
+  is repaired on the next run. A number placement that Purple Pen leaves automatic stays automatic: the central
+  placement moves onto the other visits. Purple Pen must be closed during a sync; a later save from an open
+  Purple Pen would drop what the sync added (manual, ADR 0040).
 - **Not in scope.** Live editing by several people at the same moment. Sync is a step someone runs.
 
 ### 5.5b IOF XML 3.0 export
@@ -524,9 +525,9 @@ The builder may start the editor earlier if placing controls through the CLI tur
   freemapper-print and not yet agreed; without it a sync that swaps two codes and renames a course is refused
   (ADR 0040).
 - **`.ppen` export in Purple Pen 4.0** (§5.5): the export is tested by reading it back with the core reader and
-  by byte-identical re-export of three Purple Pen files. It has not been opened in Purple Pen 4.0 yet. The
-  author is asked to open `examples/luebeck-sprint/luebeck-sprint.ppen` and report; core plan Task 6 waits for
-  a Purple Pen 4.0 file to commit. freemapper-print is to be told that the export exists *(agreed with
+  by byte-identical re-export of three Purple Pen files. The author opened the export in Purple Pen 4.0 on
+  2026-11-10 without an error *(user)*; the Purple Pen 4.0 files of the Lübeck example are fixtures
+  (`tests/fixtures/ppen/`). freemapper-print is to be told that the export exists *(agreed with
   freemapper-print)*.
 
 ## 10. Left to the builder

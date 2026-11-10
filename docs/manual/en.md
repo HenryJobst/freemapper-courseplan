@@ -322,7 +322,12 @@ freemapper-courseplan sync project.courseplan.toml
 
 `sync` merges the project with its linked `.ppen` in both directions. The project must be linked first, through
 `export --ppen FILE` or `import --ppen FILE`; without a link, `sync` stops and says so. Run it whenever you switch
-between the two programs, and close the file in Purple Pen first, so that Purple Pen does not save over the result.
+between the two programs.
+
+> **Warning: close the event in Purple Pen before you run `sync`, and reopen it afterwards.** Purple Pen keeps the
+> event in memory. If it is still open when `sync` writes the `.ppen`, its next save drops everything `sync` added.
+> The following `sync` then sees those objects as deleted in Purple Pen and deletes them from the project, without a
+> conflict. When unsure, run `--dry-run` first; it writes nothing.
 
 **The base copy.** `sync` compares three versions of every field: the file as the last sync left it, the file now and
 the project now. It keeps the first one beside the project file as `X.courseplan.ppen-base` (for `event.courseplan.toml`
@@ -347,13 +352,19 @@ course at different places, both land.
 
 **Conflicts.** A field that both sides changed differently is a conflict, and so is deleting an object on one side
 while the other edited it. A course that Purple Pen deletes while the project has classes on it is a conflict as
-well, because the classes would go with it. `sync` prints each conflict with its key and three values:
+well, because the classes would go with it. `sync` prints each conflict with its key and three values. Here control 34
+was moved to the right in the project and to the left in Purple Pen:
 
 ```text
+Sync with out.ppen.
+Changes to Purple Pen: 0
+Changes into the project: 0
+Changed the same way on both sides: 0
 control/34/position differs.
-  Base: -50.100, -3.600 mm
-  Project: -49.100, -3.600 mm
-  Purple Pen: -50.100, -2.000 mm
+Base: -1.200, -12.400 mm
+Project: -1.000, -12.400 mm
+Purple Pen: -1.400, -12.400 mm
+1 conflict is still open. Nothing was synced. Pick a side for all of them with --take ours or --take theirs, or for one conflict with --take KEY=ours or --take KEY=theirs.
 ```
 
 While a conflict is open, `sync` writes nothing, not even the changes without conflict, and exits with 1. You settle
@@ -378,11 +389,12 @@ a note says so.
 
 **What stays only in courseplan.** Classes, expected starters, accepted findings, print areas, team, relay and score
 courses, marked routes in special objects and forbidden routes with several points never reach Purple Pen, and
-`sync` never touches them. Team, relay and score courses are named in a note ("not written to Purple Pen"). The
-reverse also holds: what the import skips, such as variations and gaps in circles, stays in the `.ppen` as it is.
-A renamed control or course in Purple Pen is carried along into accepted findings, legs and the course lists of
-special objects. One thing you may notice: the project holds one central number position per control, so `sync`
-can write a `number-location` line into courses that visit that control and that nobody edited.
+`sync` never touches them. A note names each team, relay and score course, for example `note: not written to Purple
+Pen: left out T: team courses are not exported to Purple Pen`. The reverse also holds: what the import skips, such as
+variations and gaps in circles, stays in the `.ppen` as it is. A renamed control or course in Purple Pen is carried
+along into accepted findings, legs and the course lists of special objects. If Purple Pen leaves a number position
+automatic or resets it to automatic, that stays automatic in the project. If one side removes a leg while the other
+bends it, the removal wins and a note says so.
 
 **Refusals.** `sync` refuses, and writes nothing, if the `.ppen` comes from a Purple Pen version it does not know,
 if the linked file does not exist, or if the writer could not match an object of the file to the merged project. The

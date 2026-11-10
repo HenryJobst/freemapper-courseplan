@@ -333,8 +333,12 @@ freemapper-courseplan sync projekt.courseplan.toml
 
 `sync` führt das Projekt und die verknüpfte `.ppen` in beide Richtungen zusammen. Das Projekt muss vorher verknüpft
 sein, mit `export --ppen DATEI` oder `import --ppen DATEI`; ohne Verknüpfung bricht `sync` ab und sagt das. Starte
-es jedes Mal, wenn du zwischen den beiden Programmen wechselst, und schließe die Datei vorher in Purple Pen, damit
-Purple Pen das Ergebnis nicht überschreibt.
+es jedes Mal, wenn du zwischen den beiden Programmen wechselst.
+
+> **Warnung: Schließe das Event in Purple Pen, bevor du `sync` startest, und öffne es danach neu.** Purple Pen hält
+> das Event im Speicher. Ist es noch offen, wenn `sync` die `.ppen` schreibt, verwirft sein nächstes Speichern alles,
+> was `sync` hinzugefügt hat. Der folgende `sync` sieht diese Objekte dann als in Purple Pen gelöscht und löscht sie
+> ohne Konflikt auch aus dem Projekt. Bist du unsicher, starte zuerst `--dry-run`; der schreibt nichts.
 
 **Die Basiskopie.** `sync` vergleicht jedes Feld in drei Fassungen: die Datei, wie der letzte Abgleich sie
 hinterlassen hat, die Datei jetzt und das Projekt jetzt. Die erste Fassung liegt als `X.courseplan.ppen-base` neben
@@ -362,13 +366,18 @@ einer Bahn verschiedene Posten ein, bleiben beide Einfügungen.
 **Konflikte.** Ein Feld, das beide Seiten verschieden geändert haben, ist ein Konflikt. Ebenso, wenn eine Seite ein
 Objekt löscht, das die andere bearbeitet hat. Löscht Purple Pen eine Bahn, auf der das Projekt Kategorien hat, ist
 das auch ein Konflikt, weil die Kategorien mit verschwänden. `sync` gibt jeden Konflikt mit seinem Schlüssel und drei
-Werten aus:
+Werten aus. Hier wurde Posten 34 im Projekt nach rechts und in Purple Pen nach links verschoben:
 
 ```text
+Abgleich mit out.ppen.
+Änderungen nach Purple Pen: 0
+Änderungen ins Projekt: 0
+Auf beiden Seiten gleich geändert: 0
 control/34/position weicht ab.
-  Basis: -50.100, -3.600 mm
-  Projekt: -49.100, -3.600 mm
-  Purple Pen: -50.100, -2.000 mm
+Basis: -1.200, -12.400 mm
+Projekt: -1.000, -12.400 mm
+Purple Pen: -1.400, -12.400 mm
+1 Konflikt ist noch offen. Es wurde nichts abgeglichen. Mit --take ours oder --take theirs wählst du für alle eine Seite, mit --take SCHLÜSSEL=ours oder --take SCHLÜSSEL=theirs für einen einzelnen Konflikt.
 ```
 
 Solange ein Konflikt offen ist, schreibt `sync` nichts, auch nicht die Änderungen ohne Konflikt, und endet mit
@@ -394,12 +403,13 @@ der `.ppen`, wenn eine Bahn dort ihn noch anläuft, auch wenn das Projekt ihn ge
 
 **Was nur in courseplan bleibt.** Kategorien, erwartete Starter, akzeptierte Befunde, Druckbereiche, Mannschafts-,
 Staffel- und Score-Bahnen, abgeflaggte Strecken als Sonderobjekte und verbotene Routen mit mehreren Punkten kommen nie
-nach Purple Pen, und `sync` rührt sie nicht an. Mannschafts-, Staffel- und Score-Bahnen nennt ein Hinweis („nicht nach
-Purple Pen geschrieben"). Umgekehrt bleibt in der `.ppen` unverändert, was der Import auslässt, etwa Varianten und
-Lücken in Kreisen. Ein in Purple Pen umbenannter Posten oder eine umbenannte Bahn wird in akzeptierten Befunden,
-Strecken und den Bahnlisten der Sonderobjekte nachgezogen. Eines kann auffallen: Das Projekt kennt je Posten nur eine
-zentrale Nummernlage, deshalb kann `sync` eine Zeile `number-location` in Bahnen schreiben, die den Posten anlaufen
-und die niemand bearbeitet hat.
+nach Purple Pen, und `sync` rührt sie nicht an. Ein Hinweis nennt jede Mannschafts-, Staffel- und Score-Bahn, zum
+Beispiel `Hinweis: nicht nach Purple Pen geschrieben: T ausgelassen: Bahnart Mannschaftsbahn wird nicht nach Purple
+Pen exportiert`. Umgekehrt bleibt in der `.ppen` unverändert, was der Import auslässt, etwa Varianten und Lücken in
+Kreisen. Ein in Purple Pen umbenannter Posten oder eine umbenannte Bahn wird in akzeptierten Befunden, Strecken und
+den Bahnlisten der Sonderobjekte nachgezogen. Lässt Purple Pen eine Nummernlage automatisch oder setzt sie auf
+automatisch zurück, bleibt sie auch im Projekt automatisch. Entfernt eine Seite eine Strecke, deren Verlauf die andere
+ändert, gewinnt das Entfernen, und ein Hinweis sagt das.
 
 **Ablehnungen.** `sync` lehnt ab und schreibt nichts, wenn die `.ppen` aus einer unbekannten Purple-Pen-Version
 stammt, wenn die verknüpfte Datei fehlt oder wenn der Schreiber ein Objekt der Datei dem zusammengeführten Projekt
