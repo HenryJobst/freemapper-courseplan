@@ -8,6 +8,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Behoben
 
+- Automatisch gesetzte Nummern speichern ihre Richtung wieder in Zehntelgrad. Vorher stand bei etwa jeder
+  siebten Nummer ein Wert wie `102.39999999999998` statt `102.4` in der Projektdatei (ADR 0036).
 - Der Export nach Purple Pen schreibt die Variante `single` in das richtige Feld. Dasselbe Merkmal in den
   Spalten D und E über einer Kreuzung oder Einmündung in Spalte F steht jetzt als `single` in Spalte F.
 - Der Export lässt Beschreibungssymbole aus, die der Standard der Datei nicht kennt, etwa 2.10 in einer Datei von

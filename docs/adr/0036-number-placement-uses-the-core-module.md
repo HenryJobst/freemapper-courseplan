@@ -22,7 +22,8 @@ Both sides ran the same 33 cases before the switch.
   piece with half width 0.15 mm. All are tier `MapSymbol` and carry the index of their feature as label, so a
   feature counts once however many pieces it has, as before. Areas and magnetic north lines (601 and its
   sub-codes) give none (ruling R5). The conversion runs once per `auto_place`, not per control
-  *(Claude's call)*.
+  *(Claude's call)*. That follows from the code structure: `map_obstacles` is called once, before the call
+  into core, and no test would catch a call per control.
 - **Types.** `numbers::GapRange` is core's type (fields `min` and `max`, `GapRange::DEFAULT` replaces
   `GapRange::FIXED`); `normalize_direction` is core's function. `MAX_GAP_MM` is the upper limit of
   `GAP_LIMITS_MM` *(Claude's call)*.
@@ -36,6 +37,17 @@ Both sides ran the same 33 cases before the switch.
   - D1, D3, D5 and D6 give no difference in practice.
 - **Positions in the example.** `example_auto_placements_are_unchanged` passes without regeneration. No control
   of `luebeck-sprint` moves.
+- **Directions are rounded here.** Core's `candidate` rounds `preferred + 15 * k` to 0.1 degrees and wraps
+  the result into `[0, 360)` afterwards, so a candidate past 360 degrees picks up float noise: 462.4 becomes
+  102.39999999999998. The position is the one that was tested, but the stored value breaks the promise of
+  ADR 0031 (directions in steps of 0.1 degrees). `auto_place` therefore rounds every newly placed direction
+  with `(d * 10).round() / 10` and normalises afterwards, so 360.0 becomes 0.0. Kept numbers are not
+  touched. This is a workaround. The fix belongs in core, which should normalise first and round second;
+  that changes `candidate` by a few ulps and needs the agreement of freemapper-print. Until core does
+  that, the rounding here stays.
+- **Tests adapted.** Two tests died with the private `Rank` type. `overprint_conflicts_weigh_more_than_map_symbols`
+  is covered in core by `overprint_outranks_map_symbols`. `gap_rank_prefers_smaller_gap` is covered by the
+  shared case `gap_range_moves_out_before_turning`, which runs here too.
 - **Harness.** The allow-list `KNOWN_DISAGREEMENTS` in `tests/placement_cases.rs` is empty. The harness still
   fails when a listed case agrees.
 

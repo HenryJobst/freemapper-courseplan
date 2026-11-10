@@ -283,7 +283,14 @@ fn run(case: &Case) -> Vec<Option<NumberPlacement>> {
         true,
     )
     .expect("auto_place");
-    // auto_place returns the numbered controls only; crossing points get None.
+    // auto_place returns the numbered controls only; crossing points get None. A wrong count means
+    // auto_place numbered a crossing point or skipped a control.
+    assert_eq!(
+        placed.len(),
+        stops.iter().filter(|s| !s.crossing).count(),
+        "{}: one placement per numbered stop",
+        case.name
+    );
     let mut numbered = placed.into_iter();
     stops
         .iter()
@@ -356,7 +363,7 @@ fn placement_cases_match_expected() {
     }
     for case in &file.case {
         let Some(expected) = &case.expected else {
-            continue;
+            panic!("{}: no expected values", case.name);
         };
         let diff = differences(case, expected);
         let known = KNOWN_DISAGREEMENTS.iter().find(|(n, _)| *n == case.name);
@@ -494,7 +501,120 @@ fn example_auto_placements_are_unchanged() {
     }
 }
 
-/// Times the old placement on a large map. Run in release mode:
+/// Stored directions are whole tenths of a degree, bit for bit: `102.4`, not `102.39999999999998`
+/// (ADR 0031, ADR 0036). Core wraps a candidate past 360 degrees after rounding it, so courseplan
+/// rounds the directions it finds. A kept number comes back untouched.
+fn is_whole_tenth(d: f64) -> bool {
+    (0.0..360.0).contains(&d) && (d * 10.0).round() / 10.0 == d
+}
+
+#[test]
+fn automatic_directions_are_whole_tenths_in_the_cases() {
+    let mut automatic = 0;
+    for case in &load().case {
+        let stops = expand(case);
+        for (k, (stop, got)) in stops.iter().zip(run(case)).enumerate() {
+            let Some(got) = got else { continue };
+            if let Some(kept) = stop.kept {
+                assert_eq!(
+                    got.direction.to_bits(),
+                    kept.direction.to_bits(),
+                    "{} stop {k}: a kept direction stays as it is",
+                    case.name
+                );
+            } else {
+                assert!(
+                    is_whole_tenth(got.direction),
+                    "{} stop {k}: direction {:?}",
+                    case.name,
+                    got.direction
+                );
+                automatic += 1;
+            }
+        }
+    }
+    assert!(automatic > 50, "{automatic} automatic placements");
+}
+
+#[test]
+fn automatic_directions_are_whole_tenths_in_generated_courses() {
+    // Crowded courses, so that many candidates are blocked and the search walks around the circle,
+    // past 360 degrees. A deterministic pseudo-random walk makes the stops and the map symbols.
+    let mut seed: u64 = 987_654_321;
+    let mut next = move || {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        ((seed >> 33) as f64) / f64::from(1u32 << 31)
+    };
+    let mut automatic = 0;
+    let mut wrapped = 0;
+    for round in 0..12 {
+        let n = 4 + round % 6;
+        let stops: Vec<Stop> = (0..n)
+            .map(|_| Stop {
+                at: (next() * 40.0, next() * 40.0),
+                crossing: false,
+                kept: None,
+                bends: Vec::new(),
+            })
+            .collect();
+        let points: Vec<Pt> = (0..80).map(|_| (next() * 40.0, next() * 40.0)).collect();
+        let lines: Vec<Vec<Pt>> = (0..12)
+            .map(|_| {
+                let a = (next() * 40.0, next() * 40.0);
+                vec![a, (a.0 + next() * 10.0 - 5.0, a.1 + next() * 10.0 - 5.0)]
+            })
+            .collect();
+        let scale = if round % 2 == 0 { 4000 } else { 10_000 };
+        let kind = if round % 2 == 0 {
+            MapKind::Sprint
+        } else {
+            MapKind::Forest
+        };
+        let event = event_of(&stops, (0.0, 0.0), (40.0, 40.0), &[]);
+        let index = MapIndex::from_document(&map_document(scale, &points, &lines));
+        let placed = auto_place(
+            &event,
+            &event.courses[0],
+            &index,
+            scale,
+            kind,
+            gap_range_of_one_rule(None, None),
+            false,
+        )
+        .expect("auto_place");
+        for p in placed {
+            assert!(
+                is_whole_tenth(p.direction),
+                "round {round}: {:?}",
+                p.direction
+            );
+            wrapped += usize::from(p.direction < 90.0);
+            automatic += 1;
+        }
+    }
+    assert!(
+        automatic > 50 && wrapped > 0,
+        "{automatic} placements, {wrapped} low"
+    );
+}
+
+#[test]
+fn example_directions_are_whole_tenths() {
+    let table: toml::Table = example_text().parse().expect("toml");
+    let mut count = 0;
+    for course in table["course"].as_array().expect("courses") {
+        for p in course["placements"].as_array().expect("placements") {
+            let d = p["direction"].as_float().expect("direction");
+            assert!(is_whole_tenth(d), "{}: {d:?}", course["name"]);
+            count += 1;
+        }
+    }
+    assert!(count > 0);
+}
+
+/// Times the placement on a large map. Run in release mode:
 /// `cargo test --release -p freemapper-courseplan --test placement_cases -- --ignored --nocapture large_map_timing`.
 #[test]
 #[ignore = "timing, run in release mode"]

@@ -8,6 +8,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Fixed
 
+- Automatically placed numbers store their direction in tenths of a degree again. Before, about every seventh
+  number showed a value like `102.39999999999998` instead of `102.4` in the project file (ADR 0036).
 - The Purple Pen export writes the variant `single` into the right box. The same feature in columns D and E over
   a crossing or junction in column F now comes out as `single` in column F.
 - The export leaves out description symbols that the standard of the file does not have, such as 2.10 in a 2004

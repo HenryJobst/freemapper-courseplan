@@ -95,7 +95,8 @@ pub enum ExportNote {
         id: String,
     },
     /// A symbol the file's description standard lacks, left out: the 2018 symbols 2.10 and 15.6, say, in a
-    /// 2004 file. `standard` is the file's, `"2004"` or `"2018"`.
+    /// 2004 file. `standard` is the one the export used: the file's `"2004"`, `"2018"` or `"2024"`, and
+    /// `"2018"` for any other value.
     SymbolNotInStandard {
         control: String,
         column: char,
@@ -867,7 +868,7 @@ fn raw_special(
 /// A thin wrapper on [`core_columns`]: it turns the description into the column array and the file's
 /// standard string into a [`Standard`]. The core mapping does not know the control kind, so the wrapper
 /// keeps the instruction rows (15.x, 16.x) out of column C of a normal control, as `write_ppen` does; only a
-/// crossing point or a finish keeps them there.
+/// crossing point keeps them there.
 pub(crate) fn ppen_columns(
     d: &ControlDescription,
     standard: &str,
@@ -900,6 +901,12 @@ pub(crate) fn ppen_columns(
 /// The export note for what the core mapping reported about one symbol of `control`.
 fn export_note(control: &str, standard: &str, note: ColumnNote) -> ExportNote {
     let control = control.to_owned();
+    // Name the standard `ppen_columns` used, which is 2018 for a value it does not know.
+    let standard = if Standard::from_description(standard).is_some() {
+        standard.trim()
+    } else {
+        "2018"
+    };
     match note {
         ColumnNote::Refused {
             column,

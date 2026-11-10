@@ -261,6 +261,23 @@ fn symbol_of_2018_in_a_2004_base_is_refused_and_noted() {
 }
 
 #[test]
+fn note_names_the_standard_the_export_used() {
+    let refused = || ColumnNote::Refused {
+        column: 'D',
+        id: "2.10".to_owned(),
+        reason: Refusal::NotInStandard(Standard::Iof2004),
+    };
+    let standard_of = |file: &str| match export_note("31", file, refused()) {
+        ExportNote::SymbolNotInStandard { standard, .. } => standard,
+        other => panic!("unexpected note {other:?}"),
+    };
+    assert_eq!(standard_of("2004"), "2004");
+    assert_eq!(standard_of("2024"), "2024");
+    // An unknown value is exported as 2018, so the note says 2018.
+    assert_eq!(standard_of("1999"), "2018");
+}
+
+#[test]
 fn plain_height_is_written_as_high_and_noted() {
     let mut ev = event(&[("31", 10.0, 10.0)], vec![]);
     ev.controls[0].description = ControlDescription {
