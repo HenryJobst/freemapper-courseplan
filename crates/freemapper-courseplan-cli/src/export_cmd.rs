@@ -38,7 +38,7 @@ pub(crate) enum ExportError {
     Map(PathBuf, OmapError),
     Course(IofXmlError),
     /// The export to the `.ppen` at the path failed; nothing was written.
-    Ppen(PathBuf, PpenExportError),
+    Ppen(PathBuf, Box<PpenExportError>),
     /// The existing Purple Pen event to patch cannot be read.
     ReadTarget(PathBuf, ReadFileError),
     /// The target is the project file or the map, which the export would overwrite.
@@ -219,7 +219,7 @@ pub(crate) fn export_ppen_file(
             lang: &lang_code,
         },
     )
-    .map_err(|e| ExportError::Ppen(target.to_path_buf(), e))?;
+    .map_err(|e| ExportError::Ppen(target.to_path_buf(), Box::new(e)))?;
     write_atomic(target, &exported.text).map_err(ExportError::Project)?;
     let mut ids_stored = 0;
     let linked_now = linked && !linked_file;
