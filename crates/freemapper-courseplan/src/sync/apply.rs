@@ -517,6 +517,31 @@ impl<'a> Ctx<'a> {
         course.finish = new_finish;
     }
 
+    /// The model has one central placement per control and cannot say "automatic in this course" while the
+    /// control has one. When Purple Pen shows a stop automatically, the central placement moves onto every
+    /// other visit of the control that has none, and the control keeps none (I1). `except` is the course
+    /// index and the 1-based visit that stays without one.
+    fn demote_central(&mut self, code: &str, except: Option<(usize, usize)>) {
+        let Some(&i) = self.control_pos.get(code) else {
+            return;
+        };
+        let Some(central) = self.ev.controls.get_mut(i).and_then(|c| c.number.take()) else {
+            return;
+        };
+        for (ci, course) in self.ev.courses.iter_mut().enumerate() {
+            let CourseKind::Individual { controls } = &mut course.kind else {
+                continue;
+            };
+            let mut visit = 0;
+            for cc in controls.iter_mut().filter(|cc| cc.code.0 == code) {
+                visit += 1;
+                if cc.number.is_none() && except != Some((ci, visit)) {
+                    cc.number = Some(central.clone());
+                }
+            }
+        }
+    }
+
     /// Adds a course of the Purple Pen side, without classes. Its stops are translated to the project's
     /// names.
     fn add_course(&mut self, id: usize, theirs: &Course) {
@@ -551,6 +576,7 @@ impl<'a> Ctx<'a> {
             course.finish = n;
         }
         if let CourseKind::Individual { controls } = &mut course.kind {
+            // What each stop shows in Purple Pen: its own placement, else the control's.
             let mut out = Vec::new();
             for cc in controls.iter() {
                 let ti = self.theirs_by_code.get(&cc.code.0).copied();
@@ -561,15 +587,27 @@ impl<'a> Ctx<'a> {
                     continue;
                 };
                 let mut cc = cc.clone();
+                let shown = cc
+                    .number
+                    .clone()
+                    .or_else(|| ti.and_then(|i| self.v.theirs.controls[i].number.clone()));
                 cc.code = ControlCode(code.clone());
+                // I1: a stop Purple Pen places automatically must not pick up another course's placement.
+                if shown.is_none() {
+                    self.demote_central(&code, None);
+                }
+                cc.number = shown;
+                out.push(cc);
+            }
+            // A placement equal to the control's central one is stored as "central".
+            for cc in &mut out {
                 let central = self
                     .control_pos
-                    .get(&code)
+                    .get(&cc.code.0)
                     .and_then(|&i| self.ev.controls[i].number.as_ref());
-                if cc.number.as_ref() == central {
+                if central.is_some() && cc.number.as_ref() == central {
                     cc.number = None;
                 }
-                out.push(cc);
             }
             *controls = out;
         }
@@ -880,12 +918,14 @@ pub fn apply(
                         let Some(code) = cx.ctl[control].clone() else {
                             continue;
                         };
+                        // I1: automatic in Purple Pen here, so no central placement may reach this visit.
+                        if placement.is_none() {
+                            cx.demote_central(&code, Some((ci, visit as usize)));
+                        }
                         let central = cx
-                            .ev
-                            .controls
-                            .iter()
-                            .find(|c| c.code.0 == code)
-                            .and_then(|c| c.number.clone());
+                            .control_pos
+                            .get(&code)
+                            .and_then(|&i| cx.ev.controls[i].number.clone());
                         let value = placement.and_then(|(d, g)| {
                             let n = NumberPlacement {
                                 direction: d as f64 / 100.0,

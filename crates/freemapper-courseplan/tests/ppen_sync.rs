@@ -472,14 +472,9 @@ fn real_purple_pen_4_edits_merge() {
         vec![r#"<location x="-50.1" y="3.6" />"#.to_owned()],
         "{new:?}"
     );
-    // Besides the two edits, course B's stops get the number placements of the project's controls: the
-    // model has one central placement per control, and Purple Pen's automatic placement is not in it.
-    let extra: Vec<_> = new
-        .iter()
-        .filter(|l| !l.starts_with("<location") && !l.starts_with("<description"))
-        .collect();
+    // I1: course B was added by Purple Pen without pinned numbers; the sync pins none for it.
     assert!(
-        extra.iter().all(|l| l.starts_with("<number-location")),
+        new.iter().all(|l| !l.starts_with("<number-location")),
         "{new:?}"
     );
     assert!(new.iter().any(|l| l.starts_with("<location x=\"-49.1")));
@@ -829,13 +824,12 @@ fn with_many_additions(base: &str, controls: u32, courses: u32, stops: u32) -> S
     out
 }
 
-/// I2: classify and apply used to scan every field and every course per leg (88 s on 10,000 controls).
-#[test]
-fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
+/// Syncs a Purple Pen file that adds `controls` controls and `courses` courses of 50 stops; returns the time.
+fn time_large_addition(controls: u32, courses: u32) -> std::time::Duration {
     use freemapper_courseplan::ppen_import::import_ppen_as;
     let (map, kind) = luebeck_map();
     let base = fixture("luebeck-sprint-pp4-unchanged.ppen");
-    let theirs = with_many_additions(&base, 9_990, 999, 50);
+    let theirs = with_many_additions(&base, controls, courses, 50);
     let import = import_ppen_as(base.as_bytes(), &map, kind).unwrap();
     let project = common::valid_event(&import);
     let started = std::time::Instant::now();
@@ -851,10 +845,27 @@ fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
     .unwrap();
     let elapsed = started.elapsed();
     let (merged, _, _, _) = ready(Ok(plan));
-    assert_eq!(merged.courses.len(), project.courses.len() + 999);
+    assert_eq!(
+        merged.courses.len(),
+        project.courses.len() + courses as usize
+    );
+    elapsed
+}
+
+/// I2: classify and apply used to scan every field and every course per leg (88 s on 10,000 controls). The
+/// size fits a plain debug build; doubling it must stay far from quadratic.
+#[test]
+fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
+    let small = time_large_addition(1_500, 150);
+    let large = time_large_addition(3_000, 300);
     assert!(
-        elapsed < std::time::Duration::from_secs(15),
-        "sync took {elapsed:?}"
+        large < std::time::Duration::from_secs(25),
+        "sync took {large:?}"
+    );
+    let floor = std::time::Duration::from_millis(200);
+    assert!(
+        large.as_secs_f64() < 3.5 * small.max(floor).as_secs_f64(),
+        "t(n) = {small:?}, t(2n) = {large:?}"
     );
 }
 
@@ -887,4 +898,70 @@ fn a_skipped_course_named_like_a_modeled_one_still_keeps_its_control() {
         report.notes
     );
     assert!(ppen.expect("the file changes").contains("<code>36</code>"));
+}
+
+/// The changed pp4 file with course B's stop at control 4 pinned like course A's, in the layout of `text`.
+fn with_pinned_b_stop(text: &str) -> String {
+    let eol = if text.contains("\r\n") { "\r\n" } else { "\n" };
+    let at = format!("<next course-control=\"15\" />{eol}");
+    let pin = format!("    <number-location x=\"0.24777585\" y=\"5.675\" />{eol}");
+    let mut out = String::new();
+    let (head, tail) = text.split_once(&at).expect("course-control 14");
+    out.push_str(head);
+    out.push_str(&at);
+    out.push_str(&format!("    {}", pin.trim_start()));
+    out.push_str(tail);
+    out
+}
+
+/// I1: Purple Pen resets one course's number to automatic; the sync keeps it automatic there and keeps the
+/// other course's placement, now and on every later sync.
+#[test]
+fn a_number_reset_to_automatic_in_purple_pen_sticks() {
+    use freemapper_courseplan::ppen_import::import_ppen_as;
+    let (map, kind) = luebeck_map();
+    let theirs = fixture("luebeck-sprint-pp4-changed.ppen");
+    let base = with_pinned_b_stop(&theirs);
+    let import = import_ppen_as(base.as_bytes(), &map, kind).unwrap();
+    let project = common::valid_event(&import);
+    let run = |project: &Event, base: &str| {
+        ready(sync_ppen(SyncInput {
+            project,
+            base: Some(base.as_bytes()),
+            theirs: theirs.as_bytes(),
+            map: &map,
+            kind,
+            take: &[],
+            base_note: None,
+        }))
+    };
+    let (merged, ppen, written_base, _) = run(&project, &base);
+    // The file is Purple Pen's own: nothing to write.
+    assert!(ppen.is_none(), "{:?}", ppen.map(|p| line_diff(&theirs, &p)));
+    let numbers = |e: &Event, course: &str, code: &str| {
+        let c = e.courses.iter().find(|c| c.name == course).unwrap();
+        let CourseKind::Individual { controls } = &c.kind else {
+            panic!()
+        };
+        let cc = controls.iter().find(|cc| cc.code.0 == code).unwrap();
+        cc.number.clone().or(e
+            .controls
+            .iter()
+            .find(|c| c.code.0 == code)
+            .unwrap()
+            .number
+            .clone())
+    };
+    assert!(
+        numbers(&merged, "A", "32").is_some(),
+        "A keeps its placement"
+    );
+    assert!(numbers(&merged, "B", "32").is_none(), "B is automatic");
+    // A second sync changes nothing.
+    let mut again = merged.clone();
+    again.sync = None;
+    let (m2, p2, _, report) = run(&again, &written_base);
+    assert!(p2.is_none());
+    assert!(report.changes.is_empty(), "{:?}", report.changes);
+    assert!(numbers(&m2, "B", "32").is_none());
 }

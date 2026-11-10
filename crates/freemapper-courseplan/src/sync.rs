@@ -293,6 +293,68 @@ fn unmatched<'a>(
     .collect()
 }
 
+/// The keys of the number placements taken from Purple Pen that the written file does not show again.
+fn numbers_lost(
+    outcomes: &[FieldOutcome],
+    sides: &HashMap<String, freemapper_courseplan_model::Side>,
+    names: &apply::AppliedNames,
+    read_back: &crate::ppen_import::PpenImport,
+    v: &Views,
+    m: &Matching,
+) -> Vec<String> {
+    use freemapper_courseplan_model::{CourseKind, Side};
+    let mut courses: HashMap<&str, usize> = HashMap::new();
+    for (i, c) in read_back.courses.iter().enumerate() {
+        courses.entry(c.name.as_str()).or_insert(i);
+    }
+    let mut lost = Vec::new();
+    for o in outcomes {
+        let FieldKey::Course(cid, fields::CourseField::Number { control, visit }) = o.key else {
+            continue;
+        };
+        let taken = match o.pick {
+            Pick::Theirs => true,
+            Pick::Conflict => sides.get(&conflict_key(o, v, m)) == Some(&Side::Theirs),
+            _ => false,
+        };
+        let Some(FieldValue::Number(expected)) = o.theirs.as_ref().filter(|_| taken) else {
+            continue;
+        };
+        let (Some(Some(course)), Some(Some(code))) =
+            (names.courses.get(cid), names.controls.get(control))
+        else {
+            continue;
+        };
+        let shown = courses
+            .get(course.as_str())
+            .map(|&i| &read_back.courses[i])
+            .and_then(|c| match &c.kind {
+                CourseKind::Individual { controls } => controls
+                    .iter()
+                    .filter(|cc| &cc.code.0 == code)
+                    .nth((visit as usize).saturating_sub(1))
+                    .map(|cc| {
+                        let central = read_back
+                            .controls
+                            .iter()
+                            .find(|k| &k.code.0 == code)
+                            .and_then(|k| k.number.as_ref());
+                        cc.number.as_ref().or(central).map(|n| {
+                            (
+                                (n.direction * 100.0).round() as i64,
+                                (n.gap_mm * 100.0).round() as i64,
+                            )
+                        })
+                    }),
+                _ => None,
+            });
+        if shown.is_some_and(|got| got != *expected) {
+            lost.push(conflict_key(o, v, m));
+        }
+    }
+    lost
+}
+
 /// Merges the project with the linked `.ppen` by a three-way merge (D3 to D12), writes the result onto the
 /// linked file with the patch export and reads it back to check it.
 ///
@@ -483,8 +545,13 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
     store_ids(&mut event, &written.ids);
 
     // Verify: the result reads back, and the merged project and the written file agree.
-    import_ppen_as(written.text.as_bytes(), map, kind)
+    let read_back = import_ppen_as(written.text.as_bytes(), map, kind)
         .map_err(|e| SyncError::Verify(vec![e.to_string()]))?;
+    // Every number placement taken from Purple Pen must read back from the written file as it was (I1).
+    let lost = numbers_lost(&outcomes, &resolution.sides, &names, &read_back, &v, &m);
+    if !lost.is_empty() {
+        return Err(SyncError::Verify(lost));
+    }
     let check = views(
         &event,
         Some(written.text.as_bytes()),
