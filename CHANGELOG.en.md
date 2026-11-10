@@ -6,6 +6,15 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-11-10
+
+### Fixed
+
+- `export --ppen` wrote courses that Purple Pen 4.0 refused to open: `<options>` lacked the required attribute
+  `description-kind`. Files written by 0.7.0 load again after the next export onto them. freemapper-core 0.4.1
+  checks everything the writer produces against the attributes Purple Pen's loader requires. The example
+  `luebeck-sprint.ppen` is regenerated.
+
 ## [0.7.0] - 2026-11-10
 
 ### Added

@@ -6,6 +6,15 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.1] - 2026-11-10
+
+### Behoben
+
+- `export --ppen` schrieb Bahnen, die Purple Pen 4.0 nicht öffnete: In `<options>` fehlte das Pflichtattribut
+  `description-kind`. Dateien aus 0.7.0 lassen sich nach dem nächsten Export darauf wieder laden. freemapper-core
+  0.4.1 prüft alles, was der Writer schreibt, gegen die Attribute, die Purple Pens Lader verlangt. Das Beispiel
+  `luebeck-sprint.ppen` ist neu erzeugt.
+
 ## [0.7.0] - 2026-11-10
 
 ### Hinzugefügt

@@ -308,8 +308,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-course"
-version = "0.4.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
+version = "0.4.1"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.1#035545012f2ff20f97760eecc2283b8f3c6c7fb8"
 dependencies = [
  "freemapper-omap",
  "quick-xml",
@@ -319,7 +319,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "freemapper-course",
  "freemapper-courseplan-model",
@@ -334,7 +334,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-cli"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "clap",
  "dirs",
@@ -351,7 +351,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-model"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "serde",
  "tempfile",
@@ -362,8 +362,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-omap"
-version = "0.4.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
+version = "0.4.1"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.1#035545012f2ff20f97760eecc2283b8f3c6c7fb8"
 dependencies = [
  "quick-xml",
  "thiserror",
@@ -371,8 +371,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-rules"
-version = "0.4.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
+version = "0.4.1"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.1#035545012f2ff20f97760eecc2283b8f3c6c7fb8"
 dependencies = [
  "thiserror",
  "toml",
@@ -380,8 +380,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-text"
-version = "0.4.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
+version = "0.4.1"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.1#035545012f2ff20f97760eecc2283b8f3c6c7fb8"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",
