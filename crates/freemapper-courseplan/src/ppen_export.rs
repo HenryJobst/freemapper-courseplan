@@ -65,6 +65,8 @@ use freemapper_courseplan_model::{
     NumberPlacement, SpecialObject,
 };
 
+pub use freemapper_course::Deletions;
+
 use crate::map::{MapKind, map_kind};
 use crate::numbers::{circle_outer_radius_mm, number_box_mm};
 use crate::omap::MapDocument;
@@ -189,6 +191,8 @@ pub struct Target<'a> {
     pub map_path: String,
     /// The language of the descriptions of a new file, such as "de".
     pub lang: &'a str,
+    /// Objects of the base file to delete, by Purple Pen id (the sync's deletions; empty for an export).
+    pub delete: Deletions,
 }
 
 /// Writes the project's courses as a Purple Pen event: into `target.base`, keeping everything the
@@ -286,7 +290,7 @@ pub fn export_ppen_as(
             };
             let overlaid = overlay::overlay(mapped, event, &base, &import, &frame)?;
             let options = PatchOptions {
-                delete: Default::default(),
+                delete: target.delete.clone(),
                 ids_from_base: target.linked,
             };
             let written = write_ppen_patch(bytes, &overlaid.event, &options)?;
@@ -395,7 +399,7 @@ fn base_standard(base: &RawEvent, bytes: &[u8]) -> String {
 /// import, and not one of them pairs by name, the k-th of the project is the k-th of the import, in file
 /// order, the order in which the import gives the names *(controller's ruling)*. The kind is left alone
 /// when a counterpart name is in use in the project for something else.
-fn kth_renames(event: &Event, import: &PpenImport) -> HashMap<String, String> {
+pub(crate) fn kth_renames(event: &Event, import: &PpenImport) -> HashMap<String, String> {
     let starts = |specials: &[SpecialObject], start: bool| -> Vec<String> {
         specials
             .iter()

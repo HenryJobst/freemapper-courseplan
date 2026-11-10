@@ -13,7 +13,7 @@ use freemapper_courseplan::check::check_event_as;
 use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::omap::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::ppen_export::{Target, export_ppen};
+use freemapper_courseplan::ppen_export::{Deletions, Target, export_ppen};
 use freemapper_courseplan::ppen_import::import_ppen;
 use freemapper_courseplan::rules::load_rule_set;
 use freemapper_courseplan_model::{Course, CourseKind, Event};
@@ -43,6 +43,7 @@ fn export_onto(event: &Event, map: &MapDocument, base: &[u8]) -> String {
         linked: true,
         map_path: "../maps/luebeck.omap".to_owned(),
         lang: "en",
+        delete: Deletions::default(),
     };
     export_ppen(event, map, target).unwrap().text
 }

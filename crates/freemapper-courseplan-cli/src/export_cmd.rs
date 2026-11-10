@@ -12,7 +12,7 @@ use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_export::{
-    ExportIds, ExportNote, PpenExportError, Target, export_ppen_as,
+    Deletions, ExportIds, ExportNote, PpenExportError, Target, export_ppen_as,
 };
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
 use freemapper_courseplan_model::{ControlCode, Event, ProjectError, ProjectFile, write_atomic};
@@ -223,6 +223,7 @@ pub(crate) fn export_ppen_file(
             linked,
             map_path,
             lang: &lang_code,
+            delete: Deletions::default(),
         },
     )
     .map_err(|e| ExportError::Ppen(target.to_path_buf(), Box::new(e)))?;
