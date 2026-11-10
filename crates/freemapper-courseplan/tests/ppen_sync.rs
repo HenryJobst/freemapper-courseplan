@@ -306,7 +306,7 @@ fn new_control_never_takes_over_a_fresh_ppen_id() {
 // which the writer kept an object the merge modeled. Swapped codes and a renamed course in one sync land
 // as a delete plus a new course, never as a second, ghost course.
 #[test]
-fn writer_keeping_a_modeled_object_refuses() {
+fn swapped_codes_and_a_renamed_course_land_without_a_ghost_course() {
     use freemapper_courseplan::edit::{rename_control, rename_course};
     use freemapper_courseplan_model::ControlCode;
     let s = setup();
@@ -316,16 +316,12 @@ fn writer_keeping_a_modeled_object_refuses() {
     rename_control(&mut ours, &code("32"), &code("31"));
     rename_control(&mut ours, &code("tmp"), &code("32"));
     rename_course(&mut ours, "A", "Lang");
-    match s.run(&ours, &s.base, &[]) {
-        Err(SyncError::Unmatched(_)) => {}
-        Ok(SyncPlan::Ready { ppen, .. }) => {
-            let ppen = ppen.unwrap();
-            assert_eq!(ppen.matches("<course ").count(), 1);
-            assert!(ppen.contains("<name>Lang</name>"));
-            assert!(!ppen.contains("<name>A</name>"));
-        }
-        other => panic!("{other:?}"),
-    }
+    // The swap and the rename land as plain changes: no ghost course, and the writer keeps no modeled object.
+    let (_, ppen, _, _) = ready(s.run(&ours, &s.base, &[]));
+    let ppen = ppen.expect("the swap and the rename change the file");
+    assert_eq!(ppen.matches("<course ").count(), 1);
+    assert!(ppen.contains("<name>Lang</name>"));
+    assert!(!ppen.contains("<name>A</name>"));
 }
 
 #[test]
@@ -417,7 +413,15 @@ fn a_score_course_keeps_a_deleted_control_alive() {
         control: "36".to_owned(),
         course: "Sc".to_owned()
     }));
-    assert!(ppen.is_none_or(|p| p.contains("<code>36</code>") && p.contains("<name>Sc</name>")));
+    // Course A lost 36 in the project, so the file changes; the score course keeps the control.
+    let ppen = ppen.expect("course A lost 36, so the file changes");
+    assert!(ppen.contains("<code>36</code>") && ppen.contains("<name>Sc</name>"));
+    // M8: a control kept on purpose is a note, not a change that shows up on every sync.
+    assert!(
+        report.changes.iter().all(|c| c.key != "control/36"),
+        "{:?}",
+        report.changes
+    );
     assert!(project.controls.iter().all(|c| c.code.0 != "36"));
 }
 
@@ -708,10 +712,12 @@ fn id_of(text: &str, needle: &str) -> String {
 
 /// Adds a course whose only course-control after the start carries a `variation` attribute: the import
 /// skips it, the D11 scan must still see that it visits `control_id`.
-fn with_variation_course(text: &str, control_id: &str) -> String {
+fn with_variation_course(text: &str, control_id: &str, name: &str) -> String {
     let start = id_of(text, "kind=\"start\"");
     let finish = id_of(text, "kind=\"finish\"");
-    let course = "  <course id=\"2\" kind=\"normal\" order=\"2\">\n    <name>V</name>\n    <first course-control=\"100\" />\n    <options print-scale=\"4000\" description-kind=\"symbols\" />\n  </course>\n";
+    let course = format!(
+        "  <course id=\"2\" kind=\"normal\" order=\"2\">\n    <name>{name}</name>\n    <first course-control=\"100\" />\n    <options print-scale=\"4000\" description-kind=\"symbols\" />\n  </course>\n"
+    );
     let ccs = format!(
         "  <course-control id=\"100\" control=\"{start}\">\n    <next course-control=\"101\" />\n  </course-control>\n  <course-control id=\"101\" control=\"{control_id}\" variation=\"A\">\n    <next course-control=\"102\" />\n  </course-control>\n  <course-control id=\"102\" control=\"{finish}\" />\n"
     );
@@ -726,7 +732,7 @@ fn with_variation_course(text: &str, control_id: &str) -> String {
 fn variation_course_keeps_a_deleted_control_alive() {
     let s = setup();
     let c36 = id_of(&s.base, "<code>36</code>");
-    let base = with_variation_course(&s.base, &c36);
+    let base = with_variation_course(&s.base, &c36, "V");
     let mut ours = s.project.clone();
     delete_control(&mut ours, "36");
     ours.accepted_findings.clear();
@@ -747,6 +753,11 @@ fn variation_course_keeps_a_deleted_control_alive() {
         }),
         "{:?}",
         report.notes
+    );
+    assert!(
+        report.changes.iter().all(|c| c.key != "control/36"),
+        "{:?}",
+        report.changes
     );
     let ppen = ppen.expect("course A lost 36, so the file changes");
     assert!(ppen.contains("<code>36</code>"));
@@ -845,4 +856,35 @@ fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
         elapsed < std::time::Duration::from_secs(15),
         "sync took {elapsed:?}"
     );
+}
+
+/// M9: D11 matches the courses the import skipped by Purple Pen id, not by name; a skipped course that
+/// carries the name of a modeled one still keeps its control.
+#[test]
+fn a_skipped_course_named_like_a_modeled_one_still_keeps_its_control() {
+    let s = setup();
+    let c36 = id_of(&s.base, "<code>36</code>");
+    let base = with_variation_course(&s.base, &c36, "A");
+    let mut ours = s.project.clone();
+    delete_control(&mut ours, "36");
+    ours.accepted_findings.clear();
+    let plan = sync_ppen(SyncInput {
+        project: &ours,
+        base: Some(base.as_bytes()),
+        theirs: base.as_bytes(),
+        map: &s.map,
+        kind: s.kind,
+        take: &[],
+        base_note: None,
+    });
+    let (_, ppen, _, report) = ready(plan);
+    assert!(
+        report.notes.contains(&SyncNote::DeletionKept {
+            control: "36".to_owned(),
+            course: "A".to_owned()
+        }),
+        "{:?}",
+        report.notes
+    );
+    assert!(ppen.expect("the file changes").contains("<code>36</code>"));
 }

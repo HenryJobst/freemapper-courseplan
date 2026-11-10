@@ -138,8 +138,8 @@ fn changes(outcomes: &[FieldOutcome], v: &Views, m: &Matching) -> Vec<SyncChange
 struct Chains {
     /// Course-control id to (control id, linked course-control ids).
     cc: std::collections::HashMap<u32, (u32, Vec<u32>)>,
-    /// Course name and first course-control, in file order.
-    courses: Vec<(String, Option<u32>)>,
+    /// Course id, name and first course-control, in file order.
+    courses: Vec<(Option<u32>, String, Option<u32>)>,
 }
 
 fn scan_chains(theirs: &[u8]) -> Chains {
@@ -170,12 +170,12 @@ fn scan_chains(theirs: &[u8]) -> Chains {
             match e.name().as_ref() {
                 "course" => {
                     in_course = !empty;
-                    out.courses.push((String::new(), None));
+                    out.courses.push((num(e, "id"), String::new(), None));
                 }
                 "name" if in_course => in_name = !empty,
                 "first" if in_course => {
                     if let Some(c) = out.courses.last_mut() {
-                        c.1 = num(e, "course-control");
+                        c.2 = num(e, "course-control");
                     }
                 }
                 "course-control" => {
@@ -197,7 +197,7 @@ fn scan_chains(theirs: &[u8]) -> Chains {
             Xml::Text(t) if in_name => {
                 if let Some(c) = out.courses.last_mut() {
                     let t = t.xml_content(XmlVersion::Implicit1_0);
-                    c.0.push_str(t.trim());
+                    c.1.push_str(t.trim());
                 }
             }
             Xml::End(e) => match e.name().as_ref() {
@@ -219,7 +219,7 @@ fn scan_chains(theirs: &[u8]) -> Chains {
 fn visited_in_file(
     theirs: &[u8],
     ids: &[u32],
-    modeled: &[String],
+    modeled: &[u32],
 ) -> Result<Vec<(u32, String, String)>, SyncError> {
     if ids.is_empty() {
         return Ok(Vec::new());
@@ -227,9 +227,10 @@ fn visited_in_file(
     let raw = crate::ppen_import::read(theirs).map_err(SyncError::Theirs)?;
     let chains = scan_chains(theirs);
     let mut visited: Vec<(u32, String)> = Vec::new();
-    for (name, first) in &chains.courses {
-        // A course the import models is rewritten by this sync, so its old stops do not count.
-        if modeled.contains(name) {
+    for (course_id, name, first) in &chains.courses {
+        // A course the import models is rewritten by this sync, so its old stops do not count. It is
+        // matched by its Purple Pen id: a skipped course may carry the name of a modeled one.
+        if course_id.is_some_and(|i| modeled.contains(&i)) {
             continue;
         }
         let mut seen = HashSet::new();
@@ -355,22 +356,38 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
 
     // D11 for the courses the import skips.
     let mut kept_ids: HashSet<u32> = HashSet::new();
+    let mut kept_keys: HashSet<String> = HashSet::new();
     for (id, code, course) in visited_in_file(
         theirs,
         &delete.controls.clone(),
         &v.theirs
             .courses
             .iter()
-            .map(|c| c.name.clone())
+            .filter_map(|c| c.ppen_id)
             .collect::<Vec<_>>(),
     )? {
         delete.controls.retain(|i| *i != id);
         kept_ids.insert(id);
+        kept_keys.extend(outcomes.iter().filter_map(|o| {
+            match o.key {
+                FieldKey::Object(ObjectKind::Control, i)
+                    if m.controls[i]
+                        .theirs
+                        .is_some_and(|ti| v.theirs.controls[ti].ppen_id == Some(id)) =>
+                {
+                    Some(conflict_key(o, &v, &m))
+                }
+                _ => None,
+            }
+        }));
         report.notes.push(SyncNote::DeletionKept {
             control: code,
             course,
         });
     }
+
+    // A control kept on purpose is the note above; reporting its deletion would repeat on every sync (M8).
+    report.changes.retain(|c| !kept_keys.contains(&c.key));
 
     // D8: exactly theirs' id for what matched theirs, none for the rest.
     for c in &mut event.controls {
