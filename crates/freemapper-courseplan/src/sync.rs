@@ -1,5 +1,6 @@
 //! Three-way sync of a project with its linked `.ppen` (ADR 0040).
 
+pub mod apply;
 pub mod base;
 pub mod decide;
 pub mod fields;

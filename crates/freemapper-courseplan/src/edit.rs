@@ -910,3 +910,241 @@ pub fn set_rule_profile(
     })?;
     Ok(set)
 }
+
+/// Renames a control everywhere the project names it: the control, the stops of courses of every kind,
+/// and the controls and legs of accepted findings. Used by the sync when Purple Pen recodes a control.
+/// It does not check that `to` is free.
+pub fn rename_control(event: &mut Event, from: &ControlCode, to: &ControlCode) {
+    let fix = |code: &mut ControlCode| {
+        if code == from {
+            code.clone_from(to);
+        }
+    };
+    for control in &mut event.controls {
+        fix(&mut control.code);
+    }
+    for course in &mut event.courses {
+        match &mut course.kind {
+            CourseKind::Individual { controls } => {
+                controls.iter_mut().for_each(|c| fix(&mut c.code))
+            }
+            CourseKind::Team {
+                mandatory, free, ..
+            } => {
+                mandatory.iter_mut().for_each(|c| fix(&mut c.code));
+                free.iter_mut().for_each(fix);
+            }
+            CourseKind::Relay { parts, .. } => {
+                for part in parts {
+                    match part {
+                        freemapper_courseplan_model::RelayPart::Common { controls } => {
+                            controls.iter_mut().for_each(|c| fix(&mut c.code));
+                        }
+                        freemapper_courseplan_model::RelayPart::Fork { variants } => {
+                            variants.iter_mut().flatten().for_each(|c| fix(&mut c.code))
+                        }
+                    }
+                }
+            }
+            CourseKind::Score { controls, .. } => {
+                controls.iter_mut().for_each(|c| fix(&mut c.code));
+            }
+        }
+    }
+    for finding in &mut event.accepted_findings {
+        finding.controls.iter_mut().for_each(fix);
+        for leg in &mut finding.legs {
+            if leg.from == from.0 {
+                leg.from.clone_from(&to.0);
+            }
+            if leg.to == from.0 {
+                leg.to.clone_from(&to.0);
+            }
+        }
+    }
+}
+
+/// Renames a course everywhere the project names it: the course, the course lists of special objects, and
+/// the course and legs of accepted findings. Classes stay with the course. It does not check that `to` is
+/// free.
+pub fn rename_course(event: &mut Event, from: &str, to: &str) {
+    for course in &mut event.courses {
+        if course.name == from {
+            to.clone_into(&mut course.name);
+        }
+    }
+    for special in &mut event.specials {
+        if let Some(list) = special_courses_mut(special) {
+            for name in list {
+                if name == from {
+                    to.clone_into(name);
+                }
+            }
+        }
+    }
+    for finding in &mut event.accepted_findings {
+        if finding.course.as_deref() == Some(from) {
+            finding.course = Some(to.to_owned());
+        }
+        for leg in &mut finding.legs {
+            if leg.course == from {
+                to.clone_into(&mut leg.course);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use freemapper_courseplan_model::{LegRef, RelayPart, ScoreControl};
+
+    use super::*;
+
+    fn code(s: &str) -> ControlCode {
+        ControlCode(s.to_owned())
+    }
+
+    fn cc(s: &str) -> CourseControl {
+        CourseControl {
+            code: code(s),
+            number: None,
+            bends: vec![],
+            taped: false,
+        }
+    }
+
+    fn course(name: &str, kind: CourseKind) -> Course {
+        Course {
+            name: name.to_owned(),
+            classes: vec!["Offen".to_owned()],
+            start: "S".to_owned(),
+            finish: "F".to_owned(),
+            start_bends: vec![],
+            start_taped: false,
+            print_area: None,
+            climb_m: None,
+            planned_print_scale: None,
+            ppen_id: None,
+            kind,
+        }
+    }
+
+    fn event() -> Event {
+        let mut e: Event = toml::from_str(
+            r#"
+format = 1
+[event]
+title = "t"
+[sources]
+map = "m.omap"
+"#,
+        )
+        .unwrap();
+        e.courses = vec![
+            course(
+                "A",
+                CourseKind::Individual {
+                    controls: vec![cc("36"), cc("37")],
+                },
+            ),
+            course(
+                "T",
+                CourseKind::Team {
+                    team_size: 2,
+                    mandatory: vec![cc("36")],
+                    free: vec![code("36"), code("37")],
+                },
+            ),
+            course(
+                "R",
+                CourseKind::Relay {
+                    legs: 2,
+                    parts: vec![
+                        RelayPart::Common {
+                            controls: vec![cc("36")],
+                        },
+                        RelayPart::Fork {
+                            variants: vec![vec![cc("36")], vec![cc("37")]],
+                        },
+                    ],
+                },
+            ),
+            course(
+                "Sc",
+                CourseKind::Score {
+                    time_limit_min: 30,
+                    penalty_per_min: 1,
+                    controls: vec![ScoreControl {
+                        code: code("36"),
+                        value: 10,
+                    }],
+                },
+            ),
+        ];
+        e.accepted_findings = vec![freemapper_courseplan_model::AcceptedFinding {
+            rule: "r".to_owned(),
+            controls: vec![code("36")],
+            course: Some("A".to_owned()),
+            legs: vec![LegRef {
+                course: "A".to_owned(),
+                after: 1,
+                from: "36".to_owned(),
+                to: "37".to_owned(),
+            }],
+            note: "n".to_owned(),
+        }];
+        e
+    }
+
+    #[test]
+    fn rename_control_follows_into_every_course_kind_and_finding() {
+        let mut e = event();
+        rename_control(&mut e, &code("36"), &code("46"));
+        let CourseKind::Individual { controls } = &e.courses[0].kind else {
+            unreachable!()
+        };
+        assert_eq!(controls[0].code, code("46"));
+        assert_eq!(controls[1].code, code("37"));
+        let CourseKind::Team {
+            mandatory, free, ..
+        } = &e.courses[1].kind
+        else {
+            unreachable!()
+        };
+        assert_eq!(mandatory[0].code, code("46"));
+        assert_eq!(free, &vec![code("46"), code("37")]);
+        let CourseKind::Relay { parts, .. } = &e.courses[2].kind else {
+            unreachable!()
+        };
+        assert!(
+            matches!(&parts[0], RelayPart::Common { controls } if controls[0].code == code("46"))
+        );
+        assert!(
+            matches!(&parts[1], RelayPart::Fork { variants } if variants[0][0].code == code("46") && variants[1][0].code == code("37"))
+        );
+        let CourseKind::Score { controls, .. } = &e.courses[3].kind else {
+            unreachable!()
+        };
+        assert_eq!(controls[0].code, code("46"));
+        assert_eq!(e.accepted_findings[0].controls, vec![code("46")]);
+        assert_eq!(e.accepted_findings[0].legs[0].from, "46");
+        assert_eq!(e.accepted_findings[0].legs[0].to, "37");
+    }
+
+    #[test]
+    fn rename_course_keeps_classes_and_follows_references() {
+        let mut e = event();
+        e.specials = vec![SpecialObject::Water {
+            id: "W1".to_owned(),
+            ppen_id: None,
+            map_mm: MapPoint { x: 0.0, y: 0.0 },
+            courses: vec!["A".to_owned(), "T".to_owned()],
+        }];
+        rename_course(&mut e, "A", "Lang");
+        assert_eq!(e.courses[0].name, "Lang");
+        assert_eq!(e.courses[0].classes, vec!["Offen".to_owned()]);
+        assert_eq!(e.specials[0].courses(), ["Lang".to_owned(), "T".to_owned()]);
+        assert_eq!(e.accepted_findings[0].course.as_deref(), Some("Lang"));
+        assert_eq!(e.accepted_findings[0].legs[0].course, "Lang");
+    }
+}
