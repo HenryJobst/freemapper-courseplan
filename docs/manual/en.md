@@ -306,9 +306,9 @@ The project file, the map and the `--iof-xml` target of the same call are not al
 base file only up to a fixed size limit; a broken or foreign file gives an error message. If the file does not fit the
 map, the export writes nothing.
 
-**Not yet opened in Purple Pen 4.0.** The file reads back through the reader of freemapper-course, and exporting a file
-that was read gives the same bytes. The example
-[`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen) waits for a test with Purple Pen 4.0.
+**Opened in Purple Pen 4.0.** The example [`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen)
+opens there without an error, and its content looks right (checked by the author, 2026-11-10). The file also reads
+back through the reader of freemapper-course, and exporting a file that was read gives the same bytes.
 
 The AI assistant has the tool `export_ppen` for this, with `project`, `path` and `new`; the path must end in `.ppen`.
 The writer lives in `freemapper-course` (freemapper-core); the decisions are in ADR 0035.

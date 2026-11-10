@@ -32,8 +32,9 @@ also edit in Purple Pen must not lose those.
 ## Consequences
 - Export onto the file an import read gives the same bytes; a test checks it on three Purple Pen files and
   on the Lübeck example, whose export is committed as `examples/luebeck-sprint/luebeck-sprint.ppen`.
-- **Not tested in Purple Pen 4.0.** The export reads back through the core reader only. The author is asked to
-  open the example in Purple Pen 4.0 and report; core plan Task 6 waits for a Purple Pen 4.0 file.
+- **Opened in Purple Pen 4.0 (2026-11-10).** The author opened the example without an error and found its
+  content plausible. Two writer bugs showed up before that (core 0.4.1, 0.4.2); core's strict check now follows
+  Purple Pen's loader. Core plan Task 6 still waits for a file that Purple Pen 4.0 itself wrote.
 - A stale course length can remain in a changed course; the sync will tell.
 
 Source: spec §5.5 and §5.5a, plan 2026-11-10-ppen-writer, core ADR 0014

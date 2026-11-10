@@ -110,8 +110,8 @@ score courses or gaps, the program names in a note. `import` replaces a project 
 assistant has the tool `export_ppen`. It changes an existing file in place and leaves alone what the project does not
 know, such as circle gaps or map exchange; with `--new` it writes the file from scratch. It never deletes anything and
 reports what is in the file but not in the project. The writer is `freemapper-course` in freemapper-core. The example
-[`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) is such an export. **Purple Pen 4.0 has not
-opened the file yet.** If you have Purple Pen 4.0, please open it and report what arrives. The sync in both directions,
+[`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) is such an export. **Purple Pen 4.0 opens
+the file without an error, and its content looks right** (checked by the author, 2026-11-10). The sync in both directions,
 which takes changes made in Purple Pen back into the project, does not exist yet.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the

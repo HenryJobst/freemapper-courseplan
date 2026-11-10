@@ -316,9 +316,10 @@ Als Ziel sind die Projektdatei, die Karte und die Zieldatei von `--iof-xml` im s
 liest das Programm nur bis zur festen Größengrenze; eine kaputte oder fremde Datei gibt eine Fehlermeldung. Passt die
 Datei nicht zur Karte, schreibt der Export nichts.
 
-**Noch nicht in Purple Pen 4.0 geöffnet.** Die Datei wird mit dem Leser von freemapper-course wieder eingelesen, und der
-Export einer eingelesenen Datei ergibt dieselben Bytes. Das Beispiel
-[`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen) wartet auf einen Test mit Purple Pen 4.0.
+**In Purple Pen 4.0 geöffnet.** Das Beispiel [`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen)
+lässt sich dort ohne Fehler öffnen, und der Inhalt wirkt richtig (geprüft vom Autor, 10.11.2026). Außerdem wird die
+Datei mit dem Leser von freemapper-course wieder eingelesen, und der Export einer eingelesenen Datei ergibt dieselben
+Bytes.
 
 Der KI-Assistent hat dafür das Werkzeug `export_ppen` mit `project`, `path` und `new`; der Pfad muss auf `.ppen`
 enden. Der Schreiber liegt in `freemapper-course` (freemapper-core), die Entscheidungen stehen in ADR 0035.

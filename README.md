@@ -110,8 +110,8 @@ KI-Assistent hat dafür das Werkzeug `export_ppen`. Eine vorhandene Datei änder
 lässt stehen, was das Projekt nicht kennt, etwa Lücken in Kreisen oder Kartenwechsel; mit `--new` schreibt er sie neu.
 Er löscht nie etwas und meldet, was in der Datei steht und im Projekt fehlt. Den Schreiber liefert `freemapper-course`
 in freemapper-core. Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) ist ein
-Export. **Purple Pen 4.0 hat die Datei noch nicht geöffnet.** Wer Purple Pen 4.0 hat, soll sie öffnen und melden, was
-ankommt. Den Abgleich in beide Richtungen mit Übernahme der Änderungen aus Purple Pen gibt es noch nicht.
+Export. **Purple Pen 4.0 öffnet die Datei
+ohne Fehler, und der Inhalt wirkt richtig** (geprüft vom Autor, 10.11.2026). Den Abgleich in beide Richtungen mit Übernahme der Änderungen aus Purple Pen gibt es noch nicht.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine
