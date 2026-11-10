@@ -5,7 +5,7 @@ Status: Accepted
 
 ## Context
 The import mapped Purple Pen symbol ids to IOF 2024 numbers (`iof_2024`) and the export inverted that table by
-enumerating ids (`inverse`, `SINGLE_CAPABLE`). Both lived in courseplan and knew nothing of the symbol
+enumerating ids (`inverse`, `SINGLE_CAPABLE`). Both lived in courseplan and did not use the symbol
 database. freemapper-print needed the same mapping, so it moved into `freemapper-course` as
 `description_symbols` (core ADR 0017, v0.6.0): `iof_2024`, `ppen_symbol` and `ppen_columns`, built on the
 symbol database that Purple Pen ships.
@@ -23,7 +23,7 @@ symbol database that Purple Pen ships.
 - **Notes.** `Refusal::NoPurplePenId` stays `SymbolWithoutPpenId`. New: `SymbolNotInStandard` (the file's
   standard lacks the symbol, such as 2.10 or 15.6 in a 2004 file), `SymbolVariantChosen` (Purple Pen has
   several ids, the export wrote `written`) and `SymbolWrongColumn` (Purple Pen has the symbol, but its popup
-  does not offer it in this column; the brief named two notes, the third is needed for core's `WrongColumn`)
+  does not offer it in this column; core's `WrongColumn` needs this third note)
   *(Claude's call)*. Fluent texts in English and German.
 - **Export fixes that follow from the core rulings** *(agreed with freemapper-print)*:
   - The export writes only symbols the file's standard knows and the column offers.
@@ -51,4 +51,4 @@ symbol database that Purple Pen ships.
 - A patch onto a base file keeps the file's own columns where the project is unchanged (ADR 0035); a freshly
   written description can differ from the old file by `single` where the file wrote both columns.
 - A change to the mapping is a change to core and needs the agreement of freemapper-print.
-- The export reports three new cases instead of writing an id the file's standard or column does not take.
+- The export reports three new cases instead of writing an id that the file's standard or column does not take.

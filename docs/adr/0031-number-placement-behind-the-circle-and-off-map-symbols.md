@@ -47,5 +47,6 @@ above 170° between incoming and outgoing line. freemapper-print builds the same
 - freemapper-print implements the same rules and cites this ADR; its placements should match these except for the
   small cost it gives to areas.
 - `examples/luebeck-sprint` has new number directions and a new preview.
+- The implementation now lives in freemapper-core (ADR 0036); this ADR keeps the rules.
 
 Source: spec §5.3, plan 2026-11-09-number-placement-rules, user rulings of 2026-11-09

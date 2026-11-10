@@ -18,7 +18,9 @@ Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Bibliothek:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
 `freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte und `freemapper-course` für das
-Lesen von Purple-Pen-Dateien. Die Programme binden sie in einer festen Version ein, statt den Code zu kopieren.
+Lesen von Purple-Pen-Dateien. Die Programme binden sie in einer festen Version ein (courseplan: 0.6.0), statt den
+Code zu kopieren. Die Lage der Postennummern und die Tabellen der Beschreibungssymbole kommen von dort, daher
+platzieren courseplan und freemapper-print die Nummern gleich.
 
 Geplant ist für die erste Version:
 

@@ -28,19 +28,19 @@ Both sides ran the same 33 cases before the switch.
   `GAP_LIMITS_MM` *(Claude's call)*.
 - **Rulings of core ADR 0016 that move positions** *(agreed with freemapper-print)*:
   - D2: a leg loses the part within the circle radius plus half the line width, not only within the radius. A
-    bend that lies within a line width of the circle no longer blocks a box at a gap below that width
+    bend within a line width of the circle no longer blocks a box at a gap below that width
     (`bend_inside_circle_line_gap_0_01`, `_0_1`: 0 degrees instead of 90).
   - D4: "behind is blocked" is tested at the stored gap. A rule minimum of 0.331 or 0.333 mm is stored as
-    0.34 mm; the old code tested at the unrounded value and turned the number away without cause
+    0.34 mm; the old code tested at the unrounded value and turned the number away for no reason
     (`rounded_min_behind_test_0_331`, `_0_333`: 0 degrees instead of 286.1).
   - D1, D3, D5 and D6 give no difference in practice.
-- **Positions in the example.** `example_auto_placements_are_unchanged` passes without regeneration: no control
-  of `luebeck-sprint` changes.
-- **Harness.** The allow-list `KNOWN_DISAGREEMENTS` in `tests/placement_cases.rs` is empty; the harness still
+- **Positions in the example.** `example_auto_placements_are_unchanged` passes without regeneration. No control
+  of `luebeck-sprint` moves.
+- **Harness.** The allow-list `KNOWN_DISAGREEMENTS` in `tests/placement_cases.rs` is empty. The harness still
   fails when a listed case agrees.
 
 ## Consequences
 - Placements move only in the two cases above: a bend within a line width of a circle with a gap below that
   width, and a rule minimum with three decimals. Whole and half millimetre gaps are unaffected.
 - A change to the search is a change to core and needs the agreement of freemapper-print.
-- ADRs 0030 to 0032 still describe the rules; the code lives in core now.
+- ADRs 0030 to 0032 still hold the rules. The code lives in core.

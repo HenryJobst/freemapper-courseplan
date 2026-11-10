@@ -276,9 +276,9 @@ Workspace with three crates *(Claude's call)*:
      2026-11-09)*. Candidates lie on a 15° grid around the preferred direction *(Claude's call)*.
   The course's own circles, legs and numbers outweigh any number of covered map symbols, and magnetic north
   lines (601) never count as covered *(Claude's call)*.
-- freemapper-print develops the shared placement module (§5.7 there) and extracts it later. Until then this
-  project uses a simple placement of its own behind an interface that the shared module can replace
-  *(agreed with freemapper-print)*.
+- The number placement comes from `freemapper-course` in freemapper-core (v0.6.0, `place_course_numbers`), the
+  same search freemapper-print uses; courseplan builds the stops, legs and map obstacles and keeps the rule
+  profile to gap range step (ADR 0036) *(agreed with freemapper-print, 2026-11-10)*.
 - A number placement is a direction (degrees, 0 = east, counter-clockwise) and a gap: the shortest distance
   in print mm between the outer edge of the circle line and the number box, which sits centred on the
   direction ray (ADR 0030) *(agreed with freemapper-print)*.
@@ -522,5 +522,4 @@ The builder may start the editor earlier if placing controls through the CLI tur
 
 - Module layout inside the crates, crate choices within the dependency rule, the exact project file schema.
 - The map display format in the editor (SVG or raster tiles), within the shared renderer (§5.1).
-- The simple number placement until the shared module exists.
 - Whether the `.omap` reader comes from freemapper-print, omap-rs or freemapper (§5.1).
