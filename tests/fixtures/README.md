@@ -10,6 +10,8 @@ Every fixture file is listed here with its source, date and licence. Files made 
 | `ppen/lincoln-park.ppen` | Purple Pen, https://github.com/petergolde/PurplePen, commit `201417f97bb69302e3e0db123f428870e0914515` (2026-11-07), `src/TestFiles/controller/Lincoln Park.ppen`; copied unchanged from freemapper-core tag `v0.3.0` (commit `d1e826a`), `crates/freemapper-course/tests/fixtures/courses/ppen/`. SHA-256 `686e07e774a94a650d5169a268661201ec3dff3186d1dc2c79c2247743c324e8`. | 2026-11-09 | BSD, Purple Pen (below) |
 | `ppen/overlapper.ppen` | As above, `src/TestFiles/courserenderer/Overlapper.ppen`. SHA-256 `9f8cd5455c3957f492e2169eef5085933e00bb2de60ff1c9cff77740c4162f78`. | 2026-11-09 | BSD, Purple Pen (below) |
 | `ppen/sampleevent8.ppen` | As above, `src/TestFiles/descriptions/sampleevent8.ppen`. SHA-256 `d8d4872f040f56dc9ec2c8728e70e530d63331ee5cb19cb399e2abbec288f1fb`. | 2026-11-09 | BSD, Purple Pen (below) |
+| `ppen/luebeck-sprint-pp4-unchanged.ppen` | Written by the author with Purple Pen 4.0 beta on 2026-11-10: this repository's `examples/luebeck-sprint/luebeck-sprint.ppen` export, opened and saved again without a change. Edited here in the `<map>` element only: the `absolute-path` attribute (the author's home path) is removed and the element text is the path relative to this directory, `../maps/luebeck.omap`. LF line ends, byte order mark. SHA-256 `103145b4ff527b0e64004f980cd36a9f68a648f492508dc03d27487d473565f7`. | 2026-11-10 | GPL-3.0-or-later (derived from the repository's own example) |
+| `ppen/luebeck-sprint-pp4-changed.ppen` | As above, after edits in Purple Pen 4.0 beta; the same `<map>` edit. SHA-256 `a0dda514f176d3cb5ab0f7f015d1d1646b4d12e2f2cf7942e5214b0b383b199b`. | 2026-11-10 | GPL-3.0-or-later (derived from the repository's own example) |
 | `crates/freemapper-courseplan/tests/fixtures/placement/cases.toml` | freemapper-core tag `v0.6.0` (commit `6d0e152`), `crates/freemapper-course/tests/fixtures/placement/cases.toml`; copied byte for byte. Shared number placement cases (format in its header). | 2026-11-10 | GPL-3.0-or-later (freemapper-core) |
 | `crates/freemapper-courseplan/tests/fixtures/placement/luebeck-sprint-auto.toml` | Made here: `auto_place(keep_existing = false)` of every course of `examples/luebeck-sprint`, written by `PLACEMENT_CASES_DUMP=1 cargo test -p freemapper-courseplan --test placement_cases`. | 2026-11-10 | GPL-3.0-or-later |
 
@@ -17,6 +19,14 @@ The `.ppen` files keep their CRLF line ends and byte order mark (`.gitattributes
 hashes stay those of the originals. Their maps are not in this repository: Lincoln Park is a 1:5000 bitmap,
 Overlapper and sampleevent8 have no map. The import test (`crates/freemapper-courseplan/tests/ppen_import.rs`)
 fits each against a frame map at the file's scale; none of them belongs to `maps/luebeck.omap`.
+
+The two `luebeck-sprint-pp4-*` files belong to `maps/luebeck.omap` and are read against it by
+`crates/freemapper-courseplan/tests/ppen_from_purple_pen.rs`. They have LF line ends (Purple Pen 4.0 wrote them so),
+not CRLF. Purple Pen added only defaults to the unchanged file: `print-area`, `numbering`, `punch-card` and
+`course-appearance` elements, `labels`, and `hide-from-reports` in the course options; the data we wrote is unchanged.
+The changed file holds these edits by the author: control 34 moved, symbol 2.2 added in box D to control 35, controls
+38 and 39 added, 38 inserted into course A between 33 and 34, one number moved (control 35 in course A), a second
+course B added, and the print areas Purple Pen computed for the courses.
 
 The files carry no licence header of their own. Purple Pen as a whole is published under the BSD licence below:
 every source file in its repository carries it (for example `src/PurplePenCore/EventDB.cs`, "Copyright (c)
