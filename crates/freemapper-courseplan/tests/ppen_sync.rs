@@ -966,6 +966,97 @@ fn a_number_reset_to_automatic_in_purple_pen_sticks() {
     assert!(numbers(&m2, "B", "32").is_none());
 }
 
+/// Wave C, I1: a reset to automatic removes the control's central placement; team and relay stops of the
+/// project that fall back to it keep the placement.
+#[test]
+fn a_number_reset_keeps_the_placement_of_team_and_relay_stops() {
+    use freemapper_courseplan::ppen_import::import_ppen_as;
+    use freemapper_courseplan_model::RelayPart;
+    let (map, kind) = luebeck_map();
+    let theirs = fixture("luebeck-sprint-pp4-changed.ppen");
+    let base = with_pinned_b_stop(&theirs);
+    let import = import_ppen_as(base.as_bytes(), &map, kind).unwrap();
+    let mut project = common::valid_event(&import);
+    let cc = |code: &str| CourseControl {
+        code: ControlCode(code.to_owned()),
+        number: None,
+        bends: vec![],
+        taped: false,
+    };
+    let template = project.courses[0].clone();
+    let mut team = template.clone();
+    team.name = "Team".to_owned();
+    team.ppen_id = None;
+    team.classes = vec![];
+    team.kind = CourseKind::Team {
+        team_size: 2,
+        mandatory: vec![cc("32")],
+        free: vec![],
+    };
+    let mut relay = template;
+    relay.name = "Relay".to_owned();
+    relay.ppen_id = None;
+    relay.classes = vec![];
+    relay.kind = CourseKind::Relay {
+        legs: 2,
+        parts: vec![
+            RelayPart::Common {
+                controls: vec![cc("32")],
+            },
+            RelayPart::Fork {
+                variants: vec![vec![cc("32")], vec![cc("33")]],
+            },
+        ],
+    };
+    project.courses.push(team);
+    project.courses.push(relay);
+    let central_before = project
+        .controls
+        .iter()
+        .find(|c| c.code.0 == "32")
+        .unwrap()
+        .number
+        .clone();
+    assert!(central_before.is_some(), "32 has a central placement");
+    let (merged, _, _, _) = ready(sync_ppen(SyncInput {
+        project: &project,
+        base: Some(base.as_bytes()),
+        theirs: theirs.as_bytes(),
+        map: &map,
+        kind,
+        take: &[],
+        base_note: None,
+    }));
+    let resolved = |e: &Event, cc: &CourseControl| {
+        cc.number.clone().or(e
+            .controls
+            .iter()
+            .find(|c| c.code.0 == cc.code.0)
+            .unwrap()
+            .number
+            .clone())
+    };
+    for c in &merged.courses {
+        match &c.kind {
+            CourseKind::Team { mandatory, .. } => {
+                assert_eq!(resolved(&merged, &mandatory[0]), central_before, "team");
+            }
+            CourseKind::Relay { parts, .. } => {
+                for p in parts {
+                    let stops: Vec<&CourseControl> = match p {
+                        RelayPart::Common { controls } => controls.iter().collect(),
+                        RelayPart::Fork { variants } => variants.iter().flatten().collect(),
+                    };
+                    for s in stops.into_iter().filter(|s| s.code.0 == "32") {
+                        assert_eq!(resolved(&merged, s), central_before, "relay");
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Purple Pen moves the start: the project follows. The key of a special object's own field used to
 /// subtract the number of controls from the object's index.
 #[test]

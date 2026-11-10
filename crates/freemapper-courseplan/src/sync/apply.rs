@@ -483,12 +483,31 @@ impl<'a> Ctx<'a> {
         let Some(central) = self.ev.controls.get_mut(i).and_then(|c| c.number.take()) else {
             return;
         };
+        // Every course kind that holds per-stop placements: Individual, Team (mandatory stops) and Relay
+        // (common and fork parts). Score stops have none.
         for (ci, course) in self.ev.courses.iter_mut().enumerate() {
-            let CourseKind::Individual { controls } = &mut course.kind else {
-                continue;
+            let lists: Vec<&mut Vec<CourseControl>> = match &mut course.kind {
+                CourseKind::Individual { controls } => vec![controls],
+                CourseKind::Team { mandatory, .. } => vec![mandatory],
+                CourseKind::Relay { parts, .. } => parts
+                    .iter_mut()
+                    .flat_map(|p| match p {
+                        freemapper_courseplan_model::RelayPart::Common { controls } => {
+                            vec![controls]
+                        }
+                        freemapper_courseplan_model::RelayPart::Fork { variants } => {
+                            variants.iter_mut().collect()
+                        }
+                    })
+                    .collect(),
+                CourseKind::Score { .. } => continue,
             };
             let mut visit = 0;
-            for cc in controls.iter_mut().filter(|cc| cc.code.0 == code) {
+            for cc in lists
+                .into_iter()
+                .flat_map(|l| l.iter_mut())
+                .filter(|cc| cc.code.0 == code)
+            {
                 visit += 1;
                 if cc.number.is_none() && except != Some((ci, visit)) {
                     cc.number = Some(central.clone());
