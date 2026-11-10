@@ -208,6 +208,21 @@ fn overlapper_imports() {
 }
 
 #[test]
+fn import_keeps_special_and_start_ids() {
+    let got = import("sampleevent8.ppen");
+    let id_of = |id: &str| {
+        got.specials
+            .iter()
+            .find(|s| s.id() == id)
+            .unwrap_or_else(|| panic!("{id} in {:?}", got.specials))
+            .ppen_id()
+    };
+    assert_eq!(id_of("STA1"), Some(1));
+    assert_eq!(id_of("FIN1"), Some(2));
+    assert_eq!(id_of("WATER1"), Some(4));
+}
+
+#[test]
 fn sampleevent8_imports() {
     let got = import("sampleevent8.ppen");
     valid_event(&got);

@@ -311,9 +311,17 @@ impl Builder {
                 }
                 let id = c.code.clone();
                 self.starts_finishes.push(if c.kind == PKind::Start {
-                    SpecialObject::Start { id, map_mm: at }
+                    SpecialObject::Start {
+                        id,
+                        ppen_id: c.id,
+                        map_mm: at,
+                    }
                 } else {
-                    SpecialObject::Finish { id, map_mm: at }
+                    SpecialObject::Finish {
+                        id,
+                        ppen_id: c.id,
+                        map_mm: at,
+                    }
                 });
             }
             PKind::MapExchange => {}
@@ -650,54 +658,63 @@ impl Builder {
             }
         };
         match special {
-            Special::OutOfBounds { rings, .. } => {
-                for ring in rings {
+            Special::OutOfBounds { rings, id: sid, .. } => {
+                // One special with several rings becomes several objects; the id goes to the first.
+                for (n, ring) in rings.into_iter().enumerate() {
+                    let ppen_id = if n == 0 { sid } else { None };
                     let id = self.new_id("OOB");
                     self.specials.push(SpecialObject::OutOfBoundsArea {
                         id,
+                        ppen_id,
                         polygon: points(ring),
                         courses: courses.clone(),
                     });
                 }
             }
-            Special::Dangerous { rings, .. } => {
-                for ring in rings {
+            Special::Dangerous { rings, id: sid, .. } => {
+                for (n, ring) in rings.into_iter().enumerate() {
+                    let ppen_id = if n == 0 { sid } else { None };
                     let id = self.new_id("DANGER");
                     self.specials.push(SpecialObject::DangerousArea {
                         id,
+                        ppen_id,
                         polygon: points(ring),
                         courses: courses.clone(),
                     });
                 }
             }
-            Special::ForbiddenRoute { path, .. } => {
+            Special::ForbiddenRoute { path, id: sid, .. } => {
                 let id = self.new_id("FORBID");
                 self.specials.push(SpecialObject::ForbiddenRoute {
                     id,
+                    ppen_id: sid,
                     points: points(path),
                     courses,
                 });
             }
-            Special::MarkedRoute { path, .. } => {
+            Special::MarkedRoute { path, id: sid, .. } => {
                 let id = self.new_id("ROUTE");
                 self.specials.push(SpecialObject::MarkedRoute {
                     id,
+                    ppen_id: sid,
                     points: points(path),
                     courses,
                 });
             }
-            Special::FirstAid { pt, .. } => {
+            Special::FirstAid { pt, id: sid, .. } => {
                 let id = self.new_id("AID");
                 self.specials.push(SpecialObject::FirstAid {
                     id,
+                    ppen_id: sid,
                     map_mm: point(pt),
                     courses,
                 });
             }
-            Special::Water { pt, .. } => {
+            Special::Water { pt, id: sid, .. } => {
                 let id = self.new_id("WATER");
                 self.specials.push(SpecialObject::Water {
                     id,
+                    ppen_id: sid,
                     map_mm: point(pt),
                     courses,
                 });

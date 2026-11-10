@@ -43,6 +43,7 @@ fn at_start(
 fn add_start(event: &mut Event, id: &str, x: f64, y: f64) {
     event.specials.push(SpecialObject::Start {
         id: id.to_owned(),
+        ppen_id: None,
         map_mm: pt(x, y),
     });
 }

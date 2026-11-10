@@ -920,10 +920,12 @@ mod tests {
             specials: vec![
                 SpecialObject::Start {
                     id: "S1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(start.0, start.1),
                 },
                 SpecialObject::Finish {
                     id: "F1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(finish.0, finish.1),
                 },
             ],

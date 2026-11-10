@@ -865,35 +865,49 @@ impl CoursePlanServer {
             };
             let points = map_points(points);
             let special = match kind {
-                SpecialKindArg::Start => SpecialObject::Start { id, map_mm: at() },
-                SpecialKindArg::Finish => SpecialObject::Finish { id, map_mm: at() },
+                SpecialKindArg::Start => SpecialObject::Start {
+                    id,
+                    ppen_id: None,
+                    map_mm: at(),
+                },
+                SpecialKindArg::Finish => SpecialObject::Finish {
+                    id,
+                    ppen_id: None,
+                    map_mm: at(),
+                },
                 SpecialKindArg::FirstAid => SpecialObject::FirstAid {
                     id,
+                    ppen_id: None,
                     map_mm: at(),
                     courses,
                 },
                 SpecialKindArg::Water => SpecialObject::Water {
                     id,
+                    ppen_id: None,
                     map_mm: at(),
                     courses,
                 },
                 SpecialKindArg::MarkedRoute => SpecialObject::MarkedRoute {
                     id,
+                    ppen_id: None,
                     points,
                     courses,
                 },
                 SpecialKindArg::ForbiddenRoute => SpecialObject::ForbiddenRoute {
                     id,
+                    ppen_id: None,
                     points,
                     courses,
                 },
                 SpecialKindArg::OutOfBounds => SpecialObject::OutOfBoundsArea {
                     id,
+                    ppen_id: None,
                     polygon: points,
                     courses,
                 },
                 SpecialKindArg::DangerousArea => SpecialObject::DangerousArea {
                     id,
+                    ppen_id: None,
                     polygon: points,
                     courses,
                 },

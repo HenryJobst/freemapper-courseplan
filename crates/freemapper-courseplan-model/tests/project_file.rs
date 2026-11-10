@@ -822,6 +822,7 @@ courses = ["A"]
     assert!(courses.is_empty());
     project.event.specials[6] = SpecialObject::FirstAid {
         id: "a1".into(),
+        ppen_id: None,
         map_mm: MapPoint { x: 9.0, y: 9.0 },
         courses: vec![],
     };
@@ -911,6 +912,7 @@ fn adding_a_special_keeps_comments_on_the_others() {
         0,
         SpecialObject::FirstAid {
             id: "a1".into(),
+            ppen_id: None,
             map_mm: MapPoint { x: 3.0, y: 3.0 },
             courses: vec![],
         },

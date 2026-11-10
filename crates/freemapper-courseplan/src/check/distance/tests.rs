@@ -670,6 +670,7 @@ fn a_taped_leg_or_a_bend_around_the_area_gives_no_finding() {
     let mut e = two_controls(vec![taped, around]);
     e.specials.push(SpecialObject::OutOfBoundsArea {
         id: "oob".to_owned(),
+        ppen_id: None,
         polygon: vec![
             pt(28.0, 20.0),
             pt(32.0, 20.0),
@@ -699,6 +700,7 @@ fn a_rule_without_its_symbol_list_is_skipped() {
     let mut e = two_controls(vec![course("A", &["31", "32"])]);
     e.specials.push(SpecialObject::OutOfBoundsArea {
         id: "oob".to_owned(),
+        ppen_id: None,
         polygon: vec![
             pt(28.0, 20.0),
             pt(32.0, 20.0),
@@ -761,6 +763,7 @@ fn out_of_bounds_specials_apply_to_their_courses_forbidden_routes_to_none() {
     let mut e = two_controls(vec![course("A", &["31", "32"]), course("B", &["31", "32"])]);
     e.specials.push(SpecialObject::OutOfBoundsArea {
         id: "oob".to_owned(),
+        ppen_id: None,
         polygon: vec![
             pt(28.0, 20.0),
             pt(32.0, 20.0),
@@ -772,6 +775,7 @@ fn out_of_bounds_specials_apply_to_their_courses_forbidden_routes_to_none() {
     // A forbidden route may be crossed (IOF-R 17.2); running along it needs the route analysis.
     e.specials.push(SpecialObject::ForbiddenRoute {
         id: "road".to_owned(),
+        ppen_id: None,
         points: vec![pt(40.0, 0.0), pt(40.0, 60.0)],
         courses: vec![],
     });
@@ -809,6 +813,7 @@ fn forbidden_routes_and_711_on_a_forest_map_give_no_finding() {
     let mut e = two_controls(vec![course("A", &["31", "32"])]);
     e.specials.push(SpecialObject::ForbiddenRoute {
         id: "road".to_owned(),
+        ppen_id: None,
         points: vec![pt(40.0, 0.0), pt(40.0, 60.0)],
         courses: vec![],
     });

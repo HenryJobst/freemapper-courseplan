@@ -152,44 +152,68 @@ pub struct Control {
 pub enum SpecialObject {
     Start {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         map_mm: MapPoint,
     },
     Finish {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         map_mm: MapPoint,
     },
     MarkedRoute {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         points: Vec<MapPoint>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
     },
     OutOfBoundsArea {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         polygon: Vec<MapPoint>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
     },
     ForbiddenRoute {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         points: Vec<MapPoint>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
     },
     DangerousArea {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         polygon: Vec<MapPoint>,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
     },
     FirstAid {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         map_mm: MapPoint,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
     },
     Water {
         id: String,
+        /// Purple Pen's id of the special object, kept by the `.ppen` import (start and finish: the control id).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        ppen_id: Option<u32>,
         map_mm: MapPoint,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         courses: Vec<String>,
@@ -207,6 +231,20 @@ impl SpecialObject {
             | Self::DangerousArea { id, .. }
             | Self::FirstAid { id, .. }
             | Self::Water { id, .. } => id,
+        }
+    }
+
+    /// Purple Pen's id of the object, when it came from a `.ppen` file.
+    pub fn ppen_id(&self) -> Option<u32> {
+        match self {
+            Self::Start { ppen_id, .. }
+            | Self::Finish { ppen_id, .. }
+            | Self::MarkedRoute { ppen_id, .. }
+            | Self::OutOfBoundsArea { ppen_id, .. }
+            | Self::ForbiddenRoute { ppen_id, .. }
+            | Self::DangerousArea { ppen_id, .. }
+            | Self::FirstAid { ppen_id, .. }
+            | Self::Water { ppen_id, .. } => *ppen_id,
         }
     }
 
@@ -547,6 +585,33 @@ mod tests {
     }
 
     #[test]
+    fn special_ppen_id_round_trips_in_toml() {
+        #[derive(Debug, PartialEq, Serialize, Deserialize)]
+        struct Wrap {
+            specials: Vec<SpecialObject>,
+        }
+        let wrap = |ppen_id| Wrap {
+            specials: vec![SpecialObject::Water {
+                id: "WATER1".to_owned(),
+                ppen_id,
+                map_mm: MapPoint { x: 1.0, y: 2.0 },
+                courses: vec![],
+            }],
+        };
+        let with = toml::to_string(&wrap(Some(7))).unwrap();
+        assert!(with.contains("ppen_id = 7"), "{with}");
+        assert_eq!(toml::from_str::<Wrap>(&with).unwrap(), wrap(Some(7)));
+        assert_eq!(
+            toml::from_str::<Wrap>(&with).unwrap().specials[0].ppen_id(),
+            Some(7)
+        );
+        let without = toml::to_string(&wrap(None)).unwrap();
+        assert!(!without.contains("ppen_id"), "{without}");
+        assert_eq!(toml::from_str::<Wrap>(&without).unwrap(), wrap(None));
+        assert_eq!(FORMAT_VERSION, 1);
+    }
+
+    #[test]
     fn every_course_kind_round_trips() {
         let course = |name: &str, kind| Course {
             ppen_id: Some(3),
@@ -598,20 +663,24 @@ mod tests {
             specials: vec![
                 SpecialObject::Start {
                     id: "S1".to_owned(),
+                    ppen_id: None,
                     map_mm: MapPoint { x: 0.0, y: 0.0 },
                 },
                 SpecialObject::MarkedRoute {
                     id: "m1".to_owned(),
+                    ppen_id: None,
                     points: vec![MapPoint { x: 1.0, y: 2.0 }, MapPoint { x: 3.0, y: 4.0 }],
                     courses: vec![],
                 },
                 SpecialObject::OutOfBoundsArea {
                     id: "o1".to_owned(),
+                    ppen_id: None,
                     polygon: vec![MapPoint { x: 1.0, y: 2.0 }; 3],
                     courses: vec![],
                 },
                 SpecialObject::Water {
                     id: "w1".to_owned(),
+                    ppen_id: None,
                     map_mm: MapPoint { x: 5.0, y: 5.0 },
                     courses: vec!["A".to_owned()],
                 },
@@ -770,39 +839,47 @@ mod tests {
             specials: vec![
                 SpecialObject::Start {
                     id: "S1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(),
                 },
                 SpecialObject::Finish {
                     id: "F1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(),
                 },
                 SpecialObject::MarkedRoute {
                     id: "m1".to_owned(),
+                    ppen_id: None,
                     points: vec![p()],
                     courses: vec![],
                 },
                 SpecialObject::OutOfBoundsArea {
                     id: "o1".to_owned(),
+                    ppen_id: None,
                     polygon: vec![p()],
                     courses: vec![],
                 },
                 SpecialObject::ForbiddenRoute {
                     id: "f1".to_owned(),
+                    ppen_id: None,
                     points: vec![p()],
                     courses: vec![],
                 },
                 SpecialObject::DangerousArea {
                     id: "d1".to_owned(),
+                    ppen_id: None,
                     polygon: vec![p()],
                     courses: vec![],
                 },
                 SpecialObject::FirstAid {
                     id: "a1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(),
                     courses: vec![],
                 },
                 SpecialObject::Water {
                     id: "w1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(),
                     courses: vec![],
                 },

@@ -156,10 +156,12 @@ fn start_and_finish_become_special_objects() {
         vec![
             SpecialObject::Start {
                 id: "STA1".to_owned(),
+                ppen_id: Some(1),
                 map_mm: pt(10.0, -10.0),
             },
             SpecialObject::Finish {
                 id: "FIN1".to_owned(),
+                ppen_id: Some(2),
                 map_mm: pt(100.0, -10.0),
             },
         ]
@@ -416,26 +418,31 @@ fn special_objects_map_to_their_counterparts() {
         [
             SpecialObject::OutOfBoundsArea {
                 id: "OOB1".to_owned(),
+                ppen_id: Some(1),
                 polygon: vec![pt(10.0, -10.0), pt(20.0, -10.0), pt(20.0, -20.0)],
                 courses: vec![],
             },
             SpecialObject::DangerousArea {
                 id: "DANGER1".to_owned(),
+                ppen_id: Some(2),
                 polygon: vec![pt(30.0, -10.0), pt(40.0, -10.0), pt(40.0, -20.0)],
                 courses: names(&["B"]),
             },
             SpecialObject::ForbiddenRoute {
                 id: "FORBID1".to_owned(),
+                ppen_id: Some(3),
                 points: vec![pt(50.0, -50.0)],
                 courses: vec![],
             },
             SpecialObject::FirstAid {
                 id: "AID1".to_owned(),
+                ppen_id: Some(4),
                 map_mm: pt(70.0, -70.0),
                 courses: names(&["A", "B"]),
             },
             SpecialObject::Water {
                 id: "WATER1".to_owned(),
+                ppen_id: Some(5),
                 map_mm: pt(80.0, -80.0),
                 courses: vec![],
             },
@@ -468,6 +475,7 @@ fn marked_route_special_becomes_a_marked_route() {
         got.specials.last(),
         Some(&SpecialObject::MarkedRoute {
             id: "ROUTE1".to_owned(),
+            ppen_id: None,
             points: vec![pt(1.0, -2.0), pt(3.0, -4.0)],
             courses: vec!["A".to_owned()],
         })

@@ -82,10 +82,12 @@ fn event() -> Event {
         specials: vec![
             SpecialObject::Start {
                 id: "S1".to_owned(),
+                ppen_id: None,
                 map_mm: p(0.0, 0.0),
             },
             SpecialObject::Finish {
                 id: "F1".to_owned(),
+                ppen_id: None,
                 map_mm: p(0.0, 100.0),
             },
         ],

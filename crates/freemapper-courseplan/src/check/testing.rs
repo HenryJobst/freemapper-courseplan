@@ -195,10 +195,12 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         specials: vec![
             SpecialObject::Start {
                 id: "S1".to_owned(),
+                ppen_id: None,
                 map_mm: pt(0.0, 0.0),
             },
             SpecialObject::Finish {
                 id: "F1".to_owned(),
+                ppen_id: None,
                 map_mm: pt(100.0, 0.0),
             },
         ],

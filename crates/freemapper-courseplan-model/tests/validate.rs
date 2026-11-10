@@ -67,6 +67,7 @@ fn blank_or_padded_names_are_refused() {
     e.controls[1].code = ControlCode(" 32".to_owned());
     e.specials[0] = freemapper_courseplan_model::SpecialObject::Start {
         id: "S1 ".to_owned(),
+        ppen_id: None,
         map_mm: freemapper_courseplan_model::MapPoint { x: 0.0, y: 0.0 },
     };
     e.courses[0].name = "\t".to_owned();
