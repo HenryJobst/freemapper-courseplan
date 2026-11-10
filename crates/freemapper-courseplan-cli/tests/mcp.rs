@@ -1559,6 +1559,63 @@ fn mcp_resolve_then_sync_completes() {
 }
 
 #[test]
+fn mcp_sync_refuses_a_link_that_is_no_ppen_file() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::fs::write(dir.path().join("secret.txt"), "TOPSECRET").unwrap();
+    replace_in(&project, "\"out.ppen\"", "\"secret.txt\"");
+    for (tool, args) in [
+        ("sync_ppen", json!({ "project": project })),
+        (
+            "resolve_sync_conflict",
+            json!({ "project": project, "key": "control/34/position", "take": "ours" }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains(".ppen"), "{text}");
+        assert!(!text.contains("TOPSECRET"), "{text}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn mcp_sync_refuses_a_link_that_is_a_symlink() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::os::unix::fs::symlink(dir.path().join("out.ppen"), dir.path().join("link.ppen")).unwrap();
+    replace_in(&project, "\"out.ppen\"", "\"link.ppen\"");
+    let before = std::fs::read(&project).unwrap();
+    for (tool, args) in [
+        ("sync_ppen", json!({ "project": project })),
+        (
+            "resolve_sync_conflict",
+            json!({ "project": project, "key": "control/34/position", "take": "ours" }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains("symbolic link"), "{text}");
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn mcp_sync_does_not_quote_the_ppen_file_in_errors() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::fs::write(
+        dir.path().join("out.ppen"),
+        "<course-scribe-event><TOPSECRET></course-scribe-event TOPSECRET>",
+    )
+    .unwrap();
+    let (error, text) = session.call("sync_ppen", json!({ "project": project }));
+    assert!(error, "{text}");
+    assert!(text.contains("out.ppen"), "{text}");
+    assert!(!text.contains("TOPSECRET"), "{text}");
+}
+
+#[test]
 fn mcp_resolve_unknown_key_is_an_error() {
     let mut session = Session::start();
     let (_dir, project) = two_sync_conflicts(&mut session);

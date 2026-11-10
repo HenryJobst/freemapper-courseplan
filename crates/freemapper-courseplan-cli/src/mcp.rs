@@ -577,9 +577,47 @@ impl CoursePlanServer {
 
     /// A sync error as text for the assistant, with the same redaction as the other tools.
     fn sync_failed(&self, e: SyncCmdError) -> String {
+        use freemapper_courseplan::sync::SyncError;
+        // Parser errors and the lists of an invalid merge quote the Purple Pen file: fixed texts only.
+        if let SyncCmdError::Sync(path, error) = &e {
+            match error {
+                SyncError::Theirs(_) | SyncError::Base(_) | SyncError::Export(_) => {
+                    return text(
+                        &self.lang,
+                        "mcp-error-sync-ppen-invalid",
+                        &[("path", FluentValue::from(path.display().to_string()))],
+                    );
+                }
+                SyncError::Invalid(_) => {
+                    return text(&self.lang, "mcp-error-sync-invalid", &[]);
+                }
+                _ => {}
+            }
+        }
         e.message_with(&self.lang, &|e| project_error(&self.lang, e), &|p, e| {
             map_error(&self.lang, p, e)
         })
+    }
+
+    /// The project path of a sync call, after checking the link `sources.ppen` as `resolve_ppen` checks the
+    /// files the other tools open: it must end in `.ppen` and must not be a symbolic link.
+    fn sync_project(&self, project: &str) -> Result<PathBuf, String> {
+        let path = resolve_project(&self.lang, project)?;
+        let file = self.load(project)?;
+        if let Some(link) = &file.event.sources.ppen {
+            let folder = path.parent().unwrap_or_else(|| std::path::Path::new(""));
+            let target = folder.join(link);
+            let shown = target.display().to_string();
+            resolve_ppen(&self.lang, &shown)?;
+            if std::fs::symlink_metadata(&target).is_ok_and(|m| m.file_type().is_symlink()) {
+                return Err(text(
+                    &self.lang,
+                    "mcp-error-ppen-symlink",
+                    &[("path", FluentValue::from(shown))],
+                ));
+            }
+        }
+        Ok(path)
     }
 
     fn refused(&self, e: edit::EditError) -> String {
@@ -1398,7 +1436,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SyncPpen>,
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
-            let project = resolve_project(&self.lang, &req.project)?;
+            let project = self.sync_project(&req.project)?;
             let take: Vec<Take> = req
                 .take
                 .map(|side| Take::All(side.into()))
@@ -1416,7 +1454,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<ResolveSyncConflict>,
     ) -> Result<CallToolResult, McpError> {
         reply((|| {
-            let project = resolve_project(&self.lang, &req.project)?;
+            let project = self.sync_project(&req.project)?;
             store_decision(&project, &req.key, req.take.into()).map_err(|e| self.sync_failed(e))?;
             let outcome = sync_file(&project, true, &[]).map_err(|e| self.sync_failed(e))?;
             Ok(sync_json(&outcome, &self.lang))
