@@ -44,6 +44,17 @@ pub struct Applied {
     /// Purple Pen's ids (in the linked file) of the objects the project deleted.
     pub delete: Deletions,
     pub notes: Vec<SyncNote>,
+    /// The project's final name of each matched object, by index into the `Matching` vectors
+    /// (`None`: the project has no such object). The sync uses it to give each object theirs' id.
+    pub names: AppliedNames,
+}
+
+/// Final project names per `Matching` triple.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct AppliedNames {
+    pub controls: Vec<Option<String>>,
+    pub specials: Vec<Option<String>>,
+    pub courses: Vec<Option<String>>,
 }
 
 fn mm(um: i64) -> f64 {
@@ -1002,6 +1013,11 @@ pub fn apply(
         event: cx.ev,
         delete,
         notes: cx.notes,
+        names: AppliedNames {
+            controls: cx.ctl,
+            specials: cx.sp,
+            courses: cx.co,
+        },
     })
 }
 

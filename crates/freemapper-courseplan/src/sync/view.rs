@@ -2,6 +2,7 @@
 //! file (D3). Seen through the same reader, fit and rounding, Purple Pen's added defaults and the model's
 //! lossy mapping cannot show up as changes.
 
+use freemapper_course::KeptObject;
 use freemapper_courseplan_model::Event;
 
 use super::SyncError;
@@ -25,6 +26,28 @@ pub struct Views {
 fn quiet(mut import: PpenImport) -> PpenImport {
     import.notes.clear();
     import
+}
+
+/// Removes an object the export kept from the ours view: the project does not hold it.
+fn drop_kept(view: &mut PpenImport, kept: &KeptObject) {
+    use freemapper_courseplan_model::SpecialObject;
+    let is_end = |s: &SpecialObject| {
+        matches!(
+            s,
+            SpecialObject::Start { .. } | SpecialObject::Finish { .. }
+        )
+    };
+    match kept {
+        KeptObject::Control { id, .. } => {
+            view.controls.retain(|c| c.ppen_id != Some(*id));
+            view.specials
+                .retain(|s| !(is_end(s) && s.ppen_id() == Some(*id)));
+        }
+        KeptObject::Course { id, .. } => view.courses.retain(|c| c.ppen_id != Some(*id)),
+        KeptObject::Special { id, .. } => view
+            .specials
+            .retain(|s| is_end(s) || s.ppen_id() != Some(*id)),
+    }
 }
 
 /// Builds the three views. Ours is the import of the project exported onto `base` (linked, so the project's
@@ -62,10 +85,17 @@ pub fn views(
             delete: Default::default(),
         },
     )?;
-    let ours_view = quiet(
+    let mut ours_view = quiet(
         import_ppen_as(exported.text.as_bytes(), map, kind)
             .map_err(|e: PpenImportError| SyncError::Export(e.into()))?,
     );
+    // An export deletes nothing: what the base holds and the project no longer mentions is still in the
+    // file, but it is not in the project. In the ours view it is gone.
+    for note in &exported.notes {
+        if let ExportNote::Kept(kept) = note {
+            drop_kept(&mut ours_view, kept);
+        }
+    }
     let skipped = exported
         .notes
         .into_iter()

@@ -1,7 +1,6 @@
 //! `export`: writes the courses for other programs, as IOF XML 3.0 or as a Purple Pen event (`.ppen`).
 //! The same functions serve the CLI and the MCP tool.
 
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -12,10 +11,10 @@ use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_export::{
-    Deletions, ExportIds, ExportNote, PpenExportError, Target, export_ppen_as,
+    Deletions, ExportNote, PpenExportError, Target, export_ppen_as, store_ids,
 };
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
-use freemapper_courseplan_model::{ControlCode, Event, ProjectError, ProjectFile, write_atomic};
+use freemapper_courseplan_model::{ProjectError, ProjectFile, write_atomic};
 
 use crate::edit_cmd::{Failure, map_load_error};
 use crate::import_cmd::{ReadFileError, read_course_file};
@@ -250,53 +249,6 @@ pub(crate) fn export_ppen_file(
         ids_stored,
         linked_now,
     })
-}
-
-/// Puts the Purple Pen ids the export assigned into `event`; returns how many objects had none before.
-fn store_ids(event: &mut Event, ids: &ExportIds) -> usize {
-    let mut new = 0;
-    let mut put = |slot: Option<u32>, id: u32| -> Option<u32> {
-        new += usize::from(slot.is_none());
-        Some(id)
-    };
-    let controls: HashMap<ControlCode, usize> = event
-        .controls
-        .iter()
-        .enumerate()
-        .map(|(i, c)| (c.code.clone(), i))
-        .collect();
-    for (code, id) in &ids.controls {
-        if let Some(&i) = controls.get(code) {
-            let c = &mut event.controls[i];
-            c.ppen_id = put(c.ppen_id, *id);
-        }
-    }
-    let courses: HashMap<String, usize> = event
-        .courses
-        .iter()
-        .enumerate()
-        .map(|(i, c)| (c.name.clone(), i))
-        .collect();
-    for (name, id) in &ids.courses {
-        if let Some(&i) = courses.get(name) {
-            let c = &mut event.courses[i];
-            c.ppen_id = put(c.ppen_id, *id);
-        }
-    }
-    let specials: HashMap<String, usize> = event
-        .specials
-        .iter()
-        .enumerate()
-        .map(|(i, s)| (s.id().to_owned(), i))
-        .collect();
-    for (special_id, id) in &ids.specials {
-        if let Some(&i) = specials.get(special_id) {
-            let s = &mut event.specials[i];
-            let id = put(s.ppen_id(), *id);
-            s.set_ppen_id(id);
-        }
-    }
-    new
 }
 
 /// Whether two paths name the same file. A path that does not exist yet is resolved through its

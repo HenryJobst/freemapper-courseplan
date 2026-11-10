@@ -1,0 +1,478 @@
+//! `sync_ppen` on the Lübeck example linked to a Purple Pen file (spec section 7, one test per merge case).
+
+mod common;
+
+use common::purple_pen::{luebeck_map, purple_pen_saves, root};
+use freemapper_courseplan::map::MapKind;
+use freemapper_courseplan::omap::MapDocument;
+use freemapper_courseplan::ppen_export::{Deletions, Target, export_ppen_as, store_ids};
+use freemapper_courseplan::sync::decide::Take;
+use freemapper_courseplan::sync::{SyncError, SyncInput, SyncPlan, sync_ppen};
+use freemapper_courseplan_model::{CourseKind, Event, ProjectFile, Side};
+
+struct Setup {
+    map: MapDocument,
+    kind: MapKind,
+    project: Event,
+    base: String,
+}
+
+fn setup() -> Setup {
+    let (map, kind) = luebeck_map();
+    let dir = root().join("examples/luebeck-sprint");
+    let mut project = ProjectFile::load(&dir.join("luebeck-sprint.courseplan.toml"))
+        .unwrap()
+        .event;
+    let exported = export_ppen_as(
+        &project,
+        &map,
+        kind,
+        Target {
+            base: None,
+            linked: true,
+            map_path: "../maps/luebeck.omap".to_owned(),
+            lang: "en",
+            delete: Deletions::default(),
+        },
+    )
+    .unwrap();
+    store_ids(&mut project, &exported.ids);
+    Setup {
+        map,
+        kind,
+        project,
+        base: exported.text,
+    }
+}
+
+impl Setup {
+    fn run(&self, project: &Event, theirs: &str, take: &[Take]) -> Result<SyncPlan, SyncError> {
+        sync_ppen(SyncInput {
+            project,
+            base: Some(self.base.as_bytes()),
+            theirs: theirs.as_bytes(),
+            map: &self.map,
+            kind: self.kind,
+            take,
+            base_note: None,
+        })
+    }
+}
+
+fn control<'a>(e: &'a mut Event, code: &str) -> &'a mut freemapper_courseplan_model::Control {
+    e.controls.iter_mut().find(|c| c.code.0 == code).unwrap()
+}
+
+#[test]
+fn nothing_changed_is_a_no_op() {
+    let s = setup();
+    let plan = s.run(&s.project, &s.base, &[]).unwrap();
+    let SyncPlan::Ready {
+        project,
+        ppen,
+        report,
+        ..
+    } = plan
+    else {
+        panic!("conflicts")
+    };
+    assert!(ppen.is_none());
+    assert!(report.changes.is_empty(), "{:?}", report.changes);
+    let mut expected = s.project.clone();
+    expected.sync = project.sync.clone();
+    assert_eq!(project, expected);
+}
+
+fn ready(
+    plan: Result<SyncPlan, SyncError>,
+) -> (
+    Event,
+    Option<String>,
+    String,
+    freemapper_courseplan::sync::SyncReport,
+) {
+    match plan.unwrap() {
+        SyncPlan::Ready {
+            project,
+            ppen,
+            base,
+            report,
+        } => (project, ppen, base, report),
+        SyncPlan::Conflicts(r) => panic!("conflicts: {:?}", r.conflicts),
+    }
+}
+
+fn delete_control(e: &mut Event, code: &str) {
+    e.controls.retain(|c| c.code.0 != code);
+    for c in &mut e.courses {
+        if let CourseKind::Individual { controls } = &mut c.kind {
+            controls.retain(|cc| cc.code.0 != code);
+        }
+    }
+}
+
+/// Lines only in `a` and lines only in `b`.
+fn line_diff(a: &str, b: &str) -> (Vec<String>, Vec<String>) {
+    fn minus(x: &str, y: &str) -> Vec<String> {
+        let mut rest: Vec<&str> = y.lines().collect();
+        let mut out = Vec::new();
+        for l in x.lines() {
+            if let Some(p) = rest.iter().position(|r| *r == l) {
+                rest.remove(p);
+            } else {
+                out.push(l.trim().to_owned());
+            }
+        }
+        out
+    }
+    (minus(a, b), minus(b, a))
+}
+
+fn block<'a>(text: &'a str, code: &str) -> &'a str {
+    let at = text.find(&format!("<code>{code}</code>")).unwrap();
+    let from = text[..at].rfind("<control ").unwrap();
+    let to = at + text[at..].find("</control>").unwrap();
+    &text[from..to]
+}
+
+#[test]
+fn purple_pen_defaults_are_no_change() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |_| {}, true);
+    assert_ne!(theirs, s.base);
+    let (_, ppen, _, report) = ready(s.run(&s.project, &theirs, &[]));
+    assert!(report.changes.is_empty(), "{:?}", report.changes);
+    assert!(report.conflicts.is_empty());
+    assert!(ppen.is_none());
+}
+
+#[test]
+fn one_side_changed_each_way() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| control(e, "34").map_mm.x += 1.0, false);
+    let mut ours = s.project.clone();
+    control(&mut ours, "31").map_mm.x += 1.0;
+    let (project, ppen, _, _) = ready(s.run(&ours, &theirs, &[]));
+    let moved = project.controls.iter().find(|c| c.code.0 == "34").unwrap();
+    let was = s
+        .project
+        .controls
+        .iter()
+        .find(|c| c.code.0 == "34")
+        .unwrap();
+    assert!((moved.map_mm.x - was.map_mm.x - 1.0).abs() < 1e-3);
+    let own = project.controls.iter().find(|c| c.code.0 == "31").unwrap();
+    assert!((own.map_mm.x - (-49.1)).abs() < 1e-3);
+    let (gone, new) = line_diff(&theirs, &ppen.unwrap());
+    assert_eq!(gone.len(), 1, "{gone:?}");
+    assert_eq!(new.len(), 1, "{new:?}");
+    assert!(gone[0].starts_with("<location"));
+}
+
+#[test]
+fn both_sides_changed_is_listed_with_both_values() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| control(e, "34").map_mm.x += 1.0, false);
+    let mut ours = s.project.clone();
+    control(&mut ours, "34").map_mm.x += 2.0;
+    let SyncPlan::Conflicts(report) = s.run(&ours, &theirs, &[]).unwrap() else {
+        panic!("no conflict")
+    };
+    assert_eq!(report.conflicts.len(), 1);
+    let c = &report.conflicts[0];
+    assert_eq!(c.key, "control/34/position");
+    assert!(c.ours.contains(','), "{}", c.ours);
+    assert!(c.theirs.contains(','), "{}", c.theirs);
+    assert_ne!(c.ours, c.theirs);
+}
+
+#[test]
+fn take_theirs_resolves() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| control(e, "34").map_mm.x += 1.0, false);
+    let mut ours = s.project.clone();
+    control(&mut ours, "34").map_mm.x += 2.0;
+    let (project, ppen, _, _) = ready(s.run(&ours, &theirs, &[Take::All(Side::Theirs)]));
+    let c = project.controls.iter().find(|c| c.code.0 == "34").unwrap();
+    assert!((c.map_mm.x - (-1.2 + 1.0)).abs() < 1e-3, "{}", c.map_mm.x);
+    assert!(ppen.is_none());
+}
+
+#[test]
+fn deleted_on_one_side_is_deleted_on_the_other() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| delete_control(e, "37"), false);
+    let (project, _, _, _) = ready(s.run(&s.project, &theirs, &[]));
+    assert!(project.controls.iter().all(|c| c.code.0 != "37"));
+
+    let mut ours = s.project.clone();
+    delete_control(&mut ours, "36");
+    let (_, ppen, _, _) = ready(s.run(&ours, &s.base, &[]));
+    let ppen = ppen.unwrap();
+    assert!(!ppen.contains("<code>36</code>"));
+    assert!(ppen.contains("<code>35</code>"));
+}
+
+#[test]
+fn renamed_course_is_a_change_not_delete_plus_add() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| e.courses[0].name = "Lang".to_owned(), false);
+    let (project, _, _, _) = ready(s.run(&s.project, &theirs, &[]));
+    assert_eq!(project.courses.len(), 1);
+    assert_eq!(project.courses[0].name, "Lang");
+    assert_eq!(project.courses[0].classes, s.project.courses[0].classes);
+}
+
+#[test]
+fn team_course_is_reported_not_written() {
+    use freemapper_courseplan::ppen_export::ExportNote;
+    use freemapper_courseplan::sync::apply::SyncNote;
+    use freemapper_courseplan_model::{ControlCode, Course, CourseControl};
+    let s = setup();
+    let mut ours = s.project.clone();
+    let cc = |c: &str| CourseControl {
+        code: ControlCode(c.to_owned()),
+        number: None,
+        bends: vec![],
+        taped: false,
+    };
+    ours.courses.push(Course {
+        name: "T".to_owned(),
+        classes: vec![],
+        start: ours.courses[0].start.clone(),
+        finish: ours.courses[0].finish.clone(),
+        start_bends: vec![],
+        start_taped: false,
+        print_area: None,
+        climb_m: None,
+        planned_print_scale: None,
+        ppen_id: None,
+        kind: CourseKind::Team {
+            team_size: 2,
+            mandatory: vec![cc("31"), cc("32")],
+            free: vec![ControlCode("33".to_owned())],
+        },
+    });
+    let (project, ppen, _, report) = ready(s.run(&ours, &s.base, &[]));
+    assert!(report.notes.iter().any(|n| matches!(
+        n,
+        SyncNote::NotWritten(ExportNote::CourseSkipped { course, .. }) if course == "T"
+    )));
+    assert!(project.courses.iter().any(|c| c.name == "T"));
+    assert!(ppen.is_none_or(|p| !p.contains("<name>T</name>")));
+}
+
+#[test]
+fn new_control_never_takes_over_a_fresh_ppen_id() {
+    let s = setup();
+    let add = |e: &mut Event, code: &str, dx: f64| {
+        let mut c = e
+            .controls
+            .iter()
+            .find(|c| c.code.0 == "31")
+            .unwrap()
+            .clone();
+        c.code.0 = code.to_owned();
+        c.ppen_id = None;
+        c.map_mm.x += dx;
+        e.controls.push(c);
+    };
+    let theirs = purple_pen_saves(&s.base, |e| add(e, "39", 5.0), false);
+    let mut ours = s.project.clone();
+    add(&mut ours, "40", 9.0);
+    let (project, ppen, _, _) = ready(s.run(&ours, &theirs, &[]));
+    let ppen = ppen.unwrap();
+    assert_eq!(block(&ppen, "39"), block(&theirs, "39"));
+    assert!(ppen.contains("<code>40</code>"));
+    let ids: Vec<_> = project
+        .controls
+        .iter()
+        .filter(|c| c.code.0 == "39" || c.code.0 == "40")
+        .map(|c| c.ppen_id)
+        .collect();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.iter().all(Option::is_some));
+    assert_ne!(ids[0], ids[1]);
+}
+
+// Core guard: it drops all event ids when one code or name contradicts the base. The proposal to
+// freemapper-print (`PatchOptions::ids_first`, "the caller vouches that the ids are this base's") would let
+// the writer match by id there. The sync's check (`unmatched`, unit test in `sync.rs`) refuses a result in
+// which the writer kept an object the merge modeled. Swapped codes and a renamed course in one sync land
+// as a delete plus a new course, never as a second, ghost course.
+#[test]
+fn writer_keeping_a_modeled_object_refuses() {
+    use freemapper_courseplan::edit::{rename_control, rename_course};
+    use freemapper_courseplan_model::ControlCode;
+    let s = setup();
+    let mut ours = s.project.clone();
+    let code = |c: &str| ControlCode(c.to_owned());
+    rename_control(&mut ours, &code("31"), &code("tmp"));
+    rename_control(&mut ours, &code("32"), &code("31"));
+    rename_control(&mut ours, &code("tmp"), &code("32"));
+    rename_course(&mut ours, "A", "Lang");
+    match s.run(&ours, &s.base, &[]) {
+        Err(SyncError::Unmatched(_)) => {}
+        Ok(SyncPlan::Ready { ppen, .. }) => {
+            let ppen = ppen.unwrap();
+            assert_eq!(ppen.matches("<course ").count(), 1);
+            assert!(ppen.contains("<name>Lang</name>"));
+            assert!(!ppen.contains("<name>A</name>"));
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
+fn unknown_shape_is_refused() {
+    let s = setup();
+    let theirs = s
+        .base
+        .replace("</course-scribe-event>", "<future/></course-scribe-event>");
+    assert_ne!(theirs, s.base);
+    let result = s.run(&s.project, &theirs, &[]);
+    assert!(
+        matches!(result, Err(SyncError::UnknownVersion(_))),
+        "{result:?}"
+    );
+    // Also with edits on the other side.
+    let mut ours = s.project.clone();
+    control(&mut ours, "31").map_mm.x += 1.0;
+    let result = s.run(&ours, &theirs, &[]);
+    assert!(
+        matches!(result, Err(SyncError::UnknownVersion(_))),
+        "{result:?}"
+    );
+}
+
+fn control_id(text: &str, code: &str) -> String {
+    let at = text.find(&format!("<code>{code}</code>")).unwrap();
+    let from = text[..at].rfind("<control id=\"").unwrap() + "<control id=\"".len();
+    text[from..from + text[from..].find('"').unwrap()].to_owned()
+}
+
+fn kind_id(text: &str, kind: &str) -> String {
+    let at = text.find(&format!("kind=\"{kind}\"")).unwrap();
+    let from = text[..at].rfind("<control id=\"").unwrap() + "<control id=\"".len();
+    text[from..from + text[from..].find('"').unwrap()].to_owned()
+}
+
+#[test]
+fn a_score_course_keeps_a_deleted_control_alive() {
+    use freemapper_courseplan::sync::apply::SyncNote;
+    let s = setup();
+    let eol = if s.base.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
+    let (start, finish, c36) = (
+        kind_id(&s.base, "start"),
+        kind_id(&s.base, "finish"),
+        control_id(&s.base, "36"),
+    );
+    let score = [
+        r#"<course id="900" kind="score" order="9">"#.to_owned(),
+        "<name>Sc</name>".to_owned(),
+        r#"<first course-control="900" />"#.to_owned(),
+        r#"<options print-scale="4000" description-kind="symbols" />"#.to_owned(),
+        "</course>".to_owned(),
+        format!(r#"<course-control id="900" control="{start}"><next course-control="901" /></course-control>"#),
+        format!(r#"<course-control id="901" control="{c36}"><next course-control="902" /></course-control>"#),
+        format!(r#"<course-control id="902" control="{finish}" />"#),
+        "</course-scribe-event>".to_owned(),
+    ]
+    .join(eol);
+    let with_score = |t: &str| {
+        let (course, rest) = score.split_once(&format!("</course>{eol}")).unwrap();
+        let at = t.rfind("</course>").unwrap() + "</course>".len();
+        let mut out = t[..at].to_owned();
+        out.push_str(eol);
+        out.push_str(course);
+        out.push_str("</course>");
+        out.push_str(&t[at..t.rfind("</course-scribe-event>").unwrap()]);
+        out.push_str(rest);
+        out
+    };
+    let base = with_score(&s.base);
+    let theirs = with_score(&s.base);
+    let mut ours = s.project.clone();
+    delete_control(&mut ours, "36");
+    let plan = sync_ppen(SyncInput {
+        project: &ours,
+        base: Some(base.as_bytes()),
+        theirs: theirs.as_bytes(),
+        map: &s.map,
+        kind: s.kind,
+        take: &[],
+        base_note: None,
+    });
+    let (project, ppen, _, report) = ready(plan);
+    assert!(report.notes.contains(&SyncNote::DeletionKept {
+        control: "36".to_owned(),
+        course: "Sc".to_owned()
+    }));
+    assert!(ppen.is_none_or(|p| p.contains("<code>36</code>") && p.contains("<name>Sc</name>")));
+    assert!(project.controls.iter().all(|c| c.code.0 != "36"));
+}
+
+fn fixture(name: &str) -> String {
+    std::fs::read_to_string(root().join("tests/fixtures/ppen").join(name)).unwrap()
+}
+
+#[test]
+fn real_purple_pen_4_edits_merge() {
+    use freemapper_courseplan::ppen_import::import_ppen_as;
+    let (map, kind) = luebeck_map();
+    let base = fixture("luebeck-sprint-pp4-unchanged.ppen");
+    let theirs = fixture("luebeck-sprint-pp4-changed.ppen");
+    let import = import_ppen_as(base.as_bytes(), &map, kind).unwrap();
+    let mut project = common::valid_event(&import);
+    control(&mut project, "31").map_mm.x += 1.0;
+    control(&mut project, "32").description.f = Some("10.1".to_owned());
+    let plan = sync_ppen(SyncInput {
+        project: &project,
+        base: Some(base.as_bytes()),
+        theirs: theirs.as_bytes(),
+        map: &map,
+        kind,
+        take: &[],
+        base_note: None,
+    });
+    let (merged, ppen, _, _) = ready(plan);
+    let get = |code: &str| merged.controls.iter().find(|c| c.code.0 == code).unwrap();
+    assert!((get("34").map_mm.x - 9.126054).abs() < 2e-3);
+    assert!((get("34").map_mm.y - (-4.836937)).abs() < 2e-3);
+    // The file's `<description box="D">` sits at control 35 (the brief said 34).
+    assert!(get("35").description.d.is_some());
+    get("38");
+    get("39");
+    let CourseKind::Individual { controls } = &merged.courses[0].kind else {
+        panic!()
+    };
+    let codes: Vec<&str> = controls.iter().map(|c| c.code.0.as_str()).collect();
+    let p34 = codes.iter().position(|c| *c == "34").unwrap();
+    assert_eq!(codes[p34 - 1], "38", "{codes:?}");
+    let b = merged.courses.iter().find(|c| c.name == "B").unwrap();
+    assert!(b.classes.is_empty());
+    assert!((get("31").map_mm.x - (-50.1 + 1.0)).abs() < 2e-3);
+    assert_eq!(get("32").description.f.as_deref(), Some("10.1"));
+    let (gone, new) = line_diff(&theirs, &ppen.unwrap());
+    assert_eq!(
+        gone,
+        vec![r#"<location x="-50.1" y="3.6" />"#.to_owned()],
+        "{new:?}"
+    );
+    // Besides the two edits, course B's stops get the number placements of the project's controls: the
+    // model has one central placement per control, and Purple Pen's automatic placement is not in it.
+    let extra: Vec<_> = new
+        .iter()
+        .filter(|l| !l.starts_with("<location") && !l.starts_with("<description"))
+        .collect();
+    assert!(
+        extra.iter().all(|l| l.starts_with("<number-location")),
+        "{new:?}"
+    );
+    assert!(new.iter().any(|l| l.starts_with("<location x=\"-49.1")));
+    assert!(new.iter().any(|l| l.starts_with("<description box=\"F\"")));
+}
