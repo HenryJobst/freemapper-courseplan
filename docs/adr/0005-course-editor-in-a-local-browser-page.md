@@ -22,3 +22,5 @@ in freemapper-print ADR 0005: 127.0.0.1 only, a random 128-bit token in every pa
 - Cost if wrong: a browser page limits drawing tools compared with a native GUI.
 
 Source: brainstorming 2026-11-08 (user: "Browser-Editor wie bei freemapper-print passt").
+
+Amended by ADR 0042: the shell is the core crate `freemapper-web`, and every POST needs an Origin, a JSON content type and a revision.

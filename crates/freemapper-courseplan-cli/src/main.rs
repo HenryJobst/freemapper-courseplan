@@ -3,6 +3,7 @@
 
 mod check_cmd;
 mod edit_cmd;
+mod editor;
 mod export_cmd;
 mod import_cmd;
 mod mcp;
@@ -135,6 +136,17 @@ enum Command {
         #[command(subcommand)]
         action: EventCmd,
     },
+    /// Open the course editor in the browser
+    Edit {
+        /// The project file
+        project: PathBuf,
+        /// Port on 127.0.0.1
+        #[arg(long, default_value_t = 0)]
+        port: u16,
+        /// Print the address and leave the browser closed
+        #[arg(long)]
+        no_browser: bool,
+    },
     /// Serve course setting to AI assistants over MCP on stdin and stdout
     Mcp,
     /// Show the help of a command
@@ -263,6 +275,12 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .after_help(t("cli-help-check-exit-codes"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-info-project"))
                 .mut_arg("all", |a| with_help(a, "cli-arg-check-all"))
+        })
+        .mut_subcommand("edit", |s| {
+            s.about(t("cli-help-edit"))
+                .mut_arg("project", |a| with_help(a, "cli-arg-edit-project"))
+                .mut_arg("port", |a| with_help(a, "cli-arg-edit-port"))
+                .mut_arg("no_browser", |a| with_help(a, "cli-arg-edit-no-browser"))
         })
         .mut_subcommand("mcp", |s| s.about(t("cli-help-mcp")))
         .mut_subcommand("help", |s| {
@@ -456,6 +474,11 @@ fn main() -> ExitCode {
         Command::Check { project, all } => check_cmd::check(&lang, project, all),
         Command::Finding { action } => check_cmd::finding(&lang, action),
         Command::Event { action } => check_cmd::event(&lang, action),
+        Command::Edit {
+            project,
+            port,
+            no_browser,
+        } => editor::run(lang.clone(), project, port, !no_browser).map_err(Failure::Error),
         Command::Mcp => mcp::run(lang.clone()).map_err(Failure::Error),
         Command::Help { command: path } => {
             command.build();
@@ -672,6 +695,7 @@ mod tests {
     const SCANNED_SOURCES: &[(&str, &str)] = &[
         ("main.rs", include_str!("main.rs")),
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
+        ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),
         ("import_cmd.rs", include_str!("import_cmd.rs")),
@@ -717,7 +741,7 @@ mod tests {
             .filter_map(|(_, s)| s.split("#[cfg(test)]").next())
             .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-", "check-"]
+                ["error-", "cli-", "word-", "mcp-", "check-", "editor-"]
                     .iter()
                     .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')

@@ -826,3 +826,43 @@ mcp-param-accept-finding-after = Position, von der die Strecke in der Punktliste
 mcp-param-remove-accepted-finding-after = Position, von der die Strecke in der Punktliste der Bahn abgeht: Die Posten der Bahn zählen ab 1, Querungsstellen mitgezählt, und 0 ist die Strecke vom Start. Das ist nicht die Postennummer auf der Karte; anzugeben ist after aus dem Ort einer Strecke in check
 mcp-param-base = Das Basis-Regelprofil, zum Beispiel wkb-2026
 mcp-param-overlays = Aufsätze auf das Basisprofil in der Reihenfolge, in der sie gelten, zum Beispiel nor-bb-2021 [Standard: keine]
+
+## Editor (Befehl edit und Editorseite; editor-* Meldungen haben keine Argumente)
+
+cli-help-edit = Den Bahnlegungs-Editor im Browser öffnen
+cli-arg-edit-project = Die Projektdatei
+cli-arg-edit-port = Port auf 127.0.0.1 [Vorgabe: ein freier Port]
+cli-arg-edit-no-browser = Nur die Adresse ausgeben, den Browser nicht öffnen
+cli-edit-stop-hint = Der Editor läuft. Beende ihn mit Strg+C oder mit „Editor schließen“ in der Seite.
+cli-edit-browser-failed = Der Browser hat sich nicht geöffnet ({ $reason }). Öffne die Adresse oben von Hand.
+cli-edit-bind-failed = Port { $port } auf 127.0.0.1 lässt sich nicht belegen ({ $reason }). Wähle mit --port einen anderen Port oder lass die Angabe weg, dann nimmt das Programm einen freien.
+cli-edit-runtime-failed = Der Editor lässt sich nicht starten: { $reason }
+cli-edit-server-failed = Der Editor ist mit einem Fehler beendet worden: { $reason }
+
+editor-page-title = Bahnlegung
+editor-menu-event = Veranstaltung
+editor-menu-export = Exportieren
+editor-menu-import = Importieren
+editor-menu-sync = Mit Purple Pen abgleichen
+editor-menu-close = Editor schließen
+editor-pane-tree = Inhalt der Veranstaltung
+editor-pane-map = Karte
+editor-pane-props = Eigenschaften und Befunde
+editor-tree-courses = Bahnen
+editor-tree-classes = Kategorien
+editor-tree-controls = Posten
+editor-tree-specials = Sonderobjekte
+editor-props-heading = Eigenschaften
+editor-props-empty = Wähle eine Bahn, einen Posten oder ein Sonderobjekt, um die Eigenschaften zu sehen.
+editor-findings-heading = Befunde
+editor-findings-empty = Noch nichts anzuzeigen.
+editor-toolbar-label = Werkzeuge
+editor-tool-select = Auswählen
+editor-tool-control = Posten setzen
+editor-tool-crossing = Querungsstelle setzen
+editor-tool-special = Sonderobjekt
+editor-tool-course = Bahnmodus
+editor-status-label = Status
+editor-status-ready = Bereit
+editor-status-closed = Der Editor ist beendet. Du kannst diesen Tab schließen.
+editor-status-lost = Der Editor antwortet nicht. Starte ihn mit dem Befehl edit neu.

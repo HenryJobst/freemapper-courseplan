@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-text="editor-page-title"></title>
+  <link rel="stylesheet" href="assets/app.css">
+  <script type="module" src="assets/js/main.js"></script>
+</head>
+<body>
+  <header class="menubar">
+    <details class="menu">
+      <summary data-text="editor-menu-event"></summary>
+      <ul>
+        <li><button type="button" id="menu-export" data-text="editor-menu-export" disabled></button></li>
+        <li><button type="button" id="menu-import" data-text="editor-menu-import" disabled></button></li>
+        <li><button type="button" id="menu-sync" data-text="editor-menu-sync" disabled></button></li>
+        <li><button type="button" id="menu-close" data-text="editor-menu-close"></button></li>
+      </ul>
+    </details>
+  </header>
+  <main class="panes">
+    <nav class="pane" id="pane-tree" data-label="editor-pane-tree">
+      <h2 data-text="editor-tree-courses"></h2>
+      <h2 data-text="editor-tree-classes"></h2>
+      <h2 data-text="editor-tree-controls"></h2>
+      <h2 data-text="editor-tree-specials"></h2>
+    </nav>
+    <section class="pane" id="pane-map" data-label="editor-pane-map">
+      <div class="toolbar" role="toolbar" data-label="editor-toolbar-label">
+        <button type="button" data-text="editor-tool-select" aria-pressed="true"></button>
+        <button type="button" data-text="editor-tool-control" disabled></button>
+        <button type="button" data-text="editor-tool-crossing" disabled></button>
+        <button type="button" data-text="editor-tool-special" disabled></button>
+        <button type="button" data-text="editor-tool-course" disabled></button>
+      </div>
+    </section>
+    <aside class="pane" id="pane-props" data-label="editor-pane-props">
+      <h2 data-text="editor-props-heading"></h2>
+      <p class="hint" data-text="editor-props-empty"></p>
+      <h2 data-text="editor-findings-heading"></h2>
+      <p class="hint" data-text="editor-findings-empty"></p>
+    </aside>
+  </main>
+  <footer class="status" id="status" role="status" data-label="editor-status-label"></footer>
+</body>
+</html>

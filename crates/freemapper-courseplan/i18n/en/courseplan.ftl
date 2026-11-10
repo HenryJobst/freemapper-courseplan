@@ -831,3 +831,43 @@ mcp-param-accept-finding-after = Position the leg leaves in the stop list of the
 mcp-param-remove-accepted-finding-after = Position the leg leaves in the stop list of the course: the controls of the course count from 1, crossing points included, and 0 is the leg from the start. It is not the control number on the map; the after of a leg location in check is the value to give
 mcp-param-base = The base rule profile, for example wkb-2026
 mcp-param-overlays = Overlays on the base profile in the order they apply, for example nor-bb-2021 [default: none]
+
+## Editor (edit command and the editor page; editor-* messages take no arguments)
+
+cli-help-edit = Open the course editor in the browser
+cli-arg-edit-project = The project file
+cli-arg-edit-port = Port on 127.0.0.1 [default: a free port]
+cli-arg-edit-no-browser = Print the address and leave the browser closed
+cli-edit-stop-hint = The editor is running. Stop it with Ctrl+C or with "Close editor" in the page.
+cli-edit-browser-failed = The browser did not open ({ $reason }). Open the address above by hand.
+cli-edit-bind-failed = Cannot listen on port { $port } of 127.0.0.1 ({ $reason }). Choose another port with --port, or leave it out to take a free one.
+cli-edit-runtime-failed = Cannot start the editor: { $reason }
+cli-edit-server-failed = The editor stopped with an error: { $reason }
+
+editor-page-title = Course editor
+editor-menu-event = Event
+editor-menu-export = Export
+editor-menu-import = Import
+editor-menu-sync = Sync with Purple Pen
+editor-menu-close = Close editor
+editor-pane-tree = Contents of the event
+editor-pane-map = Map
+editor-pane-props = Properties and findings
+editor-tree-courses = Courses
+editor-tree-classes = Categories
+editor-tree-controls = Controls
+editor-tree-specials = Special objects
+editor-props-heading = Properties
+editor-props-empty = Select a course, a control or a special object to see its properties.
+editor-findings-heading = Findings
+editor-findings-empty = Nothing to show yet.
+editor-toolbar-label = Tools
+editor-tool-select = Select
+editor-tool-control = Place control
+editor-tool-crossing = Place crossing point
+editor-tool-special = Special object
+editor-tool-course = Course mode
+editor-status-label = Status
+editor-status-ready = Ready
+editor-status-closed = The editor has stopped. You can close this tab.
+editor-status-lost = The editor does not answer. Start it again with the edit command.
