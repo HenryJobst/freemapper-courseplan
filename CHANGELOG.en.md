@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-10
+
 ### Added
 
 - `sync` merges the project with its linked `.ppen` in both directions (ADR 0040). It compares, field by field, the base copy `X.courseplan.ppen-base` (belongs in git; `sync` removes the map's `absolute-path` from it), the file now and the project now. If both sides changed the same field differently, or one side deletes what the other edited, `sync` lists both values and writes nothing. `--take ours`, `--take theirs` or `--take KEY=SIDE` pick a side, `--dry-run` writes nothing, and `--json` prints the result for machines. The next run finishes an interrupted sync. The sync refuses files from an unknown Purple Pen version. Classes, accepted findings and team, relay and score courses stay in the project.
