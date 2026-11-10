@@ -308,8 +308,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-course"
-version = "0.3.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.3.0#d1e826a51dec80c18902282467cbfcf84b98470a"
+version = "0.4.0"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
 dependencies = [
  "freemapper-omap",
  "quick-xml",
@@ -362,8 +362,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-omap"
-version = "0.3.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.3.0#d1e826a51dec80c18902282467cbfcf84b98470a"
+version = "0.4.0"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
 dependencies = [
  "quick-xml",
  "thiserror",
@@ -371,8 +371,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-rules"
-version = "0.3.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.3.0#d1e826a51dec80c18902282467cbfcf84b98470a"
+version = "0.4.0"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
 dependencies = [
  "thiserror",
  "toml",
@@ -380,8 +380,8 @@ dependencies = [
 
 [[package]]
 name = "freemapper-text"
-version = "0.3.0"
-source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.3.0#d1e826a51dec80c18902282467cbfcf84b98470a"
+version = "0.4.0"
+source = "git+https://github.com/HenryJobst/freemapper-core?tag=v0.4.0#f02b646a652b3b5e6439cebf9156f1febd89fabb"
 dependencies = [
  "fluent-bundle",
  "fluent-syntax",

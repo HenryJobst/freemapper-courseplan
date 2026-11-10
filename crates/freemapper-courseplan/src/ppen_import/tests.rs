@@ -459,6 +459,7 @@ fn marked_route_special_becomes_a_marked_route() {
         .unwrap()
         .event;
     fitted.specials.push(Special::MarkedRoute {
+        id: None,
         path: vec![MapCoord::new(1000, -2000), MapCoord::new(3000, -4000)],
         courses: CourseFilter::Only(vec!["A".to_owned()]),
     });
