@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Editor preview: `freemapper-courseplan edit <project>` shows the event in the browser (ADR 0042, 0045, 0046). On the left is the tree of courses, categories, controls and special objects. In the centre the view shows the selected course with circles, legs and numbers over a placeholder map; on the right are the properties (read-only). The status bar is at the bottom. Nothing can be edited yet. The real map follows with freemapper-render.
+
 ### Changed
 
 - The shared building blocks come from freemapper-core v0.10.0. The program itself does not change.

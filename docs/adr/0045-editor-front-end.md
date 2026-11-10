@@ -39,7 +39,7 @@ tree, the map with the course on top, and the properties of the selection. The s
 
 ## Consequences
 - Dragging, editing and the findings drawer come in later stages on the same modules.
-- Fine lines are small click targets; legs are not selectable yet.
+- Fine lines are small click targets, and legs cannot be selected yet.
 - The page has no browser test in CI; the stage's smoke test is manual (plan Task 5, step 4).
 
 Source: browser editor plan M4, D9 to D11 (2026-11-11).

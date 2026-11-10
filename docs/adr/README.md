@@ -88,3 +88,5 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0042](0042-editor-server-and-security.md) | Editor server: one process per project, a shared shell, and guarded requests | Accepted | 2026-11-11 |
 | [0045](0045-editor-front-end.md) | Editor front end: plain modules, one SVG, texts from the server | Accepted | 2026-11-11 |
 | [0046](0046-editor-overlay-and-map-view.md) | Editor: course symbols from the server, map behind a view interface | Accepted | 2026-11-11 |
+
+Numbers 0043 and 0044 are reserved for the editor's operations and save guard (stage 2 of the editor plan).

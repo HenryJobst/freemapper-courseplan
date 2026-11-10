@@ -17,8 +17,9 @@ the competition rules and hands them on to result software and to printing:
 
 Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
-`freemapper-text` for the program texts, `freemapper-omap` for reading the map and `freemapper-course` for reading
-Purple Pen files. The programs use them in a fixed version (courseplan: 0.6.1) instead of copying the code. The
+`freemapper-text` for the program texts, `freemapper-omap` for reading the map, `freemapper-course` for reading
+Purple Pen files and `freemapper-web` for the editor's local server. The programs use them in a fixed version
+(courseplan: 0.11.0) instead of copying the code. The
 number placement and the description symbol tables come from there, so courseplan and freemapper-print place numbers
 the same way.
 
@@ -35,7 +36,8 @@ Planned for the first version:
   export and sync are usable now: `import`, `export --ppen` and `sync`; Purple Pen 4.0 opens the export);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
-- use through the editor in the browser, the command line or an AI assistant (MCP).
+- use through the editor in the browser (`edit`, usable as a preview now: it shows the event, and nothing can be
+  edited in it yet), the command line or an AI assistant (MCP).
 
 After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
 tours for the people who put out the controls, and AI support that judges courses and makes proposals.
@@ -119,6 +121,13 @@ project now, field by field. A change on one side goes to the other. If both sid
 `--take KEY=SIDE`; `--dry-run` only reports. Classes, accepted findings and team, relay and score courses stay in the
 project. The AI assistant has the tools `sync_ppen` and `resolve_sync_conflict`. The editor's conflict panel comes
 with the editor. See chapter 9 of the [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) and ADR 0040.
+
+`freemapper-courseplan edit <project>` starts the editor preview and shows the event in the browser: on the left the
+tree of courses, categories, controls and special objects, in the centre the selected course with circles, legs and
+numbers, on the right the properties. The editor is read-only; you keep making changes with the command line or the
+AI assistant and see them in the browser after about two seconds. The map is still a placeholder (grid and frame);
+the real map follows with freemapper-render. The server listens on `127.0.0.1` only and needs an access token in the
+address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

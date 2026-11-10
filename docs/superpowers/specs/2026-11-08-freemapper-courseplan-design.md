@@ -463,6 +463,17 @@ Paths are relative to the project file. The editor keeps comments it did not cre
   course or all controls; right the properties of the selection and the check findings for it. Click on the
   map places a control, dragging moves controls, bends and numbers. *(Claude's call: layout follows
   freemapper-print's editor, so both feel the same.)*
+  - **Built (stage 1 of the M4 plan, ADR 0042, 0045, 0046):** `edit PROJECT [--port N] [--no-browser]` starts a
+    local server (127.0.0.1, token in the address, `freemapper-web` from core) and serves the page. It has the tree
+    (courses, categories, controls, special objects), the map area with pan and zoom, the course overlay (circles,
+    start, finish, legs, number boxes, special objects) computed by the server, read-only properties, a status
+    bar and polling for outside changes every two seconds. The map is a placeholder (frame, 10 mm grid, note)
+    behind the `MapView` trait. The toolbar and the menu items export, import and sync are inactive.
+  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 2 select,
+    place, move and delete controls, with save guard, revision guard and undo; stage 3 courses, bends, taped
+    legs, numbers and special objects; stage 4 control descriptions (columns C to H); stage 5 findings panel,
+    export and import, sync panel with conflicts; stage 6 the real map from `freemapper-render`; stage 7 manual
+    and release 0.10.0. The release waits for stage 6.
 
 ## 6. AI support
 
@@ -506,6 +517,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 4. **M3** `.ppen` import, export and sync with three-way merge (§5.5a), IOF XML 3.0 export, tested with
    Purple Pen, freemapper-print and OE.
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
+   Under way: stage 1 (read-only preview with a placeholder map) is built; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 
@@ -521,7 +533,8 @@ The builder may start the editor earlier if placing controls through the CLI tur
 
 - **`.ppen` import against real events** (§5.5): tested with three core fixtures on generated maps; a real file
   on the Lübeck map is still open.
-- **`sync` follow-ups** (§5.5a): the editor's conflict panel comes with M4. `PatchOptions::ids_first` is proposed to
+- **`sync` follow-ups** (§5.5a): the editor's conflict panel comes with M4 (stage 5 of the plan; not built, the
+  editor of stage 1 only shows a note when the linked `.ppen` changed). `PatchOptions::ids_first` is proposed to
   freemapper-print and not yet agreed; without it a sync that swaps two codes and renames a course is refused
   (ADR 0040).
 - **`.ppen` export in Purple Pen 4.0** (§5.5): the export is tested by reading it back with the core reader and

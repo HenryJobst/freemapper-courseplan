@@ -17,9 +17,9 @@ Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
 
 Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Bibliothek:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
-`freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte und `freemapper-course` für das
-Lesen von Purple-Pen-Dateien. Die Programme binden sie in einer festen Version ein (courseplan: 0.6.1), statt den
-Code zu kopieren. Die Lage der Postennummern und die Tabellen der Beschreibungssymbole kommen von dort, daher
+`freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte, `freemapper-course` für das
+Lesen von Purple-Pen-Dateien und `freemapper-web` für den lokalen Server des Editors. Die Programme binden sie in
+einer festen Version ein (courseplan: 0.11.0), statt den Code zu kopieren. Die Lage der Postennummern und die Tabellen der Beschreibungssymbole kommen von dort, daher
 platzieren courseplan und freemapper-print die Nummern gleich.
 
 Geplant ist für die erste Version:
@@ -34,7 +34,8 @@ Geplant ist für die erste Version:
   Export und Abgleich sind schon nutzbar: `import`, `export --ppen` und `sync`; Purple Pen 4.0 öffnet den Export);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
-- Bedienung über den Editor im Browser, über die Kommandozeile oder über einen KI-Assistenten (MCP).
+- Bedienung über den Editor im Browser (`edit`, als Vorschau schon nutzbar: zeigt die Veranstaltung, bearbeiten lässt
+  sich darin noch nichts), über die Kommandozeile oder über einen KI-Assistenten (MCP).
 
 Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Score-OL, Touren für die
 Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge macht.
@@ -120,6 +121,14 @@ nichts, bis du mit `--take ours`, `--take theirs` oder `--take SCHLÜSSEL=SEITE`
 nur. Kategorien, akzeptierte Befunde und Mannschafts-, Staffel- und Score-Bahnen bleiben im Projekt. Der
 KI-Assistent hat die Werkzeuge `sync_ppen` und `resolve_sync_conflict`. Die Konfliktansicht im Editor kommt mit dem
 Editor. Siehe Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgleichen) und ADR 0040.
+
+`freemapper-courseplan edit <Projekt>` startet die Vorschau des Editors und zeigt die Veranstaltung im Browser: links
+den Baum aus Bahnen, Kategorien, Posten und Sonderobjekten, in der Mitte die gewählte Bahn mit Kreisen, Strecken und
+Nummern, rechts die Eigenschaften. Der Editor ist nur lesend; Änderungen machst du weiter mit der Kommandozeile oder
+dem KI-Assistenten und siehst sie nach etwa zwei Sekunden im Browser. Die Karte ist noch ein Platzhalter (Gitter und
+Rahmen), die echte Karte folgt mit freemapper-render. Der Server hört nur auf `127.0.0.1` und verlangt ein
+Zugriffszeichen in der Adresse. Siehe Kapitel 4 des [Handbuchs](docs/manual/de.md#4-der-editor-vorschau) und
+ADR 0042.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

@@ -7,8 +7,8 @@ Status: Accepted
 The editor shows the map and, on top of it, the course: circles, start triangle, finish, legs, number boxes and
 special objects. Each symbol has to be its own element, so the page can select and drag it, and a drag must not
 wait for a new render of the map. The shared renderer (freemapper-render) draws map content, but its course layer
-arrives only after core v0.9.0 and print's overprint is not part of `RenderedPage` yet. The first server version
-also re-read the project file for every map request.
+arrives only after core v0.9.0 and print's overprint is not part of `RenderedPage` yet. A map request should not
+read the project file again, so the server needs to hold the parsed state.
 
 ## Decision
 - **The server computes the overlay, the page draws it** *(Claude's call)*. `GET api/overlay?course=NAME`
@@ -33,7 +33,7 @@ also re-read the project file for every map request.
   `api/revision` poll (plan D8). A broken project file or map gives a state with only `revision` and `error`.
 
 ## Consequences
-- Course symbols exist twice until the print preview layer arrives: here for editing, in the renderer for the
+- Course symbols exist twice until the print preview layer arrives, here for editing and in the renderer for the
   printed page. The parity test keeps them from drifting.
 - Between `api/revision` polls the map routes can serve data of the previous revision for up to two seconds.
 - `check::drawn_part` and `numbers::number_centre` became public; they are now API of the library crate.

@@ -101,6 +101,77 @@ there.
   says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did.
 
+## 4. The editor (preview)
+
+The editor shows the event in the browser. In this preview it is read-only: you can look at courses, controls and
+special objects, but not change them. Changes still go through the command line or the AI assistant. The toolbar
+buttons and the menu items for export, import and sync are greyed out.
+
+### Starting it
+
+```sh
+freemapper-courseplan edit luebeck-sprint.courseplan.toml
+```
+
+The command loads the project, opens the browser and prints the address on a single line, such as
+`http://127.0.0.1:47123/3f9c…/`. If the project file is broken, it names the file and exits with code 1 without
+printing anything. It runs until you press Ctrl+C or choose "Close editor" in the "Event" menu. Both end it with
+exit code 0.
+
+- `--port N` picks the port. Without it the program takes a free one. If the port is taken, the program says so and
+  exits with code 1.
+- `--no-browser` does not open the browser. You open the printed address yourself. If the browser cannot be started,
+  the program prints a hint and keeps running.
+- The page speaks the program's language (`--lang en`, `FREEMAPPER_LANG` or the system language setting). The page
+  has no language switch; to change the language, restart the editor.
+
+One editor belongs to one project. To open a second project, start a second editor.
+
+### What the page shows
+
+- On the left is the tree of the event with the groups Courses, Categories, Controls and Special objects. "All
+  controls" shows every control with its code.
+- In the centre is the map. When you select a course, the editor draws its circles, start triangle, finish, legs and
+  control numbers on top. A number box with a dashed outline was placed automatically; the project stores no position
+  for it yet.
+- On the right are the properties of the selection, for example name, length and climb of a course, or code, kind,
+  position and description of a control. The area for findings is still empty.
+- The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
+  Messages appear there too.
+
+In this preview the map is a placeholder: a frame around the map extent, a 10 mm grid and a note. Circles, legs and
+numbers sit at the right place on the map, but no map content is visible beneath them. freemapper-render will supply
+that later.
+
+### Keyboard and mouse
+
+- In the tree, the arrow keys, Home and End move between entries and Enter selects.
+- When the map has focus, the arrow keys move the view. `+` and `-` zoom, and `0` fits the map to the window. With
+  the mouse you move the view by dragging on empty space and zoom with the wheel.
+- Tab moves from the tree to the map, to the properties and to the menu.
+
+### Changes from outside
+
+If another program changes the project file, for example `freemapper-courseplan control move` in a terminal or the AI
+assistant, the page reloads it after about two seconds and says so in the status bar. A tab in the background does
+not ask again until you open it. If the map changes, the page reloads it. If the linked `.ppen` changes, the status
+bar shows a note.
+
+### Privacy and security
+
+- The server listens on `127.0.0.1` only. Other computers on the network cannot reach it.
+- The address contains a random access token (32 hex digits). Anyone who knows the full address can look at the event
+  on your computer. Do not pass the address on.
+- The token also shows in the process list while the program hands it to the browser. On a computer that several
+  people share, another user can read it there. Start the editor with `--no-browser` on such a machine and open the
+  address yourself, or work on your own computer.
+- The page loads nothing from the network. The server reads only the project file, the map and the linked `.ppen`.
+  It accepts no file names from the browser.
+- The server also checks the origin and content type of requests that write, so a foreign web page in the same
+  browser cannot trigger anything. The preview does not change the project file.
+
+The decisions behind this are in ADR 0042, 0045 and 0046.
+
 ## 8. Checking: reading findings, giving reasons for exceptions
 
 `check` holds every individual course against the rules the event is meant to follow and tells you what stands
