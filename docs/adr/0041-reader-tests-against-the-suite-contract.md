@@ -30,6 +30,17 @@ a reader must derive from each. The user asked the freemapper session to write t
 - A failing contract test is a finding about courseplan or about the contract. It is settled with the freemapper
   session and never by loosening the test here.
 
+## Addendum 2026-11-10 (core v0.10.0)
+
+The contract crate has two more fixtures (core ADR 0018, addendum), and the tests run over all four. No code
+outside the tests changed.
+
+- `legacy-0.9.0-scale-bar`, a map from freemapper 0.9.0: the scale bar tagged `freemapper:source=scale-bar`
+  counts as sheet furniture, and `title_from_config` returns `None` because that sidecar has no title.
+- `future-kind`, with `map_kind = "gym"`: `map_kind_for_file` raises no error and returns what the map alone
+  gives. `map_kind`, which `export_ppen` uses, agrees with `map_kind_for_file` for all four fixtures, so
+  `export_ppen` does not need the path for them.
+
 ## Consequences
 - With `sheet` removed from `is_sheet_furniture`, `contract_classes` and `contract_extent` fail. That was tried
   before the merge.

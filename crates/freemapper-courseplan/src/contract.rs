@@ -41,24 +41,25 @@ fn each(test: impl Fn(&Read)) {
     }
 }
 
-fn kind(read: &Read) -> MapKind {
-    *MapKind::ALL
-        .iter()
-        .find(|k| k.as_str() == read.expected.map_kind)
-        .unwrap_or_else(|| panic!("{}: unknown kind {}", read.name, read.expected.map_kind))
+/// The kind the sidecar must give: `None` for the fixture whose kind no reader knows.
+fn sidecar_kind(read: &Read) -> Option<MapKind> {
+    let name = read.expected.map_kind.as_str();
+    let kind = MapKind::ALL.into_iter().find(|k| k.as_str() == name);
+    assert!(kind.is_some() || name == "unknown", "{}: {name}", read.name);
+    kind
 }
 
 #[test]
 fn contract_kind() {
     each(|read| {
-        assert_eq!(
-            map_kind_for_file(&read.doc, &read.path),
-            kind(read),
-            "{}",
-            read.name
-        );
-        // `export_ppen` has no path and asks the map alone; for what freemapper writes today the two agree.
-        assert_eq!(map_kind(&read.doc), kind(read), "{}", read.name);
+        let for_file = map_kind_for_file(&read.doc, &read.path);
+        match sidecar_kind(read) {
+            Some(kind) => assert_eq!(for_file, kind, "{}", read.name),
+            // A kind courseplan does not know counts as absent: the map decides, and no error is raised.
+            None => assert_eq!(for_file, map_kind(&read.doc), "{}", read.name),
+        }
+        // `export_ppen` has no path and asks the map alone; for every fixture the two agree.
+        assert_eq!(map_kind(&read.doc), for_file, "{}", read.name);
     });
 }
 
@@ -67,7 +68,7 @@ fn contract_title() {
     each(|read| {
         assert_eq!(
             title_from_config(read.dir.path()),
-            Some(read.expected.title.clone()),
+            read.expected.title,
             "{}",
             read.name
         );
