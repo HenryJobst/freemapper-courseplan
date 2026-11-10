@@ -8,8 +8,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Geändert
 
-- Die gemeinsamen Bausteine kommen aus freemapper-core v0.8.0. Am Programm ändert sich dadurch nichts.
-- Tests: Jeder Testlauf liest jetzt zwei Karten, die freemapper geschrieben hat (Schulhof 1:1000, Sprint 1:4000), und vergleicht Kartenart, Titel, Randobjekte, Grundfläche und Kartenausdehnung mit den Erwartungswerten aus `freemapper-contract` (ADR 0041). Ändert freemapper ein Tag oder einen Schlüssel der `freemapper.toml`, schlagen diese Tests fehl.
+- Die gemeinsamen Bausteine kommen aus freemapper-core v0.10.0. Am Programm ändert sich dadurch nichts.
+- Tests: Jeder Testlauf liest jetzt vier Karten von freemapper (Schulhof 1:1000, Sprint 1:4000, eine Karte von freemapper 0.9.0 und eine mit unbekannter Kartenart) und vergleicht Kartenart, Titel, Randobjekte, Grundfläche und Kartenausdehnung mit den Erwartungswerten aus `freemapper-contract` (ADR 0041). Ändert freemapper ein Tag oder einen Schlüssel der `freemapper.toml`, schlagen diese Tests fehl.
 
 ### Behoben
 
