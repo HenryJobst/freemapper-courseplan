@@ -255,6 +255,7 @@ mod tests {
             ],
             courses: vec![],
             accepted_findings: vec![],
+            sync: None,
         }
     }
 

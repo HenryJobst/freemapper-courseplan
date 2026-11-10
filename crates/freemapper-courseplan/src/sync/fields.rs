@@ -522,6 +522,7 @@ mod tests {
             specials: ends(),
             courses,
             accepted_findings: vec![],
+            sync: None,
         }
     }
 

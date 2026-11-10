@@ -91,6 +91,7 @@ pub fn valid_event(import: &PpenImport) -> Event {
         specials: import.specials.clone(),
         courses: import.courses.clone(),
         accepted_findings: vec![],
+        sync: None,
     };
     assert_eq!(validate(&event), vec![]);
     event

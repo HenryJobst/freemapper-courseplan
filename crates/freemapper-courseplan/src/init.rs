@@ -79,6 +79,7 @@ pub fn new_event(
         specials: Vec::new(),
         courses: Vec::new(),
         accepted_findings: Vec::new(),
+        sync: None,
     })
 }
 

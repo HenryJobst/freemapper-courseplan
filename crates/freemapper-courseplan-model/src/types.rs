@@ -560,6 +560,41 @@ pub struct Event {
     pub courses: Vec<Course>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub accepted_findings: Vec<AcceptedFinding>,
+    /// State of the three-way sync with the linked `.ppen`; absent until a sync ran (ADR 0040).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync: Option<SyncState>,
+}
+
+/// The side of a sync conflict a user picked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Side {
+    /// The project's value.
+    Ours,
+    /// The value in the `.ppen`.
+    Theirs,
+}
+
+/// A stored answer to one sync conflict. It counts only while the fingerprint of the conflict's two
+/// values still matches, and the next completed sync clears it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SyncDecision {
+    pub key: String,
+    pub take: Side,
+    pub fingerprint: String,
+}
+
+/// The `[sync]` table: what the last sync left behind.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SyncState {
+    /// The link the base copy belongs to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ppen: Option<PathBuf>,
+    /// FNV-1a 64 of the stored base copy, 16 lowercase hex digits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_fnv1a64: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub decisions: Vec<SyncDecision>,
 }
 
 #[cfg(test)]
@@ -762,6 +797,7 @@ mod tests {
                 }],
                 note: "Checked on site.".to_owned(),
             }],
+            sync: None,
         };
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();

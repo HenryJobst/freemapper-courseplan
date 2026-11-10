@@ -211,6 +211,7 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         ],
         courses,
         accepted_findings: vec![],
+        sync: None,
     }
 }
 
