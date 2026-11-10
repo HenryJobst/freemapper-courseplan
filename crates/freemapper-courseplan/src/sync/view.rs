@@ -80,7 +80,13 @@ pub fn views(
         Target {
             base,
             linked: true,
-            map_path: String::new(),
+            // Only the ours view is read from this text. A file made from scratch needs some map path;
+            // with a base the writer takes the base's.
+            map_path: if base.is_some() {
+                String::new()
+            } else {
+                "map.omap".to_owned()
+            },
             lang: "en",
             delete: Default::default(),
         },

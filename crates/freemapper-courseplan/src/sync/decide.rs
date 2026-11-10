@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use freemapper_courseplan_model::{Side, SyncDecision};
+use freemapper_courseplan_model::{ControlKind, Side, SyncDecision};
 
 use super::base::fnv1a64;
 use super::fields::{ControlField, CourseField, FieldKey, FieldOutcome, FieldValue, ObjectKind};
@@ -197,10 +197,37 @@ fn scale(s: Option<u32>) -> String {
     s.map_or_else(|| "none".to_owned(), |s| s.to_string())
 }
 
+/// The kind of a control as a word. `as_str` is the English text and the key a front end translates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KindWord {
+    Control,
+    CrossingPoint,
+    Start,
+    Finish,
+}
+
+impl KindWord {
+    pub fn of(kind: ControlKind) -> Self {
+        match kind {
+            ControlKind::Control => KindWord::Control,
+            ControlKind::CrossingPoint => KindWord::CrossingPoint,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            KindWord::Control => "control",
+            KindWord::CrossingPoint => "crossing point",
+            KindWord::Start => "start",
+            KindWord::Finish => "finish",
+        }
+    }
+}
+
 fn render_value(value: &FieldValue, v: &Views, m: &Matching) -> String {
     match value {
         FieldValue::Code(s) | FieldValue::Name(s) => s.clone(),
-        FieldValue::Kind(k) => format!("{k:?}").to_lowercase(),
+        FieldValue::Kind(k) => KindWord::of(*k).as_str().to_owned(),
         FieldValue::Point(x, y) => format!("{}, {} mm", mm(*x), mm(*y)),
         FieldValue::Column(c) => c.clone().unwrap_or_else(|| "empty".to_owned()),
         FieldValue::Shape(points, courses) => {
@@ -301,6 +328,17 @@ pub fn resolve(conflicts: &[SyncConflict], stored: &[SyncDecision], take: &[Take
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kind_words_are_readable() {
+        assert_eq!(KindWord::of(ControlKind::Control).as_str(), "control");
+        assert_eq!(
+            KindWord::of(ControlKind::CrossingPoint).as_str(),
+            "crossing point"
+        );
+        assert_eq!(KindWord::Start.as_str(), "start");
+        assert_eq!(KindWord::Finish.as_str(), "finish");
+    }
 
     fn conflict(key: &str) -> SyncConflict {
         SyncConflict {

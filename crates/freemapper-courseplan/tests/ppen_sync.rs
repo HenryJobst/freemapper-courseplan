@@ -6,9 +6,12 @@ use common::purple_pen::{luebeck_map, purple_pen_saves, root};
 use freemapper_courseplan::map::MapKind;
 use freemapper_courseplan::omap::MapDocument;
 use freemapper_courseplan::ppen_export::{Deletions, Target, export_ppen_as, store_ids};
+use freemapper_courseplan::sync::apply::SyncNote;
+use freemapper_courseplan::sync::base::{BaseState, base_state, fnv1a64};
 use freemapper_courseplan::sync::decide::Take;
 use freemapper_courseplan::sync::{SyncError, SyncInput, SyncPlan, sync_ppen};
-use freemapper_courseplan_model::{CourseKind, Event, ProjectFile, Side};
+use freemapper_courseplan_model::{CourseKind, Event, ProjectFile, Side, SyncState};
+use std::path::{Path, PathBuf};
 
 struct Setup {
     map: MapDocument,
@@ -475,4 +478,152 @@ fn real_purple_pen_4_edits_merge() {
     );
     assert!(new.iter().any(|l| l.starts_with("<location x=\"-49.1")));
     assert!(new.iter().any(|l| l.starts_with("<description box=\"F\"")));
+}
+
+const LINK: &str = "../purple-pen/luebeck.ppen";
+
+fn recorded(base: &str) -> SyncState {
+    SyncState {
+        ppen: Some(PathBuf::from(LINK)),
+        base_fnv1a64: Some(fnv1a64(base.as_bytes())),
+        decisions: vec![],
+    }
+}
+
+impl Setup {
+    /// What the CLI does: judge the stored base, then sync with what that gives.
+    fn run_stored(
+        &self,
+        project: &Event,
+        stored: Option<&str>,
+        theirs: &str,
+    ) -> Result<SyncPlan, SyncError> {
+        let state = base_state(
+            project.sync.as_ref(),
+            Path::new(LINK),
+            stored.map(str::as_bytes),
+            theirs.as_bytes(),
+        );
+        let (base, base_note) = state.resolve(stored.map(str::as_bytes), theirs.as_bytes());
+        sync_ppen(SyncInput {
+            project,
+            base: base.as_deref(),
+            theirs: theirs.as_bytes(),
+            map: &self.map,
+            kind: self.kind,
+            take: &[],
+            base_note,
+        })
+    }
+}
+
+#[test]
+fn ignored_base_deletes_nothing() {
+    let s = setup();
+    let mut ours = s.project.clone();
+    delete_control(&mut ours, "36");
+    let run = |take: &[Take]| {
+        sync_ppen(SyncInput {
+            project: &ours,
+            base: None,
+            theirs: s.base.as_bytes(),
+            map: &s.map,
+            kind: s.kind,
+            take,
+            base_note: Some(SyncNote::BaseIgnored { why: "missing" }),
+        })
+    };
+    // Without a base the differing stop list is a conflict, not a deletion.
+    let SyncPlan::Conflicts(report) = run(&[]).unwrap() else {
+        panic!("no conflict")
+    };
+    assert_eq!(report.conflicts.len(), 1);
+    assert_eq!(report.conflicts[0].key, "course/A/stops");
+    assert!(
+        report
+            .notes
+            .contains(&SyncNote::BaseIgnored { why: "missing" })
+    );
+    // Taking the .ppen brings 36 back, and the file keeps it.
+    let (project, ppen, _, report) = ready(run(&[Take::All(Side::Theirs)]));
+    assert!(project.controls.iter().any(|c| c.code.0 == "36"));
+    assert!(ppen.is_none_or(|p| p.contains("<code>36</code>")));
+    assert!(
+        report
+            .notes
+            .contains(&SyncNote::BaseIgnored { why: "missing" })
+    );
+}
+
+#[test]
+fn foreign_base_is_ignored() {
+    let s = setup();
+    // The stored base belongs to another event (it still has a control the project never had).
+    let foreign = purple_pen_saves(&s.base, |e| delete_control(e, "37"), false);
+    let mut ours = s.project.clone();
+    ours.sync = Some(recorded("the base of the last sync"));
+    assert_eq!(
+        base_state(
+            ours.sync.as_ref(),
+            Path::new(LINK),
+            Some(foreign.as_bytes()),
+            s.base.as_bytes()
+        ),
+        BaseState::Ignore("hash")
+    );
+    let (project, ppen, _, report) = ready(s.run_stored(&ours, Some(&foreign), &s.base));
+    assert!(project.controls.iter().any(|c| c.code.0 == "37"));
+    assert!(ppen.is_none());
+    assert!(
+        report
+            .notes
+            .contains(&SyncNote::BaseIgnored { why: "hash" })
+    );
+}
+
+#[test]
+fn crash_after_ppen_write_converges() {
+    let s = setup();
+    let mut ours = s.project.clone();
+    ours.sync = Some(recorded(&s.base));
+    control(&mut ours, "31").map_mm.x += 1.0;
+    let (merged, ppen, _, _) = ready(s.run_stored(&ours, Some(&s.base), &s.base));
+    let written = ppen.unwrap();
+    // The crash: the .ppen is new, the project and the base are still the old ones.
+    let (again, ppen, base, report) = ready(s.run_stored(&ours, Some(&s.base), &written));
+    assert!(report.conflicts.is_empty());
+    assert!(ppen.is_none(), "the .ppen needs no second write");
+    assert_eq!(base, written);
+    let a = again.controls.iter().find(|c| c.code.0 == "31").unwrap();
+    let b = merged.controls.iter().find(|c| c.code.0 == "31").unwrap();
+    assert!((a.map_mm.x - b.map_mm.x).abs() < 1e-3);
+    assert!(report.notes.is_empty(), "{:?}", report.notes);
+}
+
+#[test]
+fn crash_after_project_write_repairs_base() {
+    let s = setup();
+    let mut ours = s.project.clone();
+    ours.sync = Some(recorded(&s.base));
+    control(&mut ours, "31").map_mm.x += 1.0;
+    let (mut merged, ppen, _, _) = ready(s.run_stored(&ours, Some(&s.base), &s.base));
+    let written = ppen.unwrap();
+    // The crash: .ppen and project are written, the base copy is still the old one.
+    merged.sync = Some(recorded(&written));
+    assert_eq!(
+        base_state(
+            merged.sync.as_ref(),
+            Path::new(LINK),
+            Some(s.base.as_bytes()),
+            written.as_bytes()
+        ),
+        BaseState::Repair
+    );
+    let (project, ppen, base, report) = ready(s.run_stored(&merged, Some(&s.base), &written));
+    assert!(ppen.is_none());
+    assert!(report.changes.is_empty(), "{:?}", report.changes);
+    assert!(report.notes.contains(&SyncNote::BaseRepaired));
+    assert_eq!(base, written);
+    let moved = project.controls.iter().find(|c| c.code.0 == "31").unwrap();
+    assert!((moved.map_mm.x - (-49.1)).abs() < 1e-3);
 }

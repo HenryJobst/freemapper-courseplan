@@ -1,7 +1,12 @@
 //! The sync base copy: where it lives, its hash, and what is stripped from it (D1, D2).
 
+use std::borrow::Cow;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+
+use freemapper_courseplan_model::SyncState;
+
+use super::apply::SyncNote;
 
 /// FNV-1a 64 over `bytes`, as 16 lowercase hex digits. It detects drift between files and is not a
 /// security measure (D2).
@@ -118,6 +123,68 @@ fn attribute_in_tag(bytes: &[u8], mut i: usize) -> Option<(usize, usize)> {
     }
 }
 
+/// What to do with the stored base copy before a sync (D13).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BaseState {
+    /// The base copy is the one the last sync left: use it.
+    Use,
+    /// The last sync stopped after it wrote the project: the recorded hash is the linked file's, so the
+    /// linked file is the base.
+    Repair,
+    /// Sync without a base. `why` is `"missing"`, `"other link"` or `"hash"`.
+    Ignore(&'static str),
+}
+
+/// Judges the stored base copy (D13). `theirs` is the linked file as it is now; the hashes cover the bytes
+/// without `absolute-path` ([`strip_absolute_path`]).
+///
+/// A base is used only when the project records it (`sync.ppen` is this link and `base_fnv1a64` is the hash
+/// of the stored bytes). The recorded hash of the linked file itself means that only the base write is
+/// missing. Anything else, a base that does not belong to this project among it, is ignored, so that it
+/// can never cause a deletion.
+pub fn base_state(
+    sync: Option<&SyncState>,
+    link: &Path,
+    base: Option<&[u8]>,
+    theirs: &[u8],
+) -> BaseState {
+    let Some(sync) = sync else {
+        return BaseState::Ignore("missing");
+    };
+    if sync.ppen.as_deref() != Some(link) {
+        return BaseState::Ignore("other link");
+    }
+    let (Some(base), Some(recorded)) = (base, sync.base_fnv1a64.as_deref()) else {
+        return BaseState::Ignore("missing");
+    };
+    if fnv1a64(base) == recorded {
+        BaseState::Use
+    } else if fnv1a64(&strip_absolute_path(theirs)) == recorded {
+        BaseState::Repair
+    } else {
+        BaseState::Ignore("hash")
+    }
+}
+
+impl BaseState {
+    /// The base bytes for [`SyncInput::base`](crate::sync::SyncInput) and the note to put in
+    /// `base_note`: the stored copy for `Use`, the stripped linked file for `Repair`, nothing for `Ignore`.
+    pub fn resolve<'a>(
+        self,
+        base: Option<&'a [u8]>,
+        theirs: &[u8],
+    ) -> (Option<Cow<'a, [u8]>>, Option<SyncNote>) {
+        match self {
+            BaseState::Use => (base.map(Cow::Borrowed), None),
+            BaseState::Repair => (
+                Some(Cow::Owned(strip_absolute_path(theirs))),
+                Some(SyncNote::BaseRepaired),
+            ),
+            BaseState::Ignore(why) => (None, Some(SyncNote::BaseIgnored { why })),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -202,5 +269,90 @@ mod tests {
     fn is_idempotent() {
         let once = strip(r#"<map absolute-path="/h" b="2"/>"#);
         assert_eq!(strip(&once), once);
+    }
+
+    fn state(link: &str, base: &[u8]) -> SyncState {
+        SyncState {
+            ppen: Some(PathBuf::from(link)),
+            base_fnv1a64: Some(fnv1a64(base)),
+            decisions: vec![],
+        }
+    }
+
+    #[test]
+    fn matching_hash_is_used() {
+        let s = state("a.ppen", b"base");
+        assert_eq!(
+            base_state(Some(&s), Path::new("a.ppen"), Some(b"base"), b"theirs"),
+            BaseState::Use
+        );
+    }
+
+    #[test]
+    fn recorded_hash_of_theirs_repairs() {
+        let s = state("a.ppen", b"theirs");
+        assert_eq!(
+            base_state(Some(&s), Path::new("a.ppen"), Some(b"old"), b"theirs"),
+            BaseState::Repair
+        );
+        // The hash covers the stripped bytes.
+        let theirs = br#"<map absolute-path="/h" a="1"/>"#;
+        let s = state("a.ppen", &strip_absolute_path(theirs));
+        assert_eq!(
+            base_state(Some(&s), Path::new("a.ppen"), Some(b"old"), theirs),
+            BaseState::Repair
+        );
+        let (base, note) = BaseState::Repair.resolve(Some(b"old"), theirs);
+        assert_eq!(base.unwrap().as_ref(), br#"<map a="1"/>"#);
+        assert_eq!(note, Some(SyncNote::BaseRepaired));
+    }
+
+    #[test]
+    fn foreign_base_is_ignored() {
+        let s = state("a.ppen", b"recorded");
+        assert_eq!(
+            base_state(Some(&s), Path::new("a.ppen"), Some(b"foreign"), b"theirs"),
+            BaseState::Ignore("hash")
+        );
+    }
+
+    #[test]
+    fn other_link_is_ignored() {
+        let s = state("a.ppen", b"base");
+        assert_eq!(
+            base_state(Some(&s), Path::new("b.ppen"), Some(b"base"), b"theirs"),
+            BaseState::Ignore("other link")
+        );
+    }
+
+    #[test]
+    fn no_base_file_is_ignored() {
+        let s = state("a.ppen", b"base");
+        assert_eq!(
+            base_state(Some(&s), Path::new("a.ppen"), None, b"theirs"),
+            BaseState::Ignore("missing")
+        );
+        assert_eq!(
+            base_state(None, Path::new("a.ppen"), Some(b"base"), b"theirs"),
+            BaseState::Ignore("missing")
+        );
+        let no_hash = SyncState {
+            ppen: Some(PathBuf::from("a.ppen")),
+            ..SyncState::default()
+        };
+        assert_eq!(
+            base_state(Some(&no_hash), Path::new("a.ppen"), Some(b"base"), b"t"),
+            BaseState::Ignore("missing")
+        );
+    }
+
+    #[test]
+    fn resolve_gives_base_and_note() {
+        let (b, n) = BaseState::Use.resolve(Some(b"x"), b"t");
+        assert_eq!(b.unwrap().as_ref(), b"x");
+        assert_eq!(n, None);
+        let (b, n) = BaseState::Ignore("hash").resolve(Some(b"x"), b"t");
+        assert!(b.is_none());
+        assert_eq!(n, Some(SyncNote::BaseIgnored { why: "hash" }));
     }
 }

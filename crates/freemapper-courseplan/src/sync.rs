@@ -332,7 +332,7 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
             .into_iter()
             .filter(|c| resolution.open.contains(&c.key))
             .collect(),
-        notes: base_note.into_iter().collect(),
+        notes: base_note.iter().cloned().collect(),
         stale: resolution.stale.clone(),
     };
     report
@@ -350,6 +350,7 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
     } = apply(project, &v, &m, &outcomes, &resolution.sides)?;
     // `apply` already reported the skipped objects.
     report.notes.clear();
+    report.notes.extend(base_note);
     report.notes.extend(notes);
 
     // D11 for the courses the import skips.
