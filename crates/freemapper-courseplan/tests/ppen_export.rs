@@ -678,3 +678,25 @@ fn exporting_onto_its_own_export_changes_nothing() {
     assert_eq!(again.text, first.text);
     assert_eq!(again.ids, first.ids);
 }
+
+#[test]
+fn a_comment_with_a_multibyte_character_does_not_upset_the_patch() {
+    // The example has no descriptions, so the patch takes the standard from the base file's element.
+    let path = repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+    let event = ProjectFile::load(&path).unwrap().event;
+    let map = read_map_file(&path.parent().unwrap().join(&event.sources.map)).unwrap();
+    let first = export_ppen(&event, &map, target(None, true)).unwrap();
+    for comment in [
+        "<!-- <standards description=\u{e9}> -->",
+        "<!-- <standards description=\u{e4}\"x\"> -->",
+    ] {
+        let hostile = first.text.replacen(
+            "<course-scribe-event",
+            &format!("{comment}<course-scribe-event"),
+            1,
+        );
+        assert_ne!(hostile, first.text);
+        let out = export(&event, &map, hostile.as_bytes(), true);
+        assert_eq!(out.text, hostile, "{comment}");
+    }
+}

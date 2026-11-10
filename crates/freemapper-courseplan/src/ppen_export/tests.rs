@@ -967,3 +967,37 @@ fn base_standard_comes_from_descriptions_then_the_event() {
     let none = bare.replace("<standards map=\"2000\" description=\"2018\" />", "");
     assert_eq!(base_standard(&raw, none.as_bytes()), "2004");
 }
+
+#[test]
+fn base_standard_reads_the_element_not_the_text() {
+    let sample = String::from_utf8(fixture("sampleevent8.ppen")).unwrap();
+    let bare: String = sample
+        .split_inclusive('\n')
+        .filter(|l| !l.contains("<description box"))
+        .collect();
+    let raw = read(bare.as_bytes()).unwrap();
+    let real = "<standards map=\"2000\" description=\"2018\" />";
+    assert!(bare.contains(real));
+    // A comment ahead of the root names the element with a multibyte character after `description=`.
+    for comment in [
+        "<!-- <standards description=\u{e9}> -->",
+        "<!-- <standards description=\u{e4}\"2004\"> -->",
+        "<!-- <standards description=\"2004\"> -->",
+    ] {
+        let hostile = bare.replacen(
+            "<course-scribe-event",
+            &format!("{comment}\n<course-scribe-event"),
+            1,
+        );
+        assert_ne!(hostile, bare);
+        assert_eq!(base_standard(&raw, hostile.as_bytes()), "2018", "{comment}");
+    }
+    // Blanks around `=` and a line break before the attribute are XML too.
+    for spelled in [
+        "<standards map=\"2000\" description = \"2004\" />",
+        "<standards map=\"2000\"\r\n    description=\"2004\" />",
+    ] {
+        let text = bare.replace(real, spelled);
+        assert_eq!(base_standard(&raw, text.as_bytes()), "2004", "{spelled}");
+    }
+}

@@ -271,21 +271,31 @@ pub fn export_ppen(
     })
 }
 
-/// The description standard of a base file: that of its descriptions, else its `standards/@description`
-/// (the reader has parsed the file already), else 2004, the reader's default.
+/// The description standard of a base file: that of its descriptions, else the `description` attribute
+/// of its first `standards` element, else 2004, the reader's default.
+///
+/// The attribute comes from an XML parse, so comments, blanks around `=` and line breaks inside the tag
+/// are read as XML reads them. The bytes have passed the reader's size, DOCTYPE and depth guards already;
+/// a parse error ends the search with the default.
 fn base_standard(base: &RawEvent, bytes: &[u8]) -> String {
+    use quick_xml::events::Event as Xml;
     if let Some(d) = base.controls.iter().find_map(|c| c.description.as_ref()) {
         return d.standard.clone();
     }
     let text = String::from_utf8_lossy(bytes);
-    let found = text.find("<standards").and_then(|at| {
-        let tag = &text[at..at + text[at..].find('>')?];
-        let rest = &tag[tag.find(" description=")? + " description=".len()..];
-        let quote = rest.chars().next()?;
-        let rest = &rest[1..];
-        Some(rest[..rest.find(quote)?].trim().to_owned())
-    });
-    found.unwrap_or_else(|| "2004".to_owned())
+    let mut reader = quick_xml::Reader::from_str(&text);
+    loop {
+        match reader.read_event() {
+            Ok(Xml::Start(e) | Xml::Empty(e)) if e.name().as_ref() == "standards" => {
+                return match e.try_get_attribute("description") {
+                    Ok(Some(a)) => a.value.trim().to_owned(),
+                    _ => "2004".to_owned(),
+                };
+            }
+            Ok(Xml::Eof) | Err(_) => return "2004".to_owned(),
+            Ok(_) => {}
+        }
+    }
 }
 
 /// The description standard the export states. Purple Pen 3.x knows 2004 and 2018 and stores 2004 ids
