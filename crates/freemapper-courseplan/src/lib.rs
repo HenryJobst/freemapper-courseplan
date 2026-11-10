@@ -16,4 +16,5 @@ pub mod omap;
 pub mod ppen_export;
 pub mod ppen_import;
 pub mod rules;
+pub mod sync;
 pub mod text;
