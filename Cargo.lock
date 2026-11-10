@@ -320,7 +320,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "freemapper-course",
  "freemapper-courseplan-model",
@@ -336,7 +336,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-cli"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "clap",
  "dirs",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-model"
-version = "0.7.3"
+version = "0.7.4"
 dependencies = [
  "serde",
  "tempfile",
