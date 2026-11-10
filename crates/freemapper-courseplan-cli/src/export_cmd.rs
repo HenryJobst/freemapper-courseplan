@@ -94,7 +94,10 @@ impl ExportError {
 
 /// The project, loaded, and its map, read, for an export to `target`. Refuses a target that is the
 /// project file or the map, which the export would overwrite.
-fn open_inputs(project: &Path, target: &Path) -> Result<(ProjectFile, MapDocument), ExportError> {
+pub(crate) fn open_inputs(
+    project: &Path,
+    target: &Path,
+) -> Result<(ProjectFile, MapDocument), ExportError> {
     let file = ProjectFile::load(project).map_err(ExportError::Project)?;
     let map_path = file.map_path();
     if same_file(target, project) || same_file(target, &map_path) {
