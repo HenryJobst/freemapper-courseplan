@@ -129,7 +129,7 @@ pub fn link_from_project(project_path: &Path, target: &Path) -> Option<PathBuf> 
 }
 
 /// The `title` key of `freemapper.toml` in `dir`. A missing or malformed file counts as none.
-fn title_from_config(dir: &Path) -> Option<String> {
+pub(crate) fn title_from_config(dir: &Path) -> Option<String> {
     let text = std::fs::read_to_string(dir.join("freemapper.toml")).ok()?;
     let table: toml::Table = text.parse().ok()?;
     table.get("title")?.as_str().map(str::to_owned)

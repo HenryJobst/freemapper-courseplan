@@ -6,6 +6,15 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- The shared building blocks come from freemapper-core v0.8.0. The program itself does not change.
+- Tests: every test run now reads two maps written by freemapper (schoolyard 1:1000, sprint 1:4000) and compares map kind, title, sheet objects, base area and map extent with the expected values from `freemapper-contract` (ADR 0041). If freemapper changes a tag or a key of `freemapper.toml`, these tests fail.
+
+### Fixed
+
+- The source check (clippy) failed on Windows because an error type of `sync` was too large there. The program behaves as before.
+
 ## [0.9.0] - 2026-11-10
 
 ### Added

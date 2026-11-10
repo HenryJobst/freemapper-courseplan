@@ -84,3 +84,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0038](0038-sheet-furniture-and-map-kind-from-the-sidecar.md) | Sheet furniture and the map kind from the sidecar | Accepted | 2026-11-10 |
 | [0039](0039-iof-xml-positions-from-the-map-georeferencing.md) | IOF XML positions come from the map georeferencing | Accepted | 2026-11-10 |
 | [0040](0040-ppen-sync-three-way-merge-on-the-purple-pen-view.md) | The Purple Pen sync is a three-way merge on the Purple Pen view | Accepted | 2026-11-10 |
+| [0041](0041-reader-tests-against-the-suite-contract.md) | Reader tests against the suite contract | Accepted | 2026-11-10 |

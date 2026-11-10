@@ -49,7 +49,8 @@ pub(crate) enum SyncCmdError {
     Map(PathBuf, OmapError),
     /// The link points at the project file or its map.
     Overwrites(PathBuf),
-    Sync(PathBuf, SyncError),
+    /// Boxed: with a Windows path the variant would reach 128 bytes (`clippy::result_large_err`).
+    Sync(PathBuf, Box<SyncError>),
     /// The base copy matches its recorded hash but cannot be read as a Purple Pen event.
     BaseUnusable(PathBuf),
     /// A `--take KEY=SIDE` names no open conflict.
@@ -259,7 +260,7 @@ fn sync_inner(
             SyncError::Base(_) if state == BaseState::Use => {
                 SyncCmdError::BaseUnusable(base_file.clone())
             }
-            e => SyncCmdError::Sync(ppen_path.clone(), e),
+            e => SyncCmdError::Sync(ppen_path.clone(), Box::new(e)),
         })
     };
     let plan = if store_only {
