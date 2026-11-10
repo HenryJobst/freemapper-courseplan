@@ -31,8 +31,7 @@ Geplant ist für die erste Version:
   spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
   mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);
 - Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (Import und
-  Export sind schon nutzbar, `import` und `export --ppen`; der Abgleich fehlt noch, und der Export ist in Purple Pen 4.0
-  noch nicht geöffnet worden);
+  Export und Abgleich sind schon nutzbar: `import`, `export --ppen` und `sync`; Purple Pen 4.0 öffnet den Export);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser, über die Kommandozeile oder über einen KI-Assistenten (MCP).
@@ -75,7 +74,7 @@ ganze Einzelbahnen an. `freemapper-courseplan init <Karte>` erzeugt die Projektd
 Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im Projekt steht, auch die Länge jeder
 Bahn. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten). Die Projektdatei ist
-TOML, du kannst sie auch von Hand bearbeiten. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
+TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
 bearbeiten oder messen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzelbahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
@@ -111,7 +110,16 @@ lässt stehen, was das Projekt nicht kennt, etwa Lücken in Kreisen oder Kartenw
 Er löscht nie etwas und meldet, was in der Datei steht und im Projekt fehlt. Den Schreiber liefert `freemapper-course`
 in freemapper-core. Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) ist ein
 Export. **Purple Pen 4.0 öffnet die Datei
-ohne Fehler, und der Inhalt wirkt richtig** (geprüft vom Autor, 10.11.2026). Den Abgleich in beide Richtungen mit Übernahme der Änderungen aus Purple Pen gibt es noch nicht.
+ohne Fehler, und der Inhalt wirkt richtig** (geprüft vom Autor, 10.11.2026).
+
+`freemapper-courseplan sync <Projekt>` führt das Projekt und die verknüpfte `.ppen` in beide Richtungen zusammen. Es
+vergleicht Feld für Feld die Datei, wie der letzte Abgleich sie hinterlassen hat (die Basiskopie
+`X.courseplan.ppen-base`, die in Git gehört), die Datei jetzt und das Projekt jetzt. Eine Änderung auf einer Seite
+geht auf die andere. Haben beide Seiten dasselbe Feld verschieden geändert, nennt `sync` beide Werte und schreibt
+nichts, bis du mit `--take ours`, `--take theirs` oder `--take SCHLÜSSEL=SEITE` eine Seite wählst; `--dry-run` meldet
+nur. Kategorien, akzeptierte Befunde und Mannschafts-, Staffel- und Score-Bahnen bleiben im Projekt. Der
+KI-Assistent hat die Werkzeuge `sync_ppen` und `resolve_sync_conflict`. Die Konfliktansicht im Editor kommt mit dem
+Editor. Siehe Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgleichen) und ADR 0040.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

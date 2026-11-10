@@ -253,7 +253,7 @@ sie nicht erfinden.
 
 ## 9. Mit Purple Pen abgleichen
 
-Der Weg hinein ist `import`; der Weg zurück ist `export --ppen` (weiter unten). Ein Abgleich, der Änderungen aus Purple Pen zurückholt, fehlt noch. `import` übernimmt ein Purple-Pen-Event (`.ppen`), das für dieselbe Karte gezeichnet
+Der Weg hinein ist `import`; der Weg zurück ist `export --ppen` (weiter unten). `sync` holt Änderungen aus Purple Pen zurück (weiter unten). `import` übernimmt ein Purple-Pen-Event (`.ppen`), das für dieselbe Karte gezeichnet
 ist. Die Karte muss in OOM vorliegen und denselben Maßstab haben wie das Event.
 
 ```sh
@@ -295,7 +295,7 @@ sie an; die Beschreibungen folgen dann dem Standard 2018. Ein vorhandenes Event 
 
 Der Export löscht nie. Steht ein Posten, eine Bahn oder ein Sonderobjekt in der Datei, aber nicht im Projekt, bleibt
 es dort, und das Programm meldet es als behalten. Das Projekt kann nicht wissen, ob es dort gelöscht oder in Purple
-Pen neu angelegt wurde. Das soll der spätere Abgleich entscheiden.
+Pen neu angelegt wurde. Das entscheidet `sync` (weiter unten) mit Hilfe der Basiskopie.
 
 Die Purple-Pen-Kennungen bestimmen, welches Objekt welches ist. Gilt die Datei als Partnerdatei des Projekts
 (`sources.ppen`), schickt der Export die gespeicherten Kennungen mit und speichert neue im Projekt. Das gilt auch,
@@ -323,6 +323,104 @@ Bytes.
 
 Der KI-Assistent hat dafür das Werkzeug `export_ppen` mit `project`, `path` und `new`; der Pfad muss auf `.ppen`
 enden. Der Schreiber liegt in `freemapper-course` (freemapper-core), die Entscheidungen stehen in ADR 0035.
+
+### Mit Purple Pen abgleichen (`sync`)
+
+```sh
+freemapper-courseplan sync projekt.courseplan.toml --dry-run
+freemapper-courseplan sync projekt.courseplan.toml
+```
+
+`sync` führt das Projekt und die verknüpfte `.ppen` in beide Richtungen zusammen. Das Projekt muss vorher verknüpft
+sein, mit `export --ppen DATEI` oder `import --ppen DATEI`; ohne Verknüpfung bricht `sync` ab und sagt das. Starte
+es jedes Mal, wenn du zwischen den beiden Programmen wechselst.
+
+> **Warnung: Schließe das Event in Purple Pen, bevor du `sync` startest, und öffne es danach neu.** Purple Pen hält
+> das Event im Speicher. Ist es noch offen, wenn `sync` die `.ppen` schreibt, verwirft sein nächstes Speichern alles,
+> was `sync` hinzugefügt hat. Der folgende `sync` sieht diese Objekte dann als in Purple Pen gelöscht und löscht sie
+> ohne Konflikt auch aus dem Projekt. Bist du unsicher, starte zuerst `--dry-run`; der schreibt nichts.
+
+**Die Basiskopie.** `sync` vergleicht jedes Feld in drei Fassungen: die Datei, wie der letzte Abgleich sie
+hinterlassen hat, die Datei jetzt und das Projekt jetzt. Die erste Fassung liegt als `X.courseplan.ppen-base` neben
+der Projektdatei (zu `event.courseplan.toml` also `event.courseplan.ppen-base`). Ihre Endung ist nicht `.ppen`,
+damit sie niemand aus Versehen in Purple Pen öffnet. Lege sie zusammen mit der Projektdatei in Git ab. `sync`
+entfernt aus der Kopie das Attribut `absolute-path` der Karte, weil dort der Pfad deines Home-Ordners steht und der
+Abgleich es nicht vergleicht. In der Projektdatei steht eine Tabelle `[sync]` mit der Verknüpfung und einem Hashwert
+der Basiskopie.
+
+**Erster Abgleich.** Es gibt noch keine Basiskopie. `sync` sagt das, löscht nichts und behandelt jeden Unterschied
+als Konflikt. Am Ende schreibt es die Basiskopie. Dasselbe passiert, wenn die Basiskopie fehlt, zu einer anderen
+Datei gehört oder nicht zu ihrem Hashwert passt; der Hinweis nennt den Grund.
+
+**Probelauf.** `--dry-run` listet auf, was der Abgleich in jeder Richtung ändern würde und welche Konflikte offen
+sind. Er schreibt nichts, auch keine Entscheidungen.
+
+**Was zusammengeführt wird.** Jedes Feld für sich: bei einem Posten Code, Art, Position und jede Spalte der
+Beschreibung; bei einer Bahn Name, Posten, Anstieg, Druckmaßstab und die Lage jeder Nummer; bei einer Strecke
+Knickpunkte und Abflaggung; bei einem Sonderobjekt seine Form. Ein Feld, das nur eine Seite geändert hat, geht auf
+die andere. Haben beide Seiten dieselbe Änderung gemacht, zählt sie einmal. Hast du im Projekt Posten 34 verschoben
+und jemand in Purple Pen Posten 31, kommen beide Verschiebungen an. Auch ein Löschen ist eine Änderung: auf der einen
+Seite gelöscht und auf der anderen unberührt heißt auf beiden gelöscht. Fügen zwei Leute an verschiedenen Stellen
+einer Bahn verschiedene Posten ein, bleiben beide Einfügungen.
+
+**Konflikte.** Ein Feld, das beide Seiten verschieden geändert haben, ist ein Konflikt. Ebenso, wenn eine Seite ein
+Objekt löscht, das die andere bearbeitet hat. Löscht Purple Pen eine Bahn, auf der das Projekt Kategorien hat, ist
+das auch ein Konflikt, weil die Kategorien mit verschwänden. `sync` gibt jeden Konflikt mit seinem Schlüssel und drei
+Werten aus. Hier wurde Posten 34 im Projekt nach rechts und in Purple Pen nach links verschoben:
+
+```text
+Abgleich mit out.ppen.
+Änderungen nach Purple Pen: 0
+Änderungen ins Projekt: 0
+Auf beiden Seiten gleich geändert: 0
+control/34/position weicht ab.
+Basis: -1.200, -12.400 mm
+Projekt: -1.000, -12.400 mm
+Purple Pen: -1.400, -12.400 mm
+1 Konflikt ist noch offen. Es wurde nichts abgeglichen. Mit --take ours oder --take theirs wählst du für alle eine Seite, mit --take SCHLÜSSEL=ours oder --take SCHLÜSSEL=theirs für einen einzelnen Konflikt.
+```
+
+Solange ein Konflikt offen ist, schreibt `sync` nichts, auch nicht die Änderungen ohne Konflikt, und endet mit
+Exitcode 1. Mit `--take` entscheidest du:
+
+- `--take ours` behält für jeden offenen Konflikt den Wert des Projekts, `--take theirs` nimmt den der Purple-Pen-Datei.
+  Es wird nichts gespeichert; es gilt nur für diesen Aufruf.
+- `--take control/34/position=theirs` entscheidet einen Konflikt und darf mehrfach vorkommen. Bleiben andere Konflikte
+  offen, steht die Entscheidung mit einem Fingerabdruck beider Werte in der Projektdatei unter
+  `[[sync.decisions]]`. Sie gilt, solange die Werte gleich bleiben; ändert sich einer, ignoriert `sync` die
+  Entscheidung und sagt das. Ein abgeschlossener Abgleich löscht alle gespeicherten Entscheidungen.
+
+Die Schlüssel haben die Form `control/34/position`, `control/32/column/g`, `control/35` (der ganze Posten),
+`course/A/stops`, `course/A/number/31`, `leg/31-32` oder `special/WATER1`. Mit `sync --dry-run` siehst du, welche
+offen sind.
+
+**Was geschrieben wird.** Ist kein Konflikt offen, schreibt `sync` in dieser Reihenfolge: die `.ppen`, die
+Projektdatei, die Basiskopie. Kurz vor dem ersten Schreiben liest es die `.ppen` noch einmal. Hat Purple Pen
+inzwischen gespeichert, wird nichts geschrieben, und du startest `sync` erneut. Bricht ein Absturz oder eine volle
+Platte den Abgleich dazwischen ab, beendet der nächste `sync` die Arbeit: Änderungen, die beide Seiten schon haben,
+sind keine Konflikte, und eine Basiskopie, die laut Projektdatei veraltet ist, wird repariert. Ein Posten bleibt in
+der `.ppen`, wenn eine Bahn dort ihn noch anläuft, auch wenn das Projekt ihn gelöscht hat; ein Hinweis sagt das.
+
+**Was nur in courseplan bleibt.** Kategorien, erwartete Starter, akzeptierte Befunde, Druckbereiche, Mannschafts-,
+Staffel- und Score-Bahnen, abgeflaggte Strecken als Sonderobjekte und verbotene Routen mit mehreren Punkten kommen nie
+nach Purple Pen, und `sync` rührt sie nicht an. Ein Hinweis nennt jede Mannschafts-, Staffel- und Score-Bahn, zum
+Beispiel `Hinweis: nicht nach Purple Pen geschrieben: T ausgelassen: Bahnart Mannschaftsbahn wird nicht nach Purple
+Pen exportiert`. Umgekehrt bleibt in der `.ppen` unverändert, was der Import auslässt, etwa Varianten und Lücken in
+Kreisen. Ein in Purple Pen umbenannter Posten oder eine umbenannte Bahn wird in akzeptierten Befunden, Strecken und
+den Bahnlisten der Sonderobjekte nachgezogen. Lässt Purple Pen eine Nummernlage automatisch oder setzt sie auf
+automatisch zurück, bleibt sie auch im Projekt automatisch. Entfernt eine Seite eine Strecke, deren Verlauf die andere
+ändert, gewinnt das Entfernen, und ein Hinweis sagt das.
+
+**Ablehnungen.** `sync` lehnt ab und schreibt nichts, wenn die `.ppen` aus einer unbekannten Purple-Pen-Version
+stammt, wenn die verknüpfte Datei fehlt oder wenn der Schreiber ein Objekt der Datei dem zusammengeführten Projekt
+nicht zuordnen konnte. Der letzte Fall kann eintreten, wenn du in einem Abgleich zwei Postencodes vertauschst und
+eine Bahn umbenennst; mach das in zwei Schritten.
+
+Der KI-Assistent hat zwei Werkzeuge. `sync_ppen` nimmt `project`, `dry_run` und `take` (`ours` oder `theirs` für den
+ganzen Aufruf) und gibt `written`, `conflicts`, `changes` und `notes` zurück. `resolve_sync_conflict` nimmt
+`project`, `key` und `take`, speichert eine Entscheidung und gibt zurück, was noch offen ist; ist nichts mehr
+offen, schließt `sync_ppen` den Abgleich ab. `sync --json` gibt dieselben Felder aus. Die Entscheidungen dahinter
+stehen in ADR 0040.
 
 ## 10. Weitergeben: IOF-XML für OE
 

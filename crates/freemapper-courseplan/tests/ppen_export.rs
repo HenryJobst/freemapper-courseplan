@@ -11,7 +11,7 @@ use freemapper_course::{KeptObject, RawEvent, read_ppen};
 use freemapper_courseplan::omap::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_export::{
-    ExportNote, PpenExport, PpenExportError, Target, export_ppen,
+    Deletions, ExportNote, PpenExport, PpenExportError, Target, export_ppen,
 };
 use freemapper_courseplan::ppen_import::import_ppen;
 use freemapper_courseplan_model::{
@@ -25,6 +25,7 @@ fn target(base: Option<&[u8]>, linked: bool) -> Target<'_> {
         linked,
         map_path: "map.omap".to_owned(),
         lang: "en",
+        delete: Deletions::default(),
     }
 }
 
@@ -861,6 +862,7 @@ fn example_export() -> PpenExport {
         linked: true,
         map_path: "../../tests/fixtures/maps/luebeck.omap".to_owned(),
         lang: "en",
+        delete: Deletions::default(),
     };
     export_ppen(&event, &map, target).unwrap()
 }

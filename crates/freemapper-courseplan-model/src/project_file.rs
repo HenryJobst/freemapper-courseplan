@@ -355,6 +355,7 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
         "courses" => element_of("specials"),
         "controls" | "legs" => element_of("accepted_findings"),
         "rule_overlays" => path == "event",
+        "decisions" => path == "sync",
         "bends" | "taped" => {
             path.starts_with("courses[") && path.contains('.') && path.ends_with(']')
         }
@@ -459,6 +460,7 @@ fn identity_key(table_key: &str) -> Option<&'static str> {
         "controls" => Some("code"),
         "courses" | "classes" => Some("name"),
         "specials" => Some("id"),
+        "decisions" => Some("key"),
         _ => None,
     }
 }

@@ -6,6 +6,7 @@ mod edit_cmd;
 mod export_cmd;
 mod import_cmd;
 mod mcp;
+mod sync_cmd;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -81,6 +82,20 @@ enum Command {
         /// With --ppen, write the file from scratch and replace an existing one
         #[arg(long, requires = "ppen")]
         new: bool,
+    },
+    /// Merge the project with its linked Purple Pen file
+    Sync {
+        /// The project file
+        project: PathBuf,
+        /// Show what the sync would do and write nothing
+        #[arg(long)]
+        dry_run: bool,
+        /// Pick a side for conflicts: ours, theirs, KEY=ours or KEY=theirs
+        #[arg(long, value_name = "SIDE")]
+        take: Vec<String>,
+        /// Print the result as JSON
+        #[arg(long)]
+        json: bool,
     },
     /// Add, move, describe, number and remove controls
     Control {
@@ -234,6 +249,14 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .mut_arg("iof_xml", |a| with_help(a, "cli-arg-export-iof-xml"))
                 .mut_arg("ppen", |a| with_help(a, "cli-arg-export-ppen"))
                 .mut_arg("new", |a| with_help(a, "cli-arg-export-new"))
+        })
+        .mut_subcommand("sync", |s| {
+            s.about(t("cli-cmd-sync"))
+                .after_help(t("cli-cmd-sync-exit-codes"))
+                .mut_arg("project", |a| with_help(a, "cli-arg-sync-project"))
+                .mut_arg("dry_run", |a| with_help(a, "cli-arg-sync-dry-run"))
+                .mut_arg("take", |a| with_help(a, "cli-arg-sync-take"))
+                .mut_arg("json", |a| with_help(a, "cli-arg-sync-json"))
         })
         .mut_subcommand("check", |s| {
             s.about(t("cli-help-check"))
@@ -424,6 +447,12 @@ fn main() -> ExitCode {
             ppen,
             new,
         } => export_cmd::export(&lang, &project, iof_xml, ppen, new),
+        Command::Sync {
+            project,
+            dry_run,
+            take,
+            json,
+        } => sync_cmd::sync(&lang, &project, dry_run, &take, json),
         Command::Check { project, all } => check_cmd::check(&lang, project, all),
         Command::Finding { action } => check_cmd::finding(&lang, action),
         Command::Event { action } => check_cmd::event(&lang, action),
@@ -646,6 +675,7 @@ mod tests {
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),
         ("import_cmd.rs", include_str!("import_cmd.rs")),
+        ("sync_cmd.rs", include_str!("sync_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
     ];

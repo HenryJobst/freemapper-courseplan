@@ -146,6 +146,39 @@ pub(super) struct ImportPpen {
     pub(super) replace: Option<bool>,
 }
 
+/// The side of a sync conflict to keep.
+#[derive(Deserialize, JsonSchema, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum SyncSide {
+    Ours,
+    Theirs,
+}
+
+impl From<SyncSide> for freemapper_courseplan_model::Side {
+    fn from(side: SyncSide) -> Self {
+        match side {
+            SyncSide::Ours => Self::Ours,
+            SyncSide::Theirs => Self::Theirs,
+        }
+    }
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SyncPpen {
+    pub(super) project: String,
+    pub(super) dry_run: Option<bool>,
+    pub(super) take: Option<SyncSide>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ResolveSyncConflict {
+    pub(super) project: String,
+    pub(super) key: String,
+    pub(super) take: SyncSide,
+}
+
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct AddControl {

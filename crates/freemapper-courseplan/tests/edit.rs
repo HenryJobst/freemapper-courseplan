@@ -96,6 +96,7 @@ fn event() -> Event {
             course("B", individual(&["33", "32"])),
         ],
         accepted_findings: vec![],
+        sync: None,
     }
 }
 

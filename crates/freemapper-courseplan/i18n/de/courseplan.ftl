@@ -557,6 +557,9 @@ error-import-ppen-outside-map = nur { $inside } von { $total } Posten liegen auf
 error-import-ppen-invalid = das Purple-Pen-Event lässt sich nicht lesen: { $source }
 error-import-ppen-fit = das Purple-Pen-Event passt nicht zur Karte: { $source }
 mcp-error-not-ppen = { $path } ist kein Purple-Pen-Event; diese Dateien enden auf .ppen
+mcp-error-ppen-symlink = Der Verweis sources.ppen des Projekts nennt { $path }, einen symbolischen Link. Der Server folgt keinen symbolischen Links.
+mcp-error-sync-ppen-invalid = Die Purple-Pen-Datei { $path } lässt sich nicht abgleichen. Sie ist kein lesbares Purple-Pen-Event oder passt nicht zur Karte des Projekts. Öffne sie in Purple Pen, um sie zu prüfen.
+mcp-error-sync-invalid = Das zusammengeführte Projekt wäre ungültig, deshalb wurde nichts geschrieben. Führe den Abgleich auf der Kommandozeile aus, um die Einzelheiten zu sehen.
 import-ppen-note-unknown-element = unbekannt und ausgelassen: { $what }
 import-ppen-note-skipped = Bahn { $course } ausgelassen: { $why }
 import-ppen-note-gaps = Bahn { $course } hat Lücken in Kreisen oder Strecken; das Modell kennt keine Lücken, Kreise und Strecken bleiben ganz
@@ -601,6 +604,81 @@ word-import-special-white-out = Abdeckung
 mcp-tool-import-ppen = Die Posten, Bahnen und Sonderobjekte eines Purple-Pen-Events (.ppen) übernehmen, das für die Karte des Projekts gezeichnet ist. Erwartet project, path (die .ppen-Datei) und replace; ohne replace darf das Projekt noch keine Posten, Bahnen oder Sonderobjekte haben, mit replace werden sie durch die des Events ersetzt, Kategorien und akzeptierte Befunde bleiben. Gibt controls, courses und notes zurück, die Texte zu dem, was ausgelassen oder geändert wurde.
 mcp-param-import-ppen-path = Das Purple-Pen-Event, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .ppen
 mcp-param-import-ppen-replace = Vorhandenes ersetzen [Standard: false]
+
+## Abgleich mit der verknüpften Purple-Pen-Datei (sync)
+
+cli-cmd-sync = Das Projekt mit seiner verknüpften Purple-Pen-Datei abgleichen
+cli-cmd-sync-exit-codes =
+    Exitcode 0: abgeglichen, oder es gab nichts zu tun.
+    Exitcode 1: Konflikte bleiben offen, oder der Abgleich wurde abgelehnt. Dann wird nichts abgeglichen; nur Entscheidungen der Form SCHLÜSSEL=SEITE landen in der Projektdatei.
+    Exitcode 2: falscher Aufruf, zum Beispiel eine unbekannte Option.
+cli-arg-sync-project = Die Projektdatei
+cli-arg-sync-dry-run = Zeigen, was der Abgleich täte, und nichts schreiben, auch keine Entscheidungen
+cli-arg-sync-take = Für Konflikte eine Seite wählen. ours ist das Projekt, theirs die Purple-Pen-Datei. Eine Seite allein entscheidet jeden offenen Konflikt. SCHLÜSSEL=SEITE entscheidet einen Konflikt und bleibt in der Projektdatei gespeichert, solange andere Konflikte offen sind. Darf mehrfach vorkommen
+cli-arg-sync-json = Das Ergebnis als JSON ausgeben
+sync-summary =
+    Abgleich mit { $path }.
+    Änderungen nach Purple Pen: { $ours }
+    Änderungen ins Projekt: { $theirs }
+    Auf beiden Seiten gleich geändert: { $both }
+sync-change-line = { $side ->
+    [ours] { $key } geht nach Purple Pen: { $value }
+    [theirs] { $key } kommt aus Purple Pen: { $value }
+   *[both] { $key } ist auf beiden Seiten gleich geändert: { $value }
+}
+sync-conflict-line =
+    { $key } weicht ab.
+      Basis: { $base }
+      Projekt: { $ours }
+      Purple Pen: { $theirs }
+sync-conflicts-remain = { $count ->
+    [one] 1 Konflikt ist noch offen.
+   *[other] { $count } Konflikte sind noch offen.
+} Es wurde nichts abgeglichen. Mit --take ours oder --take theirs wählst du für alle eine Seite, mit --take SCHLÜSSEL=ours oder --take SCHLÜSSEL=theirs für einen einzelnen Konflikt.
+sync-decisions-stored = { $count ->
+    [one] 1 Entscheidung in { $path } gespeichert.
+   *[other] { $count } Entscheidungen in { $path } gespeichert.
+} Sie gelten, solange die Konflikte gleich bleiben.
+sync-stale-decision = Die gespeicherte Entscheidung für { $key } passt nicht mehr, weil sich einer der Werte geändert hat. Sie wird ignoriert.
+sync-nothing-to-do = Das Projekt und { $path } stimmen schon überein. Nichts zu tun.
+sync-dry-run = Probelauf. Es wurde nichts geschrieben.
+sync-note-deletion-kept = Posten { $control } bleibt in der Purple-Pen-Datei, obwohl das Projekt ihn gelöscht hat, weil Bahn { $course } ihn noch anläuft
+sync-note-leg-change-dropped = die geänderten Knickpunkte oder die Flaggung der Strecke { $from } nach { $to } entfallen, weil keine Bahn diese Strecke mehr läuft
+sync-note-new-name-taken = das neue Objekt { $from } aus Purple Pen heißt im Projekt { $to }, weil das Projekt { $from } schon vergeben hat
+sync-note-base-ignored = { $why }. Ohne Basiskopie löscht der Abgleich nichts und behandelt jeden Unterschied als Konflikt
+error-sync-internal = interner Fehler im Abgleich ({ $what }). Bitte melden
+error-sync-take-parse = Nach --take erwartet: ours, theirs, KEY=ours oder KEY=theirs, bekommen: `{ $value }`.
+error-sync-take-twice-all = --take nennt ours und theirs für alle Konflikte. Gib eine Seite an.
+error-sync-take-twice-key = --take nennt zwei verschiedene Seiten für { $key }. Gib eine Seite an.
+error-sync-base-unusable = Die Basiskopie { $path } lässt sich nicht als Purple-Pen-Event lesen. Lösche die Datei und führe sync erneut aus: Der Abgleich arbeitet dann ohne Basis, löscht nichts und fragt bei jedem Unterschied nach.
+sync-note-first-sync = erster Abgleich dieses Projekts mit dieser Datei. Es gibt noch keine Basiskopie, deshalb löscht der Abgleich nichts und behandelt jeden Unterschied als Konflikt; er schreibt die Basiskopie, sobald er ohne offene Konflikte durchgelaufen ist
+sync-note-base-repaired = ein früherer Abgleich hat die Basiskopie nicht geschrieben. Sie stimmt jetzt wieder mit der verknüpften Datei überein
+sync-note-not-written = nicht nach Purple Pen geschrieben: { $note }
+word-sync-why-missing = es gibt keine brauchbare Basiskopie
+word-sync-why-other-link = die Basiskopie gehört zu einer anderen Purple-Pen-Datei
+word-sync-why-hash = die Basiskopie passt nicht zum Hashwert in der Projektdatei
+word-sync-value-deleted = gelöscht
+word-sync-value-none = keine
+word-sync-value-empty = leer
+word-sync-kind-control = Posten
+word-sync-kind-crossing-point = Querungsstelle
+word-sync-kind-start = Start
+word-sync-kind-finish = Ziel
+error-sync-no-link = { $path } hat keine Verknüpfung mit einer Purple-Pen-Datei. Verknüpfe sie zuerst mit export --ppen DATEI oder import --ppen DATEI
+error-sync-link-missing = die verknüpfte Purple-Pen-Datei { $path } existiert nicht
+error-sync-changed-meanwhile = { $path } hat sich während des Abgleichs geändert, wahrscheinlich weil Purple Pen gespeichert hat. Es wurde nichts geschrieben. Starte sync erneut
+error-sync-partial = der Abgleich hat { $written } geschrieben und ist dann gescheitert: { $source }. Starte sync erneut, um ihn zu beenden
+error-sync-take-unknown-key = kein offener Konflikt hat den Schlüssel { $key }
+error-sync-base = die Basiskopie zu { $path } lässt sich nicht einlesen: { $source }
+error-sync-theirs = die verknüpfte Purple-Pen-Datei { $path } lässt sich nicht einlesen: { $source }
+error-sync-export = das Projekt lässt sich für { $path } nicht als Purple-Pen-Event schreiben: { $source }
+error-sync-unknown-version = { $path } stammt aus einer Purple-Pen-Version, die dieses Programm nicht kennt ({ $version }). Es wurde nichts geschrieben
+error-sync-unmatched = { $count ->
+    [one] der Schreiber konnte 1 Objekt von { $path } nicht zuordnen: { $list }. Es wurde nichts geschrieben
+   *[other] der Schreiber konnte { $count } Objekte von { $path } nicht zuordnen: { $list }. Es wurde nichts geschrieben
+}
+error-sync-invalid = das zusammengeführte Event ist nicht gültig, deshalb wurde nichts geschrieben: { $errors }
+error-sync-verify = die Purple-Pen-Datei ließe sich nicht als das zusammengeführte Projekt wieder einlesen ({ $list }). Es wurde nichts geschrieben
 
 ## MCP-Server (Werkzeugnamen, Parameternamen und JSON-Felder bleiben Englisch)
 
@@ -676,6 +754,12 @@ mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder eine
 mcp-param-export-iof-xml-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .xml
 mcp-param-export-ppen-path = Das zu schreibende Purple-Pen-Event, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .ppen; eine fehlende Datei wird angelegt
 mcp-param-export-ppen-new = Die Datei von Grund auf schreiben und eine vorhandene ersetzen [Standard: false]
+mcp-tool-sync-ppen = Das Projekt mit der Purple-Pen-Datei abgleichen, die sources.ppen nennt. Der Abgleich vergleicht beide mit der Basiskopie, die der letzte Abgleich hinterlassen hat. Eine Änderung auf einer Seite kommt so auf der anderen an, und eine Änderung am selben Feld auf beiden Seiten ist ein Konflikt. Erwartet project, dry_run und take. Mit dry_run wird nichts geschrieben. take (ours oder theirs) entscheidet alle offenen Konflikte nur für diesen Aufruf und speichert nichts. Solange Konflikte offen sind, schreibt der Abgleich nichts; mit resolve_sync_conflict entscheidest du sie einzeln. Ein Abgleich ohne offene Konflikte schreibt die Purple-Pen-Datei, das Projekt und die Basiskopie neben der Projektdatei. Gibt written (true, wenn der Abgleich Dateien geändert hat), dry_run, ppen_changed (die Purple-Pen-Datei hat sich geändert), base (use, repair, first oder ignore), changes (key, side und value jeder Änderung), conflicts (key, base, ours und theirs jedes offenen Konflikts), notes (Texte zur Basiskopie und zu dem, was behalten oder nicht geschrieben wurde) und stale (gespeicherte Entscheidungen, die nicht mehr passen) zurück.
+mcp-tool-resolve-sync-conflict = Die Antwort auf einen offenen Abgleichskonflikt in der Projektdatei speichern, ohne abzugleichen. Erwartet project, key (so, wie sync_ppen ihn unter conflicts aufführt) und take (ours behält den Wert des Projekts, theirs den der Purple-Pen-Datei). Die Antwort gilt nur, solange beide Werte unverändert bleiben, und der nächste abgeschlossene Abgleich löscht sie. Ein Schlüssel, der kein offener Konflikt ist, wird abgelehnt. Gibt dieselben Felder zurück wie ein Probelauf von sync_ppen, conflicts enthält also, was noch offen ist; ist die Liste leer, schließt ein Aufruf von sync_ppen den Abgleich ab.
+mcp-param-sync-ppen-dry-run = Melden, was der Abgleich täte, und nichts schreiben [Standard: false]
+mcp-param-sync-ppen-take = Alle offenen Konflikte für diesen Aufruf mit dem Wert des Projekts (ours) oder der Purple-Pen-Datei (theirs) entscheiden; es wird nichts gespeichert [Standard: Konflikte bleiben offen]
+mcp-param-resolve-sync-conflict-key = Der Schlüssel des Konflikts, so, wie sync_ppen ihn unter conflicts aufführt
+mcp-param-resolve-sync-conflict-take = Welcher Wert bleibt, der des Projekts (ours) oder der der Purple-Pen-Datei (theirs)
 mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
 mcp-param-map = Die OOM-Karte (Sprint oder Schulhof), ein absoluter Pfad oder einer mit ~ am Anfang
 mcp-param-title = Titel der Veranstaltung [Standard: der Titel in freemapper.toml neben der Karte, sonst der Kartenname]

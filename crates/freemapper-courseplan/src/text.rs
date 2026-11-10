@@ -46,6 +46,8 @@ use crate::omap::OmapError;
 use crate::ppen_export::{ExportNote, PpenExportError};
 use crate::ppen_import::{ImportNote, PpenImportError};
 use crate::rules::RulesError;
+use crate::sync::SyncError;
+use crate::sync::apply::SyncNote;
 
 /// Program texts for a value, for example an error.
 ///
@@ -566,6 +568,128 @@ impl Localize for ExportNote {
     }
 }
 
+impl Localize for SyncNote {
+    fn localize(&self, lang: &Lang) -> String {
+        let t = |id: &str, args: &[(&str, FluentValue)]| text(lang, id, args);
+        match self {
+            SyncNote::DeletionKept { control, course } => t(
+                "sync-note-deletion-kept",
+                &[("control", v(control)), ("course", v(course))],
+            ),
+            SyncNote::LegChangeDropped { from, to } => t(
+                "sync-note-leg-change-dropped",
+                &[("from", v(from)), ("to", v(to))],
+            ),
+            SyncNote::NewNameTaken { from, to } => t(
+                "sync-note-new-name-taken",
+                &[("from", v(from)), ("to", v(to))],
+            ),
+            SyncNote::BaseIgnored { why } => t(
+                "sync-note-base-ignored",
+                &[("why", v(word(lang, "word-sync-why", why)))],
+            ),
+            SyncNote::FirstSync => t("sync-note-first-sync", &[]),
+            SyncNote::BaseRepaired => t("sync-note-base-repaired", &[]),
+            SyncNote::NotWritten(note) => {
+                t("sync-note-not-written", &[("note", v(note.localize(lang)))])
+            }
+        }
+    }
+}
+
+/// The words of a rendered sync value that a front end translates.
+const SYNC_WORDS: [&str; 7] = [
+    "deleted",
+    "none",
+    "empty",
+    "control",
+    "crossing point",
+    "start",
+    "finish",
+];
+
+/// Whether `raw` is one of the words [`sync_value`] translates. A name that is one is rendered in quotes.
+pub fn is_sync_word(raw: &str) -> bool {
+    SYNC_WORDS.contains(&raw)
+}
+
+/// A value of a sync conflict or change as the user reads it. The values are rendered in English; the
+/// whole-value words (`deleted`, the control kinds, `none`, `empty`) are translated, in a value of several
+/// parts (`35; control; empty`) each part, any other value (positions, stop lists) is language-neutral and
+/// stays.
+pub fn sync_value(lang: &Lang, raw: &str) -> String {
+    raw.split("; ")
+        .map(|part| {
+            let prefix = if matches!(part, "deleted" | "none" | "empty") {
+                "word-sync-value"
+            } else {
+                "word-sync-kind"
+            };
+            word(lang, prefix, part)
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+/// The text of a refused or failed sync of the linked file `path`.
+pub fn sync_error(e: &SyncError, lang: &Lang, path: &str) -> String {
+    let t = |id: &str, args: &[(&str, FluentValue)]| text(lang, id, args);
+    match e {
+        SyncError::Base(e) => t(
+            "error-sync-base",
+            &[("path", v(path)), ("source", v(e.localize(lang)))],
+        ),
+        SyncError::Theirs(e) => t(
+            "error-sync-theirs",
+            &[("path", v(path)), ("source", v(e.localize(lang)))],
+        ),
+        SyncError::Export(e) => t(
+            "error-sync-export",
+            &[
+                ("path", v(path)),
+                ("source", v(ppen_export_error(e, lang, path))),
+            ],
+        ),
+        SyncError::UnknownVersion(version) => t(
+            "error-sync-unknown-version",
+            &[("path", v(path)), ("version", v(version))],
+        ),
+        SyncError::Unmatched(kept) => t(
+            "error-sync-unmatched",
+            &[
+                ("count", v(kept.len())),
+                ("path", v(path)),
+                (
+                    "list",
+                    v(kept
+                        .iter()
+                        .map(|k| ExportNote::Kept(k.clone()).localize(lang))
+                        .collect::<Vec<_>>()
+                        .join("; ")),
+                ),
+            ],
+        ),
+        SyncError::Invalid(errors) => t(
+            "error-sync-invalid",
+            &[(
+                "errors",
+                v(errors
+                    .iter()
+                    .map(|e| e.localize(lang))
+                    .collect::<Vec<_>>()
+                    .join("; ")),
+            )],
+        ),
+        SyncError::Verify(keys) => t("error-sync-verify", &[("list", v(keys.join(", ")))]),
+    }
+}
+
+impl Localize for SyncError {
+    fn localize(&self, lang: &Lang) -> String {
+        sync_error(self, lang, "")
+    }
+}
+
 /// The text of a failed `.ppen` export to `path`; an unusable base file names it, since one call can
 /// write two files.
 pub fn ppen_export_error(e: &PpenExportError, lang: &Lang, path: &str) -> String {
@@ -797,6 +921,7 @@ impl Localize for RulesError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sync::decide::KindWord;
     use freemapper_courseplan_model::{ControlCode, MapPoint};
     use std::collections::BTreeSet;
     use std::path::PathBuf;
@@ -933,10 +1058,50 @@ mod tests {
             "source",
             "standard",
             "written",
+            "ours",
+            "theirs",
+            "both",
+            "side",
+            "base",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
         .collect()
+    }
+
+    #[test]
+    fn sync_values_and_notes_speak_german() {
+        let de = de();
+        assert_eq!(sync_value(&de, "deleted"), "gelöscht");
+        assert_eq!(
+            sync_value(&de, "35; control; -1.2, 3 mm; empty"),
+            "35; Posten; -1.2, 3 mm; leer"
+        );
+        // A name that reads like a word is quoted by the renderer and stays.
+        assert_eq!(sync_value(&de, "\"none\""), "\"none\"");
+        assert_eq!(sync_value(&de, "crossing point"), "Querungsstelle");
+        assert_eq!(sync_value(&de, "-1.200, 12.400 mm"), "-1.200, 12.400 mm");
+        let en = Lang::english();
+        assert_eq!(sync_value(&en, "finish"), "finish");
+        for note in [
+            SyncNote::BaseRepaired,
+            SyncNote::FirstSync,
+            SyncNote::BaseIgnored { why: "hash" },
+            SyncNote::DeletionKept {
+                control: s("36"),
+                course: s("A"),
+            },
+        ] {
+            for lang in available() {
+                let out = note.localize(&lang);
+                assert!(!out.is_empty() && !out.starts_with("sync-"), "{out}");
+            }
+        }
+        assert!(
+            SyncNote::BaseIgnored { why: "hash" }
+                .localize(&de)
+                .contains("Hashwert")
+        );
     }
 
     #[test]
@@ -956,6 +1121,9 @@ mod tests {
             "word-import-why",
             "word-import-special",
             "word-export-why",
+            "word-sync-why",
+            "word-sync-value",
+            "word-sync-kind",
         ] {
             ids.remove(excluded);
         }
@@ -1109,6 +1277,23 @@ mod tests {
             "white-out",
         ] {
             ids.insert(format!("word-import-special-{kind}"));
+        }
+        for why in ["missing", "other-link", "hash"] {
+            ids.insert(format!("word-sync-why-{why}"));
+        }
+        for value in ["deleted", "none", "empty"] {
+            ids.insert(format!("word-sync-value-{value}"));
+        }
+        for kind in [
+            KindWord::Control,
+            KindWord::CrossingPoint,
+            KindWord::Start,
+            KindWord::Finish,
+        ] {
+            ids.insert(format!(
+                "word-sync-kind-{}",
+                kind.as_str().replace(' ', "-")
+            ));
         }
         let args = sample_args();
         for lang in available() {

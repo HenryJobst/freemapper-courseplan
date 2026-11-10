@@ -617,6 +617,7 @@ mod tests {
                 },
             }],
             accepted_findings: vec![],
+            sync: None,
         }
     }
 

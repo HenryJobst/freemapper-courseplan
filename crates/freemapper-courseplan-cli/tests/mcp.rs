@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 34] = [
+const TOOLS: [&str; 36] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -37,6 +37,8 @@ const TOOLS: [&str; 34] = [
     "export_iof_xml",
     "export_ppen",
     "import_ppen",
+    "sync_ppen",
+    "resolve_sync_conflict",
     "accept_finding",
     "remove_accepted_finding",
     "set_rule_profile",
@@ -1465,3 +1467,193 @@ const PARK_MAP: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 </barrier>
 </map>
 "#;
+
+const SYNC_P34: &str = "map_mm = [-1.2, -12.4]";
+const SYNC_P35: &str = "map_mm = [-28.2, 10.2]";
+const SYNC_Q34: &str = "<location x=\"-1.2\" y=\"12.4\" />";
+const SYNC_Q35: &str = "<location x=\"-28.2\" y=\"-10.2\" />";
+
+fn replace_in(path: &Path, from: &str, to: &str) {
+    let text = std::fs::read_to_string(path).unwrap();
+    assert!(text.contains(from), "{from} not in {}", path.display());
+    std::fs::write(path, text.replacen(from, to, 1)).unwrap();
+}
+
+/// The Luebeck example, exported and synced once, then both controls 34 and 35 moved on both sides.
+fn two_sync_conflicts(session: &mut Session) -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    std::fs::copy(
+        root.join("tests/fixtures/maps/luebeck.omap"),
+        dir.path().join("luebeck.omap"),
+    )
+    .unwrap();
+    let text = std::fs::read_to_string(
+        root.join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml"),
+    )
+    .unwrap()
+    .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+    let project = dir.path().join("event.courseplan.toml");
+    std::fs::write(&project, text).unwrap();
+    let ppen = dir.path().join("out.ppen");
+    session.ok("export_ppen", json!({ "project": project, "path": ppen }));
+    let first = session.ok("sync_ppen", json!({ "project": project }));
+    assert_eq!(first["written"], true, "{first}");
+    assert_eq!(first["base"], "first", "{first}");
+    let notes = first["notes"].to_string();
+    assert!(notes.contains("first sync"), "{notes}");
+    replace_in(&project, SYNC_P34, "map_mm = [-1.0, -12.4]");
+    replace_in(&project, SYNC_P35, "map_mm = [-28.0, 10.2]");
+    replace_in(&ppen, SYNC_Q34, "<location x=\"-1.4\" y=\"12.4\" />");
+    replace_in(&ppen, SYNC_Q35, "<location x=\"-28.4\" y=\"-10.2\" />");
+    (dir, project)
+}
+
+#[test]
+fn mcp_sync_lists_conflicts() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    let ppen_before = std::fs::read(dir.path().join("out.ppen")).unwrap();
+    let result = session.ok("sync_ppen", json!({ "project": project }));
+    assert_eq!(result["written"], false, "{result}");
+    assert_eq!(result["conflicts"].as_array().unwrap().len(), 2, "{result}");
+    assert_eq!(
+        result["conflicts"][0]["key"], "control/34/position",
+        "{result}"
+    );
+    assert_eq!(
+        std::fs::read(dir.path().join("out.ppen")).unwrap(),
+        ppen_before
+    );
+    // A side for the whole call settles both and writes.
+    let dry = session.ok(
+        "sync_ppen",
+        json!({ "project": project, "dry_run": true, "take": "theirs" }),
+    );
+    assert_eq!(dry["written"], false, "{dry}");
+    assert_eq!(dry["dry_run"], true, "{dry}");
+    assert_eq!(dry["conflicts"], json!([]), "{dry}");
+}
+
+#[test]
+fn mcp_resolve_then_sync_completes() {
+    let mut session = Session::start();
+    let (_dir, project) = two_sync_conflicts(&mut session);
+    let one = session.ok(
+        "resolve_sync_conflict",
+        json!({ "project": project, "key": "control/34/position", "take": "theirs" }),
+    );
+    assert_eq!(one["conflicts"].as_array().unwrap().len(), 1, "{one}");
+    assert_eq!(one["written"], false, "{one}");
+    let two = session.ok(
+        "resolve_sync_conflict",
+        json!({ "project": project, "key": "control/35/position", "take": "ours" }),
+    );
+    assert_eq!(two["conflicts"], json!([]), "{two}");
+    let done = session.ok("sync_ppen", json!({ "project": project }));
+    assert_eq!(done["written"], true, "{done}");
+    assert_eq!(done["conflicts"], json!([]), "{done}");
+    let text = std::fs::read_to_string(&project).unwrap();
+    assert!(text.contains("map_mm = [-1.4, -12.4]"), "{text}");
+    assert!(text.contains("map_mm = [-28.0, 10.2]"), "{text}");
+}
+
+#[test]
+fn mcp_sync_refuses_a_link_that_is_no_ppen_file() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::fs::write(dir.path().join("secret.txt"), "TOPSECRET").unwrap();
+    replace_in(&project, "\"out.ppen\"", "\"secret.txt\"");
+    for (tool, args) in [
+        ("sync_ppen", json!({ "project": project })),
+        (
+            "resolve_sync_conflict",
+            json!({ "project": project, "key": "control/34/position", "take": "ours" }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains(".ppen"), "{text}");
+        assert!(!text.contains("TOPSECRET"), "{text}");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn mcp_sync_refuses_a_link_that_is_a_symlink() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::os::unix::fs::symlink(dir.path().join("out.ppen"), dir.path().join("link.ppen")).unwrap();
+    replace_in(&project, "\"out.ppen\"", "\"link.ppen\"");
+    let before = std::fs::read(&project).unwrap();
+    for (tool, args) in [
+        ("sync_ppen", json!({ "project": project })),
+        (
+            "resolve_sync_conflict",
+            json!({ "project": project, "key": "control/34/position", "take": "ours" }),
+        ),
+    ] {
+        let (error, text) = session.call(tool, args);
+        assert!(error, "{tool}: {text}");
+        assert!(text.contains("symbolic link"), "{text}");
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn mcp_sync_does_not_quote_the_ppen_file_in_errors() {
+    let mut session = Session::start();
+    let (dir, project) = two_sync_conflicts(&mut session);
+    std::fs::write(
+        dir.path().join("out.ppen"),
+        "<course-scribe-event><TOPSECRET></course-scribe-event TOPSECRET>",
+    )
+    .unwrap();
+    let (error, text) = session.call("sync_ppen", json!({ "project": project }));
+    assert!(error, "{text}");
+    assert!(text.contains("out.ppen"), "{text}");
+    assert!(!text.contains("TOPSECRET"), "{text}");
+}
+
+#[test]
+fn mcp_resolve_unknown_key_is_an_error() {
+    let mut session = Session::start();
+    let (_dir, project) = two_sync_conflicts(&mut session);
+    let before = std::fs::read(&project).unwrap();
+    let (error, text) = session.call(
+        "resolve_sync_conflict",
+        json!({ "project": project, "key": "control/99/position", "take": "ours" }),
+    );
+    assert!(error, "{text}");
+    assert!(text.contains("control/99/position"), "{text}");
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn tool_list_has_sync_tools_in_both_languages() {
+    for lang in ["en", "de"] {
+        let mut session = Session::start_in(lang);
+        let tools = session.request("tools/list", json!({}));
+        for name in ["sync_ppen", "resolve_sync_conflict"] {
+            let tool = tools["tools"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t["name"] == name)
+                .unwrap_or_else(|| panic!("{name} is missing in {lang}"));
+            assert!(tool["description"].as_str().unwrap().len() > 80, "{tool}");
+            let props = &tool["inputSchema"]["properties"];
+            assert!(props["project"]["description"].is_string(), "{tool}");
+            assert!(props["take"]["description"].is_string(), "{tool}");
+        }
+    }
+    let mut de = Session::start_in("de");
+    let tools = de.request("tools/list", json!({}));
+    let tool = tools["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["name"] == "sync_ppen")
+        .unwrap();
+    assert!(tool["description"].as_str().unwrap().contains("Abgleich"));
+}

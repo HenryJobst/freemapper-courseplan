@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, ControlKind, CourseKind, Event, LegRef, MapPoint, ModelError,
-    PrintArea, ProjectError, ProjectFile, SpecialObject,
+    PrintArea, ProjectError, ProjectFile, Side, SpecialObject, SyncDecision, SyncState,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -1011,4 +1011,45 @@ fn a_new_finding_writes_legs_as_an_inline_array() {
         "{text}"
     );
     assert!(ProjectFile::load(&file).is_ok());
+}
+
+#[test]
+fn sync_state_round_trips() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut project = created_with_three_controls_and_two_courses(dir.path());
+    project.event.sync = Some(SyncState {
+        ppen: Some("a.ppen".into()),
+        base_fnv1a64: Some("cbf29ce484222325".to_owned()),
+        decisions: vec![
+            SyncDecision {
+                key: "control/34/position".to_owned(),
+                take: Side::Theirs,
+                fingerprint: "0123456789abcdef".to_owned(),
+            },
+            SyncDecision {
+                key: "course/A/stops".to_owned(),
+                take: Side::Ours,
+                fingerprint: "fedcba9876543210".to_owned(),
+            },
+        ],
+    });
+    let back = save_and_reload(&mut project);
+    assert_eq!(back.format, 1);
+    let text = std::fs::read_to_string(&project.path).unwrap();
+    assert!(text.contains("[[sync.decisions]]"), "{text}");
+    assert!(text.contains("take = \"theirs\""), "{text}");
+    // Dropping a decision on a later save keeps the other one.
+    project.event.sync.as_mut().unwrap().decisions.remove(0);
+    save_and_reload(&mut project);
+}
+
+#[test]
+fn project_without_sync_writes_no_sync_table() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut project = created_with_three_controls_and_two_courses(dir.path());
+    let back = save_and_reload(&mut project);
+    assert_eq!(back.sync, None);
+    assert_eq!(back.format, 1);
+    let text = std::fs::read_to_string(&project.path).unwrap();
+    assert!(!text.contains("sync"), "{text}");
 }

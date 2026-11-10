@@ -563,6 +563,9 @@ error-import-ppen-outside-map = only { $inside } of { $total } controls lie on t
 error-import-ppen-invalid = the Purple Pen event cannot be read: { $source }
 error-import-ppen-fit = the Purple Pen event does not fit the map: { $source }
 mcp-error-not-ppen = { $path } is not a Purple Pen event; these files end in .ppen
+mcp-error-ppen-symlink = The link sources.ppen of the project names { $path }, which is a symbolic link. The server does not follow symbolic links.
+mcp-error-sync-ppen-invalid = The Purple Pen file { $path } cannot be synced. It is not a readable Purple Pen event, or it does not fit the project's map. Open it in Purple Pen to check it.
+mcp-error-sync-invalid = The merged project would not be valid, so nothing was written. Run the sync on the command line to see the details.
 import-ppen-note-unknown-element = not known and left out: { $what }
 import-ppen-note-skipped = course { $course } is left out: { $why }
 import-ppen-note-gaps = course { $course } has circle or leg gaps; the model has no gaps, so they are drawn whole
@@ -607,6 +610,81 @@ word-import-special-white-out = white-out
 mcp-tool-import-ppen = Take over the controls, courses and special objects of a Purple Pen event (.ppen) drawn for the project's map. Takes project, path, the .ppen file, and replace; without replace the project must hold no controls, courses or special objects yet, and with it they are swapped for the event's, while classes and accepted findings stay. Returns controls, courses and notes, the texts on what was left out or changed.
 mcp-param-import-ppen-path = The Purple Pen event, an absolute path or one starting with ~, ending in .ppen
 mcp-param-import-ppen-replace = Replace what the project already has [default: false]
+
+## Sync with the linked Purple Pen file (sync)
+
+cli-cmd-sync = Merge the project with its linked Purple Pen file
+cli-cmd-sync-exit-codes =
+    Exit code 0: synced, or nothing to do.
+    Exit code 1: conflicts remain, or the sync was refused. Then nothing is synced; only decisions given as KEY=SIDE are stored in the project file.
+    Exit code 2: wrong call, for example an unknown option.
+cli-arg-sync-project = The project file
+cli-arg-sync-dry-run = Show what the sync would do and write nothing, not even decisions
+cli-arg-sync-take = Pick a side for conflicts. ours is the project, theirs is the Purple Pen file. A bare side decides every open conflict. KEY=SIDE decides one conflict and stays stored in the project file while other conflicts remain. Can be given more than once
+cli-arg-sync-json = Print the result as JSON
+sync-summary =
+    Sync with { $path }.
+    Changes to Purple Pen: { $ours }
+    Changes into the project: { $theirs }
+    Changed the same way on both sides: { $both }
+sync-change-line = { $side ->
+    [ours] { $key } goes to Purple Pen: { $value }
+    [theirs] { $key } comes from Purple Pen: { $value }
+   *[both] { $key } changed the same way on both sides: { $value }
+}
+sync-conflict-line =
+    { $key } differs.
+      Base: { $base }
+      Project: { $ours }
+      Purple Pen: { $theirs }
+sync-conflicts-remain = { $count ->
+    [one] 1 conflict is still open.
+   *[other] { $count } conflicts are still open.
+} Nothing was synced. Pick a side for all of them with --take ours or --take theirs, or for one conflict with --take KEY=ours or --take KEY=theirs.
+sync-decisions-stored = { $count ->
+    [one] Stored 1 decision in { $path }.
+   *[other] Stored { $count } decisions in { $path }.
+} They apply as long as the conflicts stay the same.
+sync-stale-decision = The stored decision for { $key } no longer fits, because one of its values changed. It is ignored.
+sync-nothing-to-do = The project and { $path } already agree. Nothing to do.
+sync-dry-run = Dry run. Nothing was written.
+sync-note-deletion-kept = control { $control } stays in the Purple Pen file, although the project deleted it, because course { $course } still visits it
+sync-note-leg-change-dropped = the changed bends or marking of the leg { $from } to { $to } are dropped, because no course runs that leg any more
+sync-note-new-name-taken = the new object { $from } from Purple Pen is called { $to } in the project, because the project already uses { $from }
+sync-note-base-ignored = { $why }. Without a base copy, the sync deletes nothing and treats every difference as a conflict
+error-sync-internal = internal error in sync ({ $what }). Please report this
+error-sync-take-parse = Expected ours, theirs, KEY=ours or KEY=theirs after --take, got `{ $value }`.
+error-sync-take-twice-all = --take names ours and theirs for all conflicts. Give one side.
+error-sync-take-twice-key = --take names two different sides for { $key }. Give one side.
+error-sync-base-unusable = The base copy { $path } cannot be read as a Purple Pen event. Delete that file and run sync again: the sync then works without a base, deletes nothing and asks about every difference.
+sync-note-first-sync = first sync of this project with this file. There is no base copy yet, so the sync deletes nothing and treats every difference as a conflict; it writes the base copy when it has finished without open conflicts
+sync-note-base-repaired = an earlier sync did not write the base copy. It matches the linked file again now
+sync-note-not-written = not written to Purple Pen: { $note }
+word-sync-why-missing = there is no usable base copy
+word-sync-why-other-link = the base copy belongs to another Purple Pen file
+word-sync-why-hash = the base copy does not match the hash in the project file
+word-sync-value-deleted = deleted
+word-sync-value-none = none
+word-sync-value-empty = empty
+word-sync-kind-control = control
+word-sync-kind-crossing-point = crossing point
+word-sync-kind-start = start
+word-sync-kind-finish = finish
+error-sync-no-link = { $path } has no link to a Purple Pen file. Link it first with export --ppen FILE or import --ppen FILE
+error-sync-link-missing = the linked Purple Pen file { $path } does not exist
+error-sync-changed-meanwhile = { $path } changed while the sync ran, probably because Purple Pen saved it. Nothing was written. Run sync again
+error-sync-partial = the sync wrote { $written } and then failed: { $source }. Run sync again to finish the job
+error-sync-take-unknown-key = no open conflict has the key { $key }
+error-sync-base = the base copy for { $path } cannot be imported: { $source }
+error-sync-theirs = the linked Purple Pen file { $path } cannot be imported: { $source }
+error-sync-export = the project cannot be written as a Purple Pen event for { $path }: { $source }
+error-sync-unknown-version = { $path } comes from a Purple Pen version this program does not know ({ $version }). Nothing was written
+error-sync-unmatched = { $count ->
+    [one] the writer could not match 1 object of { $path }: { $list }. Nothing was written
+   *[other] the writer could not match { $count } objects of { $path }: { $list }. Nothing was written
+}
+error-sync-invalid = the merged event is not valid, so nothing was written: { $errors }
+error-sync-verify = the Purple Pen file would not read back as the merged project ({ $list }). Nothing was written
 
 ## MCP server (tool names, parameter names and JSON fields stay English)
 
@@ -681,6 +759,12 @@ mcp-param-project = Project file of the event, an absolute path or one starting 
 mcp-param-export-iof-xml-path = The file to write, an absolute path or one starting with ~, ending in .xml
 mcp-param-export-ppen-path = The Purple Pen event to write, an absolute path or one starting with ~, ending in .ppen; it is created when missing
 mcp-param-export-ppen-new = Write the file from scratch and replace an existing one [default: false]
+mcp-tool-sync-ppen = Merge the project with the Purple Pen file that sources.ppen names. The merge compares both with the base copy the last sync left, so a change on one side lands on the other and a change on both sides to the same field is a conflict. Takes project, dry_run and take. With dry_run nothing is written. take (ours or theirs) settles every open conflict for this call only and stores nothing. While conflicts are open, the sync writes nothing; use resolve_sync_conflict to settle them one by one. A sync with a clean outcome writes the Purple Pen file, the project and the base copy next to the project file. Returns written (true when the sync changed files), dry_run, ppen_changed (the Purple Pen file changed), base (use, repair, first or ignore), changes (key, side and value of each change), conflicts (key, base, ours and theirs of each open conflict), notes (texts on the base copy and on what was kept or not written) and stale (stored decisions that no longer fit).
+mcp-tool-resolve-sync-conflict = Store the answer to one open sync conflict in the project file, without syncing. Takes project, key (as sync_ppen lists it under conflicts) and take (ours keeps the project's value, theirs the Purple Pen file's). The answer counts only while both values stay as they are, and the next completed sync clears it. A key that is no open conflict is refused. Returns the same fields as a dry run of sync_ppen, so conflicts holds what is still open; when it is empty, call sync_ppen to finish.
+mcp-param-sync-ppen-dry-run = Report what the sync would do and write nothing [default: false]
+mcp-param-sync-ppen-take = Settle every open conflict for this call with the project's value (ours) or the Purple Pen file's (theirs); nothing is stored [default: leave conflicts open]
+mcp-param-resolve-sync-conflict-key = The key of the conflict, as sync_ppen lists it under conflicts
+mcp-param-resolve-sync-conflict-take = Which value to keep, the project's (ours) or the Purple Pen file's (theirs)
 mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
 mcp-param-map = The OOM map (sprint or schoolyard), an absolute path or one starting with ~
 mcp-param-title = Event title [default: the title in freemapper.toml next to the map, else the map name]

@@ -244,7 +244,7 @@ accepts one. You write the note or dictate it. The assistant should not invent o
 
 ## 9. Exchanging with Purple Pen
 
-The way in is `import`; the way back is `export --ppen` (below). A sync that brings changes from Purple Pen back is still missing. `import` takes over a Purple Pen event (`.ppen`) drawn for the same map. The map
+The way in is `import`; the way back is `export --ppen` (below). `sync` brings changes made in Purple Pen back (below). `import` takes over a Purple Pen event (`.ppen`) drawn for the same map. The map
 must be an OOM file at the same scale as the event.
 
 ```sh
@@ -286,7 +286,7 @@ event keeps its standard.
 
 The export never deletes. If a control, course or special object is in the file but not in the project, it stays
 there and the program reports it as kept. The project cannot tell whether it was deleted here or added in Purple
-Pen. The later sync is to decide that.
+Pen. `sync` (below) decides that, using the base copy.
 
 The Purple Pen ids decide which object is which. If the file is the project's linked file (`sources.ppen`), the export
 sends the stored ids and stores new ones in the project. That also holds when the export creates the file or replaces it
@@ -312,6 +312,98 @@ back through the reader of freemapper-course, and exporting a file that was read
 
 The AI assistant has the tool `export_ppen` for this, with `project`, `path` and `new`; the path must end in `.ppen`.
 The writer lives in `freemapper-course` (freemapper-core); the decisions are in ADR 0035.
+
+### Syncing with Purple Pen
+
+```sh
+freemapper-courseplan sync project.courseplan.toml --dry-run
+freemapper-courseplan sync project.courseplan.toml
+```
+
+`sync` merges the project with its linked `.ppen` in both directions. The project must be linked first, through
+`export --ppen FILE` or `import --ppen FILE`; without a link, `sync` stops and says so. Run it whenever you switch
+between the two programs.
+
+> **Warning: close the event in Purple Pen before you run `sync`, and reopen it afterwards.** Purple Pen keeps the
+> event in memory. If it is still open when `sync` writes the `.ppen`, its next save drops everything `sync` added.
+> The following `sync` then sees those objects as deleted in Purple Pen and deletes them from the project, without a
+> conflict. When unsure, run `--dry-run` first; it writes nothing.
+
+**The base copy.** `sync` compares three versions of every field: the file as the last sync left it, the file now and
+the project now. It keeps the first one beside the project file as `X.courseplan.ppen-base` (for `event.courseplan.toml`
+that is `event.courseplan.ppen-base`). Its extension is not `.ppen`, so nobody opens it in Purple Pen by mistake.
+Commit it to git together with the project file. `sync` removes the `absolute-path` attribute of the map from the copy,
+because it holds the path of your home folder, and the merge does not compare it. The project file gets a `[sync]`
+table with the link and a hash of the base copy.
+
+**First sync.** There is no base copy yet. `sync` says so, deletes nothing and treats every difference as a conflict.
+It writes the base copy at the end. The same happens if the base copy is missing, belongs to another file or does
+not match its hash; the note names the reason.
+
+**Dry run.** `--dry-run` lists what the sync would change in each direction and which conflicts are open. It writes
+nothing, not even decisions.
+
+**What gets merged.** Each field on its own: a control's code, kind, position and each description column; a course's
+name, controls, climb, print scale and the position of each number; the bends and marking of a leg; the shape of a
+special object. A field changed on one side goes to the other. If both sides made the same change, it counts once.
+If you moved control 34 in the project and someone moved 31 in Purple Pen, both moves land. A deletion is a change
+too: deleted on one side and untouched on the other is deleted on both. If two people insert different controls into a
+course at different places, both land.
+
+**Conflicts.** A field that both sides changed differently is a conflict, and so is deleting an object on one side
+while the other edited it. A course that Purple Pen deletes while the project has classes on it is a conflict as
+well, because the classes would go with it. `sync` prints each conflict with its key and three values. Here control 34
+was moved to the right in the project and to the left in Purple Pen:
+
+```text
+Sync with out.ppen.
+Changes to Purple Pen: 0
+Changes into the project: 0
+Changed the same way on both sides: 0
+control/34/position differs.
+Base: -1.200, -12.400 mm
+Project: -1.000, -12.400 mm
+Purple Pen: -1.400, -12.400 mm
+1 conflict is still open. Nothing was synced. Pick a side for all of them with --take ours or --take theirs, or for one conflict with --take KEY=ours or --take KEY=theirs.
+```
+
+While a conflict is open, `sync` writes nothing, not even the changes without conflict, and exits with 1. You settle
+it with `--take`:
+
+- `--take ours` keeps the project's value for every open conflict, `--take theirs` takes the Purple Pen file's.
+  Nothing is stored; it holds for this call only.
+- `--take control/34/position=theirs` decides one conflict and can be repeated. If other conflicts stay open, the
+  decision is stored in the project file under `[[sync.decisions]]`, together with a fingerprint of both values. It
+  holds while they stay as they are; if either changes, `sync` ignores the decision and says so. A completed sync
+  clears all stored decisions.
+
+The keys have the form `control/34/position`, `control/32/column/g`, `control/35` (the whole control),
+`course/A/stops`, `course/A/number/31`, `leg/31-32` or `special/WATER1`. Run `sync --dry-run` to see the ones that are open.
+
+**What is written.** When no conflict is open, `sync` writes in this order: the `.ppen`, the project file, the base
+copy. Just before the first write it reads the `.ppen` again. If Purple Pen saved in the meantime, nothing is
+written and you run `sync` again. If a crash or a full disk stops it in between, the next `sync` finishes the job:
+changes that both sides already have are no conflicts, and a base copy that the project file shows as outdated is
+repaired. A control stays in the `.ppen` when a course in it still visits the control, even if the project deleted it;
+a note says so.
+
+**What stays only in courseplan.** Classes, expected starters, accepted findings, print areas, team, relay and score
+courses, marked routes in special objects and forbidden routes with several points never reach Purple Pen, and
+`sync` never touches them. A note names each team, relay and score course, for example `note: not written to Purple
+Pen: left out T: team courses are not exported to Purple Pen`. The reverse also holds: what the import skips, such as
+variations and gaps in circles, stays in the `.ppen` as it is. A renamed control or course in Purple Pen is carried
+along into accepted findings, legs and the course lists of special objects. If Purple Pen leaves a number position
+automatic or resets it to automatic, that stays automatic in the project. If one side removes a leg while the other
+bends it, the removal wins and a note says so.
+
+**Refusals.** `sync` refuses, and writes nothing, if the `.ppen` comes from a Purple Pen version it does not know,
+if the linked file does not exist, or if the writer could not match an object of the file to the merged project. The
+last case can occur when you swap two control codes and rename a course in one sync; do it in two steps.
+
+The AI assistant has two tools. `sync_ppen` takes `project`, `dry_run` and `take` (`ours` or `theirs` for the whole
+call) and returns `written`, `conflicts`, `changes` and `notes`. `resolve_sync_conflict` takes `project`, `key` and
+`take`, stores one decision and returns what is still open; when nothing is left, `sync_ppen` finishes the job. With
+`sync --json` the command prints the same fields. The decisions behind all this are in ADR 0040.
 
 ## 10. Handing on: IOF XML for OE
 
