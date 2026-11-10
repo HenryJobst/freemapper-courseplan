@@ -4,10 +4,37 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title data-text="editor-page-title"></title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="assets/app.css">
   <script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
+  <main class="panes">
+    <nav class="pane" id="pane-tree" data-label="editor-pane-tree"></nav>
+    <section class="pane" id="pane-map" data-label="editor-pane-map">
+      <div class="toolbar" role="toolbar" data-label="editor-toolbar-label">
+        <button type="button" data-text="editor-tool-select" aria-pressed="true"></button>
+        <button type="button" data-text="editor-tool-control" disabled></button>
+        <button type="button" data-text="editor-tool-crossing" disabled></button>
+        <button type="button" data-text="editor-tool-special" disabled></button>
+        <button type="button" data-text="editor-tool-course" disabled></button>
+        <span class="spacer"></span>
+        <button type="button" id="zoom-out" data-label="editor-zoom-out" data-title="editor-zoom-out">&minus;</button>
+        <button type="button" id="zoom-in" data-label="editor-zoom-in" data-title="editor-zoom-in">+</button>
+        <button type="button" id="zoom-fit" data-label="editor-zoom-fit" data-title="editor-zoom-fit">0</button>
+      </div>
+      <svg id="map-svg" tabindex="0" role="application" data-label="editor-pane-map" xmlns="http://www.w3.org/2000/svg">
+        <g id="layer-map"></g>
+        <g id="layer-overlay"></g>
+      </svg>
+    </section>
+    <aside class="pane" id="pane-props" tabindex="0" data-label="editor-pane-props">
+      <h2 data-text="editor-props-heading"></h2>
+      <div id="props"></div>
+      <h2 data-text="editor-findings-heading"></h2>
+      <p class="hint" data-text="editor-findings-empty"></p>
+    </aside>
+  </main>
   <header class="menubar">
     <details class="menu">
       <summary data-text="editor-menu-event"></summary>
@@ -19,29 +46,12 @@
       </ul>
     </details>
   </header>
-  <main class="panes">
-    <nav class="pane" id="pane-tree" data-label="editor-pane-tree">
-      <h2 data-text="editor-tree-courses"></h2>
-      <h2 data-text="editor-tree-classes"></h2>
-      <h2 data-text="editor-tree-controls"></h2>
-      <h2 data-text="editor-tree-specials"></h2>
-    </nav>
-    <section class="pane" id="pane-map" data-label="editor-pane-map">
-      <div class="toolbar" role="toolbar" data-label="editor-toolbar-label">
-        <button type="button" data-text="editor-tool-select" aria-pressed="true"></button>
-        <button type="button" data-text="editor-tool-control" disabled></button>
-        <button type="button" data-text="editor-tool-crossing" disabled></button>
-        <button type="button" data-text="editor-tool-special" disabled></button>
-        <button type="button" data-text="editor-tool-course" disabled></button>
-      </div>
-    </section>
-    <aside class="pane" id="pane-props" data-label="editor-pane-props">
-      <h2 data-text="editor-props-heading"></h2>
-      <p class="hint" data-text="editor-props-empty"></p>
-      <h2 data-text="editor-findings-heading"></h2>
-      <p class="hint" data-text="editor-findings-empty"></p>
-    </aside>
-  </main>
-  <footer class="status" id="status" role="status" data-label="editor-status-label"></footer>
+  <footer class="status" id="status">
+    <span id="status-message" role="status" aria-live="polite"></span>
+    <span class="field"><span class="name" data-text="editor-status-map"></span> <span id="status-map"></span></span>
+    <span class="field"><span class="name" data-text="editor-status-scale"></span> <span id="status-scale"></span></span>
+    <span class="field"><span class="name" data-text="editor-status-kind"></span> <span id="status-kind"></span></span>
+    <span class="field"><span class="name" data-text="editor-status-cursor"></span> <span id="status-cursor" class="cursor"></span></span>
+  </footer>
 </body>
 </html>

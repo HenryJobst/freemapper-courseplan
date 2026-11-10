@@ -11,8 +11,9 @@ export function t(id) {
 
 export async function loadTexts() {
   const answer = await get("api/texts");
-  catalog = answer.texts;
-  document.documentElement.lang = answer.lang;
+  if (!answer.ok) throw new Error(`api/texts: ${answer.status}`);
+  catalog = answer.data.texts;
+  document.documentElement.lang = answer.data.lang;
   apply(document);
 }
 
