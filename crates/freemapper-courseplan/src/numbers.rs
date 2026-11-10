@@ -1,19 +1,25 @@
 //! Automatic placement of control numbers.
 //!
-//! A deterministic placement that weighs the map: a number goes where its box touches the fewest
-//! circles, legs and other numbers (overprint), then the fewest point and line symbols of the map
-//! (areas and magnetic north lines never count). Among equals it goes behind the circle, in line
-//! with the incoming leg, unless the outgoing leg is there; then it takes the nearest free
-//! direction in steps of 15 degrees, rounded to 0.1 degrees, and at an almost straight angle it
-//! points straight out of the bend (the outer bisector). Before it turns away, a number moves
-//! outward within the gap range of the rules (ADR 0032). The shared `freemapper-placement`
-//! module replaces this later (ADR 0013, ADR 0014).
+//! The search itself lives in `freemapper-course` (`placement`, shared with freemapper-print, ADR
+//! 0036): a number goes where its box touches the fewest circles, legs and other numbers
+//! (overprint), then the fewest point and line symbols of the map (areas and magnetic north lines
+//! never count). Among equals it goes behind the circle, in line with the incoming leg, unless the
+//! outgoing leg is there; then it takes the nearest free direction in steps of 15 degrees, rounded
+//! to 0.1 degrees, and at an almost straight angle it points straight out of the bend (the outer
+//! bisector). Before it turns away, a number moves outward within the gap range of the rules (ADR
+//! 0032). This module keeps what belongs to the application: the overprint sizes, the gap range
+//! from the rule profile, the kept-number levels (ruling R11) and the conversion of map features
+//! into obstacles.
 //!
 //! Conventions: map coordinates are millimetres with y down, so "north" on screen is -y. A
 //! direction is in degrees, 0 = east, counter-clockwise, hence 90 degrees points to -y (north).
 //! Overprint sizes are print millimetres at the base scale of the map kind and grow to map
 //! millimetres by `map_mm = print_mm * base_scale / map_scale`. Terms follow `docs/glossary.md`.
 
+use freemapper_course::placement::{
+    self, CourseNumbers, GAP_LIMITS_MM, NumberStop, Obstacle, ObstacleShape, Placement, Rect, Tier,
+    number_box, place_course_numbers,
+};
 use freemapper_courseplan_model::{CourseKind, Discipline, Event, MapPoint, NumberPlacement};
 
 use crate::check::{symbol_matches, value_number};
@@ -22,74 +28,35 @@ use crate::edit::{EditError, apply, course_mut, individual_mut};
 use crate::map::{FeatureGeometry, MapFeature, MapIndex, MapKind};
 use crate::rules::RuleSet;
 
-/// Step between two candidate gaps in print mm (agreed with freemapper-print).
-const GAP_STEP_MM: f64 = 0.5;
-/// Upper bound of the steps in `candidate_gaps`; 10 mm in steps of 0.5 mm need 20.
-const MAX_GAP_STEPS: u32 = 1000;
-/// The range of gaps between circle and number in print mm that the rules want.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct GapRange {
-    pub min_mm: f64,
-    pub max_mm: f64,
-}
-
-impl GapRange {
-    /// The range without an applicable rule: the fixed gap of 0.5 mm. This equals `GAP_STEP_MM`
-    /// on purpose: the old fixed gap is the first step of the grid.
-    pub const FIXED: GapRange = GapRange {
-        min_mm: 0.5,
-        max_mm: 0.5,
-    };
-}
+pub use placement::{GapRange, normalize_direction};
 
 /// The gap range of the active `number_gap` rules that apply to a course. The strictest wins:
-/// the largest `min_gap_mm` and the smallest `max_gap_mm`. A value a rule leaves out keeps that
-/// side open. Without a rule the range is [`GapRange::FIXED`]; with only a max the min is 0.5,
-/// with only a min the max equals it. A rule value that is not finite or not above 0 counts as
-/// missing, the others are clamped into [0.01, 10] mm, and a max below the min is raised to the
-/// min (the check reads each rule the same way, see `normalise_sides`).
+/// the largest `min_gap_mm` and the smallest `max_gap_mm`; each rule is read the way the check
+/// reads it (`rule_sides`). A value a rule leaves out keeps that side open. Without a rule the
+/// range is [`GapRange::DEFAULT`]; with only a max the min is 0.5, with only a min the max equals
+/// it (`GapRange::from_limits`, which also rounds the min up and the max down to 0.01 mm).
 pub fn gap_range(
     rules: &RuleSet,
     map_kind: MapKind,
     discipline: Discipline,
     print_scale: u32,
 ) -> GapRange {
-    let applying: Vec<_> = rules
+    let sides = rules
         .rules
         .iter()
         .filter(|r| {
             r.rule.key == "number_gap"
                 && crate::rules::applies(&r.rule, map_kind, discipline, print_scale)
         })
-        .collect();
-    let sides: Vec<(Option<f64>, Option<f64>)> =
-        applying.iter().map(|r| rule_sides(&r.rule)).collect();
-    let min = sides
-        .iter()
-        .filter_map(|(min, _)| *min)
-        .fold(None, |acc: Option<f64>, v| {
-            Some(acc.map_or(v, |a| a.max(v)))
-        });
-    let max = sides
-        .iter()
-        .filter_map(|(_, max)| *max)
-        .fold(None, |acc: Option<f64>, v| {
-            Some(acc.map_or(v, |a| a.min(v)))
-        });
-    let (min, max) = match (min, max) {
-        (None, None) => return GapRange::FIXED,
-        (Some(min), None) => (min, min),
-        (None, Some(max)) => (GapRange::FIXED.min_mm, max),
-        (Some(min), Some(max)) => (min, max),
-    };
-    GapRange {
-        min_mm: min,
-        max_mm: max.max(min),
+        .map(|r| rule_sides(&r.rule));
+    match GapRange::strictest(sides) {
+        Some((min, max)) => GapRange::from_limits(min, max),
+        None => GapRange::DEFAULT,
     }
 }
 
 /// Smallest gap a rule value may have, in print mm (the grid of the stored gaps).
-const MIN_RULE_GAP_MM: f64 = 0.01;
+const MIN_RULE_GAP_MM: f64 = GAP_LIMITS_MM.0;
 
 /// A rule gap value made usable: a value that is not finite or not above 0 counts as missing,
 /// the others are clamped into [0.01, [`MAX_GAP_MM`]].
@@ -120,16 +87,10 @@ pub(crate) fn rule_sides(rule: &crate::rules::Rule) -> (Option<f64>, Option<f64>
 
 /// Width of one digit relative to the number height.
 const DIGIT_WIDTH_FACTOR: f64 = 0.6;
-/// Directions tried around the preferred one: steps of 15 degrees, up to 12 in each direction
-/// (the 12th is the opposite direction, tried once).
-const CANDIDATE_STEP_DEG: f64 = 15.0;
-const CANDIDATE_STEPS: i32 = 12;
-const EPS: f64 = 1e-9;
-/// A point symbol is covered when the number box comes within this distance of its position
-/// (map mm; map symbols do not scale with the overprint factor).
 /// Symbol code of magnetic north lines, which never count as covered (ruling R5).
 const NORTH_LINE_SYMBOL: &str = "601";
-
+/// A point symbol is covered when the number box comes within this distance of its position
+/// (map mm; map symbols do not scale with the overprint factor).
 const POINT_SYMBOL_RADIUS_MM: f64 = 0.5;
 /// A line symbol is covered when a segment of it comes within this distance of the number box
 /// (map mm).
@@ -171,181 +132,11 @@ pub fn base_scale(kind: MapKind) -> u32 {
 }
 
 /// Largest gap between circle and number that the CLI and the MCP server accept, in print mm.
-pub const MAX_GAP_MM: f64 = 10.0;
-
-/// A number direction in degrees brought into [0, 360).
-pub fn normalize_direction(direction: f64) -> f64 {
-    let d = direction.rem_euclid(360.0);
-    // A tiny negative value rounds up to 360, and -0 stays -0; both mean east.
-    if d >= 360.0 || d == 0.0 { 0.0 } else { d }
-}
+pub const MAX_GAP_MM: f64 = GAP_LIMITS_MM.1;
 
 /// Whether a gap in print mm is more than 0 and at most [`MAX_GAP_MM`].
 pub fn gap_in_range(gap_mm: f64) -> bool {
     gap_mm > 0.0 && gap_mm <= MAX_GAP_MM
-}
-
-/// Axis-aligned rectangle in map mm.
-#[derive(Debug, Clone, Copy)]
-struct Rect {
-    min_x: f64,
-    min_y: f64,
-    max_x: f64,
-    max_y: f64,
-}
-
-impl Rect {
-    fn centred(cx: f64, cy: f64, w: f64, h: f64) -> Self {
-        Self {
-            min_x: cx - w / 2.0,
-            min_y: cy - h / 2.0,
-            max_x: cx + w / 2.0,
-            max_y: cy + h / 2.0,
-        }
-    }
-
-    fn overlaps(&self, other: &Rect) -> bool {
-        self.min_x < other.max_x - EPS
-            && other.min_x < self.max_x - EPS
-            && self.min_y < other.max_y - EPS
-            && other.min_y < self.max_y - EPS
-    }
-
-    fn contains(&self, x: f64, y: f64) -> bool {
-        self.min_x <= x && x <= self.max_x && self.min_y <= y && y <= self.max_y
-    }
-
-    fn corners(&self) -> [(f64, f64); 4] {
-        [
-            (self.min_x, self.min_y),
-            (self.max_x, self.min_y),
-            (self.max_x, self.max_y),
-            (self.min_x, self.max_y),
-        ]
-    }
-
-    fn distance_to_point(&self, x: f64, y: f64) -> f64 {
-        let dx = (self.min_x - x).max(0.0).max(x - self.max_x);
-        let dy = (self.min_y - y).max(0.0).max(y - self.max_y);
-        dx.hypot(dy)
-    }
-
-    /// Smallest distance between the rectangle and the segment, 0 when they intersect.
-    fn distance_to_segment(&self, a: (f64, f64), b: (f64, f64)) -> f64 {
-        if self.contains(a.0, a.1) || self.contains(b.0, b.1) {
-            return 0.0;
-        }
-        let c = self.corners();
-        for i in 0..4 {
-            if segments_cross(a, b, c[i], c[(i + 1) % 4]) {
-                return 0.0;
-            }
-        }
-        let mut best = self
-            .distance_to_point(a.0, a.1)
-            .min(self.distance_to_point(b.0, b.1));
-        for corner in c {
-            best = best.min(point_segment_distance(corner, a, b));
-        }
-        best
-    }
-}
-
-fn orient(a: (f64, f64), b: (f64, f64), c: (f64, f64)) -> f64 {
-    (b.0 - a.0) * (c.1 - a.1) - (b.1 - a.1) * (c.0 - a.0)
-}
-
-/// True when the segments cross properly; touching cases are caught by the distance tests.
-fn segments_cross(a: (f64, f64), b: (f64, f64), c: (f64, f64), d: (f64, f64)) -> bool {
-    orient(a, b, c) * orient(a, b, d) < 0.0 && orient(c, d, a) * orient(c, d, b) < 0.0
-}
-
-fn point_segment_distance(p: (f64, f64), a: (f64, f64), b: (f64, f64)) -> f64 {
-    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
-    let len2 = dx * dx + dy * dy;
-    let t = if len2 < EPS {
-        0.0
-    } else {
-        (((p.0 - a.0) * dx + (p.1 - a.1) * dy) / len2).clamp(0.0, 1.0)
-    };
-    (p.0 - (a.0 + t * dx)).hypot(p.1 - (a.1 + t * dy))
-}
-
-/// Whether the box covers a point or line symbol of the map; areas, outlines included, never count.
-fn feature_covered(rect: &Rect, feature: &MapFeature) -> bool {
-    // Magnetic north lines (601 and its sub-codes) run over the whole map and never count (R5).
-    if feature
-        .symbol_code
-        .as_deref()
-        .is_some_and(|code| symbol_matches(code, NORTH_LINE_SYMBOL))
-    {
-        return false;
-    }
-    match &feature.geometry {
-        FeatureGeometry::Point(p) => rect.distance_to_point(p.x, p.y) <= POINT_SYMBOL_RADIUS_MM,
-        FeatureGeometry::Line(points) => points.windows(2).any(|w| {
-            rect.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y))
-                <= LINE_SYMBOL_HALF_WIDTH_MM
-        }),
-        FeatureGeometry::Area(_) => false,
-    }
-}
-
-/// The key a candidate is ranked by, smaller being better: overprint conflicts (circles, legs,
-/// other numbers), map conflicts (covered point and line symbols), distance to the preferred
-/// direction, gap, distance to the outer bisector, direction (ruling R4, ADR 0032).
-struct Rank {
-    overprint: usize,
-    map: usize,
-    off_preferred: f64,
-    gap: f64,
-    off_outer: f64,
-    direction: f64,
-}
-
-impl Rank {
-    fn beats(&self, other: &Rank) -> bool {
-        let (mine, theirs) = ((self.overprint, self.map), (other.overprint, other.map));
-        mine < theirs
-            || (mine == theirs
-                && (self.off_preferred < other.off_preferred - EPS
-                    || ((self.off_preferred - other.off_preferred).abs() <= EPS
-                        && (self.gap < other.gap - EPS
-                            || ((self.gap - other.gap).abs() <= EPS
-                                && (self.off_outer < other.off_outer - EPS
-                                    || ((self.off_outer - other.off_outer).abs() <= EPS
-                                        && self.direction < other.direction)))))))
-    }
-}
-
-/// The gaps tried for each direction, in print mm: from the minimum in steps of 0.5 mm, the last
-/// one being exactly the maximum. Rounded to 0.01 so that the stored value is the one evaluated:
-/// the minimum up and the maximum down, so no gap leaves the range. The loop is bounded, so
-/// whatever the range holds, it ends.
-fn candidate_gaps(gaps: GapRange) -> Vec<f64> {
-    let up = |v: f64| ((v - EPS) * 100.0).ceil() / 100.0;
-    let down = |v: f64| ((v + EPS) * 100.0).floor() / 100.0;
-    let round = |v: f64| (v * 100.0).round() / 100.0;
-    let min = up(clean_gap(Some(gaps.min_mm)).unwrap_or(GapRange::FIXED.min_mm));
-    let max = down(clean_gap(Some(gaps.max_mm)).unwrap_or(min)).max(min);
-    let mut out = vec![min];
-    for k in 1..=MAX_GAP_STEPS {
-        let g = round(min + GAP_STEP_MM * f64::from(k));
-        if g >= max - EPS {
-            break;
-        }
-        out.push(g);
-    }
-    if max > min + EPS {
-        out.push(max);
-    }
-    out
-}
-
-/// The candidate direction `step` steps from `preferred`, rounded to 0.1 degrees (ruling R3) so
-/// that the stored value is exactly the one evaluated.
-fn candidate_direction(preferred: f64, step: i32) -> f64 {
-    normalize_direction(((preferred + CANDIDATE_STEP_DEG * f64::from(step)) * 10.0).round() / 10.0)
 }
 
 fn digits(n: u32) -> usize {
@@ -379,6 +170,7 @@ pub fn number_box_mm(kind: MapKind, number: u32) -> (f64, f64) {
 /// The rectangle a number occupies on the map. The centre lies on the ray in `direction`, and
 /// `gap_mm` (print mm) is the shortest distance between the outer edge of the circle line and the
 /// rectangle (agreed with freemapper-print, ADR 0030).
+#[cfg(test)]
 fn number_rect(
     centre: &MapPoint,
     direction: f64,
@@ -388,13 +180,15 @@ fn number_rect(
     factor: f64,
 ) -> Rect {
     let (w, h) = box_size(sizes, number);
-    let (w, h) = (w * factor, h * factor);
-    let rad = direction.to_radians();
-    // y is down: 90 degrees (north) is -y.
-    let (dx, dy) = (rad.cos(), -rad.sin());
-    let reach = outer_radius(sizes) * factor + gap_mm * factor;
-    let dist = box_distance(rad.cos().abs(), rad.sin().abs(), w / 2.0, h / 2.0, reach);
-    Rect::centred(centre.x + dx * dist, centre.y + dy * dist, w, h)
+    number_box(
+        (centre.x, centre.y),
+        outer_radius(sizes) * factor,
+        (w * factor, h * factor),
+        Placement {
+            direction,
+            gap_mm: gap_mm * factor,
+        },
+    )
 }
 
 /// Centre of the number box of a control at `at`, in map mm at `map_scale`, for the placement the
@@ -407,108 +201,83 @@ pub(crate) fn number_centre(
     map_scale: u32,
 ) -> MapPoint {
     let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
-    let r = number_rect(
-        at,
-        placement.direction,
-        number,
-        placement.gap_mm,
-        &overprint_sizes(kind),
-        factor,
+    let sizes = overprint_sizes(kind);
+    let (w, h) = box_size(&sizes, number);
+    let r = number_box(
+        (at.x, at.y),
+        outer_radius(&sizes) * factor,
+        (w * factor, h * factor),
+        Placement {
+            direction: placement.direction,
+            gap_mm: placement.gap_mm * factor,
+        },
     );
-    MapPoint {
-        x: (r.min_x + r.max_x) / 2.0,
-        y: (r.min_y + r.max_y) / 2.0,
+    let (cx, cy) = r.centre();
+    MapPoint { x: cx, y: cy }
+}
+
+/// The obstacle a map feature makes, or `None` for areas and magnetic north lines (601 and its
+/// sub-codes, ruling R5). A point is a zero-length segment with the half width of a point symbol,
+/// a line segment by segment with the half width of a line symbol; both rank as map symbols and
+/// carry the feature index as label, so a feature counts once.
+fn map_obstacle(index: usize, feature: &MapFeature) -> Vec<Obstacle> {
+    if feature
+        .symbol_code
+        .as_deref()
+        .is_some_and(|code| symbol_matches(code, NORTH_LINE_SYMBOL))
+    {
+        return Vec::new();
     }
-}
-
-/// Distance along a ray with direction cosines `c`, `s` (both >= 0) at which a box with half sizes
-/// `a`, `b` centred on the ray is exactly `reach` away from the origin.
-fn box_distance(c: f64, s: f64, a: f64, b: f64, reach: f64) -> f64 {
-    // The nearest point of the box is on its near vertical edge, its near horizontal edge or the
-    // corner between them.
-    if s < EPS || (c > EPS && (reach + a) / c * s <= b) {
-        return (reach + a) / c;
-    }
-    if c < EPS || (reach + b) / s * c <= a {
-        return (reach + b) / s;
-    }
-    let p = a * c + b * s;
-    p + (p * p - a * a - b * b + reach * reach).max(0.0).sqrt()
-}
-
-/// Direction in degrees [0, 360) from `from` to `to`, 0 = east, counter-clockwise, y down.
-fn direction_to(from: &MapPoint, to: &MapPoint) -> Option<f64> {
-    let (dx, dy) = (to.x - from.x, from.y - to.y);
-    (dx.hypot(dy) > EPS).then(|| dy.atan2(dx).to_degrees().rem_euclid(360.0))
-}
-
-fn angle_diff(a: f64, b: f64) -> f64 {
-    let d = (a - b).rem_euclid(360.0);
-    d.min(360.0 - d)
-}
-
-/// Bisector of the widest gap between the legs seen from the control (the outer bisector).
-fn outer_bisector(incoming: Option<f64>, outgoing: Option<f64>) -> f64 {
-    match (incoming, outgoing) {
-        (Some(a), Some(b)) => {
-            let (lo, hi) = if a <= b { (a, b) } else { (b, a) };
-            let inner = hi - lo;
-            if inner >= 360.0 - inner {
-                (lo + inner / 2.0).rem_euclid(360.0)
-            } else {
-                (hi + (360.0 - inner) / 2.0).rem_euclid(360.0)
-            }
+    let obstacle = |a: (f64, f64), b: (f64, f64), half_width: f64| Obstacle {
+        shape: ObstacleShape::Segment { a, b, half_width },
+        weight: 0.0,
+        tier: Tier::MapSymbol,
+        label: format!("m{index}"),
+    };
+    match &feature.geometry {
+        FeatureGeometry::Point(p) => {
+            vec![obstacle((p.x, p.y), (p.x, p.y), POINT_SYMBOL_RADIUS_MM)]
         }
-        (Some(a), None) | (None, Some(a)) => (a + 180.0).rem_euclid(360.0),
-        (None, None) => 45.0,
+        FeatureGeometry::Line(points) => points
+            .windows(2)
+            .map(|w| {
+                obstacle(
+                    (w[0].x, w[0].y),
+                    (w[1].x, w[1].y),
+                    LINE_SYMBOL_HALF_WIDTH_MM,
+                )
+            })
+            .collect(),
+        FeatureGeometry::Area(_) => Vec::new(),
     }
 }
 
-/// The direction the placement tries first: behind the circle, in line with the incoming leg,
-/// unless that is blocked by the outgoing leg or there is no incoming leg; then the outer bisector.
-fn preferred(incoming: Option<f64>, outgoing: Option<f64>, behind_blocked: bool) -> f64 {
-    match incoming {
-        Some(a) if !behind_blocked => (a + 180.0).rem_euclid(360.0),
-        _ => outer_bisector(incoming, outgoing),
-    }
-}
-
-/// Removes the first `dist` mm of the polyline.
-fn trim_start(points: &[MapPoint], dist: f64) -> Vec<MapPoint> {
-    let mut left = dist;
-    for (i, w) in points.windows(2).enumerate() {
-        let len = (w[1].x - w[0].x).hypot(w[1].y - w[0].y);
-        if len > left {
-            let t = left / len;
-            let mut out = vec![MapPoint {
-                x: w[0].x + (w[1].x - w[0].x) * t,
-                y: w[0].y + (w[1].y - w[0].y) * t,
-            }];
-            out.extend(points[i + 1..].iter().cloned());
-            return out;
-        }
-        left -= len;
-    }
-    Vec::new()
+/// All obstacles of the map, converted once per placement.
+fn map_obstacles(map: &MapIndex) -> Vec<Obstacle> {
+    map.features()
+        .iter()
+        .enumerate()
+        .flat_map(|(i, f)| map_obstacle(i, f))
+        .collect()
 }
 
 /// Places the number of every numbered control of an individual course (crossing points get none),
 /// in running order, as one placement per numbered control.
 ///
-/// Number box: `0.6 * height * digits` wide and `height` high. The preferred direction is behind
-/// the circle, in line with the incoming leg (its last segment, so after the last bend); if the
-/// box there touches the outgoing leg, or there is no incoming leg, it is the outer bisector
-/// (the middle of the larger area between the legs). Tried are the 24 directions
-/// `preferred + 15 * k` degrees, each rounded to 0.1 degrees and returned as evaluated. They are
-/// crossed with the gaps of `gaps` (from the minimum in steps of 0.5 mm up to the maximum, see
-/// `candidate_gaps`) and compared as (overprint conflicts, map conflicts, distance to the
-/// preferred direction, gap, distance to the outer bisector, direction), so a larger gap in the
-/// preferred direction beats a smaller one in another direction. "Behind is blocked" is tested at
-/// the minimum gap. Stored numbers keep their gap even outside the range; only `check` warns.
-/// Overprint conflicts are a box on another circle, on a leg widened by half the line width, or on
-/// a number placed before; map conflicts are covered point or line symbols, each counting once.
-/// Areas and magnetic north lines (601 and its sub-codes) never count. Overprint outweighs any
-/// number of map conflicts (rulings R3 to R5).
+/// Number box: `0.6 * height * digits` wide and `height` high. The search is
+/// `freemapper_course::placement::place_course_numbers` (ADR 0036, core ADR 0016): the preferred
+/// direction is behind the circle, in line with the incoming leg (its last segment, so after the
+/// last bend); if the box there touches the outgoing leg, or there is no incoming leg, it is the
+/// outer bisector (the middle of the larger area between the legs). Tried are the 24 directions
+/// `preferred + 15 * k` degrees, each rounded to 0.1 degrees and returned as evaluated, crossed
+/// with the gaps of `gaps` (from the minimum in steps of 0.5 mm up to the maximum) and compared as
+/// (overprint conflicts, map conflicts, distance to the preferred direction, gap, distance to the
+/// outer bisector, direction), so a larger gap in the preferred direction beats a smaller one in
+/// another direction. "Behind is blocked" is tested at the minimum gap. Stored numbers keep their
+/// gap even outside the range; only `check` warns. Overprint conflicts are a box on another
+/// circle, on a leg widened by half the line width, or on a number placed before; map conflicts
+/// are covered point or line symbols, each counting once. Areas and magnetic north lines (601 and
+/// its sub-codes) never count. Overprint outweighs any number of map conflicts (rulings R3 to R5).
 ///
 /// Kept numbers follow the levels of design §5.3, the more specific winning: automatic placement,
 /// then the central number of the control (`Control.number`), then the number of the course
@@ -535,8 +304,6 @@ pub fn auto_place(
     };
     let sizes = overprint_sizes(kind);
     let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
-    let radius = sizes.circle_diameter_mm * factor / 2.0;
-    let half_line = sizes.line_width_mm * factor / 2.0;
     let numbers = control_numbers(event, course);
 
     // Position of each course control; a control the event lacks cannot occur after course_legs.
@@ -569,128 +336,48 @@ pub fn auto_place(
             None => own.filter(|_| keep_existing),
         }
     };
-    let mut placed: Vec<Rect> = Vec::new();
-    for (k, number) in numbers.iter().enumerate() {
-        if let (Some(number), Some(existing)) = (*number, kept(k)) {
-            placed.push(number_rect(
-                &positions[k],
-                existing.direction,
-                number,
-                existing.gap_mm,
-                &sizes,
-                factor,
-            ));
-        }
-    }
-    let mut out = Vec::new();
-    for (k, number) in numbers.iter().enumerate() {
-        let Some(number) = *number else { continue };
-        if let Some(existing) = kept(k) {
-            out.push(existing);
-            continue;
-        }
-        let here = &positions[k];
-        // Leg k arrives at this control, leg k + 1 leaves it.
-        let incoming = &legs[k];
-        let outgoing = &legs[k + 1];
-        let incoming_dir = incoming
-            .points
-            .len()
-            .checked_sub(2)
-            .and_then(|i| direction_to(here, &incoming.points[i]));
-        let outgoing_dir = outgoing.points.get(1).and_then(|p| direction_to(here, p));
-        let outer = outer_bisector(incoming_dir, outgoing_dir);
-
-        // Legs as polylines; the parts inside the own circle always touch it and are ignored.
-        let mut lines: Vec<Vec<MapPoint>> = Vec::new();
-        for (i, leg) in legs.iter().enumerate() {
-            if i == k {
-                let reversed: Vec<MapPoint> = leg.points.iter().rev().cloned().collect();
-                lines.push(trim_start(&reversed, radius));
-            } else if i == k + 1 {
-                lines.push(trim_start(&leg.points, radius));
-            } else {
-                lines.push(leg.points.clone());
-            }
-        }
-
-        // Behind is blocked when a box there touches the outgoing leg (trimmed by the circle).
-        let behind_blocked = incoming_dir.is_some_and(|a| {
-            let behind = number_rect(
-                here,
-                (a + 180.0).rem_euclid(360.0),
-                number,
-                gaps.min_mm,
-                &sizes,
-                factor,
-            );
-            lines[k + 1].windows(2).any(|w| {
-                behind.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y)) <= half_line
-            })
-        });
-        let preferred_dir = preferred(incoming_dir, outgoing_dir, behind_blocked);
-
-        // Point and line symbols near enough for any candidate box to cover them.
-        let (box_w, box_h) = box_size(&sizes, number);
-        let (box_w, box_h) = (box_w * factor, box_h * factor);
-        // Farthest a candidate box can reach from the control, plus a symbol's own extent.
-        let reach =
-            radius + half_line + gaps.max_mm * factor + box_w.hypot(box_h) + POINT_SYMBOL_RADIUS_MM;
-        let features = map.features_near(here.clone(), reach);
-
-        let mut best: Option<Rank> = None;
-        let gap_list = candidate_gaps(gaps);
-        for (step, gap) in (-(CANDIDATE_STEPS - 1)..=CANDIDATE_STEPS)
-            .flat_map(|step| gap_list.iter().map(move |gap| (step, *gap)))
-        {
-            let direction = candidate_direction(preferred_dir, step);
-            let rect = number_rect(here, direction, number, gap, &sizes, factor);
-            // Circles, legs and other numbers (overprint) weigh more than map symbols (ruling R4).
-            let mut overprint = 0;
-            for (j, pos) in positions.iter().enumerate() {
-                let is_circle = numbers[j].is_some();
-                let same_place = (pos.x - here.x).hypot(pos.y - here.y) < EPS;
-                if is_circle
-                    && j != k
-                    && !same_place
-                    && rect.distance_to_point(pos.x, pos.y) < radius + half_line
-                {
-                    overprint += 1;
-                }
-            }
-            for line in &lines {
-                if line.windows(2).any(|w| {
-                    rect.distance_to_segment((w[0].x, w[0].y), (w[1].x, w[1].y)) <= half_line
-                }) {
-                    overprint += 1;
-                }
-            }
-            overprint += placed.iter().filter(|r| rect.overlaps(r)).count();
-            let map_conflicts = features
-                .iter()
-                .filter(|(feature, _)| feature_covered(&rect, feature))
-                .count();
-
-            let rank = Rank {
-                overprint,
-                map: map_conflicts,
-                off_preferred: angle_diff(direction, preferred_dir),
-                gap,
-                off_outer: angle_diff(direction, outer),
-                direction,
-            };
-            if best.as_ref().is_none_or(|b| rank.beats(b)) {
-                best = Some(rank);
-            }
-        }
-        let (direction, gap) = best.map_or((preferred_dir, gaps.min_mm), |r| (r.direction, r.gap));
-        placed.push(number_rect(here, direction, number, gap, &sizes, factor));
-        out.push(NumberPlacement {
-            direction,
-            gap_mm: gap,
-        });
-    }
-    Ok(out)
+    let stops: Vec<NumberStop> = positions
+        .iter()
+        .zip(&numbers)
+        .enumerate()
+        .map(|(k, (pos, number))| NumberStop {
+            centre: (pos.x, pos.y),
+            size: number.map(|n| {
+                let (w, h) = box_size(&sizes, n);
+                (w * factor, h * factor)
+            }),
+            kept: number.and_then(|_| {
+                kept(k).map(|p| Placement {
+                    direction: p.direction,
+                    gap_mm: p.gap_mm,
+                })
+            }),
+        })
+        .collect();
+    let leg_points: Vec<Vec<(f64, f64)>> = legs
+        .iter()
+        .map(|leg| leg.points.iter().map(|p| (p.x, p.y)).collect())
+        .collect();
+    let placed = place_course_numbers(
+        &CourseNumbers {
+            stops: &stops,
+            legs: &leg_points,
+            circle_r: sizes.circle_diameter_mm * factor / 2.0,
+            half_line: sizes.line_width_mm * factor / 2.0,
+            unit: factor,
+            gaps,
+        },
+        &map_obstacles(map),
+        Rect::UNBOUNDED,
+    );
+    Ok(placed
+        .into_iter()
+        .flatten()
+        .map(|p| NumberPlacement {
+            direction: p.direction,
+            gap_mm: p.gap_mm,
+        })
+        .collect())
 }
 
 /// Writes [`auto_place`] results into the course controls of the named individual course that have
@@ -776,6 +463,21 @@ pub fn place_numbers(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use freemapper_course::placement::{angle_diff, candidate};
+
+    // Shims over the core API for the scenarios that predate the switch (ADR 0036).
+    fn candidate_direction(preferred: f64, step: i32) -> f64 {
+        candidate(preferred, step.rem_euclid(24) as usize)
+    }
+
+    fn candidate_gaps(gaps: GapRange) -> Vec<f64> {
+        // Rounding and clamping live in `from_limits` now; `steps` only walks the range.
+        GapRange::from_limits(Some(gaps.min), Some(gaps.max)).steps()
+    }
+
+    fn feature_covered(r: &Rect, f: &MapFeature) -> bool {
+        map_obstacle(0, f).iter().any(|o| o.shape.hits(r))
+    }
     use crate::check::testing::{
         AREA_520, LINE_502, LINE_601, POINT_113, area_object, line_object, map, point_object, rule,
         with_values,
@@ -800,20 +502,14 @@ mod tests {
     #[test]
     fn gap_range_reads_the_profile() {
         let set = load_rule_set("wkb-2026", &[]).unwrap();
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 0.5,
-                max_mm: 5.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 0.5, max: 5.0 });
     }
 
     #[test]
     fn gap_range_without_rule_is_fixed() {
         let mut set = load_rule_set("wkb-2026", &[]).unwrap();
         set.rules.retain(|r| r.rule.key != "number_gap");
-        assert_eq!(range_of(&set), GapRange::FIXED);
+        assert_eq!(range_of(&set), GapRange::DEFAULT);
     }
 
     #[test]
@@ -821,13 +517,7 @@ mod tests {
         let mut set = load_rule_set("wkb-2026", &[]).unwrap();
         set.rules
             .push(gap_rule("t.gap", "min_gap_mm = 1.0\nmax_gap_mm = 3.0"));
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 1.0,
-                max_mm: 3.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 1.0, max: 3.0 });
     }
 
     #[test]
@@ -836,13 +526,7 @@ mod tests {
         set.rules.retain(|r| r.rule.key != "number_gap");
         set.rules
             .push(gap_rule("t.gap", "min_gap_mm = 6.0\nmax_gap_mm = 5.0"));
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 6.0,
-                max_mm: 6.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 6.0, max: 6.0 });
     }
 
     #[test]
@@ -850,22 +534,10 @@ mod tests {
         let mut set = load_rule_set("wkb-2026", &[]).unwrap();
         set.rules.retain(|r| r.rule.key != "number_gap");
         set.rules.push(gap_rule("t.max", "max_gap_mm = 3.0"));
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 0.5,
-                max_mm: 3.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 0.5, max: 3.0 });
         set.rules.clear();
         set.rules.push(gap_rule("t.min", "min_gap_mm = 2.0"));
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 2.0,
-                max_mm: 2.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 2.0, max: 2.0 });
     }
 
     fn p(x: f64, y: f64) -> MapPoint {
@@ -1001,7 +673,7 @@ mod tests {
     }
 
     fn place_on(e: &Event, map: &MapIndex, scale: u32) -> Vec<NumberPlacement> {
-        place_in(e, map, scale, GapRange::FIXED)
+        place_in(e, map, scale, GapRange::DEFAULT)
     }
 
     fn place_in(e: &Event, map: &MapIndex, scale: u32, gaps: GapRange) -> Vec<NumberPlacement> {
@@ -1016,6 +688,34 @@ mod tests {
     /// The map index of a sprint map with the given objects.
     fn index(objects: Vec<crate::omap::MapObject>) -> MapIndex {
         MapIndex::from_document(&map(4000, objects))
+    }
+
+    #[test]
+    fn map_features_are_converted_once() {
+        let mut objects = Vec::new();
+        for i in 0..3 {
+            objects.push(point_object(POINT_113, f64::from(i) * 10.0, 0.0));
+        }
+        objects.push(line_object(LINE_502, &[(0.0, 5.0), (10.0, 5.0)]));
+        objects.push(line_object(LINE_502, &[(0.0, 8.0), (10.0, 8.0)]));
+        objects.push(area_object(
+            AREA_520,
+            &[(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)],
+        ));
+        objects.push(line_object(LINE_601, &[(0.0, 20.0), (10.0, 20.0)]));
+        let obstacles = map_obstacles(&index(objects));
+        assert_eq!(obstacles.len(), 5);
+        let points = obstacles.iter().filter(|o| {
+            matches!(o.shape, ObstacleShape::Segment { a, b, half_width }
+                if a == b && half_width == POINT_SYMBOL_RADIUS_MM)
+        });
+        assert_eq!(points.count(), 3);
+        let lines = obstacles.iter().filter(|o| {
+            matches!(o.shape, ObstacleShape::Segment { a, b, half_width }
+                if a != b && half_width == LINE_SYMBOL_HALF_WIDTH_MM)
+        });
+        assert_eq!(lines.count(), 2);
+        assert!(obstacles.iter().all(|o| o.tier == Tier::MapSymbol));
     }
 
     #[test]
@@ -1063,7 +763,7 @@ mod tests {
         );
         let other = &e.controls[2].map_mm;
         assert!(
-            rect.distance_to_point(other.x, other.y) >= 3.0 + 0.175,
+            rect.distance_to_point((other.x, other.y)) >= 3.0 + 0.175,
             "direction {} touches the circle",
             placed[0].direction
         );
@@ -1122,7 +822,7 @@ mod tests {
                 &MapIndex::default(),
                 4000,
                 MapKind::Sprint,
-                GapRange::FIXED,
+                GapRange::DEFAULT,
                 false
             ),
             Ok(1)
@@ -1173,7 +873,7 @@ mod tests {
                     &MapIndex::default(),
                     4000,
                     MapKind::Sprint,
-                    GapRange::FIXED,
+                    GapRange::DEFAULT,
                     overwrite
                 ),
                 Ok(1),
@@ -1216,7 +916,7 @@ mod tests {
                 &MapIndex::default(),
                 4000,
                 MapKind::Sprint,
-                GapRange::FIXED,
+                GapRange::DEFAULT,
                 true
             ),
             Ok(1)
@@ -1231,8 +931,8 @@ mod tests {
         // y is down, so north (90 degrees) is smaller y.
         let sizes = overprint_sizes(MapKind::Sprint);
         let rect = number_rect(&p(100.0, 100.0), 90.0, 1, 0.5, &sizes, 1.0);
-        assert!(rect.max_y < 100.0);
-        assert!((rect.max_y - (100.0 - 3.675)).abs() < 1e-9);
+        assert!(rect.max.1 < 100.0);
+        assert!((rect.max.1 - (100.0 - 3.675)).abs() < 1e-9);
     }
 
     #[test]
@@ -1245,14 +945,14 @@ mod tests {
             for gap in [0.3, 1.0] {
                 for direction in [0.0, 30.0, 45.0, 60.0, 90.0, 135.0, 200.0, 315.0] {
                     let rect = number_rect(&p(0.0, 0.0), direction, number, gap, &sizes, 1.0);
-                    let clearance = rect.distance_to_point(0.0, 0.0) - r_outer;
+                    let clearance = rect.distance_to_point((0.0, 0.0)) - r_outer;
                     assert!(
                         (clearance - gap).abs() < 1e-9,
                         "{number} at {direction} with gap {gap}: clearance {clearance}"
                     );
                     let (cx, cy) = (
-                        (rect.min_x + rect.max_x) / 2.0,
-                        (rect.min_y + rect.max_y) / 2.0,
+                        (rect.min.0 + rect.max.0) / 2.0,
+                        (rect.min.1 + rect.max.1) / 2.0,
                     );
                     let rad = f64::to_radians(direction);
                     assert!(
@@ -1298,8 +998,8 @@ mod tests {
         // A box at 1:5000 is 0.8 times as high: east box starts at 0.8 * (3.175 + 0.5).
         let sizes = overprint_sizes(MapKind::Sprint);
         let r = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 0.8);
-        assert!((r.min_x - 0.8 * 3.675).abs() < 1e-9);
-        assert!(((r.max_y - r.min_y) - 3.2).abs() < 1e-9);
+        assert!((r.min.0 - 0.8 * 3.675).abs() < 1e-9);
+        assert!(((r.max.1 - r.min.1) - 3.2).abs() < 1e-9);
     }
 
     #[test]
@@ -1354,10 +1054,10 @@ mod tests {
         let sizes = overprint_sizes(MapKind::Sprint);
         let rect = number_rect(&e.controls[0].map_mm, d, 1, 0.5, &sizes, 1.0);
         let other = &e.controls[2].map_mm;
-        assert!(rect.distance_to_point(other.x, other.y) >= 3.0 + 0.175);
+        assert!(rect.distance_to_point((other.x, other.y)) >= 3.0 + 0.175);
         // Straight behind really is blocked.
         let behind = number_rect(&e.controls[0].map_mm, 0.0, 1, 0.5, &sizes, 1.0);
-        assert!(behind.distance_to_point(other.x, other.y) < 3.0 + 0.175);
+        assert!(behind.distance_to_point((other.x, other.y)) < 3.0 + 0.175);
     }
 
     #[test]
@@ -1375,7 +1075,7 @@ mod tests {
         for dir in [d, 360.0 - d] {
             let rect = number_rect(&e.controls[0].map_mm, dir, 1, 0.5, &sizes, 1.0);
             assert!(
-                rect.distance_to_point(other.x, other.y) >= 3.0 + 0.175,
+                rect.distance_to_point((other.x, other.y)) >= 3.0 + 0.175,
                 "{dir}"
             );
         }
@@ -1427,7 +1127,7 @@ mod tests {
                 &MapIndex::default(),
                 4000,
                 MapKind::Sprint,
-                GapRange::FIXED,
+                GapRange::DEFAULT,
                 true
             ),
             Ok(2)
@@ -1452,7 +1152,7 @@ mod tests {
             &MapIndex::default(),
             4000,
             MapKind::Sprint,
-            GapRange::FIXED,
+            GapRange::DEFAULT,
             true,
         )
         .unwrap();
@@ -1469,7 +1169,7 @@ mod tests {
         let point = index(vec![point_object(POINT_113, 105.5, 100.0)]);
         let d = place_on(&e, &point, 4000)[0].direction;
         assert!(angle_diff(d, 0.0) >= 15.0, "direction {d}");
-        assert!(sprint_rect(&e, d).distance_to_point(105.5, 100.0) > POINT_SYMBOL_RADIUS_MM);
+        assert!(sprint_rect(&e, d).distance_to_point((105.5, 100.0)) > POINT_SYMBOL_RADIUS_MM);
         // (b) A 502 line running north-south there: the same.
         let line = index(vec![line_object(
             LINE_502,
@@ -1494,10 +1194,10 @@ mod tests {
         let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
         let east = sprint_rect(&e, 0.0);
         // 0.3 mm outside the box (less than the symbol radius): still covered.
-        let near = index(vec![point_object(POINT_113, east.max_x + 0.3, 100.0)]);
+        let near = index(vec![point_object(POINT_113, east.max.0 + 0.3, 100.0)]);
         assert!(angle_diff(place_on(&e, &near, 4000)[0].direction, 0.0) >= 15.0);
         // 0.7 mm outside: free.
-        let far = index(vec![point_object(POINT_113, east.max_x + 0.7, 100.0)]);
+        let far = index(vec![point_object(POINT_113, east.max.0 + 0.7, 100.0)]);
         assert!(angle_diff(place_on(&e, &far, 4000)[0].direction, 0.0) < 1e-9);
     }
 
@@ -1523,7 +1223,7 @@ mod tests {
                 continue;
             }
             let r = sprint_rect(&e, direction);
-            let (cx, cy) = ((r.min_x + r.max_x) / 2.0, (r.min_y + r.max_y) / 2.0);
+            let (cx, cy) = ((r.min.0 + r.max.0) / 2.0, (r.min.1 + r.max.1) / 2.0);
             objects.push(line_object(LINE_502, &[(cx - 0.1, cy), (cx + 0.1, cy)]));
         }
         let map = index(objects);
@@ -1547,47 +1247,18 @@ mod tests {
     }
 
     #[test]
-    fn overprint_conflicts_weigh_more_than_map_symbols() {
-        let rank = |overprint, map| Rank {
-            overprint,
-            map,
-            off_preferred: 0.0,
-            gap: 0.5,
-            off_outer: 0.0,
-            direction: 0.0,
-        };
-        // On its own leg and one line symbol (two conflicts in all) loses against three line
-        // symbols and no overprint.
-        assert!(rank(0, 3).beats(&rank(1, 1)));
-        assert!(!rank(1, 1).beats(&rank(0, 3)));
-        // Equal overprint: fewer map conflicts win, then the later keys decide.
-        assert!(rank(1, 1).beats(&rank(1, 2)));
-        let near = Rank {
-            off_preferred: 15.0,
-            ..rank(0, 0)
-        };
-        assert!(rank(0, 0).beats(&near));
-        let low = Rank {
-            direction: 15.0,
-            ..rank(0, 0)
-        };
-        assert!(rank(0, 0).beats(&low));
-        assert!(!rank(0, 0).beats(&rank(0, 0)));
-    }
-
-    #[test]
     fn magnetic_north_lines_never_count_as_covered() {
         let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
         let east = sprint_rect(&e, 0.0);
-        let cy = (east.min_y + east.max_y) / 2.0;
+        let cy = (east.min.1 + east.max.1) / 2.0;
         let north_lines = index(vec![line_object(
             LINE_601,
-            &[(east.min_x - 3.0, cy), (east.max_x + 3.0, cy)],
+            &[(east.min.0 - 3.0, cy), (east.max.0 + 3.0, cy)],
         )]);
         assert!(angle_diff(place_on(&e, &north_lines, 4000)[0].direction, 0.0) < 1e-9);
         let same_geometry = index(vec![line_object(
             LINE_502,
-            &[(east.min_x - 3.0, cy), (east.max_x + 3.0, cy)],
+            &[(east.min.0 - 3.0, cy), (east.max.0 + 3.0, cy)],
         )]);
         assert!(angle_diff(place_on(&e, &same_geometry, 4000)[0].direction, 0.0) >= 15.0);
     }
@@ -1595,7 +1266,7 @@ mod tests {
     #[test]
     fn candidate_directions_are_rounded_to_a_tenth_and_never_360() {
         assert_eq!(candidate_direction(359.96, 0), 0.0);
-        for step in -(CANDIDATE_STEPS - 1)..=CANDIDATE_STEPS {
+        for step in -11..=12 {
             let d = candidate_direction(123.456_789, step);
             assert!((0.0..360.0).contains(&d), "{d}");
             assert!((d * 10.0 - (d * 10.0).round()).abs() < 1e-9, "{d}");
@@ -1630,11 +1301,11 @@ mod tests {
         let at_base = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 1.0);
         let at_double = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 2.0);
         assert!(
-            ((at_double.max_y - at_double.min_y) - 2.0 * (at_base.max_y - at_base.min_y)).abs()
+            ((at_double.max.1 - at_double.min.1) - 2.0 * (at_base.max.1 - at_base.min.1)).abs()
                 < 1e-9
         );
         // East: the box starts at the outer edge of the circle line 3.175 + gap 0.5.
-        assert!(((at_base.min_x) - 3.675).abs() < 1e-9);
+        assert!(((at_base.min.0) - 3.675).abs() < 1e-9);
     }
 
     #[test]
@@ -1657,7 +1328,7 @@ mod tests {
             &MapIndex::default(),
             4000,
             MapKind::Sprint,
-            GapRange::FIXED,
+            GapRange::DEFAULT,
             false,
         )
         .unwrap();
@@ -1674,7 +1345,7 @@ mod tests {
             &MapIndex::default(),
             4000,
             MapKind::Sprint,
-            GapRange::FIXED,
+            GapRange::DEFAULT,
             true,
         )
         .unwrap();
@@ -1691,7 +1362,7 @@ mod tests {
                 &MapIndex::default(),
                 4000,
                 MapKind::Sprint,
-                GapRange::FIXED,
+                GapRange::DEFAULT,
                 false
             ),
             Err(EditError::NotFound { .. })
@@ -1700,31 +1371,31 @@ mod tests {
 
     #[test]
     fn candidate_gaps_end_at_max() {
-        let gaps = |min_mm, max_mm| candidate_gaps(GapRange { min_mm, max_mm });
+        let gaps = |min, max| candidate_gaps(GapRange { min, max });
         assert_eq!(
             gaps(0.5, 5.0),
             vec![0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
         );
         assert_eq!(gaps(0.5, 1.2), vec![0.5, 1.0, 1.2]);
-        assert_eq!(candidate_gaps(GapRange::FIXED), vec![0.5]);
+        assert_eq!(candidate_gaps(GapRange::DEFAULT), vec![0.5]);
     }
 
     #[test]
     fn candidate_gaps_round_inwards_and_always_end() {
-        let gaps = |min_mm, max_mm| candidate_gaps(GapRange { min_mm, max_mm });
+        let gaps = |min, max| candidate_gaps(GapRange { min, max });
         // The minimum rounds up, so the first gap is never below it.
         assert_eq!(gaps(0.333, 0.333)[0], 0.34);
         // The maximum rounds down, so the last gap is never above it.
         assert_eq!(*gaps(0.5, 1.237).last().unwrap(), 1.23);
-        for (min_mm, max_mm) in [
+        for (min, max) in [
             (f64::NAN, f64::NAN),
             (f64::INFINITY, f64::INFINITY),
             (0.0, f64::INFINITY),
             (-3.0, 1e300),
             (50.0, 50.0),
         ] {
-            let list = candidate_gaps(GapRange { min_mm, max_mm });
-            assert!(!list.is_empty() && list.len() <= 1001, "{min_mm} {max_mm}");
+            let list = candidate_gaps(GapRange { min, max });
+            assert!(!list.is_empty() && list.len() <= 1001, "{min} {max}");
             assert!(
                 list.iter().all(|g| (0.01..=MAX_GAP_MM).contains(g)),
                 "{list:?}"
@@ -1739,11 +1410,11 @@ mod tests {
         // Not finite or not above 0 counts as missing.
         set.rules
             .push(gap_rule("t.bad", "min_gap_mm = nan\nmax_gap_mm = inf"));
-        assert_eq!(range_of(&set), GapRange::FIXED);
+        assert_eq!(range_of(&set), GapRange::DEFAULT);
         set.rules.clear();
         set.rules
             .push(gap_rule("t.neg", "min_gap_mm = -1.0\nmax_gap_mm = 0.0"));
-        assert_eq!(range_of(&set), GapRange::FIXED);
+        assert_eq!(range_of(&set), GapRange::DEFAULT);
         // 50 mm is clamped to the largest gap the CLI accepts.
         set.rules.clear();
         set.rules
@@ -1751,26 +1422,20 @@ mod tests {
         assert_eq!(
             range_of(&set),
             GapRange {
-                min_mm: MAX_GAP_MM,
-                max_mm: MAX_GAP_MM
+                min: MAX_GAP_MM,
+                max: MAX_GAP_MM
             }
         );
         // A tiny positive value is lifted to 0.01.
         set.rules.clear();
         set.rules.push(gap_rule("t.tiny", "min_gap_mm = 0.000001"));
-        assert_eq!(range_of(&set).min_mm, 0.01);
+        assert_eq!(range_of(&set).min, 0.01);
         // An invalid value of one rule leaves the valid one of another alone.
         set.rules.clear();
         set.rules
             .push(gap_rule("t.ok", "min_gap_mm = 1.0\nmax_gap_mm = 3.0"));
         set.rules.push(gap_rule("t.nan", "max_gap_mm = nan"));
-        assert_eq!(
-            range_of(&set),
-            GapRange {
-                min_mm: 1.0,
-                max_mm: 3.0
-            }
-        );
+        assert_eq!(range_of(&set), GapRange { min: 1.0, max: 3.0 });
     }
 
     #[test]
@@ -1782,10 +1447,7 @@ mod tests {
             LINE_502,
             &[(103.0, 100.0), (130.0, 100.0)],
         )]);
-        let range = GapRange {
-            min_mm: 0.5,
-            max_mm: 5.0,
-        };
+        let range = GapRange { min: 0.5, max: 5.0 };
         let d = place_in(&e, &line, 4000, range)[0].direction;
         assert!(angle_diff(d, 0.0) >= 15.0, "direction {d}");
     }
@@ -1796,32 +1458,14 @@ mod tests {
         // the circle line is covered by the box at 0.5 mm, but not by the box further out.
         let e = event((70.0, 100.0), &[n("31", 100.0, 100.0)], (100.0, 140.0));
         let east = sprint_rect(&e, 0.0);
-        let blocker = index(vec![point_object(POINT_113, east.min_x + 0.15, 100.0)]);
-        let fixed = place_in(&e, &blocker, 4000, GapRange::FIXED)[0].clone();
+        let blocker = index(vec![point_object(POINT_113, east.min.0 + 0.15, 100.0)]);
+        let fixed = place_in(&e, &blocker, 4000, GapRange::DEFAULT)[0].clone();
         assert!(angle_diff(fixed.direction, 0.0) >= 15.0, "{fixed:?}");
         assert!((fixed.gap_mm - 0.5).abs() < 1e-9);
-        let range = GapRange {
-            min_mm: 0.5,
-            max_mm: 5.0,
-        };
+        let range = GapRange { min: 0.5, max: 5.0 };
         let wide = place_in(&e, &blocker, 4000, range)[0].clone();
         assert!(angle_diff(wide.direction, 0.0) < 1e-9, "{wide:?}");
         assert!(wide.gap_mm > 0.5 && wide.gap_mm <= 5.0, "{wide:?}");
-    }
-
-    #[test]
-    fn gap_rank_prefers_smaller_gap() {
-        let rank = |off_preferred, gap| Rank {
-            overprint: 0,
-            map: 0,
-            off_preferred,
-            gap,
-            off_outer: 0.0,
-            direction: 0.0,
-        };
-        assert!(rank(0.0, 0.5).beats(&rank(0.0, 1.0)));
-        assert!(!rank(0.0, 1.0).beats(&rank(0.0, 0.5)));
-        assert!(rank(0.0, 3.0).beats(&rank(15.0, 0.5)));
     }
 
     #[test]
@@ -1834,10 +1478,7 @@ mod tests {
         if let CourseKind::Individual { controls } = &mut e.courses[0].kind {
             controls[0].number = Some(far.clone());
         }
-        let range = GapRange {
-            min_mm: 0.5,
-            max_mm: 5.0,
-        };
+        let range = GapRange { min: 0.5, max: 5.0 };
         let out = auto_place(
             &e,
             &e.courses[0],

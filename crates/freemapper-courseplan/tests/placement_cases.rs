@@ -8,7 +8,7 @@
 use std::path::Path;
 
 use freemapper_courseplan::map::{MapIndex, MapKind, map_kind};
-use freemapper_courseplan::numbers::{GapRange, MAX_GAP_MM, auto_place};
+use freemapper_courseplan::numbers::{GapRange, auto_place};
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::omap::{
     MapCoord, MapDocument, MapGeoref, MapObject, MapObjectKind, MapPart, SymbolSet,
@@ -23,29 +23,10 @@ use serde::Deserialize;
 const CASES: &str = include_str!("fixtures/placement/cases.toml");
 const TOLERANCE: f64 = 1e-9;
 
-/// Cases whose expected values the old code is known not to reproduce, each with the reason. The
-/// harness still runs them and requires that they differ (so the entry goes when the code catches up).
-///
-/// Ruled for core in freemapper-core ADR 0016: D2 (the old leg trim at the circle radius leaves a piece of leg
-/// inside the circle line) and D4 (the old "behind is blocked" test uses the unrounded rule minimum).
-const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[
-    (
-        "bend_inside_circle_line_gap_0_01",
-        "D2: trim at the circle radius, not radius plus half line width",
-    ),
-    (
-        "bend_inside_circle_line_gap_0_1",
-        "D2: trim at the circle radius, not radius plus half line width",
-    ),
-    (
-        "rounded_min_behind_test_0_333",
-        "D4: behind test at the unrounded rule minimum 0.333, stored gap 0.34",
-    ),
-    (
-        "rounded_min_behind_test_0_331",
-        "D4: behind test at the unrounded rule minimum 0.331, stored gap 0.34",
-    ),
-];
+/// Cases whose expected values the code is known not to reproduce, each with the reason. The harness
+/// still runs them and requires that they differ. Empty since the switch to freemapper-course (ADR 0036):
+/// the four cases of core ADR 0016 (D2, D4) pass.
+const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[];
 
 type Pt = (f64, f64);
 
@@ -192,23 +173,9 @@ fn mp(p: Pt) -> MapPoint {
 
 /// What `gap_range` makes of one `number_gap` rule with `min_gap_mm` / `max_gap_mm`.
 fn gap_range_of_one_rule(min: Option<f64>, max: Option<f64>) -> GapRange {
-    let clean = |v: Option<f64>| {
-        v.filter(|v| v.is_finite() && *v > 0.0)
-            .map(|v| v.clamp(0.01, MAX_GAP_MM))
-    };
-    let (min, max) = match (clean(min), clean(max)) {
-        (Some(min), Some(max)) => (Some(min), Some(max.max(min))),
-        other => other,
-    };
-    let (min, max) = match (min, max) {
-        (None, None) => return GapRange::FIXED,
-        (Some(min), None) => (min, min),
-        (None, Some(max)) => (GapRange::FIXED.min_mm, max),
-        (Some(min), Some(max)) => (min, max),
-    };
-    GapRange {
-        min_mm: min,
-        max_mm: max.max(min),
+    match GapRange::strictest([(min, max)]) {
+        Some((min, max)) => GapRange::from_limits(min, max),
+        None => GapRange::DEFAULT,
     }
 }
 
@@ -408,7 +375,7 @@ fn placement_cases_match_expected() {
 /// Lists every case whose result differs from its expected values: `cargo test --test placement_cases --
 /// --ignored --nocapture list_disagreements`.
 #[test]
-#[ignore = "prints the disagreements between expected values and courseplan's old code"]
+#[ignore = "prints the disagreements between expected values and courseplan"]
 fn list_disagreements() {
     for case in &load().case {
         if let Some(expected) = &case.expected {
@@ -575,10 +542,7 @@ fn large_map_timing() {
         &index,
         4000,
         MapKind::Sprint,
-        GapRange {
-            min_mm: 0.5,
-            max_mm: 5.0,
-        },
+        GapRange { min: 0.5, max: 5.0 },
         false,
     )
     .expect("auto_place");

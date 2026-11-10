@@ -6,6 +6,12 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- Die Nummernlage kommt jetzt aus `freemapper-course` (0.6.0), derselben Suche, die freemapper-print nutzt. Die
+  Lagen ändern sich nur in zwei Randfällen: bei einem Knick, der näher als eine Linienbreite am Kreis liegt, und
+  bei einem Regelminimum mit drei Nachkommastellen. Das Beispiel `luebeck-sprint` bleibt gleich (ADR 0036).
+
 ## [0.7.3] - 2026-11-10
 
 ### Behoben

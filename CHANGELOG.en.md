@@ -6,6 +6,12 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- Number placement now comes from `freemapper-course` (0.6.0), the same search freemapper-print uses. Positions
+  change only in two edge cases: a bend closer to the circle than one line width, and a rule minimum with three
+  decimals. The `luebeck-sprint` example stays the same (ADR 0036).
+
 ## [0.7.3] - 2026-11-10
 
 ### Fixed

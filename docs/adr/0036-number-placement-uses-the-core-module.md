@@ -1,0 +1,46 @@
+# 0036. Number placement uses the core module
+
+Date: 2026-11-10
+Status: Accepted
+
+## Context
+ADRs 0030 to 0032 describe the number placement that `numbers::auto_place` carried out itself. freemapper-print
+needed the same search for its sheets, so the search moved into `freemapper-course` as `placement`
+(`best`, `GapRange`, `Obstacle`) and, with v0.6.0, `place_course_numbers` for a whole course (core ADR 0016).
+Both sides ran the same 33 cases before the switch.
+
+## Decision
+- **One search, in core.** `auto_place` builds the stops (number box size, kept placement), the legs and the
+  map obstacles and calls `place_course_numbers` with unbounded bounds. The search loop, the box and distance
+  geometry (`Rect`, `segments_cross`, `box_distance`, ...), the candidate lists and the ranking are gone here
+  *(agreed with freemapper-print, 2026-11-10)*.
+- **What stays in courseplan.** The overprint sizes per map kind, the base scale, `circle_outer_radius_mm` and
+  `number_box_mm`, the kept-number levels (central number, course number, `keep_existing`, ruling R11), the
+  rule profile to gap range step (`rule_sides`, `normalise_sides`, then `GapRange::strictest` and
+  `GapRange::from_limits`) and the conversion of map features into obstacles *(Claude's call)*.
+- **Map features.** A point becomes a zero-length `Segment` with half width 0.5 mm, a line one `Segment` per
+  piece with half width 0.15 mm. All are tier `MapSymbol` and carry the index of their feature as label, so a
+  feature counts once however many pieces it has, as before. Areas and magnetic north lines (601 and its
+  sub-codes) give none (ruling R5). The conversion runs once per `auto_place`, not per control
+  *(Claude's call)*.
+- **Types.** `numbers::GapRange` is core's type (fields `min` and `max`, `GapRange::DEFAULT` replaces
+  `GapRange::FIXED`); `normalize_direction` is core's function. `MAX_GAP_MM` is the upper limit of
+  `GAP_LIMITS_MM` *(Claude's call)*.
+- **Rulings of core ADR 0016 that move positions** *(agreed with freemapper-print)*:
+  - D2: a leg loses the part within the circle radius plus half the line width, not only within the radius. A
+    bend that lies within a line width of the circle no longer blocks a box at a gap below that width
+    (`bend_inside_circle_line_gap_0_01`, `_0_1`: 0 degrees instead of 90).
+  - D4: "behind is blocked" is tested at the stored gap. A rule minimum of 0.331 or 0.333 mm is stored as
+    0.34 mm; the old code tested at the unrounded value and turned the number away without cause
+    (`rounded_min_behind_test_0_331`, `_0_333`: 0 degrees instead of 286.1).
+  - D1, D3, D5 and D6 give no difference in practice.
+- **Positions in the example.** `example_auto_placements_are_unchanged` passes without regeneration: no control
+  of `luebeck-sprint` changes.
+- **Harness.** The allow-list `KNOWN_DISAGREEMENTS` in `tests/placement_cases.rs` is empty; the harness still
+  fails when a listed case agrees.
+
+## Consequences
+- Placements move only in the two cases above: a bend within a line width of a circle with a gap below that
+  width, and a rule minimum with three decimals. Whole and half millimetre gaps are unaffected.
+- A change to the search is a change to core and needs the agreement of freemapper-print.
+- ADRs 0030 to 0032 still describe the rules; the code lives in core now.
