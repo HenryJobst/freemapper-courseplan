@@ -10,7 +10,9 @@ use freemapper_courseplan::sync::apply::SyncNote;
 use freemapper_courseplan::sync::base::{BaseState, base_state, fnv1a64};
 use freemapper_courseplan::sync::decide::Take;
 use freemapper_courseplan::sync::{SyncError, SyncInput, SyncPlan, sync_ppen};
-use freemapper_courseplan_model::{CourseKind, Event, ProjectFile, Side, SyncState};
+use freemapper_courseplan_model::{
+    ControlCode, CourseControl, CourseKind, Event, ProjectFile, Side, SyncState,
+};
 use std::path::{Path, PathBuf};
 
 struct Setup {
@@ -626,4 +628,133 @@ fn crash_after_project_write_repairs_base() {
     assert_eq!(base, written);
     let moved = project.controls.iter().find(|c| c.code.0 == "31").unwrap();
     assert!((moved.map_mm.x - (-49.1)).abs() < 1e-3);
+}
+
+fn set_stops(e: &mut Event, course: &str, codes: &[&str]) {
+    let c = e.courses.iter_mut().find(|c| c.name == course).unwrap();
+    let CourseKind::Individual { controls } = &mut c.kind else {
+        panic!("not an individual course")
+    };
+    let old = controls.clone();
+    *controls = codes
+        .iter()
+        .map(|c| CourseControl {
+            code: ControlCode((*c).to_owned()),
+            number: old
+                .iter()
+                .find(|o| o.code.0 == *c)
+                .and_then(|o| o.number.clone()),
+            bends: vec![],
+            taped: false,
+        })
+        .collect();
+}
+
+fn stops(e: &Event, course: &str) -> Vec<String> {
+    let c = e.courses.iter().find(|c| c.name == course).unwrap();
+    let CourseKind::Individual { controls } = &c.kind else {
+        panic!("not an individual course")
+    };
+    controls.iter().map(|c| c.code.0.clone()).collect()
+}
+
+/// D13: after a crash between the `.ppen` write and the project write, the rerun merges the written file
+/// against the old project and must give the same stops, also for a repeated loop.
+#[test]
+fn crash_after_ppen_write_converges_for_a_repeated_loop() {
+    let s = setup();
+    let mut pp = s.project.clone();
+    set_stops(&mut pp, "A", &["32", "33", "34", "35", "36", "37"]);
+    pp.accepted_findings.clear();
+    let theirs = export_ppen_as(
+        &pp,
+        &s.map,
+        s.kind,
+        Target {
+            base: Some(s.base.as_bytes()),
+            linked: true,
+            map_path: String::new(),
+            lang: "en",
+            delete: Deletions::default(),
+        },
+    )
+    .unwrap()
+    .text;
+    let mut ours = s.project.clone();
+    set_stops(
+        &mut ours,
+        "A",
+        &["31", "32", "31", "32", "33", "34", "35", "36", "37"],
+    );
+    ours.accepted_findings.clear();
+    // Either the merge asks, or the rerun after the crash gives the same stops.
+    let SyncPlan::Ready {
+        project: merged,
+        ppen: Some(written),
+        ..
+    } = s.run(&ours, &theirs, &[]).unwrap()
+    else {
+        return;
+    };
+    let (again, _, _, _) = ready(s.run(&ours, &written, &[]));
+    assert_eq!(stops(&again, "A"), stops(&merged, "A"));
+}
+
+fn id_of(text: &str, needle: &str) -> String {
+    let at = text.find(needle).unwrap();
+    let from = text[..at].rfind("<control id=\"").unwrap() + "<control id=\"".len();
+    text[from..from + text[from..].find('"').unwrap()].to_owned()
+}
+
+/// Adds a course whose only course-control after the start carries a `variation` attribute: the import
+/// skips it, the D11 scan must still see that it visits `control_id`.
+fn with_variation_course(text: &str, control_id: &str) -> String {
+    let start = id_of(text, "kind=\"start\"");
+    let finish = id_of(text, "kind=\"finish\"");
+    let course = "  <course id=\"2\" kind=\"normal\" order=\"2\">\n    <name>V</name>\n    <first course-control=\"100\" />\n    <options print-scale=\"4000\" description-kind=\"symbols\" />\n  </course>\n";
+    let ccs = format!(
+        "  <course-control id=\"100\" control=\"{start}\">\n    <next course-control=\"101\" />\n  </course-control>\n  <course-control id=\"101\" control=\"{control_id}\" variation=\"A\">\n    <next course-control=\"102\" />\n  </course-control>\n  <course-control id=\"102\" control=\"{finish}\" />\n"
+    );
+    let at = text.find("  <course-control id=").unwrap();
+    let mut out = format!("{}{}{}", &text[..at], course, &text[at..]);
+    let end = out.rfind("</course-scribe-event>").unwrap();
+    out.insert_str(end, &ccs);
+    out
+}
+
+#[test]
+fn variation_course_keeps_a_deleted_control_alive() {
+    let s = setup();
+    let c36 = id_of(&s.base, "<code>36</code>");
+    let base = with_variation_course(&s.base, &c36);
+    let mut ours = s.project.clone();
+    delete_control(&mut ours, "36");
+    ours.accepted_findings.clear();
+    let plan = sync_ppen(SyncInput {
+        project: &ours,
+        base: Some(base.as_bytes()),
+        theirs: base.as_bytes(),
+        map: &s.map,
+        kind: s.kind,
+        take: &[],
+        base_note: None,
+    });
+    let (project, ppen, _, report) = ready(plan);
+    assert!(
+        report.notes.contains(&SyncNote::DeletionKept {
+            control: "36".to_owned(),
+            course: "V".to_owned()
+        }),
+        "{:?}",
+        report.notes
+    );
+    let ppen = ppen.expect("course A lost 36, so the file changes");
+    assert!(ppen.contains("<code>36</code>"));
+    assert!(ppen.contains(&format!("control=\"{c36}\" variation=\"A\"")));
+    assert!(project.controls.iter().all(|c| c.code.0 != "36"));
+    assert_eq!(
+        ppen.matches(&format!("\" control=\"{c36}\"")).count(),
+        1,
+        "only the variation course-control is left"
+    );
 }

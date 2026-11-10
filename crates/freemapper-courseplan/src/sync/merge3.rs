@@ -72,7 +72,23 @@ fn align<T: Eq>(base: &[T], other: &[T]) -> Vec<Option<usize>> {
 }
 
 /// Three-way merge of identity sequences against their common base.
+///
+/// A clean result is accepted only if it is stable: merging it again with either side gives it back.
+/// With repeated identities the LCS alignment does not guarantee that, and D13's crash recovery re-merges
+/// a written result. An unstable merge is reported as a conflict.
 pub fn diff3<T: Eq + Clone>(base: &[T], ours: &[T], theirs: &[T]) -> Merged3<T> {
+    match merge_once(base, ours, theirs) {
+        Merged3::Clean(m)
+            if merge_once(base, ours, &m) == Merged3::Clean(m.clone())
+                && merge_once(base, &m, theirs) == Merged3::Clean(m.clone()) =>
+        {
+            Merged3::Clean(m)
+        }
+        _ => Merged3::Conflict,
+    }
+}
+
+fn merge_once<T: Eq + Clone>(base: &[T], ours: &[T], theirs: &[T]) -> Merged3<T> {
     let ao = align(base, ours);
     let at = align(base, theirs);
     let mut out: Vec<T> = Vec::new();
@@ -245,6 +261,12 @@ mod tests {
                 assert_eq!(diff3(b, x, x), Merged3::Clean(x.clone()), "{b:?} {x:?}");
                 for t in &all {
                     assert_eq!(diff3(b, x, t), diff3(b, t, x), "{b:?} {x:?} {t:?}");
+                    // Fixed point: re-merging a clean result with either side gives it back (D13).
+                    if let Merged3::Clean(m) = diff3(b, x, t) {
+                        let same = Merged3::Clean(m.clone());
+                        assert_eq!(diff3(b, x, &m), same, "{b:?} {x:?} {t:?}");
+                        assert_eq!(diff3(b, &m, t), same, "{b:?} {x:?} {t:?}");
+                    }
                 }
             }
         }
