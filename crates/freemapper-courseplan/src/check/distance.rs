@@ -401,6 +401,7 @@ pub(super) fn leg_through_forbidden(
                     id,
                     polygon,
                     courses,
+                    ..
                 } if for_course(courses) => Some(Obstacle::OutOfBounds {
                     id,
                     rings: vec![polygon.clone()],

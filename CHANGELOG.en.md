@@ -8,6 +8,17 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- `freemapper-courseplan export <project> --ppen <file> [--new]` writes the individual courses as a Purple Pen
+  event. It changes an existing file in place and leaves alone whatever the project does not know (gaps in circles
+  and legs, map exchange, column F text, course length); `--new` writes the file from scratch. The export never
+  deletes: what is in the file but not in the project stays and is reported as kept. What it writes differently or
+  not at all (team, relay and score courses, symbols with no Purple Pen counterpart, partial flagging after
+  changed bends) is named in a note. A newly created file is recorded in the project as `sources.ppen` when none
+  is set yet; for that file the Purple Pen ids are stored in the project. The AI assistant has the tool
+  `export_ppen`. The writer comes from freemapper-core v0.4.0 (`freemapper-course`). **Not yet opened in
+  Purple Pen 4.0** (ADR 0035).
+- The example [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen); a test compares it with a
+  fresh export, another reads it back and exports onto it.
 - A test reads the IOF XML export (the Lübeck example and an event with a crossing point) back through the IOF
   reader of freemapper-course and compares controls, positions, courses, order of stops and number positions.
 

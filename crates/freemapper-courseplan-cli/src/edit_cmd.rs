@@ -650,39 +650,47 @@ pub fn special(lang: &Lang, cmd: SpecialCmd) -> Outcome {
             let special = match kind {
                 SpecialKind::Start => SpecialObject::Start {
                     id,
+                    ppen_id: None,
                     map_mm: map_mm(),
                 },
                 SpecialKind::Finish => SpecialObject::Finish {
                     id,
+                    ppen_id: None,
                     map_mm: map_mm(),
                 },
                 SpecialKind::FirstAid => SpecialObject::FirstAid {
                     id,
+                    ppen_id: None,
                     map_mm: map_mm(),
                     courses,
                 },
                 SpecialKind::Water => SpecialObject::Water {
                     id,
+                    ppen_id: None,
                     map_mm: map_mm(),
                     courses,
                 },
                 SpecialKind::MarkedRoute => SpecialObject::MarkedRoute {
                     id,
+                    ppen_id: None,
                     points,
                     courses,
                 },
                 SpecialKind::ForbiddenRoute => SpecialObject::ForbiddenRoute {
                     id,
+                    ppen_id: None,
                     points,
                     courses,
                 },
                 SpecialKind::OutOfBounds => SpecialObject::OutOfBoundsArea {
                     id,
+                    ppen_id: None,
                     polygon: points,
                     courses,
                 },
                 SpecialKind::DangerousArea => SpecialObject::DangerousArea {
                     id,
+                    ppen_id: None,
                     polygon: points,
                     courses,
                 },

@@ -4,8 +4,7 @@
 
 Finished events on maps from [freemapper's examples](https://github.com/HenryJobst/freemapper/tree/main/examples).
 Each one comes with its project file, the commands that made it and a preview image. The output of `check` is part of it. The IOF XML 3.0
-export is included as `course-data.xml`; it is checked against the IOF schema and read back by the IOF reader of freemapper-course. An import into OE has not been tested. The Purple Pen export (`.ppen`; the import with `import --ppen` already works)
-and the print PDF from freemapper-print follow later.
+export is included as `course-data.xml`; it is checked against the IOF schema and read back by the IOF reader of freemapper-course. An import into OE has not been tested. The Purple Pen export is included as `luebeck-sprint.ppen`; a test reads it back with the reader of freemapper-course. It has not been opened in Purple Pen 4.0 yet. The print PDF from freemapper-print follows later.
 
 | Example | Map | Preview |
 |---|---|---|

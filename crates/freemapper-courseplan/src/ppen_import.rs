@@ -28,6 +28,8 @@
 use std::collections::{HashMap, HashSet};
 
 use freemapper_course::fit::FitOptions;
+/// The largest course file the reader takes, for callers that read the file from disk.
+pub use freemapper_course::model::MAX_COURSE_FILE_BYTES;
 use freemapper_course::model::{Description, Offset};
 use freemapper_course::{
     ControlKind as PKind, CourseError, CourseFilter, CourseKind as PCourseKind, CourseNote,
@@ -288,6 +290,17 @@ fn hundredths(v: f64) -> f64 {
     (v * 100.0).round() / 100.0
 }
 
+/// The courseplan description the import makes of Purple Pen symbol ids in columns C to H.
+#[cfg(test)]
+pub(crate) fn import_columns(columns: [Option<String>; 6]) -> ControlDescription {
+    let d = Description {
+        columns,
+        standard: "2018".to_owned(),
+        column_f_text: None,
+    };
+    Builder::default().description("1", &d)
+}
+
 impl Builder {
     fn control(&mut self, c: &freemapper_course::Control<MapCoord>) {
         // The fit places every control it can; a control no course uses may come without a position.
@@ -311,9 +324,17 @@ impl Builder {
                 }
                 let id = c.code.clone();
                 self.starts_finishes.push(if c.kind == PKind::Start {
-                    SpecialObject::Start { id, map_mm: at }
+                    SpecialObject::Start {
+                        id,
+                        ppen_id: c.id,
+                        map_mm: at,
+                    }
                 } else {
-                    SpecialObject::Finish { id, map_mm: at }
+                    SpecialObject::Finish {
+                        id,
+                        ppen_id: c.id,
+                        map_mm: at,
+                    }
                 });
             }
             PKind::MapExchange => {}
@@ -650,54 +671,63 @@ impl Builder {
             }
         };
         match special {
-            Special::OutOfBounds { rings, .. } => {
-                for ring in rings {
+            Special::OutOfBounds { rings, id: sid, .. } => {
+                // One special with several rings becomes several objects; the id goes to the first.
+                for (n, ring) in rings.into_iter().enumerate() {
+                    let ppen_id = if n == 0 { sid } else { None };
                     let id = self.new_id("OOB");
                     self.specials.push(SpecialObject::OutOfBoundsArea {
                         id,
+                        ppen_id,
                         polygon: points(ring),
                         courses: courses.clone(),
                     });
                 }
             }
-            Special::Dangerous { rings, .. } => {
-                for ring in rings {
+            Special::Dangerous { rings, id: sid, .. } => {
+                for (n, ring) in rings.into_iter().enumerate() {
+                    let ppen_id = if n == 0 { sid } else { None };
                     let id = self.new_id("DANGER");
                     self.specials.push(SpecialObject::DangerousArea {
                         id,
+                        ppen_id,
                         polygon: points(ring),
                         courses: courses.clone(),
                     });
                 }
             }
-            Special::ForbiddenRoute { path, .. } => {
+            Special::ForbiddenRoute { path, id: sid, .. } => {
                 let id = self.new_id("FORBID");
                 self.specials.push(SpecialObject::ForbiddenRoute {
                     id,
+                    ppen_id: sid,
                     points: points(path),
                     courses,
                 });
             }
-            Special::MarkedRoute { path, .. } => {
+            Special::MarkedRoute { path, id: sid, .. } => {
                 let id = self.new_id("ROUTE");
                 self.specials.push(SpecialObject::MarkedRoute {
                     id,
+                    ppen_id: sid,
                     points: points(path),
                     courses,
                 });
             }
-            Special::FirstAid { pt, .. } => {
+            Special::FirstAid { pt, id: sid, .. } => {
                 let id = self.new_id("AID");
                 self.specials.push(SpecialObject::FirstAid {
                     id,
+                    ppen_id: sid,
                     map_mm: point(pt),
                     courses,
                 });
             }
-            Special::Water { pt, .. } => {
+            Special::Water { pt, id: sid, .. } => {
                 let id = self.new_id("WATER");
                 self.specials.push(SpecialObject::Water {
                     id,
+                    ppen_id: sid,
                     map_mm: point(pt),
                     courses,
                 });
@@ -754,13 +784,13 @@ const BEND_2024: &str = "11.1";
 
 /// A Purple Pen symbol id mapped to IOF Control Descriptions 2024.
 #[derive(Debug, PartialEq)]
-struct Mapped {
-    id: String,
+pub(crate) struct Mapped {
+    pub(crate) id: String,
     /// The Purple Pen variant "objects of the same kind" (`10.1single`, `10.2single`, `11.15single`).
-    single: bool,
+    pub(crate) single: bool,
 }
 
-const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+pub(crate) const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 /// The IOF Control Descriptions 2024 number of a Purple Pen symbol id, or `None` when 2024 has no such
 /// symbol. Purple Pen stores the 2004 numbers (its `symbols.xml`: "Uses the 2004 ids only") with suffixes
@@ -770,7 +800,7 @@ const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 /// 11 to 12, column H from 12 to 13, special instructions from 13 to 15 and the finish rows from 14 to 16.
 /// Source: International Specification for Control Descriptions 2024 (IOF), compared with Purple Pen's
 /// `symbols.xml` at `201417f9`. 2004 12.3 (radio control) and 13.6 (map issue point) have no 2024 number.
-fn iof_2024(id: &str) -> Option<Mapped> {
+pub(crate) fn iof_2024(id: &str) -> Option<Mapped> {
     let split = id
         .char_indices()
         .find(|&(_, ch)| !(ch.is_ascii_digit() || ch == '.'))

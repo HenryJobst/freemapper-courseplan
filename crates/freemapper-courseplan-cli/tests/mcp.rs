@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 33] = [
+const TOOLS: [&str; 34] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -35,6 +35,7 @@ const TOOLS: [&str; 33] = [
     "init_event",
     "check",
     "export_iof_xml",
+    "export_ppen",
     "import_ppen",
     "accept_finding",
     "remove_accepted_finding",
@@ -1317,6 +1318,87 @@ fn export_iof_xml_writes_the_file() {
     );
     assert!(error);
     assert!(text.contains(".xml"), "{text}");
+}
+
+#[test]
+fn export_ppen_returns_path_courses_skipped_and_notes() {
+    let (dir, map, project) = workspace();
+    let target = dir.path().join("out.ppen");
+    let mut session = Session::start();
+    session.ok(
+        "init_event",
+        json!({ "map": map, "project": project, "title": "Test" }),
+    );
+    let done = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(done["courses"], 0, "{done}");
+    assert_eq!(done["skipped"], json!([]), "{done}");
+    assert_eq!(done["notes"], json!([]), "{done}");
+    assert_eq!(done["path"], json!(target.display().to_string()), "{done}");
+    assert!(
+        std::fs::read_to_string(&target)
+            .unwrap()
+            .contains("<course-scribe-event")
+    );
+    let again = session.ok(
+        "export_ppen",
+        json!({ "project": project, "path": target, "new": true }),
+    );
+    assert_eq!(again["courses"], 0, "{again}");
+    let (error, text) = session.call(
+        "export_ppen",
+        json!({ "project": project, "path": dir.path().join("out.txt") }),
+    );
+    assert!(error);
+    assert!(text.contains(".ppen"), "{text}");
+}
+
+#[test]
+fn export_ppen_says_whether_it_patched_and_how_many_ids_it_stored() {
+    let (dir, map, project) = workspace();
+    let target = dir.path().join("out.ppen");
+    let mut session = Session::start();
+    session.ok(
+        "init_event",
+        json!({ "map": map, "project": project, "title": "Training" }),
+    );
+    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
+    let p = |fx, fy| point(&extent, fx, fy);
+    for (kind, id, at) in [("start", "S1", p(0.4, 0.4)), ("finish", "F1", p(0.6, 0.6))] {
+        session.ok(
+            "add_special",
+            json!({ "project": project, "kind": kind, "id": id, "at": at }),
+        );
+    }
+    for (code, at) in [("31", p(0.45, 0.5)), ("32", p(0.55, 0.45))] {
+        session.ok(
+            "add_control",
+            json!({ "project": project, "at": at, "code": code }),
+        );
+    }
+    session.ok(
+        "add_course",
+        json!({
+            "project": project, "name": "A", "start": "S1", "finish": "F1",
+            "controls": ["31", "32"]
+        }),
+    );
+    // A new file links the project and stores an id for the start, the finish, both controls and the
+    // course.
+    let done = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(done["courses"], 1, "{done}");
+    assert_eq!(done["patched"], false, "{done}");
+    assert_eq!(done["ids_stored"], 5, "{done}");
+    assert_eq!(done["notes"], json!([]), "{done}");
+    let again = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(again["patched"], true, "{again}");
+    assert_eq!(again["ids_stored"], 0, "{again}");
+    session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(0.5, 0.55), "code": "33" }),
+    );
+    let third = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(third["patched"], true, "{third}");
+    assert_eq!(third["ids_stored"], 1, "{third}");
 }
 
 #[test]

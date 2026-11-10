@@ -492,9 +492,47 @@ export-iof-xml-written = { $count ->
    *[other] wrote { $count } courses to { $path }
 }
 export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
-export-iof-xml-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE
+export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE or --ppen FILE
 error-export-iof-xml-course = cannot export course { $course }: { $source }
 error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
+cli-arg-export-ppen = Write the individual courses into a Purple Pen event. The export changes an existing file in place and keeps everything the project did not change. It creates a missing file and, if the project has no sources.ppen yet, links the project to it. The project's Purple Pen ids count only for the linked file
+cli-arg-export-new = With --ppen, write the file from scratch and replace the existing one; a project without sources.ppen is linked to it
+export-ppen-written = { $count ->
+    [one] wrote 1 course to the new Purple Pen event { $path }
+   *[other] wrote { $count } courses to the new Purple Pen event { $path }
+}
+export-ppen-patched = { $count ->
+    [one] wrote 1 course into the Purple Pen event { $path }
+   *[other] wrote { $count } courses into the Purple Pen event { $path }
+}
+export-ppen-note-line = note: { $note }
+export-ppen-ids-stored = { $count ->
+    [one] stored a Purple Pen id for 1 object of the project that had none
+   *[other] stored a Purple Pen id for { $count } objects of the project that had none
+}
+export-ppen-note-course-skipped = left out { $course }: { $kind } courses are not exported to Purple Pen
+export-ppen-note-special-skipped = special object { $id } is left out: { $why }
+export-ppen-note-symbol-without-id = control { $control }, column { $column }: symbol { $id } has no Purple Pen counterpart and is left out
+export-ppen-note-code-not-stored = the code "{ $code }" has blanks at an end, and reading the event again drops them, so the control comes back under another code
+export-ppen-note-flagging-implied = course { $course }, leg { $from } to { $to }: Purple Pen flags this leg by itself, although the project does not mark it
+export-ppen-note-partial-flagging-dropped = course { $course }, leg { $from } to { $to }: the bends changed and the flagging no longer starts or stops at a bend, so the partial flagging is dropped
+export-ppen-kept-control = control { $code } (Purple Pen id { $id }) is in the file but not in the project; the export keeps it, because it never deletes
+export-ppen-kept-course = course { $name } (Purple Pen id { $id }) is in the file but not in the project; the export keeps it, because it never deletes
+export-ppen-kept-special = special object of kind { $kind } (Purple Pen id { $id }) is in the file but not in the project; the export keeps it, because it never deletes
+error-export-ppen-base = the existing Purple Pen event { $path } cannot be patched: { $source }
+error-export-ppen-unknown-version = the Purple Pen event comes from a version this program does not know ({ $version }); nothing was written
+error-export-ppen-unsupported = the courses cannot be written to a Purple Pen event: { $what }
+error-export-ppen-invalid = the courses give an invalid Purple Pen event: { $what }
+error-export-ppen-shared-leg = courses { $first } and { $second } draw the leg { $from } to { $to } differently, and Purple Pen keeps one leg per pair of controls
+error-export-ppen-shared-circle-gaps = courses { $first } and { $second } give control { $control } different circle gaps at 1:{ $scale }
+error-export-ppen-limit = too large for a Purple Pen event: { $what }
+error-export-ppen-circle-gap-limit = too large for a Purple Pen event: the courses would copy more than { $limit } circle gaps from the existing file
+error-export-ppen-ids-not-stored = wrote { $path }, but the project could not be saved, so it lacks the Purple Pen ids of that file: { $source }
+error-export-same-target = --iof-xml and --ppen name the same file { $path }; name two different files
+export-ppen-linked = sources.ppen now names { $path }
+word-export-why-marked-route = Purple Pen has no marked route object; the flagging belongs to the legs
+word-export-why-forbidden-route-with-several-points = Purple Pen draws a forbidden route only as a single cross
+word-export-why-no-course-left = it belongs only to courses that were left out
 
 ## Purple Pen import (init --ppen, import --ppen)
 
@@ -513,6 +551,8 @@ import-ppen-done = { $controls ->
 import-ppen-note-line = note: { $note }
 import-ppen-needs-replace = { $path } already has controls, courses or special objects; run again with --replace to swap them for the content of the Purple Pen event
 error-import-ppen-read = cannot read { $path }: { $source }
+error-ppen-not-a-file = { $path } is not a file
+error-ppen-too-large = { $path } is larger than { $limit } MB, the limit for a Purple Pen event
 error-import-ppen-scale-mismatch = the Purple Pen event is drawn for 1:{ $file } and the map is 1:{ $map }; export the courses for the map's scale
 error-import-ppen-map-scale-unknown = the Purple Pen event is drawn for 1:{ $file }, and the map states no scale; set the scale in the map file
 error-import-ppen-outside-map = only { $inside } of { $total } controls lie on the map; the event belongs to another map
@@ -631,9 +671,12 @@ mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports 
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 mcp-tool-set-start-window = Set the start window of the event, the minutes from the first to the last start, at least 1. The start capacity check divides the expected starters by it.
 mcp-tool-export-iof-xml = Write the individual courses of the event as IOF XML 3.0 CourseData for result software such as OE. Takes project and path, the file to write, which ends in .xml; an existing file is replaced. Returns path, courses, the number of courses written, and skipped, the team, relay and score courses left out, each with name and kind.
+mcp-tool-export-ppen = Write the individual courses of the event into a Purple Pen event (.ppen). Takes project, path (the .ppen file) and new. The export changes an existing file in place and keeps everything the project did not change. It creates a missing file, and with new it writes the file from scratch; either way a project without sources.ppen is linked to the file. The export never deletes: objects in the file that the project lacks stay and are reported. The project's Purple Pen ids count only for the file that sources.ppen names, and only for that file does the export store the ids it assigns in the project. Returns path, courses (the number of courses written), skipped (the team, relay and score courses left out, each with name and kind), notes (the texts on what was left out, changed or kept), patched (true when an existing file was changed in place) and ids_stored (how many objects of the project got a Purple Pen id for the first time).
 
 mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
 mcp-param-export-iof-xml-path = The file to write, an absolute path or one starting with ~, ending in .xml
+mcp-param-export-ppen-path = The Purple Pen event to write, an absolute path or one starting with ~, ending in .ppen; it is created when missing
+mcp-param-export-ppen-new = Write the file from scratch and replace an existing one [default: false]
 mcp-param-init-event-project = Where to write the project file, an absolute path or one starting with ~ [default: next to the map, named after it with .courseplan.toml]
 mcp-param-map = The OOM map (sprint or schoolyard), an absolute path or one starting with ~
 mcp-param-title = Event title [default: the title in freemapper.toml next to the map, else the map name]

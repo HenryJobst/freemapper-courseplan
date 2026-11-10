@@ -89,8 +89,8 @@ fn kind_label(kind: &CourseKind) -> &'static str {
 
 fn start_or_finish(special: &SpecialObject) -> Option<(&str, &str, &MapPoint)> {
     match special {
-        SpecialObject::Start { id, map_mm } => Some(("Start", id, map_mm)),
-        SpecialObject::Finish { id, map_mm } => Some(("Finish", id, map_mm)),
+        SpecialObject::Start { id, map_mm, .. } => Some(("Start", id, map_mm)),
+        SpecialObject::Finish { id, map_mm, .. } => Some(("Finish", id, map_mm)),
         _ => None,
     }
 }

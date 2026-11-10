@@ -19,6 +19,7 @@ es Bahnen aus einer `.ppen` drucken kann; dann ersetzt das Druck-PDF diese Skizz
 - `transcript.de.txt`, `transcript.en.txt`: die Befehle und ihre Ausgaben
 - `check.de.txt`, `check.en.txt`: die Prüfung der Bahn, mit einem akzeptierten Hinweis
 - `course-data.xml`: die Bahn als IOF-XML 3.0, erzeugt mit `export` (siehe unten)
+- `luebeck-sprint.ppen`: die Bahn als Purple-Pen-Event, erzeugt mit `export --ppen` (siehe unten)
 - `preview.jpg`, `make-preview.py`: die Skizze und das Skript dazu
 
 ## So entstand die Bahn
@@ -107,6 +108,14 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-d
 
 Die Datei besteht die Prüfung gegen das IOF-Schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
 course-data.xml`). Ihr `createTime` ist fest auf `2026-11-09T12:00:00Z` gesetzt, damit der Test die Datei vergleichen kann; ein eigener Lauf schreibt die aktuelle Zeit in UTC. Außerdem liest ein Test sie mit dem IOF-Leser von freemapper-course wieder ein. Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Wer es tut, soll melden, was ankommt.
+
+## Export nach Purple Pen
+
+```text
+$ freemapper-courseplan export luebeck-sprint.courseplan.toml --ppen luebeck-sprint.ppen
+```
+
+Die Datei gibt es noch nicht, deshalb schreibt `export` sie neu und trägt sie im Projekt als `sources.ppen` ein. Ein Test vergleicht die Datei mit einem frischen Export, ein zweiter liest sie wieder ein und exportiert sie ein zweites Mal auf sich selbst, mit denselben Bytes. **In Purple Pen 4.0 ist die Datei noch nicht geöffnet worden.** Wer Purple Pen 4.0 hat, soll sie öffnen und melden, ob sie sich lädt und ob Posten, Bahn und Nummern an der richtigen Stelle stehen. Die Texte der Beschreibung sind englisch, weil das Beispiel mit englischer Oberfläche erzeugt ist.
 
 ## Skizze neu erzeugen
 

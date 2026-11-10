@@ -7,7 +7,9 @@ use freemapper_courseplan::init::{InitError, create_project, link_from_project, 
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::ppen_import::{ImportNote, PpenImportError, import_ppen};
+use freemapper_courseplan::ppen_import::{
+    ImportNote, MAX_COURSE_FILE_BYTES, PpenImportError, import_ppen,
+};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{Event, ProjectError, ProjectFile};
 
@@ -31,7 +33,7 @@ pub(crate) enum ImportError {
     NotMap(PathBuf),
     Map(PathBuf, OmapError),
     /// The Purple Pen file cannot be read from disk.
-    ReadPpen(PathBuf, std::io::Error),
+    ReadPpen(PathBuf, ReadFileError),
     Ppen(PpenImportError),
     /// The project has content and `replace` was not given.
     NeedsReplace(PathBuf),
@@ -53,14 +55,7 @@ impl ImportError {
                 text(lang, "error-import-not-map", &[("path", path_arg(&path))])
             }
             ImportError::Map(path, e) => map(&path, e),
-            ImportError::ReadPpen(path, e) => text(
-                lang,
-                "error-import-ppen-read",
-                &[
-                    ("path", path_arg(&path)),
-                    ("source", FluentValue::from(e.to_string())),
-                ],
-            ),
+            ImportError::ReadPpen(path, e) => e.message(lang, &path),
             ImportError::Ppen(e) => e.localize(lang),
             ImportError::NeedsReplace(path) => text(
                 lang,
@@ -91,7 +86,66 @@ fn read_oom(map_path: &Path) -> Result<MapDocument, ImportError> {
 }
 
 fn read_ppen_file(ppen: &Path) -> Result<Vec<u8>, ImportError> {
-    std::fs::read(ppen).map_err(|e| ImportError::ReadPpen(ppen.to_path_buf(), e))
+    read_course_file(ppen).map_err(|e| ImportError::ReadPpen(ppen.to_path_buf(), e))
+}
+
+/// Why a Purple Pen file was not read from disk.
+#[derive(Debug)]
+pub(crate) enum ReadFileError {
+    Io(std::io::Error),
+    /// A directory, a device or a FIFO.
+    NotAFile,
+    /// Larger than `MAX_COURSE_FILE_BYTES`, which the reader refuses anyway.
+    TooLarge,
+}
+
+impl ReadFileError {
+    /// The text of the error for the file `path`.
+    pub(crate) fn message(&self, lang: &Lang, path: &Path) -> String {
+        let path = FluentValue::from(path.display().to_string());
+        match self {
+            ReadFileError::Io(e) => text(
+                lang,
+                "error-import-ppen-read",
+                &[("path", path), ("source", FluentValue::from(e.to_string()))],
+            ),
+            ReadFileError::NotAFile => text(lang, "error-ppen-not-a-file", &[("path", path)]),
+            ReadFileError::TooLarge => text(
+                lang,
+                "error-ppen-too-large",
+                &[
+                    ("path", path),
+                    (
+                        "limit",
+                        FluentValue::from(MAX_COURSE_FILE_BYTES / (1024 * 1024)),
+                    ),
+                ],
+            ),
+        }
+    }
+}
+
+/// Reads a Purple Pen file: a regular file of at most `MAX_COURSE_FILE_BYTES`. The checks come before
+/// the read, so that a FIFO does not block and a device or a file of several GB is not read whole; the
+/// read itself stops one byte past the limit, in case the file grows in between.
+pub(crate) fn read_course_file(path: &Path) -> Result<Vec<u8>, ReadFileError> {
+    use std::io::Read;
+    let limit = MAX_COURSE_FILE_BYTES as u64;
+    let meta = std::fs::metadata(path).map_err(ReadFileError::Io)?;
+    if !meta.is_file() {
+        return Err(ReadFileError::NotAFile);
+    }
+    if meta.len() > limit {
+        return Err(ReadFileError::TooLarge);
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .and_then(|f| f.take(limit + 1).read_to_end(&mut bytes))
+        .map_err(ReadFileError::Io)?;
+    if bytes.len() as u64 > limit {
+        return Err(ReadFileError::TooLarge);
+    }
+    Ok(bytes)
 }
 
 /// Puts the content of the Purple Pen event `bytes` into `event`: controls, special objects and courses,

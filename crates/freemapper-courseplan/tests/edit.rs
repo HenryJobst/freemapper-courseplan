@@ -82,10 +82,12 @@ fn event() -> Event {
         specials: vec![
             SpecialObject::Start {
                 id: "S1".to_owned(),
+                ppen_id: None,
                 map_mm: pt(0.0, 0.0),
             },
             SpecialObject::Finish {
                 id: "F1".to_owned(),
+                ppen_id: None,
                 map_mm: pt(1.0, 1.0),
             },
         ],
@@ -311,6 +313,7 @@ fn add_special_checks_id_and_points() {
     let mut e = event();
     let water = |id: &str, x: f64| SpecialObject::Water {
         id: id.to_owned(),
+        ppen_id: None,
         map_mm: pt(x, 0.0),
         courses: vec![],
     };
@@ -325,6 +328,7 @@ fn add_special_checks_id_and_points() {
     ));
     let route = SpecialObject::MarkedRoute {
         id: "m".to_owned(),
+        ppen_id: None,
         points: vec![pt(0.0, 0.0), pt(0.0, 99.0)],
         courses: vec![],
     };
@@ -484,6 +488,7 @@ fn team_course_edit_is_not_supported() {
 fn water(courses: &[&str]) -> SpecialObject {
     SpecialObject::Water {
         id: "w1".to_owned(),
+        ppen_id: None,
         map_mm: pt(0.0, 0.0),
         courses: courses.iter().map(|c| (*c).to_owned()).collect(),
     }
@@ -606,6 +611,7 @@ fn bent_course() -> Event {
     });
     e.specials[1] = SpecialObject::Finish {
         id: "F1".to_owned(),
+        ppen_id: None,
         map_mm: pt(40.0, 0.0),
     };
     let course = &mut e.courses[0];

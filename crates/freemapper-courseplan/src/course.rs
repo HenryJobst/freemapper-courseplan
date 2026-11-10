@@ -81,10 +81,10 @@ pub fn course_legs(event: &Event, course: &Course) -> Result<Vec<LegGeometry>, C
             .specials
             .iter()
             .find_map(|s| match s {
-                SpecialObject::Start { id: i, map_mm } if want_start && i == id => {
+                SpecialObject::Start { id: i, map_mm, .. } if want_start && i == id => {
                     Some(map_mm.clone())
                 }
-                SpecialObject::Finish { id: i, map_mm } if !want_start && i == id => {
+                SpecialObject::Finish { id: i, map_mm, .. } if !want_start && i == id => {
                     Some(map_mm.clone())
                 }
                 _ => None,
@@ -244,10 +244,12 @@ mod tests {
             specials: vec![
                 SpecialObject::Start {
                     id: "S1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(0.0, 0.0),
                 },
                 SpecialObject::Finish {
                     id: "F1".to_owned(),
+                    ppen_id: None,
                     map_mm: p(0.0, 100.0),
                 },
             ],

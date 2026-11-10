@@ -1,17 +1,24 @@
-//! `export`: writes the courses for other programs. IOF XML 3.0 is the first format. The same
-//! function serves the CLI and the MCP tool.
+//! `export`: writes the courses for other programs, as IOF XML 3.0 or as a Purple Pen event (`.ppen`).
+//! The same functions serve the CLI and the MCP tool.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use freemapper_courseplan::init::link_from_project;
 use freemapper_courseplan::iof_xml::{IofXmlError, SkippedCourse, export_iof_xml};
 use freemapper_courseplan::map::map_kind;
 use freemapper_courseplan::omap::OmapError;
+use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
-use freemapper_courseplan_model::{ProjectError, ProjectFile, write_atomic};
+use freemapper_courseplan::ppen_export::{
+    ExportIds, ExportNote, PpenExportError, Target, export_ppen,
+};
+use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
+use freemapper_courseplan_model::{ControlCode, Event, ProjectError, ProjectFile, write_atomic};
 
 use crate::edit_cmd::{Failure, map_load_error};
+use crate::import_cmd::{ReadFileError, read_course_file};
 
 /// What an export wrote.
 #[derive(Debug)]
@@ -30,8 +37,15 @@ pub(crate) enum ExportError {
     NotMap(PathBuf),
     Map(PathBuf, OmapError),
     Course(IofXmlError),
+    /// The export to the `.ppen` at the path failed; nothing was written.
+    Ppen(PathBuf, PpenExportError),
+    /// The existing Purple Pen event to patch cannot be read.
+    ReadTarget(PathBuf, ReadFileError),
     /// The target is the project file or the map, which the export would overwrite.
     Overwrites(PathBuf),
+    /// The `.ppen` at the path was written, but the project file with its Purple Pen ids (and the
+    /// link to it) could not be saved.
+    IdsNotStored(PathBuf, ProjectError),
 }
 
 impl ExportError {
@@ -55,6 +69,16 @@ impl ExportError {
                 "error-export-overwrites-input",
                 &[("path", FluentValue::from(path.display().to_string()))],
             ),
+            ExportError::Ppen(path, e) => ppen_export_error(&e, lang, &path.display().to_string()),
+            ExportError::ReadTarget(path, e) => e.message(lang, &path),
+            ExportError::IdsNotStored(path, e) => text(
+                lang,
+                "error-export-ppen-ids-not-stored",
+                &[
+                    ("path", FluentValue::from(path.display().to_string())),
+                    ("source", FluentValue::from(project(e))),
+                ],
+            ),
             ExportError::Course(IofXmlError::Course { course, source }) => text(
                 lang,
                 "error-export-iof-xml-course",
@@ -67,13 +91,9 @@ impl ExportError {
     }
 }
 
-/// Writes the individual courses of `project` to `target` as IOF XML 3.0. Nothing is written when
-/// a course cannot be measured; an existing `target` is replaced atomically.
-pub(crate) fn export_iof_xml_file(
-    project: &Path,
-    target: &Path,
-    created: &str,
-) -> Result<ExportReport, ExportError> {
+/// The project, loaded, and its map, read, for an export to `target`. Refuses a target that is the
+/// project file or the map, which the export would overwrite.
+fn open_inputs(project: &Path, target: &Path) -> Result<(ProjectFile, MapDocument), ExportError> {
     let file = ProjectFile::load(project).map_err(ExportError::Project)?;
     let map_path = file.map_path();
     if same_file(target, project) || same_file(target, &map_path) {
@@ -87,6 +107,17 @@ pub(crate) fn export_iof_xml_file(
         return Err(ExportError::NotMap(map_path));
     }
     let doc = read_map_file(&map_path).map_err(|e| ExportError::Map(map_path.clone(), e))?;
+    Ok((file, doc))
+}
+
+/// Writes the individual courses of `project` to `target` as IOF XML 3.0. Nothing is written when
+/// a course cannot be measured; an existing `target` is replaced atomically.
+pub(crate) fn export_iof_xml_file(
+    project: &Path,
+    target: &Path,
+    created: &str,
+) -> Result<ExportReport, ExportError> {
+    let (file, doc) = open_inputs(project, target)?;
     let exported = export_iof_xml(
         &file.event,
         doc.georef.scale_denominator,
@@ -99,6 +130,166 @@ pub(crate) fn export_iof_xml_file(
         courses: file.event.courses.len() - exported.skipped.len(),
         skipped: exported.skipped,
     })
+}
+
+/// What a `.ppen` export wrote.
+#[derive(Debug)]
+pub(crate) struct PpenReport {
+    pub(crate) courses: usize,
+    /// What the export left out, changed or kept.
+    pub(crate) notes: Vec<ExportNote>,
+    /// The target was an existing file, patched in place.
+    pub(crate) patched: bool,
+    /// The number of objects of the project that got a Purple Pen id for the first time. Only the
+    /// linked file gives them.
+    pub(crate) ids_stored: usize,
+    /// The export made the target the project's linked file (`sources.ppen`).
+    pub(crate) linked_now: bool,
+}
+
+impl PpenReport {
+    /// The team, relay and score courses the export left out, as name and kind.
+    pub(crate) fn skipped(&self) -> Vec<(&str, &str)> {
+        self.notes
+            .iter()
+            .filter_map(|n| match n {
+                ExportNote::CourseSkipped { course, kind } => Some((course.as_str(), *kind)),
+                _ => None,
+            })
+            .collect()
+    }
+}
+
+/// Writes the individual courses of `project` to the Purple Pen event `target`.
+///
+/// An existing `target` is the base: the export changes what the project changed and leaves the rest of
+/// the file as it is, unless `new` asks for a file from scratch. A missing `target` is created.
+///
+/// The project's Purple Pen ids count only for its linked file, the one `sources.ppen` names. For a
+/// project without `sources.ppen`, a new file (`target` did not exist, or `new` was given) becomes the
+/// linked file *(controller's ruling)*: `sources.ppen` names it, relative to the project file. For the
+/// linked file the ids the export assigned are stored in the project. Any other target, an existing file
+/// or a new one while the project is linked elsewhere, gets no ids, and nothing is written back: the link
+/// stays as it is.
+///
+/// The `.ppen` is written first, atomically, then the project (also atomically, and only when something
+/// changed). Nothing is written when the export fails; when only the project save fails, the error says
+/// that the `.ppen` was written.
+pub(crate) fn export_ppen_file(
+    project: &Path,
+    target: &Path,
+    new: bool,
+    lang: &Lang,
+) -> Result<PpenReport, ExportError> {
+    let (mut file, doc) = open_inputs(project, target)?;
+    let folder = project.parent().unwrap_or_else(|| Path::new(""));
+    let linked_file = file
+        .event
+        .sources
+        .ppen
+        .as_ref()
+        .is_some_and(|link| same_file(target, &folder.join(link)));
+    let fresh = new || !target.exists();
+    let base = if fresh {
+        None
+    } else {
+        Some(
+            read_course_file(target)
+                .map_err(|e| ExportError::ReadTarget(target.to_path_buf(), e))?,
+        )
+    };
+    // A new file links a project that has no link yet; one linked elsewhere keeps its link, and the
+    // new file is treated like any other foreign target.
+    let has_link = file.event.sources.ppen.is_some();
+    let linked = linked_file || (fresh && !has_link);
+    let map_path = link_from_project(target, &file.map_path())
+        .map_or_else(
+            || file.map_path().display().to_string(),
+            |p| p.display().to_string(),
+        )
+        .replace('\\', "/");
+    let lang_code = lang.code();
+    let exported = export_ppen(
+        &file.event,
+        &doc,
+        Target {
+            base: base.as_deref(),
+            linked,
+            map_path,
+            lang: &lang_code,
+        },
+    )
+    .map_err(|e| ExportError::Ppen(target.to_path_buf(), e))?;
+    write_atomic(target, &exported.text).map_err(ExportError::Project)?;
+    let mut ids_stored = 0;
+    let linked_now = linked && !linked_file;
+    if linked {
+        let mut event = file.event.clone();
+        ids_stored = store_ids(&mut event, &exported.ids);
+        if linked_now {
+            event.sources.ppen =
+                Some(link_from_project(project, target).unwrap_or_else(|| target.to_path_buf()));
+        }
+        if event != file.event {
+            file.event = event;
+            file.save()
+                .map_err(|e| ExportError::IdsNotStored(target.to_path_buf(), e))?;
+        }
+    }
+    Ok(PpenReport {
+        courses: exported.courses,
+        notes: exported.notes,
+        patched: base.is_some(),
+        ids_stored,
+        linked_now,
+    })
+}
+
+/// Puts the Purple Pen ids the export assigned into `event`; returns how many objects had none before.
+fn store_ids(event: &mut Event, ids: &ExportIds) -> usize {
+    let mut new = 0;
+    let mut put = |slot: Option<u32>, id: u32| -> Option<u32> {
+        new += usize::from(slot.is_none());
+        Some(id)
+    };
+    let controls: HashMap<ControlCode, usize> = event
+        .controls
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (c.code.clone(), i))
+        .collect();
+    for (code, id) in &ids.controls {
+        if let Some(&i) = controls.get(code) {
+            let c = &mut event.controls[i];
+            c.ppen_id = put(c.ppen_id, *id);
+        }
+    }
+    let courses: HashMap<String, usize> = event
+        .courses
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (c.name.clone(), i))
+        .collect();
+    for (name, id) in &ids.courses {
+        if let Some(&i) = courses.get(name) {
+            let c = &mut event.courses[i];
+            c.ppen_id = put(c.ppen_id, *id);
+        }
+    }
+    let specials: HashMap<String, usize> = event
+        .specials
+        .iter()
+        .enumerate()
+        .map(|(i, s)| (s.id().to_owned(), i))
+        .collect();
+    for (special_id, id) in &ids.specials {
+        if let Some(&i) = specials.get(special_id) {
+            let s = &mut event.specials[i];
+            let id = put(s.ppen_id(), *id);
+            s.set_ppen_id(id);
+        }
+    }
+    new
 }
 
 /// Whether two paths name the same file. A path that does not exist yet is resolved through its
@@ -117,48 +308,113 @@ fn same_file(a: &Path, b: &Path) -> bool {
 }
 
 /// The `export` command.
-pub(crate) fn export(lang: &Lang, project: &Path, iof_xml: Option<PathBuf>) -> Result<(), Failure> {
-    let Some(target) = iof_xml else {
-        return Err(Failure::Usage(text(
-            lang,
-            "export-iof-xml-nothing-to-do",
-            &[],
-        )));
-    };
-    let report = export_iof_xml_file(project, &target, &now_iso()).map_err(|e| {
+pub(crate) fn export(
+    lang: &Lang,
+    project: &Path,
+    iof_xml: Option<PathBuf>,
+    ppen: Option<PathBuf>,
+    new: bool,
+) -> Result<(), Failure> {
+    if iof_xml.is_none() && ppen.is_none() {
+        return Err(Failure::Usage(text(lang, "export-nothing-to-do", &[])));
+    }
+    let failed = |e: ExportError| {
         Failure::Error(e.message(
             lang,
             |e| e.localize(lang),
             |p, e| map_load_error(lang, p, e),
         ))
-    })?;
-    for skipped in &report.skipped {
+    };
+    let path_arg = |p: &Path| FluentValue::from(p.display().to_string());
+    // The IOF XML is written first and would replace the Purple Pen file the second step reads.
+    if let (Some(xml), Some(ppen)) = (&iof_xml, &ppen)
+        && same_file(xml, ppen)
+    {
+        return Err(Failure::Error(text(
+            lang,
+            "error-export-same-target",
+            &[("path", path_arg(ppen))],
+        )));
+    }
+    if let Some(target) = iof_xml {
+        let report = export_iof_xml_file(project, &target, &now_iso()).map_err(failed)?;
+        for skipped in &report.skipped {
+            println!(
+                "{}",
+                text(
+                    lang,
+                    "export-iof-xml-skipped",
+                    &[
+                        ("course", FluentValue::from(skipped.name.clone())),
+                        (
+                            "kind",
+                            FluentValue::from(text(
+                                lang,
+                                &format!("word-kind-{}", skipped.kind),
+                                &[]
+                            )),
+                        ),
+                    ],
+                )
+            );
+        }
         println!(
             "{}",
             text(
                 lang,
-                "export-iof-xml-skipped",
+                "export-iof-xml-written",
                 &[
-                    ("course", FluentValue::from(skipped.name.clone())),
-                    (
-                        "kind",
-                        FluentValue::from(text(lang, &format!("word-kind-{}", skipped.kind), &[])),
-                    ),
+                    ("count", FluentValue::from(report.courses)),
+                    ("path", path_arg(&target)),
                 ],
             )
         );
     }
-    println!(
-        "{}",
-        text(
-            lang,
-            "export-iof-xml-written",
-            &[
-                ("count", FluentValue::from(report.courses)),
-                ("path", FluentValue::from(target.display().to_string())),
-            ],
-        )
-    );
+    if let Some(target) = ppen {
+        let report = export_ppen_file(project, &target, new, lang).map_err(failed)?;
+        let id = if report.patched {
+            "export-ppen-patched"
+        } else {
+            "export-ppen-written"
+        };
+        println!(
+            "{}",
+            text(
+                lang,
+                id,
+                &[
+                    ("count", FluentValue::from(report.courses)),
+                    ("path", path_arg(&target)),
+                ],
+            )
+        );
+        for note in &report.notes {
+            println!(
+                "{}",
+                text(
+                    lang,
+                    "export-ppen-note-line",
+                    &[("note", FluentValue::from(note.localize(lang)))],
+                )
+            );
+        }
+        if report.linked_now {
+            println!(
+                "{}",
+                text(lang, "export-ppen-linked", &[("path", path_arg(&target))])
+            );
+        }
+        if report.ids_stored > 0 {
+            println!(
+                "{}",
+                text(
+                    lang,
+                    "export-ppen-ids-stored",
+                    &[("count", FluentValue::from(report.ids_stored))],
+                )
+            );
+        }
+    }
     Ok(())
 }
 
