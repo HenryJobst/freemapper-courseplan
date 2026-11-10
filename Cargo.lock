@@ -328,6 +328,7 @@ dependencies = [
  "freemapper-rules",
  "freemapper-text",
  "quick-xml",
+ "serde",
  "tempfile",
  "thiserror",
  "toml",
