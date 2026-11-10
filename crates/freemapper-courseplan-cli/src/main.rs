@@ -697,6 +697,8 @@ mod tests {
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
         ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("editor/map_view.rs", include_str!("editor/map_view.rs")),
+        ("editor/api.rs", include_str!("editor/api.rs")),
+        ("editor/overlay.rs", include_str!("editor/overlay.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),
         ("import_cmd.rs", include_str!("import_cmd.rs")),

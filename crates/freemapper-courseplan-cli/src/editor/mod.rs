@@ -18,9 +18,12 @@ use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
 use rust_embed::RustEmbed;
 use tokio::sync::{Mutex, Notify};
 
+use api::Loaded;
 use map_view::{MapCache, MapViewError, PageRect};
 
+mod api;
 mod map_view;
+mod overlay;
 #[cfg(test)]
 mod tests;
 
@@ -36,9 +39,10 @@ const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsa
 
 /// What the routes share. One project per process; operations take the lock one after another.
 pub(crate) struct EditorState {
-    /// The project file, as a canonical path. The operations of the next tasks read it.
-    #[allow(dead_code)]
+    /// The project file, as a canonical path.
     pub project: PathBuf,
+    /// The project file as last read; `api/state` and `api/revision` refresh it, the map routes only use it.
+    pub loaded: Loaded,
     /// The language of the page's texts: the process language.
     pub lang: Lang,
     /// Notified to stop the server (`POST api/quit`).
@@ -50,8 +54,10 @@ pub(crate) struct EditorState {
 impl EditorState {
     pub(crate) fn new(project: PathBuf, lang: Lang, shutdown: Arc<Notify>) -> Self {
         let note = text(&lang, "editor-map-placeholder", &[]);
+        let loaded = Loaded::read(&project, &lang);
         Self {
             project,
+            loaded,
             lang,
             shutdown,
             map: MapCache::new(note),
@@ -67,6 +73,9 @@ pub(crate) fn router(prefix: &str, state: Shared) -> Router {
         .route(&format!("{prefix}/"), get(index))
         .route(&format!("{prefix}/assets/{{*path}}"), get(asset))
         .route(&format!("{prefix}/api/texts"), get(texts))
+        .route(&format!("{prefix}/api/state"), get(api_state))
+        .route(&format!("{prefix}/api/revision"), get(api_revision))
+        .route(&format!("{prefix}/api/overlay"), get(api_overlay))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
         .route(&format!("{prefix}/api/quit"), post(quit))
@@ -100,12 +109,70 @@ fn plain(status: StatusCode, message: String) -> Response {
     (status, message).into_response()
 }
 
-/// Loads the project's map through the cache.
+/// The map of the project as last read, through the cache; the project file is not read again.
 fn map_entry(state: &mut EditorState) -> Result<&map_view::MapEntry, String> {
-    let map_path = ProjectFile::load(&state.project)
-        .map_err(|e| e.to_string())?
-        .map_path();
+    let map_path = state.loaded.map_path()?;
     state.map.get(&map_path)
+}
+
+async fn api_state(State(state): State<Shared>) -> Response {
+    let mut state = state.lock().await;
+    let state = &mut *state;
+    state.loaded.refresh(&state.project, &state.lang);
+    axum::Json(api::state_json(&state.loaded, &mut state.map)).into_response()
+}
+
+async fn api_revision(State(state): State<Shared>) -> Response {
+    let mut state = state.lock().await;
+    let state = &mut *state;
+    state.loaded.refresh(&state.project, &state.lang);
+    axum::Json(api::revision_json(&state.loaded)).into_response()
+}
+
+/// The course symbols in map mm; `?course=NAME` for one course, no parameter for all controls.
+async fn api_overlay(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let mut state = state.lock().await;
+    let state = &mut *state;
+    let lang = state.lang.clone();
+    let Ok(course) = api::overlay_query(query.as_deref()) else {
+        return plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-map-bad-request", &[]),
+        );
+    };
+    let file = match &state.loaded.file {
+        Ok(file) => file,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e.clone()),
+    };
+    let entry = match state.map.get(&file.map_path()) {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    let scale = entry.doc.georef.scale_denominator;
+    let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+    let event = &file.event;
+    let gaps = match course
+        .as_deref()
+        .and_then(|name| event.courses.iter().find(|c| c.name == name))
+    {
+        Some(found) => match freemapper_courseplan::rules::load_rule_set(
+            &event.event.rule_profile,
+            &event.event.rule_overlays,
+        ) {
+            Ok(rules) => freemapper_courseplan::numbers::gap_range(
+                &rules,
+                kind,
+                event.event.discipline,
+                freemapper_courseplan::rules::print_scale_of(found, scale),
+            ),
+            Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e.localize(&lang)),
+        },
+        None => freemapper_courseplan::numbers::GapRange::DEFAULT,
+    };
+    match overlay::overlay(event, course.as_deref(), &entry.index, scale, kind, gaps) {
+        Ok(overlay) => axum::Json(overlay).into_response(),
+        Err(e) => plain(StatusCode::NOT_FOUND, e.localize(&lang)),
+    }
 }
 
 async fn map_info(State(state): State<Shared>) -> Response {

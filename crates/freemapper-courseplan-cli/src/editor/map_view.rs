@@ -210,6 +210,20 @@ pub(crate) struct FileStamp {
 }
 
 impl FileStamp {
+    /// The stamp as a string the page compares for equality.
+    pub(crate) fn token(&self) -> String {
+        let since = self
+            .modified
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default();
+        format!(
+            "{}-{}.{:09}",
+            self.len,
+            since.as_secs(),
+            since.subsec_nanos()
+        )
+    }
+
     pub(crate) fn of(path: &Path) -> Result<Self, String> {
         let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
         Ok(Self {
