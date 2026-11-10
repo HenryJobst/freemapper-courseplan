@@ -411,7 +411,17 @@ pub fn classify(v: &Views, m: &Matching, project: &Event) -> Vec<FieldOutcome> {
         }
     }
     for key in legs {
-        out.push(field_outcome(key, &base, &ours, &theirs));
+        let mut o = field_outcome(key, &base, &ours, &theirs);
+        // D6: a leg that one side removed through its stops no longer exists; the other side's bends for
+        // it are dropped (`apply` notes it), so the removal wins instead of asking.
+        if o.pick == Pick::Conflict && o.ours.is_some() != o.theirs.is_some() {
+            o.pick = if o.ours.is_none() {
+                Pick::Ours
+            } else {
+                Pick::Theirs
+            };
+        }
+        out.push(o);
     }
     out
 }
@@ -839,5 +849,36 @@ mod tests {
             legs[0].theirs,
             Some(FieldValue::Leg(vec![(15_000, 3_000)], false))
         );
+    }
+
+    /// D6: a leg one side removed through its stops, bent on the other side, is dropped (with a note in
+    /// `apply`), not a question.
+    #[test]
+    fn leg_removed_on_one_side_and_bent_on_the_other_is_not_a_conflict() {
+        let mut bent = vec![course("A", 1, &["31", "34"])];
+        if let CourseKind::Individual { controls } = &mut bent[0].kind {
+            controls[0].bends = vec![MapPoint { x: 15.0, y: 3.0 }];
+        }
+        let v = views(
+            import(base3(), vec![course("A", 1, &["31", "34"])]),
+            import(base3(), vec![course("A", 1, &["34"])]),
+            import(base3(), bent),
+        );
+        let (m, out) = run(&v, &empty_project());
+        let (a, b) = (ident(&v, &m, "31"), ident(&v, &m, "34"));
+        assert_eq!(of(&out, FieldKey::Leg(a, b)).pick, Pick::Ours);
+        // And the other way round.
+        let mut bent = vec![course("A", 1, &["31", "34"])];
+        if let CourseKind::Individual { controls } = &mut bent[0].kind {
+            controls[0].bends = vec![MapPoint { x: 15.0, y: 3.0 }];
+        }
+        let v = views(
+            import(base3(), vec![course("A", 1, &["31", "34"])]),
+            import(base3(), bent),
+            import(base3(), vec![course("A", 1, &["34"])]),
+        );
+        let (m, out) = run(&v, &empty_project());
+        let (a, b) = (ident(&v, &m, "31"), ident(&v, &m, "34"));
+        assert_eq!(of(&out, FieldKey::Leg(a, b)).pick, Pick::Theirs);
     }
 }

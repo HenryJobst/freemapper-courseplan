@@ -1043,7 +1043,9 @@ pub fn apply(
         let FieldKey::Leg(a, b) = o.key else {
             continue;
         };
-        let changed = winner(o, t).is_some_and(|w| {
+        // A leg the winner removed counts with the other side's value: that one is dropped with the note.
+        let value = winner(o, t).or(o.ours.as_ref()).or(o.theirs.as_ref());
+        let changed = value.is_some_and(|w| {
             Some(w) != o.base.as_ref()
                 && !matches!(w, FieldValue::Leg(bends, false) if bends.is_empty())
         });
