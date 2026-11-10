@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-10
+
 ### Added
 
 - The IOF XML export writes latitude and longitude (`Position`, six decimals) for start, controls and finish when the map is georeferenced (ADR 0039). Without usable georeferencing the file keeps map positions only, and `export` says so. The MCP tool `export_iof_xml` also returns `geo_positions`.

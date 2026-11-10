@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.8.0] - 2026-11-10
+
 ### Hinzugefügt
 
 - Der Export nach IOF-XML schreibt für Start, Posten und Ziel Breite und Länge (`Position`, sechs Nachkommastellen), wenn die Karte georeferenziert ist (ADR 0039). Ohne nutzbare Georeferenzierung bleiben es Kartenpositionen, und `export` meldet das. Das MCP-Werkzeug `export_iof_xml` gibt zusätzlich `geo_positions` zurück.
