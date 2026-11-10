@@ -871,3 +871,5 @@ editor-status-label = Status
 editor-status-ready = Ready
 editor-status-closed = The editor has stopped. You can close this tab.
 editor-status-lost = The editor does not answer. Start it again with the edit command.
+editor-map-placeholder = Map display follows with freemapper-render
+editor-map-bad-request = The requested map section is not valid.

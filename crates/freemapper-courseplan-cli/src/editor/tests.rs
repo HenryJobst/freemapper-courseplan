@@ -201,3 +201,142 @@ async fn page_and_assets_are_served_from_the_embedded_set() {
         StatusCode::NOT_FOUND
     );
 }
+
+mod map {
+    use super::*;
+    use crate::editor::map_view::{MapCache, MapView, PageRect, PlaceholderMap};
+    use freemapper_courseplan_model::MapPoint;
+
+    fn placeholder() -> PlaceholderMap {
+        PlaceholderMap::from_extent(
+            Some((MapPoint { x: 0.0, y: 0.0 }, MapPoint { x: 200.0, y: 150.0 })),
+            "Map <note>".into(),
+        )
+    }
+
+    #[test]
+    fn placeholder_mapping_round_trips() {
+        let map = PlaceholderMap::from_extent(
+            Some((MapPoint { x: -30.0, y: 5.5 }, MapPoint { x: 90.0, y: 70.0 })),
+            String::new(),
+        )
+        .mapping();
+        for (x, y) in [(0.0, 0.0), (-12.25, 33.5), (1234.5, -987.25)] {
+            let (px, py) = map.to_page(MapPoint { x, y });
+            let back = map.to_map(px, py);
+            assert!((back.x - x).abs() < 1e-9 && (back.y - y).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn placeholder_page_box_is_extent_plus_10_mm() {
+        let map = placeholder();
+        let b = map.page_box();
+        assert_eq!((b.x0, b.y0, b.x1, b.y1), (0.0, 0.0, 220.0, 170.0));
+        let m = map.mapping();
+        assert_eq!((m.k, m.dx, m.dy), (1.0, 10.0, 10.0));
+    }
+
+    #[test]
+    fn placeholder_draws_no_map_content() {
+        let map = placeholder();
+        let svg = map.svg_for(map.page_box(), 1.0).unwrap();
+        let paths = svg.matches("<path").count();
+        let known = svg.matches("<path class=\"grid\"").count()
+            + svg.matches("<path class=\"frame\"").count();
+        assert!(paths >= 2 && paths == known, "{svg}");
+        assert_eq!(svg.matches("<text").count(), 1);
+        assert!(svg.contains("Map &lt;note&gt;"));
+        assert_eq!(
+            svg.matches("<image").count() + svg.matches("<circle").count(),
+            0
+        );
+    }
+
+    #[test]
+    fn placeholder_svg_is_small_at_any_zoom() {
+        let map = placeholder();
+        for zoom in [0.01, 100.0] {
+            let svg = map.svg_for(map.page_box(), zoom).unwrap();
+            assert!(svg.len() < 64 * 1024, "{zoom}: {}", svg.len());
+        }
+        let huge = PlaceholderMap::from_extent(
+            Some((MapPoint { x: 0.0, y: 0.0 }, MapPoint { x: 1e6, y: 1e6 })),
+            String::new(),
+        );
+        assert!(huge.svg_for(huge.page_box(), 0.01).unwrap().len() < 64 * 1024);
+        assert!(huge.svg_for(huge.page_box(), 1.0).is_err());
+    }
+
+    #[test]
+    fn placeholder_refuses_hostile_rects() {
+        let map = placeholder();
+        for (x1, zoom) in [
+            (f64::NAN, 1.0),
+            (f64::INFINITY, 1.0),
+            (100.0, 0.0),
+            (100.0, f64::NAN),
+        ] {
+            let rect = PageRect {
+                x0: 0.0,
+                y0: 0.0,
+                x1,
+                y1: 10.0,
+            };
+            assert!(map.svg_for(rect, zoom).is_err());
+        }
+    }
+
+    async fn status(query: &str) -> StatusCode {
+        app(&Lang::english())
+            .oneshot(
+                Request::get(format!("/tok/api/map.svg{query}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+            .status()
+    }
+
+    #[tokio::test]
+    async fn map_svg_rejects_bad_rects() {
+        for query in [
+            "",
+            "?x0=0&y0=0&x1=10",
+            "?x0=10&y0=0&x1=10&y1=10",
+            "?x0=10&y0=0&x1=0&y1=10",
+            "?x0=NaN&y0=0&x1=10&y1=10",
+            "?x0=0&y0=0&x1=inf&y1=10",
+            "?x0=0&y0=0&x1=1e300&y1=10",
+            "?x0=0&y0=0&x1=10&y1=10&zoom=0",
+            "?x0=0&y0=0&x1=10&y1=10&zoom=1e9",
+            "?x0=0&y0=0&x1=10&y1=10&zoom=abc",
+            "?x0=0&x0=1&y0=0&x1=10&y1=10",
+            "?x0=0&y0=0&x1=10&y1=10&extra=1",
+        ] {
+            assert_eq!(status(query).await, StatusCode::BAD_REQUEST, "{query}");
+        }
+    }
+
+    #[test]
+    fn cache_rebuilds_when_the_map_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("map.omap");
+        let source = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/fixtures/maps/forest-sample.omap"
+        ))
+        .unwrap();
+        std::fs::write(&path, &source).unwrap();
+        let mut cache = MapCache::new("note".into());
+        let first = cache.get(&path).unwrap().stamp;
+        assert_eq!(cache.get(&path).unwrap().stamp, first);
+        let mut changed = source;
+        changed.extend_from_slice(b"\n\n");
+        std::fs::write(&path, changed).unwrap();
+        let second = cache.get(&path).unwrap();
+        assert_ne!(second.stamp, first);
+        assert!(second.view.is_placeholder());
+    }
+}

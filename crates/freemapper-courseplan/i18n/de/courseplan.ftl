@@ -866,3 +866,5 @@ editor-status-label = Status
 editor-status-ready = Bereit
 editor-status-closed = Der Editor ist beendet. Du kannst diesen Tab schließen.
 editor-status-lost = Der Editor antwortet nicht. Starte ihn mit dem Befehl edit neu.
+editor-map-placeholder = Die Kartendarstellung folgt mit freemapper-render
+editor-map-bad-request = Der angeforderte Kartenausschnitt ist ungültig.

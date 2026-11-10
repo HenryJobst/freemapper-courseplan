@@ -8,7 +8,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::extract::{Path, State};
+use axum::extract::{Path, RawQuery, State};
+use axum::http::{StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, TEXTS, text};
@@ -17,6 +18,9 @@ use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
 use rust_embed::RustEmbed;
 use tokio::sync::{Mutex, Notify};
 
+use map_view::{MapCache, MapViewError, PageRect};
+
+mod map_view;
 #[cfg(test)]
 mod tests;
 
@@ -39,14 +43,18 @@ pub(crate) struct EditorState {
     pub lang: Lang,
     /// Notified to stop the server (`POST api/quit`).
     pub shutdown: Arc<Notify>,
+    /// The map built from the project's map file.
+    pub map: MapCache,
 }
 
 impl EditorState {
     pub(crate) fn new(project: PathBuf, lang: Lang, shutdown: Arc<Notify>) -> Self {
+        let note = text(&lang, "editor-map-placeholder", &[]);
         Self {
             project,
             lang,
             shutdown,
+            map: MapCache::new(note),
         }
     }
 }
@@ -59,6 +67,8 @@ pub(crate) fn router(prefix: &str, state: Shared) -> Router {
         .route(&format!("{prefix}/"), get(index))
         .route(&format!("{prefix}/assets/{{*path}}"), get(asset))
         .route(&format!("{prefix}/api/texts"), get(texts))
+        .route(&format!("{prefix}/api/map/view"), get(map_info))
+        .route(&format!("{prefix}/api/map.svg"), get(map_svg))
         .route(&format!("{prefix}/api/quit"), post(quit))
         .with_state(state)
 }
@@ -84,6 +94,115 @@ async fn texts(State(state): State<Shared>) -> Response {
         })
         .collect();
     axum::Json(serde_json::json!({ "lang": lang.code(), "texts": texts })).into_response()
+}
+
+fn plain(status: StatusCode, message: String) -> Response {
+    (status, message).into_response()
+}
+
+/// Loads the project's map through the cache.
+fn map_entry(state: &mut EditorState) -> Result<&map_view::MapEntry, String> {
+    let map_path = ProjectFile::load(&state.project)
+        .map_err(|e| e.to_string())?
+        .map_path();
+    state.map.get(&map_path)
+}
+
+async fn map_info(State(state): State<Shared>) -> Response {
+    let mut state = state.lock().await;
+    let entry = match map_entry(&mut state) {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    let (b, m) = (entry.view.page_box(), entry.view.mapping());
+    axum::Json(serde_json::json!({
+        "page_box": [b.x0, b.y0, b.x1, b.y1],
+        "mapping": { "k": m.k, "dx": m.dx, "dy": m.dy },
+        "placeholder": entry.view.is_placeholder(),
+    }))
+    .into_response()
+}
+
+/// The query of `api/map.svg`. A repeated or unknown parameter, or a value that is not a number, is refused.
+#[derive(Default)]
+struct SvgQuery {
+    x0: Option<f64>,
+    y0: Option<f64>,
+    x1: Option<f64>,
+    y1: Option<f64>,
+    zoom: Option<f64>,
+}
+
+impl SvgQuery {
+    fn parse(raw: &str) -> Option<Self> {
+        let mut q = SvgQuery::default();
+        for pair in raw.split('&').filter(|p| !p.is_empty()) {
+            let (key, value) = pair.split_once('=')?;
+            let slot = match key {
+                "x0" => &mut q.x0,
+                "y0" => &mut q.y0,
+                "x1" => &mut q.x1,
+                "y1" => &mut q.y1,
+                "zoom" => &mut q.zoom,
+                _ => return None,
+            };
+            if slot.replace(value.parse().ok()?).is_some() {
+                return None;
+            }
+        }
+        Some(q)
+    }
+}
+
+/// Coordinates beyond this are not a page.
+const MAX_COORDINATE: f64 = 1.0e7;
+/// Largest accepted zoom (pixels per mm).
+const MAX_ZOOM: f64 = 1000.0;
+
+fn parse_rect(q: &SvgQuery) -> Option<(PageRect, f64)> {
+    let rect = PageRect {
+        x0: q.x0?,
+        y0: q.y0?,
+        x1: q.x1?,
+        y1: q.y1?,
+    };
+    let zoom = q.zoom.unwrap_or(1.0);
+    let coordinates = [rect.x0, rect.y0, rect.x1, rect.y1];
+    let ok = coordinates
+        .iter()
+        .all(|v| v.is_finite() && v.abs() <= MAX_COORDINATE)
+        && rect.x1 > rect.x0
+        && rect.y1 > rect.y0
+        && zoom.is_finite()
+        && zoom > 0.0
+        && zoom <= MAX_ZOOM;
+    ok.then_some((rect, zoom))
+}
+
+async fn map_svg(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let mut state = state.lock().await;
+    let lang = state.lang.clone();
+    let bad = || {
+        plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-map-bad-request", &[]),
+        )
+    };
+    let Some((rect, zoom)) = query
+        .and_then(|raw| SvgQuery::parse(&raw))
+        .and_then(|q| parse_rect(&q))
+    else {
+        return bad();
+    };
+    let entry = match map_entry(&mut state) {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    match entry.view.svg_for(rect, zoom) {
+        Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
+        Err(MapViewError::TooLarge) => bad(),
+        Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    }
 }
 
 async fn quit(State(state): State<Shared>) -> Response {
