@@ -248,6 +248,20 @@ impl SpecialObject {
         }
     }
 
+    /// Sets Purple Pen's id of the object, as the `.ppen` export does after it wrote the object.
+    pub fn set_ppen_id(&mut self, id: Option<u32>) {
+        match self {
+            Self::Start { ppen_id, .. }
+            | Self::Finish { ppen_id, .. }
+            | Self::MarkedRoute { ppen_id, .. }
+            | Self::OutOfBoundsArea { ppen_id, .. }
+            | Self::ForbiddenRoute { ppen_id, .. }
+            | Self::DangerousArea { ppen_id, .. }
+            | Self::FirstAid { ppen_id, .. }
+            | Self::Water { ppen_id, .. } => *ppen_id = id,
+        }
+    }
+
     /// The courses the object is limited to; empty for all courses, and always empty for start and finish.
     pub fn courses(&self) -> &[String] {
         match self {

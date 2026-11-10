@@ -1,4 +1,4 @@
-//! `export --iof-xml` on the command line.
+//! `export --iof-xml` and `export --ppen` on the command line.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -302,4 +302,254 @@ fn a_target_in_a_missing_directory_fails_and_names_the_path() {
     assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
     assert!(stderr(&result).contains("out.xml"), "{}", stderr(&result));
     assert!(!out.exists());
+}
+
+// ---------------------------------------------------------------------------------------------
+// export --ppen
+
+/// The example project with `sources.ppen = link`.
+fn example_linked(link: &str) -> (tempfile::TempDir, PathBuf) {
+    let (dir, project) = example("");
+    let text = std::fs::read_to_string(&project).unwrap();
+    let text = text.replace(
+        "map = \"luebeck.omap\"",
+        &format!("map = \"luebeck.omap\"\nppen = \"{link}\""),
+    );
+    assert!(text.contains("ppen ="), "{text}");
+    std::fs::write(&project, text).unwrap();
+    (dir, project)
+}
+
+fn export_ppen(cwd: &Path, lang: &str, project: &Path, target: &Path, extra: &[&str]) -> Output {
+    let mut args = vec![
+        "export",
+        project.to_str().unwrap(),
+        "--ppen",
+        target.to_str().unwrap(),
+    ];
+    args.extend_from_slice(extra);
+    run(cwd, lang, &args)
+}
+
+#[test]
+fn export_ppen_writes_and_links() {
+    let (dir, project) = example_linked("out.ppen");
+    let target = dir.path().join("out.ppen");
+    let before = std::fs::read_to_string(&project).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    let text = stdout(&result);
+    assert!(
+        text.contains("wrote 1 course to the new Purple Pen event"),
+        "{text}"
+    );
+    assert!(text.contains("stored the Purple Pen ids of"), "{text}");
+    let ppen = std::fs::read_to_string(&target).unwrap();
+    assert!(ppen.contains("<course-scribe-event"), "{ppen}");
+    let after = std::fs::read_to_string(&project).unwrap();
+    assert_ne!(before, after);
+    assert!(after.contains("ppen_id"), "{after}");
+    assert!(after.contains("ppen = \"out.ppen\""), "{after}");
+    assert!(!dir.path().join("out.ppen.tmp").exists());
+    // The second export patches the file and changes neither it nor the project.
+    let ppen_before = std::fs::read(&target).unwrap();
+    let again = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(again.status.success(), "{}", stderr(&again));
+    assert!(
+        stdout(&again).contains("into the Purple Pen event"),
+        "{}",
+        stdout(&again)
+    );
+    assert_eq!(std::fs::read(&target).unwrap(), ppen_before);
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), after);
+}
+
+#[test]
+fn an_unlinked_project_stays_unlinked() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    let before = std::fs::read_to_string(&project).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(target.exists());
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+}
+
+#[test]
+fn ids_only_for_the_linked_file() {
+    let (dir, project) = example_linked("a.ppen");
+    let a = dir.path().join("a.ppen");
+    let b = dir.path().join("b.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &a, &[])
+            .status
+            .success()
+    );
+    std::fs::copy(&a, &b).unwrap();
+    let linked = std::fs::read_to_string(&project).unwrap();
+    // Corrupt nothing: exporting onto the copy leaves project and copy as they are.
+    let b_before = std::fs::read(&b).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &b, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        !stdout(&result).contains("stored the Purple Pen ids"),
+        "{}",
+        stdout(&result)
+    );
+    assert_eq!(std::fs::read_to_string(&project).unwrap(), linked);
+    assert_eq!(std::fs::read(&b).unwrap(), b_before);
+}
+
+#[test]
+fn export_ppen_new_ignores_the_existing_file() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    std::fs::write(&target, "not a purple pen event").unwrap();
+    let broken = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert_eq!(broken.status.code(), Some(1), "{}", stdout(&broken));
+    assert!(
+        stderr(&broken).contains("cannot be patched"),
+        "{}",
+        stderr(&broken)
+    );
+    assert_eq!(
+        std::fs::read_to_string(&target).unwrap(),
+        "not a purple pen event"
+    );
+    let result = export_ppen(dir.path(), "en", &project, &target, &["--new"]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        std::fs::read_to_string(&target)
+            .unwrap()
+            .contains("<course-scribe-event")
+    );
+}
+
+#[test]
+fn new_needs_ppen() {
+    let (dir, project) = example("");
+    let result = run(
+        dir.path(),
+        "en",
+        &["export", project.to_str().unwrap(), "--new"],
+    );
+    assert!(!result.status.success());
+}
+
+#[test]
+fn export_ppen_refuses_the_project_and_map_as_target() {
+    let (dir, project) = example("");
+    let map = dir.path().join("luebeck.omap");
+    let (project_before, map_before) = (
+        std::fs::read(&project).unwrap(),
+        std::fs::read(&map).unwrap(),
+    );
+    for target in [&project, &map] {
+        let result = export_ppen(dir.path(), "en", &project, target, &["--new"]);
+        assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+        assert!(
+            stderr(&result).contains("would overwrite it"),
+            "{}",
+            stderr(&result)
+        );
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), project_before);
+    assert_eq!(std::fs::read(&map).unwrap(), map_before);
+}
+
+#[test]
+fn refused_course_and_team_named_in_de_and_en() {
+    let (dir, project) = example(TEAM);
+    let target = dir.path().join("out.ppen");
+    let en = export_ppen(dir.path(), "en", &project, &target, &["--new"]);
+    assert!(en.status.success(), "{}", stderr(&en));
+    assert!(
+        stdout(&en).contains("note: left out Team: team courses are not exported to Purple Pen"),
+        "{}",
+        stdout(&en)
+    );
+    let de = export_ppen(dir.path(), "de", &project, &target, &["--new"]);
+    assert!(de.status.success(), "{}", stderr(&de));
+    assert!(
+        stdout(&de).contains("Hinweis: Team ausgelassen: Bahnart Mannschaftsbahn wird nicht nach Purple Pen exportiert"),
+        "{}",
+        stdout(&de)
+    );
+    assert!(!std::fs::read_to_string(&target).unwrap().contains("Team"));
+}
+
+#[test]
+fn unknown_version_base_exits_non_zero_and_writes_nothing() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &target, &[])
+            .status
+            .success()
+    );
+    let base = std::fs::read_to_string(&target).unwrap().replacen(
+        "<course-scribe-event>",
+        "<course-scribe-event version=\"9\">",
+        1,
+    );
+    assert!(base.contains("version=\"9\""), "{base}");
+    std::fs::write(&target, &base).unwrap();
+    let project_before = std::fs::read(&project).unwrap();
+    for lang in ["en", "de"] {
+        let result = export_ppen(dir.path(), lang, &project, &target, &[]);
+        assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+        assert!(!stderr(&result).is_empty());
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), base);
+        assert_eq!(std::fs::read(&project).unwrap(), project_before);
+    }
+}
+
+#[test]
+fn a_kept_object_is_reported_with_the_never_deletes_hint() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &target, &[])
+            .status
+            .success()
+    );
+    // A project with one control fewer: the control stays in the file.
+    let text = std::fs::read_to_string(&project).unwrap();
+    let other = dir.path().join("other.courseplan.toml");
+    let reduced = reduced_project(&text);
+    std::fs::write(&other, reduced).unwrap();
+    let result = export_ppen(dir.path(), "en", &other, &target, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        stdout(&result).contains("it never deletes"),
+        "{}",
+        stdout(&result)
+    );
+}
+
+/// The project text without its courses.
+fn reduced_project(text: &str) -> String {
+    let at = text.find("[[courses]]").expect("the example has a course");
+    text[..at].to_owned()
+}
+
+#[test]
+fn both_formats_in_one_call_are_written() {
+    let (dir, project) = example("");
+    let xml = dir.path().join("o.xml");
+    let ppen = dir.path().join("o.ppen");
+    let result = run(
+        dir.path(),
+        "en",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            xml.to_str().unwrap(),
+            "--ppen",
+            ppen.to_str().unwrap(),
+        ],
+    );
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(xml.exists() && ppen.exists());
 }

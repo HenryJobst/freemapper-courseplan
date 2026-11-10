@@ -75,6 +75,12 @@ enum Command {
         /// Write the individual courses as IOF XML 3.0 CourseData
         #[arg(long, value_name = "FILE")]
         iof_xml: Option<PathBuf>,
+        /// Write the individual courses into a Purple Pen event
+        #[arg(long, value_name = "FILE")]
+        ppen: Option<PathBuf>,
+        /// With --ppen, write the file from scratch and replace an existing one
+        #[arg(long, requires = "ppen")]
+        new: bool,
     },
     /// Add, move, describe, number and remove controls
     Control {
@@ -226,6 +232,8 @@ fn localized_command(lang: &Lang) -> clap::Command {
             s.about(t("cli-help-export"))
                 .mut_arg("project", |a| with_help(a, "cli-arg-export-project"))
                 .mut_arg("iof_xml", |a| with_help(a, "cli-arg-export-iof-xml"))
+                .mut_arg("ppen", |a| with_help(a, "cli-arg-export-ppen"))
+                .mut_arg("new", |a| with_help(a, "cli-arg-export-new"))
         })
         .mut_subcommand("check", |s| {
             s.about(t("cli-help-check"))
@@ -410,7 +418,12 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
-        Command::Export { project, iof_xml } => export_cmd::export(&lang, &project, iof_xml),
+        Command::Export {
+            project,
+            iof_xml,
+            ppen,
+            new,
+        } => export_cmd::export(&lang, &project, iof_xml, ppen, new),
         Command::Check { project, all } => check_cmd::check(&lang, project, all),
         Command::Finding { action } => check_cmd::finding(&lang, action),
         Command::Event { action } => check_cmd::event(&lang, action),

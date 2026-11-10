@@ -1309,6 +1309,42 @@ impl CoursePlanServer {
         })())
     }
 
+    #[tool(description = "Export the courses to a Purple Pen event")]
+    async fn export_ppen(
+        &self,
+        Parameters(req): Parameters<ExportPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply((|| {
+            let project = resolve_project(&self.lang, &req.project)?;
+            let target = resolve_ppen(&self.lang, &req.path)?;
+            let report =
+                crate::export_cmd::export_ppen_file(&project, &target, flag(req.new), &self.lang)
+                    .map_err(|e| {
+                    e.message(
+                        &self.lang,
+                        |e| project_error(&self.lang, e),
+                        |p, e| map_error(&self.lang, p, e),
+                    )
+                })?;
+            let skipped: Vec<Value> = report
+                .skipped()
+                .into_iter()
+                .map(|(name, kind)| json!({ "name": name, "kind": kind }))
+                .collect();
+            let notes: Vec<String> = report
+                .notes
+                .iter()
+                .map(|n| n.localize(&self.lang))
+                .collect();
+            Ok(json!({
+                "path": target.display().to_string(),
+                "courses": report.courses,
+                "skipped": skipped,
+                "notes": notes,
+            }))
+        })())
+    }
+
     #[tool(description = "Import a Purple Pen event")]
     async fn import_ppen(
         &self,
@@ -1696,7 +1732,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 33);
+            assert_eq!(tools.len(), 34);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

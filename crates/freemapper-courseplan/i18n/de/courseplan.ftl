@@ -486,9 +486,40 @@ export-iof-xml-written = { $count ->
    *[other] { $count } Bahnen nach { $path } geschrieben
 }
 export-iof-xml-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach IOF XML exportiert
-export-iof-xml-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI
+export-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI oder --ppen DATEI
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
+cli-arg-export-ppen = Die Einzelbahnen in ein Purple-Pen-Event schreiben. Eine vorhandene Datei wird an Ort und Stelle geändert und behält alles, was das Projekt nicht geändert hat; eine fehlende Datei wird angelegt. Die Purple-Pen-IDs des Projekts gelten nur für die Datei, die sources.ppen nennt
+cli-arg-export-new = Mit --ppen die Datei von Grund auf schreiben und eine vorhandene ersetzen
+export-ppen-written = { $count ->
+    [one] 1 Bahn in das neue Purple-Pen-Event { $path } geschrieben
+   *[other] { $count } Bahnen in das neue Purple-Pen-Event { $path } geschrieben
+}
+export-ppen-patched = { $count ->
+    [one] 1 Bahn in das Purple-Pen-Event { $path } geschrieben
+   *[other] { $count } Bahnen in das Purple-Pen-Event { $path } geschrieben
+}
+export-ppen-note-line = Hinweis: { $note }
+export-ppen-ids-stored = die Purple-Pen-IDs von { $count } Objekten im Projekt gespeichert
+export-ppen-note-course-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach Purple Pen exportiert
+export-ppen-note-special-skipped = Sonderobjekt { $id } ausgelassen: { $why }
+export-ppen-note-symbol-without-id = Posten { $control }, Spalte { $column }: Symbol { $id } hat in Purple Pen keine Entsprechung und wird ausgelassen
+export-ppen-note-code-not-stored = Purple Pen speichert für Starts, Ziele und Kreuzungspunkte keine Kennzahl, daher heißt { $code } beim erneuten Einlesen anders
+export-ppen-note-flagging-implied = Bahn { $course }, Strecke { $from } nach { $to }: Purple Pen flaggt diese Strecke von selbst, obwohl das Projekt sie nicht abgeflaggt hat
+export-ppen-note-partial-flagging-dropped = Bahn { $course }, Strecke { $from } nach { $to }: die Knickpunkte haben sich geändert und die Flaggung beginnt oder endet nicht mehr an einem Knickpunkt, daher entfällt die Teilflaggung
+export-ppen-kept-control = Posten { $code } (Purple-Pen-ID { $id }) steht in der Datei, aber nicht im Projekt; der Export behält ihn, weil er nie löscht
+export-ppen-kept-course = Bahn { $name } (Purple-Pen-ID { $id }) steht in der Datei, aber nicht im Projekt; der Export behält sie, weil er nie löscht
+export-ppen-kept-special = Sonderobjekt der Art { $kind } (Purple-Pen-ID { $id }) steht in der Datei, aber nicht im Projekt; der Export behält es, weil er nie löscht
+error-export-ppen-base = das vorhandene Purple-Pen-Event lässt sich nicht ändern: { $source }
+error-export-ppen-unknown-version = das Purple-Pen-Event stammt aus einer Version, die dieses Programm nicht kennt ({ $version }); es wurde nichts geschrieben
+error-export-ppen-unsupported = die Bahnen lassen sich nicht in ein Purple-Pen-Event schreiben: { $what }
+error-export-ppen-invalid = die Bahnen ergeben kein gültiges Purple-Pen-Event: { $what }
+error-export-ppen-shared-leg = die Bahnen { $first } und { $second } zeichnen die Strecke { $from } nach { $to } verschieden, und Purple Pen kennt je Postenpaar nur eine Strecke
+error-export-ppen-shared-circle-gaps = die Bahnen { $first } und { $second } geben Posten { $control } bei 1:{ $scale } verschiedene Kreislücken
+error-export-ppen-limit = zu groß für ein Purple-Pen-Event: { $what }
+word-export-why-marked-route = Purple Pen hat kein Objekt für die abgeflaggte Strecke, die Flaggung gehört dort zu den Strecken
+word-export-why-forbidden-route-with-several-points = Purple Pen zeichnet eine verbotene Route nur als einzelnes Kreuz
+word-export-why-no-course-left = es gehört nur zu Bahnen, die ausgelassen wurden
 
 ## Purple-Pen-Import (init --ppen, import --ppen)
 
@@ -626,9 +657,12 @@ mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit ch
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 mcp-tool-set-start-window = Das Startfenster der Veranstaltung setzen, die Minuten vom ersten bis zum letzten Start, mindestens 1. Die Prüfung der Startkapazität teilt die erwarteten Starter dadurch.
 mcp-tool-export-iof-xml = Die Einzelbahnen der Veranstaltung als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben. Erwartet project und path, die zu schreibende Datei mit der Endung .xml; eine vorhandene Datei wird ersetzt. Gibt path, courses (die Zahl der geschriebenen Bahnen) und skipped zurück, die ausgelassenen Mannschafts-, Staffel- und Score-Bahnen mit name und kind.
+mcp-tool-export-ppen = Die Einzelbahnen der Veranstaltung in ein Purple-Pen-Event (.ppen) schreiben. Erwartet project, path (die .ppen-Datei) und new. Eine vorhandene Datei wird an Ort und Stelle geändert und behält alles, was das Projekt nicht geändert hat, eine fehlende Datei wird angelegt, und mit new wird die Datei von Grund auf geschrieben. Der Export löscht nie; Objekte, die in der Datei stehen und im Projekt fehlen, bleiben und werden gemeldet. Die Purple-Pen-IDs des Projekts gelten nur für die Datei, die sources.ppen nennt, und die IDs, die der Export vergibt, werden im Projekt gespeichert. Gibt path, courses (die Zahl der geschriebenen Bahnen), skipped (die ausgelassenen Mannschafts-, Staffel- und Score-Bahnen mit name und kind) und notes zurück, die Texte zu dem, was ausgelassen, geändert oder behalten wurde.
 
 mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
 mcp-param-export-iof-xml-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .xml
+mcp-param-export-ppen-path = Das zu schreibende Purple-Pen-Event, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .ppen; eine fehlende Datei wird angelegt
+mcp-param-export-ppen-new = Die Datei von Grund auf schreiben und eine vorhandene ersetzen [Standard: false]
 mcp-param-init-event-project = Wohin die Projektdatei kommt, ein absoluter Pfad oder einer mit ~ am Anfang [Standard: neben der Karte, nach ihr benannt mit .courseplan.toml]
 mcp-param-map = Die OOM-Karte (Sprint oder Schulhof), ein absoluter Pfad oder einer mit ~ am Anfang
 mcp-param-title = Titel der Veranstaltung [Standard: der Titel in freemapper.toml neben der Karte, sonst der Kartenname]

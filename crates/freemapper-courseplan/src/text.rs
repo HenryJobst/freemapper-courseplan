@@ -43,6 +43,7 @@ use crate::edit::EditError;
 use crate::init::InitError;
 use crate::numbers::MAX_GAP_MM;
 use crate::omap::OmapError;
+use crate::ppen_export::{ExportNote, PpenExportError};
 use crate::ppen_import::{ImportNote, PpenImportError};
 use crate::rules::RulesError;
 
@@ -464,6 +465,123 @@ impl Localize for ImportNote {
     }
 }
 
+impl Localize for ExportNote {
+    fn localize(&self, lang: &Lang) -> String {
+        use freemapper_course::KeptObject;
+        let t = |id: &str, args: &[(&str, FluentValue)]| text(lang, id, args);
+        match self {
+            ExportNote::CourseSkipped { course, kind } => t(
+                "export-ppen-note-course-skipped",
+                &[
+                    ("course", v(course)),
+                    ("kind", v(word(lang, "word-kind", kind))),
+                ],
+            ),
+            ExportNote::SpecialSkipped { id, why } => t(
+                "export-ppen-note-special-skipped",
+                &[
+                    ("id", v(id)),
+                    ("why", v(word(lang, "word-export-why", why))),
+                ],
+            ),
+            ExportNote::SymbolWithoutPpenId {
+                control,
+                column,
+                id,
+            } => t(
+                "export-ppen-note-symbol-without-id",
+                &[
+                    ("control", v(control)),
+                    ("column", v(column)),
+                    ("id", v(id)),
+                ],
+            ),
+            ExportNote::CodeNotStored { code } => {
+                t("export-ppen-note-code-not-stored", &[("code", v(code))])
+            }
+            ExportNote::FlaggingImplied { course, from, to } => t(
+                "export-ppen-note-flagging-implied",
+                &[("course", v(course)), ("from", v(from)), ("to", v(to))],
+            ),
+            ExportNote::PartialFlaggingDropped { course, from, to } => t(
+                "export-ppen-note-partial-flagging-dropped",
+                &[("course", v(course)), ("from", v(from)), ("to", v(to))],
+            ),
+            ExportNote::Kept(KeptObject::Control { id, code }) => t(
+                "export-ppen-kept-control",
+                &[("id", v(id)), ("code", v(code))],
+            ),
+            ExportNote::Kept(KeptObject::Course { id, name }) => t(
+                "export-ppen-kept-course",
+                &[("id", v(id)), ("name", v(name))],
+            ),
+            ExportNote::Kept(KeptObject::Special { id, kind }) => t(
+                "export-ppen-kept-special",
+                &[
+                    ("id", v(id)),
+                    ("kind", v(word(lang, "word-import-special", kind))),
+                ],
+            ),
+        }
+    }
+}
+
+impl Localize for PpenExportError {
+    fn localize(&self, lang: &Lang) -> String {
+        use freemapper_course::PpenWriteError as W;
+        match self {
+            PpenExportError::Base(e) => text(
+                lang,
+                "error-export-ppen-base",
+                &[("source", v(e.localize(lang)))],
+            ),
+            PpenExportError::Write(e) => match e {
+                W::Base(e) => text(lang, "error-export-ppen-base", &[("source", v(e))]),
+                W::UnknownVersion(version) => text(
+                    lang,
+                    "error-export-ppen-unknown-version",
+                    &[("version", v(version))],
+                ),
+                W::Unsupported(what) => {
+                    text(lang, "error-export-ppen-unsupported", &[("what", v(what))])
+                }
+                W::Invalid(what) => text(lang, "error-export-ppen-invalid", &[("what", v(what))]),
+                W::SharedLeg {
+                    from,
+                    to,
+                    first,
+                    second,
+                } => text(
+                    lang,
+                    "error-export-ppen-shared-leg",
+                    &[
+                        ("from", v(from)),
+                        ("to", v(to)),
+                        ("first", v(first)),
+                        ("second", v(second)),
+                    ],
+                ),
+                W::SharedCircleGaps {
+                    control,
+                    scale,
+                    first,
+                    second,
+                } => text(
+                    lang,
+                    "error-export-ppen-shared-circle-gaps",
+                    &[
+                        ("control", v(control)),
+                        ("scale", v(scale)),
+                        ("first", v(first)),
+                        ("second", v(second)),
+                    ],
+                ),
+                W::Limit(what) => text(lang, "error-export-ppen-limit", &[("what", v(what))]),
+            },
+        }
+    }
+}
+
 fn place_word(lang: &Lang, place: &Place) -> String {
     text(lang, &format!("word-place-{}", place.as_str()), &[])
 }
@@ -658,6 +776,7 @@ mod tests {
             "kind",
             "errors",
             "what",
+            "version",
             "x",
             "y",
             "min_x",
@@ -786,6 +905,7 @@ mod tests {
             "word-special",
             "word-import-why",
             "word-import-special",
+            "word-export-why",
         ] {
             ids.remove(excluded);
         }
@@ -918,6 +1038,13 @@ mod tests {
             "no-name",
         ] {
             ids.insert(format!("word-import-why-{why}"));
+        }
+        for why in [
+            "marked-route",
+            "forbidden-route-with-several-points",
+            "no-course-left",
+        ] {
+            ids.insert(format!("word-export-why-{why}"));
         }
         for kind in [
             "out-of-bounds",
