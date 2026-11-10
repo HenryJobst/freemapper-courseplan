@@ -18,7 +18,7 @@ the competition rules and hands them on to result software and to printing:
 Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
 `freemapper-text` for the program texts, `freemapper-omap` for reading the map and `freemapper-course` for reading
-Purple Pen files. The programs use them in a fixed version (courseplan: 0.6.0) instead of copying the code. The
+Purple Pen files. The programs use them in a fixed version (courseplan: 0.6.1) instead of copying the code. The
 number placement and the description symbol tables come from there, so courseplan and freemapper-print place numbers
 the same way.
 

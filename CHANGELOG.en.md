@@ -6,6 +6,13 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.5] - 2026-11-10
+
+### Changed
+
+- freemapper-core 0.6.1: automatically placed numbers store their direction in clean tenths of a degree again
+  (ADR 0036). The rounding workaround in courseplan is gone.
+
 ## [0.7.4] - 2026-11-10
 
 ### Fixed

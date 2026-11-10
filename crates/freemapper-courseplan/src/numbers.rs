@@ -372,28 +372,12 @@ pub fn auto_place(
     );
     Ok(placed
         .into_iter()
-        .zip(&stops)
-        .filter_map(|(p, stop)| {
-            let p = p?;
-            // A kept number comes back as it went in. The search wraps a candidate past 360 degrees
-            // after rounding it, which leaves float noise (102.39999999999998); round what it found.
-            let direction = if stop.kept.is_some() {
-                p.direction
-            } else {
-                round_direction(p.direction)
-            };
-            Some(NumberPlacement {
-                direction,
-                gap_mm: p.gap_mm,
-            })
+        .flatten()
+        .map(|p| NumberPlacement {
+            direction: p.direction,
+            gap_mm: p.gap_mm,
         })
         .collect())
-}
-
-/// A direction rounded to 0.1 degrees and normalised to `[0, 360)`. Rounding comes first and
-/// normalising second, so a value does not pick up float noise by the wrap (360.0 becomes 0.0).
-fn round_direction(direction: f64) -> f64 {
-    normalize_direction((direction * 10.0).round() / 10.0) + 0.0
 }
 
 /// Writes [`auto_place`] results into the course controls of the named individual course that have

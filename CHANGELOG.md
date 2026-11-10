@@ -6,6 +6,13 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.5] - 2026-11-10
+
+### Geändert
+
+- freemapper-core 0.6.1: Automatisch gesetzte Nummern speichern ihre Richtung wieder in sauberen Zehntelgrad
+  (ADR 0036). Die Rundung als Zwischenlösung in courseplan entfällt.
+
 ## [0.7.4] - 2026-11-10
 
 ### Behoben
