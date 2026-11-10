@@ -25,7 +25,27 @@ const TOLERANCE: f64 = 1e-9;
 
 /// Cases whose expected values the old code is known not to reproduce, each with the reason. The
 /// harness still runs them and requires that they differ (so the entry goes when the code catches up).
-const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[];
+///
+/// Ruled for core in freemapper-core ADR 0016: D2 (the old leg trim at the circle radius leaves a piece of leg
+/// inside the circle line) and D4 (the old "behind is blocked" test uses the unrounded rule minimum).
+const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[
+    (
+        "bend_inside_circle_line_gap_0_01",
+        "D2: trim at the circle radius, not radius plus half line width",
+    ),
+    (
+        "bend_inside_circle_line_gap_0_1",
+        "D2: trim at the circle radius, not radius plus half line width",
+    ),
+    (
+        "rounded_min_behind_test_0_333",
+        "D4: behind test at the unrounded rule minimum 0.333, stored gap 0.34",
+    ),
+    (
+        "rounded_min_behind_test_0_331",
+        "D4: behind test at the unrounded rule minimum 0.331, stored gap 0.34",
+    ),
+];
 
 type Pt = (f64, f64);
 
