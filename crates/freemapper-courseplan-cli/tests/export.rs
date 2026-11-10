@@ -409,6 +409,42 @@ fn new_links_the_project_too() {
 }
 
 #[test]
+fn a_linked_project_keeps_its_link_on_a_new_file() {
+    let (dir, project) = example_linked("a.ppen");
+    let a = dir.path().join("a.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &a, &[])
+            .status
+            .success()
+    );
+    let linked = std::fs::read_to_string(&project).unwrap();
+    assert!(linked.contains("ppen = \"a.ppen\""), "{linked}");
+    // A missing file and --new onto another existing file: neither moves the link or stores ids.
+    let c = dir.path().join("c.ppen");
+    let d = dir.path().join("d.ppen");
+    std::fs::write(&d, "not a purple pen event").unwrap();
+    for (target, extra) in [(&c, &[][..]), (&d, &["--new"][..])] {
+        let result = export_ppen(dir.path(), "en", &project, target, extra);
+        assert!(result.status.success(), "{}", stderr(&result));
+        assert!(target.exists());
+        assert!(
+            !stdout(&result).contains("sources.ppen"),
+            "{}",
+            stdout(&result)
+        );
+        assert_eq!(std::fs::read_to_string(&project).unwrap(), linked);
+    }
+    // --new onto the linked file stays linked to it.
+    let result = export_ppen(dir.path(), "en", &project, &a, &["--new"]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        std::fs::read_to_string(&project)
+            .unwrap()
+            .contains("ppen = \"a.ppen\"")
+    );
+}
+
+#[test]
 fn an_existing_foreign_file_does_not_link() {
     let (dir, project) = example("");
     // The file comes from a copy of the project, which it links; the project itself stays unlinked.

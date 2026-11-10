@@ -165,11 +165,12 @@ impl PpenReport {
 /// An existing `target` is the base: the export changes what the project changed and leaves the rest of
 /// the file as it is, unless `new` asks for a file from scratch. A missing `target` is created.
 ///
-/// The project's Purple Pen ids count only for its linked file, the one `sources.ppen` names. A new file,
-/// whether `target` did not exist or `new` was given, becomes the linked file *(controller's ruling)*:
-/// `sources.ppen` names it, relative to the project file. For the linked file the ids the export assigned
-/// are stored in the project. An export onto an existing file that is not the linked one links nothing and
-/// stores no id.
+/// The project's Purple Pen ids count only for its linked file, the one `sources.ppen` names. For a
+/// project without `sources.ppen`, a new file (`target` did not exist, or `new` was given) becomes the
+/// linked file *(controller's ruling)*: `sources.ppen` names it, relative to the project file. For the
+/// linked file the ids the export assigned are stored in the project. Any other target, an existing file
+/// or a new one while the project is linked elsewhere, gets no ids, and nothing is written back: the link
+/// stays as it is.
 ///
 /// The `.ppen` is written first, atomically, then the project (also atomically, and only when something
 /// changed). Nothing is written when the export fails; when only the project save fails, the error says
@@ -197,7 +198,10 @@ pub(crate) fn export_ppen_file(
                 .map_err(|e| ExportError::ReadTarget(target.to_path_buf(), e))?,
         )
     };
-    let linked = linked_file || fresh;
+    // A new file links a project that has no link yet; one linked elsewhere keeps its link, and the
+    // new file is treated like any other foreign target.
+    let has_link = file.event.sources.ppen.is_some();
+    let linked = linked_file || (fresh && !has_link);
     let map_path = link_from_project(target, &file.map_path())
         .map_or_else(
             || file.map_path().display().to_string(),
@@ -218,7 +222,7 @@ pub(crate) fn export_ppen_file(
     .map_err(|e| ExportError::Ppen(target.to_path_buf(), e))?;
     write_atomic(target, &exported.text).map_err(ExportError::Project)?;
     let mut ids_stored = 0;
-    let linked_now = fresh && !linked_file;
+    let linked_now = linked && !linked_file;
     if linked {
         let mut event = file.event.clone();
         ids_stored = store_ids(&mut event, &exported.ids);
