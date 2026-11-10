@@ -1353,6 +1353,55 @@ fn export_ppen_returns_path_courses_skipped_and_notes() {
 }
 
 #[test]
+fn export_ppen_says_whether_it_patched_and_how_many_ids_it_stored() {
+    let (dir, map, project) = workspace();
+    let target = dir.path().join("out.ppen");
+    let mut session = Session::start();
+    session.ok(
+        "init_event",
+        json!({ "map": map, "project": project, "title": "Training" }),
+    );
+    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
+    let p = |fx, fy| point(&extent, fx, fy);
+    for (kind, id, at) in [("start", "S1", p(0.4, 0.4)), ("finish", "F1", p(0.6, 0.6))] {
+        session.ok(
+            "add_special",
+            json!({ "project": project, "kind": kind, "id": id, "at": at }),
+        );
+    }
+    for (code, at) in [("31", p(0.45, 0.5)), ("32", p(0.55, 0.45))] {
+        session.ok(
+            "add_control",
+            json!({ "project": project, "at": at, "code": code }),
+        );
+    }
+    session.ok(
+        "add_course",
+        json!({
+            "project": project, "name": "A", "start": "S1", "finish": "F1",
+            "controls": ["31", "32"]
+        }),
+    );
+    // A new file links the project and stores an id for the start, the finish, both controls and the
+    // course.
+    let done = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(done["courses"], 1, "{done}");
+    assert_eq!(done["patched"], false, "{done}");
+    assert_eq!(done["ids_stored"], 5, "{done}");
+    assert_eq!(done["notes"], json!([]), "{done}");
+    let again = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(again["patched"], true, "{again}");
+    assert_eq!(again["ids_stored"], 0, "{again}");
+    session.ok(
+        "add_control",
+        json!({ "project": project, "at": p(0.5, 0.55), "code": "33" }),
+    );
+    let third = session.ok("export_ppen", json!({ "project": project, "path": target }));
+    assert_eq!(third["patched"], true, "{third}");
+    assert_eq!(third["ids_stored"], 1, "{third}");
+}
+
+#[test]
 fn import_ppen_takes_over_the_event_and_returns_counts_and_notes() {
     let dir = tempfile::tempdir().unwrap();
     let map = dir.path().join("park.omap");

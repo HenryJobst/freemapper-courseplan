@@ -1341,6 +1341,8 @@ impl CoursePlanServer {
                 "courses": report.courses,
                 "skipped": skipped,
                 "notes": notes,
+                "patched": report.patched,
+                "ids_stored": report.ids_stored,
             }))
         })())
     }

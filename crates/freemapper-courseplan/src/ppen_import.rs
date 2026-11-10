@@ -28,6 +28,8 @@
 use std::collections::{HashMap, HashSet};
 
 use freemapper_course::fit::FitOptions;
+/// The largest course file the reader takes, for callers that read the file from disk.
+pub use freemapper_course::model::MAX_COURSE_FILE_BYTES;
 use freemapper_course::model::{Description, Offset};
 use freemapper_course::{
     ControlKind as PKind, CourseError, CourseFilter, CourseKind as PCourseKind, CourseNote,

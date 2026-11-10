@@ -343,7 +343,7 @@ fn export_ppen_writes_and_links() {
         text.contains("wrote 1 course to the new Purple Pen event"),
         "{text}"
     );
-    assert!(text.contains("stored the Purple Pen ids of"), "{text}");
+    assert!(text.contains("stored a Purple Pen id for"), "{text}");
     let ppen = std::fs::read_to_string(&target).unwrap();
     assert!(ppen.contains("<course-scribe-event"), "{ppen}");
     let after = std::fs::read_to_string(&project).unwrap();
@@ -365,14 +365,85 @@ fn export_ppen_writes_and_links() {
 }
 
 #[test]
-fn an_unlinked_project_stays_unlinked() {
+fn a_new_file_links_the_project() {
     let (dir, project) = example("");
     let target = dir.path().join("out.ppen");
-    let before = std::fs::read_to_string(&project).unwrap();
     let result = export_ppen(dir.path(), "en", &project, &target, &[]);
     assert!(result.status.success(), "{}", stderr(&result));
-    assert!(target.exists());
+    let linked = std::fs::read_to_string(&project).unwrap();
+    assert!(linked.contains("ppen = \"out.ppen\""), "{linked}");
+    assert!(linked.contains("ppen_id"), "{linked}");
+    // Move the start: the next export moves the one start of the file instead of adding a second.
+    let moved = linked.replace("map_mm = [-97.4, -3.6]", "map_mm = [-90.0, -3.6]");
+    assert_ne!(moved, linked);
+    std::fs::write(&project, &moved).unwrap();
+    let before = std::fs::read_to_string(&target).unwrap();
+    let again = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(again.status.success(), "{}", stderr(&again));
+    let after = std::fs::read_to_string(&target).unwrap();
+    assert_eq!(after.matches("kind=\"start\"").count(), 1, "{after}");
+    let location = |text: &str| -> String {
+        let at = text.find("kind=\"start\"").unwrap();
+        let rest = &text[at..];
+        let from = rest.find("<location").unwrap();
+        rest[from..from + rest[from..].find("/>").unwrap()].to_owned()
+    };
+    assert_ne!(location(&after), location(&before));
+    assert!(
+        location(&after).contains("x=\"-90\""),
+        "{}",
+        location(&after)
+    );
+    assert!(!stdout(&again).contains("STA1"), "{}", stdout(&again));
+}
+
+#[test]
+fn new_links_the_project_too() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    std::fs::write(&target, "not a purple pen event").unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &target, &["--new"]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    let text = std::fs::read_to_string(&project).unwrap();
+    assert!(text.contains("ppen = \"out.ppen\""), "{text}");
+}
+
+#[test]
+fn an_existing_foreign_file_does_not_link() {
+    let (dir, project) = example("");
+    // The file comes from a copy of the project, which it links; the project itself stays unlinked.
+    let copy = dir.path().join("copy.courseplan.toml");
+    std::fs::copy(&project, &copy).unwrap();
+    let target = dir.path().join("out.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &copy, &target, &[])
+            .status
+            .success()
+    );
+    let before = std::fs::read_to_string(&project).unwrap();
+    let file_before = std::fs::read(&target).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
     assert_eq!(std::fs::read_to_string(&project).unwrap(), before);
+    assert_eq!(std::fs::read(&target).unwrap(), file_before);
+}
+
+/// `text` with the Purple Pen ids `a` and `b` of two normal controls swapped, codes kept: the control
+/// elements and every reference to them.
+fn swap_control_ids(text: &str, a: u32, b: u32) -> String {
+    let mut out = text.to_owned();
+    for (pattern, hold) in [
+        ("<control id=\"{}\"", "<control id=\"#{}\""),
+        (" control=\"{}\"", " control=\"#{}\""),
+        ("start-control=\"{}\"", "start-control=\"#{}\""),
+        ("end-control=\"{}\"", "end-control=\"#{}\""),
+    ] {
+        let of = |p: &str, n: u32| p.replace("{}", &n.to_string());
+        out = out
+            .replace(&of(pattern, a), &of(hold, b))
+            .replace(&of(pattern, b), &of(hold, a));
+    }
+    out.replace("=\"#", "=\"")
 }
 
 #[test]
@@ -385,19 +456,155 @@ fn ids_only_for_the_linked_file() {
             .status
             .success()
     );
-    std::fs::copy(&a, &b).unwrap();
+    // b.ppen holds the same controls, but 31 and 32 have each other's Purple Pen id. Ids taken over
+    // from the project would pair 31 with 32 there.
+    let text = std::fs::read_to_string(&a).unwrap();
+    assert!(
+        text.contains("<control id=\"3\" kind=\"normal\">\r\n    <code>31</code>"),
+        "{text}"
+    );
+    assert!(
+        text.contains("<control id=\"4\" kind=\"normal\">\r\n    <code>32</code>"),
+        "{text}"
+    );
+    let swapped = swap_control_ids(&text, 3, 4);
+    assert!(swapped.contains("<control id=\"4\" kind=\"normal\">\r\n    <code>31</code>"));
+    std::fs::write(&b, &swapped).unwrap();
     let linked = std::fs::read_to_string(&project).unwrap();
-    // Corrupt nothing: exporting onto the copy leaves project and copy as they are.
-    let b_before = std::fs::read(&b).unwrap();
     let result = export_ppen(dir.path(), "en", &project, &b, &[]);
     assert!(result.status.success(), "{}", stderr(&result));
     assert!(
-        !stdout(&result).contains("stored the Purple Pen ids"),
+        !stdout(&result).contains("stored a Purple Pen id"),
         "{}",
         stdout(&result)
     );
+    // The project keeps the ids of a.ppen; b.ppen keeps its own, and every control its code and place.
     assert_eq!(std::fs::read_to_string(&project).unwrap(), linked);
-    assert_eq!(std::fs::read(&b).unwrap(), b_before);
+    assert_eq!(std::fs::read_to_string(&b).unwrap(), swapped);
+}
+
+#[test]
+fn the_same_file_for_both_formats_is_refused() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &target, &[])
+            .status
+            .success()
+    );
+    let before = std::fs::read(&target).unwrap();
+    for lang in ["en", "de"] {
+        let result = run(
+            dir.path(),
+            lang,
+            &[
+                "export",
+                project.to_str().unwrap(),
+                "--iof-xml",
+                target.to_str().unwrap(),
+                "--ppen",
+                dir.path().join(".").join("out.ppen").to_str().unwrap(),
+            ],
+        );
+        assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+        let want = if lang == "en" {
+            "the same file"
+        } else {
+            "dieselbe Datei"
+        };
+        assert!(stderr(&result).contains(want), "{}", stderr(&result));
+        assert_eq!(std::fs::read(&target).unwrap(), before);
+    }
+}
+
+#[test]
+fn a_directory_or_an_oversized_file_is_not_read() {
+    let (dir, project) = example("");
+    let folder = dir.path().join("folder.ppen");
+    std::fs::create_dir(&folder).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &folder, &[]);
+    assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+    assert!(
+        stderr(&result).contains("is not a file"),
+        "{}",
+        stderr(&result)
+    );
+    // A sparse file one byte over the limit of 50 MB.
+    let big = dir.path().join("big.ppen");
+    std::fs::File::create(&big)
+        .unwrap()
+        .set_len(50 * 1024 * 1024 + 1)
+        .unwrap();
+    for lang in ["en", "de"] {
+        let result = export_ppen(dir.path(), lang, &project, &big, &[]);
+        assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+        let want = if lang == "en" {
+            "larger than 50 MB"
+        } else {
+            "größer als 50 MB"
+        };
+        assert!(stderr(&result).contains(want), "{}", stderr(&result));
+    }
+    // The import reads the same way.
+    let result = run(
+        dir.path(),
+        "en",
+        &[
+            "import",
+            project.to_str().unwrap(),
+            "--ppen",
+            folder.to_str().unwrap(),
+            "--replace",
+        ],
+    );
+    assert_eq!(result.status.code(), Some(1), "{}", stdout(&result));
+    assert!(
+        stderr(&result).contains("is not a file"),
+        "{}",
+        stderr(&result)
+    );
+}
+
+#[cfg(unix)]
+#[test]
+fn a_failed_project_save_says_the_ppen_was_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let (dir, project) = example("");
+    let out = tempfile::tempdir().unwrap();
+    let target = out.path().join("out.ppen");
+    // The project folder takes no new file, so the atomic save of the project fails.
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o555)).unwrap();
+    let results: Vec<Output> = ["en", "de"]
+        .iter()
+        .map(|lang| export_ppen(dir.path(), lang, &project, &target, &["--new"]))
+        .collect();
+    std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o755)).unwrap();
+    for (result, want) in results.iter().zip(["but the project", "aber das Projekt"]) {
+        assert_eq!(result.status.code(), Some(1), "{}", stdout(result));
+        assert!(stderr(result).contains(want), "{}", stderr(result));
+        assert!(stderr(result).contains("out.ppen"), "{}", stderr(result));
+    }
+    assert!(target.exists());
+}
+
+#[test]
+fn a_comment_in_the_base_does_not_crash_the_export() {
+    let (dir, project) = example("");
+    let target = dir.path().join("out.ppen");
+    assert!(
+        export_ppen(dir.path(), "en", &project, &target, &[])
+            .status
+            .success()
+    );
+    let text = std::fs::read_to_string(&target).unwrap().replacen(
+        "<course-scribe-event",
+        "<!-- <standards description=\u{e9}> --><course-scribe-event",
+        1,
+    );
+    std::fs::write(&target, &text).unwrap();
+    let result = export_ppen(dir.path(), "en", &project, &target, &[]);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), text);
 }
 
 #[test]
@@ -412,6 +619,7 @@ fn export_ppen_new_ignores_the_existing_file() {
         "{}",
         stderr(&broken)
     );
+    assert!(stderr(&broken).contains("out.ppen"), "{}", stderr(&broken));
     assert_eq!(
         std::fs::read_to_string(&target).unwrap(),
         "not a purple pen event"

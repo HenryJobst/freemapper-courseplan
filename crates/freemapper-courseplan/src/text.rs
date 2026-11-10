@@ -526,64 +526,67 @@ impl Localize for ExportNote {
     }
 }
 
-impl Localize for PpenExportError {
-    fn localize(&self, lang: &Lang) -> String {
-        use freemapper_course::PpenWriteError as W;
-        match self {
-            PpenExportError::Base(e) => text(
+/// The text of a failed `.ppen` export to `path`; an unusable base file names it, since one call can
+/// write two files.
+pub fn ppen_export_error(e: &PpenExportError, lang: &Lang, path: &str) -> String {
+    use freemapper_course::PpenWriteError as W;
+    let base = |source: String| {
+        text(
+            lang,
+            "error-export-ppen-base",
+            &[("path", v(path)), ("source", v(source))],
+        )
+    };
+    match e {
+        PpenExportError::Base(e) => base(e.localize(lang)),
+        PpenExportError::Write(e) => match e {
+            W::Base(e) => base(e.to_string()),
+            W::UnknownVersion(version) => text(
                 lang,
-                "error-export-ppen-base",
-                &[("source", v(e.localize(lang)))],
+                "error-export-ppen-unknown-version",
+                &[("version", v(version))],
             ),
-            PpenExportError::Write(e) => match e {
-                W::Base(e) => text(lang, "error-export-ppen-base", &[("source", v(e))]),
-                W::UnknownVersion(version) => text(
-                    lang,
-                    "error-export-ppen-unknown-version",
-                    &[("version", v(version))],
-                ),
-                W::Unsupported(what) => {
-                    text(lang, "error-export-ppen-unsupported", &[("what", v(what))])
-                }
-                W::Invalid(what) => text(lang, "error-export-ppen-invalid", &[("what", v(what))]),
-                W::SharedLeg {
-                    from,
-                    to,
-                    first,
-                    second,
-                } => text(
-                    lang,
-                    "error-export-ppen-shared-leg",
-                    &[
-                        ("from", v(from)),
-                        ("to", v(to)),
-                        ("first", v(first)),
-                        ("second", v(second)),
-                    ],
-                ),
-                W::SharedCircleGaps {
-                    control,
-                    scale,
-                    first,
-                    second,
-                } => text(
-                    lang,
-                    "error-export-ppen-shared-circle-gaps",
-                    &[
-                        ("control", v(control)),
-                        ("scale", v(scale)),
-                        ("first", v(first)),
-                        ("second", v(second)),
-                    ],
-                ),
-                W::Limit(what) => text(lang, "error-export-ppen-limit", &[("what", v(what))]),
-            },
-            PpenExportError::CircleGapLimit { limit } => text(
+            W::Unsupported(what) => {
+                text(lang, "error-export-ppen-unsupported", &[("what", v(what))])
+            }
+            W::Invalid(what) => text(lang, "error-export-ppen-invalid", &[("what", v(what))]),
+            W::SharedLeg {
+                from,
+                to,
+                first,
+                second,
+            } => text(
                 lang,
-                "error-export-ppen-circle-gap-limit",
-                &[("limit", v(limit))],
+                "error-export-ppen-shared-leg",
+                &[
+                    ("from", v(from)),
+                    ("to", v(to)),
+                    ("first", v(first)),
+                    ("second", v(second)),
+                ],
             ),
-        }
+            W::SharedCircleGaps {
+                control,
+                scale,
+                first,
+                second,
+            } => text(
+                lang,
+                "error-export-ppen-shared-circle-gaps",
+                &[
+                    ("control", v(control)),
+                    ("scale", v(scale)),
+                    ("first", v(first)),
+                    ("second", v(second)),
+                ],
+            ),
+            W::Limit(what) => text(lang, "error-export-ppen-limit", &[("what", v(what))]),
+        },
+        PpenExportError::CircleGapLimit { limit } => text(
+            lang,
+            "error-export-ppen-circle-gap-limit",
+            &[("limit", v(limit))],
+        ),
     }
 }
 
