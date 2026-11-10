@@ -519,12 +519,14 @@ fn export_from_scratch_reads_back() {
     let (event, map) = luebeck();
     let out = export_ppen(&event, &map, target(None, true)).unwrap();
     assert_eq!(out.courses, 2);
-    // Purple Pen stores no code for starts and finishes.
-    for code in ["S1", "F1", "CP"] {
-        assert!(out.notes.contains(&ExportNote::CodeNotStored {
-            code: code.to_owned()
-        }));
-    }
+    // Purple Pen stores no code for starts, finishes and crossing points; that is expected and not noted.
+    assert!(
+        !out.notes
+            .iter()
+            .any(|n| matches!(n, ExportNote::CodeNotStored { .. })),
+        "{:?}",
+        out.notes
+    );
     let back = import_ppen(out.text.as_bytes(), &map).unwrap();
     let back = valid_event(&back);
 
@@ -768,4 +770,66 @@ fn a_pair_visited_twice_keeps_its_map_exchange() {
         .unwrap()
         .climb_m = Some(20.0);
     assert_eq!(read(&out.text), base);
+}
+
+#[test]
+fn unlinked_starts_finishes_and_crossing_points_pair_by_their_order() {
+    use freemapper_course::ControlKind as PKind;
+    // From scratch and without a link the project keeps S1, F1 and CP, while a re-import names them STA1,
+    // FIN1 and CROSS1. Neither id nor name pairs them, so the k-th of each kind pairs with the k-th.
+    let (mut event, map) = luebeck();
+    for s in &mut event.specials {
+        if let SpecialObject::Start { ppen_id, .. } | SpecialObject::Finish { ppen_id, .. } = s {
+            *ppen_id = None;
+        }
+    }
+    let first = export_ppen(&event, &map, target(None, false)).unwrap();
+    let start = event
+        .specials
+        .iter_mut()
+        .find_map(|s| match s {
+            SpecialObject::Start { map_mm, .. } => Some(map_mm),
+            _ => None,
+        })
+        .unwrap();
+    start.x += 7.4;
+    let moved_start = start.clone();
+    let cp = event
+        .controls
+        .iter_mut()
+        .find(|c| c.code.0 == "CP")
+        .unwrap();
+    cp.map_mm.y += 2.0;
+    let moved_cp = cp.map_mm.clone();
+    let out = export(&event, &map, first.text.as_bytes(), false);
+    let back = read(&out.text);
+    let of = |kind| -> Vec<_> { back.controls.iter().filter(|c| c.kind == kind).collect() };
+    let starts = of(PKind::Start);
+    assert_eq!(starts.len(), 1, "{}", out.text);
+    let at = starts[0].position.unwrap();
+    assert!((at.x_mm - moved_start.x).abs() < 0.001 && (at.y_mm + moved_start.y).abs() < 0.001);
+    assert_eq!(of(PKind::Finish).len(), 1);
+    let crossings = of(PKind::CrossingPoint);
+    assert_eq!(crossings.len(), 1, "{}", out.text);
+    let at = crossings[0].position.unwrap();
+    assert!((at.x_mm - moved_cp.x).abs() < 0.001 && (at.y_mm + moved_cp.y).abs() < 0.001);
+    assert!(
+        !out.notes.iter().any(|n| matches!(n, ExportNote::Kept(_))),
+        "{:?}",
+        out.notes
+    );
+    // The ids come back under the project's names.
+    assert!(
+        out.ids.specials.iter().any(|(id, _)| id == "S1"),
+        "{:?}",
+        out.ids
+    );
+    assert!(
+        out.ids.controls.iter().any(|(code, _)| code.0 == "CP"),
+        "{:?}",
+        out.ids
+    );
+    // Only the moved objects changed.
+    let text = first.text.clone();
+    assert_eq!(changed_lines(&text, &out.text).len(), 2, "{}", out.text);
 }

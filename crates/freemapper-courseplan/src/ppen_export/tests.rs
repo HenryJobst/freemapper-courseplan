@@ -389,12 +389,6 @@ fn team_relay_score_are_skipped_and_named() {
     assert_eq!(
         got.notes,
         vec![
-            ExportNote::CodeNotStored {
-                code: "S1".to_owned()
-            },
-            ExportNote::CodeNotStored {
-                code: "F1".to_owned()
-            },
             skipped("T", "team"),
             skipped("R", "relay"),
             skipped("S", "score"),
@@ -554,17 +548,26 @@ fn starts_finishes_and_crossing_points() {
     assert_eq!(codes, ["STA1", "31", "CROSS1", "X7", "F1"]);
     assert!(stops[1].number_text_at.is_some());
     assert_eq!(stops[2].number_text_at, None);
-    // A re-import names starts, finishes and crossing points STA1, FIN1, CROSS1 … in file order.
+    // A re-import names starts, finishes and crossing points STA1, FIN1, CROSS1 … in file order. That
+    // is expected and not noted.
+    assert_eq!(got.notes, vec![]);
+}
+
+#[test]
+fn code_not_stored_only_for_a_normal_control() {
+    // The reader trims a code, so a normal control whose code has blanks at an end comes back under
+    // another one. Starts, finishes and crossing points have no stored code and get no note.
+    let mut ev = event(
+        &[("31", 10.0, 10.0), (" 33", 20.0, 20.0), ("CP", 30.0, 30.0)],
+        vec![course("A", &["31", " 33", "CP"])],
+    );
+    ev.controls[2].kind = ControlKind::CrossingPoint;
+    let got = sprint(&ev);
     assert_eq!(
         got.notes,
-        vec![
-            ExportNote::CodeNotStored {
-                code: "F1".to_owned()
-            },
-            ExportNote::CodeNotStored {
-                code: "X7".to_owned()
-            },
-        ]
+        vec![ExportNote::CodeNotStored {
+            code: " 33".to_owned()
+        }]
     );
 }
 

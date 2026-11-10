@@ -8,7 +8,8 @@
 //! - Controls: starts and finishes become controls of kind start and finish, coded by their special
 //!   object id, first and in the project's order; then the project's controls and crossing points. Purple
 //!   Pen stores a code only for normal controls; a re-import names the others `STA1`, `FIN1`, `CROSS1` …
-//!   in file order, and a code that does not come back so is noted ([`ExportNote::CodeNotStored`]).
+//!   in file order. That is expected and not noted *(controller's ruling)*; [`ExportNote::CodeNotStored`]
+//!   is left for a normal control whose code the reader would not give back.
 //! - Courses: individual courses become normal courses with one leg per pair of stops, its bends and
 //!   whether it is taped (a marked route). Team, relay and score courses are skipped and named, as the IOF
 //!   XML export does *(Claude's call)*. The print scale is the planned one, else the map scale, which is
@@ -24,7 +25,9 @@
 //!   points. A marked route special and a forbidden route of several points have no Purple Pen
 //!   counterpart and are skipped; so is an object whose course list names only courses not written.
 //! - Ids: the Purple Pen ids of the project only when asked, that is when the target is the file the project
-//!   is linked to; ids from another file could capture unrelated objects there.
+//!   is linked to or a new file; ids from another file could capture unrelated objects there. Onto an
+//!   unlinked base file, starts, finishes and crossing points that pair neither by id nor by name pair by
+//!   their order ([`kth_renames`]).
 //! - Descriptions: a `.ppen` stores Purple Pen's symbol ids, which are 2004 numbers with suffixes, while the
 //!   project stores IOF Control Descriptions 2024 numbers. [`ppen_columns`] inverts the import's table
 //!   ([`iof_2024`]). The inverse is built by enumerating every Purple Pen id through the import's table, so
@@ -61,7 +64,7 @@ use crate::map::{MapKind, map_kind};
 use crate::numbers::{circle_outer_radius_mm, number_box_mm};
 use crate::omap::MapDocument;
 use crate::ppen_import::{DIRECTIONS, iof_2024};
-use crate::ppen_import::{PpenImportError, import_ppen};
+use crate::ppen_import::{PpenImport, PpenImportError, import_ppen};
 
 /// The project mapped onto a Purple Pen event, with what the mapping left out or changed.
 #[derive(Debug, Clone, PartialEq)]
@@ -87,8 +90,9 @@ pub enum ExportNote {
         column: char,
         id: String,
     },
-    /// A start, finish or crossing point whose code a re-import would not give back: Purple Pen stores no
-    /// code for them, and the import names them `STA1`, `FIN1`, `CROSS1` … in file order.
+    /// A normal control whose code a re-import would not give back: one with blanks at an end, which the
+    /// reader trims. Starts, finishes and crossing points get no note, although Purple Pen stores
+    /// no code for them and the import names them `STA1`, `FIN1`, `CROSS1` … in file order.
     CodeNotStored { code: String },
     /// Purple Pen flags the leg on its own (into a map exchange or a finish whose symbol is 14.1), although
     /// the project's leg is not taped.
@@ -183,6 +187,8 @@ pub fn export_ppen(
 ) -> Result<PpenExport, PpenExportError> {
     let kind = map_kind(map);
     let map_scale = map.georef.scale_denominator;
+    // Project names of starts, finishes and crossing points paired by their order, by the base file's name.
+    let mut back: HashMap<String, String> = HashMap::new();
     let (overlaid, written, mut notes) = match target.base {
         None => {
             let mapped = to_raw_in(
@@ -218,6 +224,19 @@ pub fn export_ppen(
         Some(bytes) => {
             let base = crate::ppen_import::read(bytes)?;
             let import = import_ppen(bytes, map)?;
+            let renames = if target.linked {
+                HashMap::new()
+            } else {
+                kth_renames(event, &import)
+            };
+            let renamed;
+            let event = if renames.is_empty() {
+                event
+            } else {
+                renamed = rename(event, &renames);
+                back = renames.into_iter().map(|(p, b)| (b, p)).collect();
+                &renamed
+            };
             let standard = base_standard(&base, bytes);
             let scaling = base.source.item_scaling.unwrap_or_default();
             let mapped = to_raw_in(event, kind, map_scale, scaling, &standard, target.linked);
@@ -269,6 +288,26 @@ pub fn export_ppen(
             .cloned()
             .zip(written.ids.specials.iter().copied()),
     );
+    if !back.is_empty() {
+        let name = |s: &mut String| {
+            if let Some(p) = back.get(s.as_str()) {
+                s.clone_from(p);
+            }
+        };
+        ids.controls.iter_mut().for_each(|(c, _)| name(&mut c.0));
+        ids.specials.iter_mut().for_each(|(s, _)| name(s));
+        for note in &mut notes {
+            match note {
+                ExportNote::SymbolWithoutPpenId { control, .. } => name(control),
+                ExportNote::FlaggingImplied { from, to, .. }
+                | ExportNote::PartialFlaggingDropped { from, to, .. } => {
+                    name(from);
+                    name(to);
+                }
+                _ => {}
+            }
+        }
+    }
     Ok(PpenExport {
         text: written.text,
         ids,
@@ -302,6 +341,94 @@ fn base_standard(base: &RawEvent, bytes: &[u8]) -> String {
             Ok(_) => {}
         }
     }
+}
+
+/// Renames that pair the project's starts, finishes and crossing points with those of an unlinked base
+/// file by their order, from project name to the import's name.
+///
+/// Purple Pen stores no code for these objects, and the import names them `STA1`, `FIN1`, `CROSS1` … in
+/// file order, while a project that did not come from the file has its own names (`S1`, `F1`, its own
+/// code). Without a link there is no Purple Pen id either, so nothing pairs them, and every export would
+/// add a moved start once more. The fallback, per kind: when the project has as many of the kind as the
+/// import, and not one of them pairs by name, the k-th of the project is the k-th of the import, in file
+/// order, the order in which the import gives the names *(controller's ruling)*. The kind is left alone
+/// when a counterpart name is in use in the project for something else.
+fn kth_renames(event: &Event, import: &PpenImport) -> HashMap<String, String> {
+    let starts = |specials: &[SpecialObject], start: bool| -> Vec<String> {
+        specials
+            .iter()
+            .filter(|s| match s {
+                SpecialObject::Start { .. } => start,
+                SpecialObject::Finish { .. } => !start,
+                _ => false,
+            })
+            .map(|s| s.id().to_owned())
+            .collect()
+    };
+    let crossings = |controls: &[Control]| -> Vec<String> {
+        controls
+            .iter()
+            .filter(|c| c.kind == ControlKind::CrossingPoint)
+            .map(|c| c.code.0.clone())
+            .collect()
+    };
+    let used: HashSet<&str> = event
+        .controls
+        .iter()
+        .map(|c| c.code.0.as_str())
+        .chain(event.specials.iter().map(SpecialObject::id))
+        .collect();
+    let kinds = [
+        (
+            starts(&event.specials, true),
+            starts(&import.specials, true),
+        ),
+        (
+            starts(&event.specials, false),
+            starts(&import.specials, false),
+        ),
+        (crossings(&event.controls), crossings(&import.controls)),
+    ];
+    let mut out = HashMap::new();
+    for (project, base) in kinds {
+        let fits = !project.is_empty()
+            && project.len() == base.len()
+            && !project.iter().any(|p| base.contains(p))
+            && !base.iter().any(|b| used.contains(b.as_str()));
+        if fits {
+            out.extend(project.into_iter().zip(base));
+        }
+    }
+    out
+}
+
+/// `event` with the starts, finishes and crossing points of `renames` under their new names, in the
+/// courses too.
+fn rename(event: &Event, renames: &HashMap<String, String>) -> Event {
+    let name = |s: &mut String| {
+        if let Some(n) = renames.get(s.as_str()) {
+            s.clone_from(n);
+        }
+    };
+    let mut out = event.clone();
+    for c in &mut out.controls {
+        name(&mut c.code.0);
+    }
+    for s in &mut out.specials {
+        if let SpecialObject::Start { id, .. } | SpecialObject::Finish { id, .. } = s {
+            name(id);
+        }
+    }
+    for c in &mut out.courses {
+        name(&mut c.start);
+        name(&mut c.finish);
+        if let CourseKind::Individual { controls } = &mut c.kind {
+            for cc in controls {
+                name(&mut cc.code.0);
+            }
+        }
+    }
+    out
 }
 
 /// The description standard the export states. Purple Pen 3.x knows 2004 and 2018 and stores 2004 ids
@@ -492,37 +619,19 @@ fn description(c: &Control, standard: &str, notes: &mut Vec<ExportNote>) -> Opti
     })
 }
 
-/// The codes of starts, finishes and crossing points that a re-import would name otherwise. The reader
-/// gives them the codes of Purple Pen's IOF XML export: prefix and a count per kind in file order, skipping
-/// codes in use.
+/// The codes of normal controls that a re-import would not give back: the reader trims a code, so one
+/// with blanks at an end comes back otherwise.
+///
+/// Starts, finishes and crossing points are left out on purpose *(controller's ruling)*: Purple Pen stores
+/// no code for them, a re-import names them `STA1`, `FIN1`, `CROSS1` … in file order, and an export onto
+/// the file pairs them again (by Purple Pen id, else by that name, else by their order; see
+/// [`kth_renames`]). A note for each would only be noise.
 fn codes_not_stored(controls: &[PControl<RawPoint>]) -> Vec<String> {
-    let mut used: HashSet<String> = controls
+    controls
         .iter()
-        .filter(|c| c.kind == PKind::Control && !c.code.is_empty())
+        .filter(|c| c.kind == PKind::Control && c.code.trim() != c.code)
         .map(|c| c.code.clone())
-        .collect();
-    let mut counters: BTreeMap<&str, u32> = BTreeMap::new();
-    let mut out = Vec::new();
-    for c in controls {
-        let prefix = match c.kind {
-            PKind::Start => "STA",
-            PKind::Finish => "FIN",
-            PKind::CrossingPoint => "CROSS",
-            _ => continue,
-        };
-        let n = counters.entry(prefix).or_insert(0);
-        let given = loop {
-            *n += 1;
-            let code = format!("{prefix}{n}");
-            if used.insert(code.clone()) {
-                break code;
-            }
-        };
-        if given != c.code {
-            out.push(c.code.clone());
-        }
-    }
-    out
+        .collect()
 }
 
 /// The print scale a course states in the file and the `CourseObjRatio` the reader computes from it.
