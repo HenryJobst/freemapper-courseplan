@@ -12,10 +12,10 @@ rust-version = "1.88"
 [workspace.dependencies]
 freemapper-courseplan-model = { path = "crates/freemapper-courseplan-model" }
 freemapper-courseplan = { path = "crates/freemapper-courseplan" }
-freemapper-text = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.4.2" }
-freemapper-rules = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.4.2" }
-freemapper-omap = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.4.2" }
-freemapper-course = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.4.2" }
+freemapper-text = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.5.1" }
+freemapper-rules = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.5.1" }
+freemapper-omap = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.5.1" }
+freemapper-course = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.5.1" }
 serde = { version = "1", features = ["derive"] }
 toml = "1.2.1"
 toml_edit = { version = "=0.25.17", features = ["serde"] }
