@@ -316,6 +316,14 @@ Workspace with three crates *(Claude's call)*:
   have one point, as Purple Pen stores a cross. `ppen_id` is kept for the sync. See ADR 0034.
 - **`.ppen` export**: everything the model can express in `.ppen`, so freemapper-print and Purple Pen read
   the event. Formats Purple Pen cannot represent (team) are refused with a clear message.
+  **Built (one way, no deletions):** `export PROJECT --ppen FILE [--new]` and the MCP tool `export_ppen`, on the
+  writer in freemapper-core v0.4.0 (`freemapper-course`). An existing FILE is patched: what the project does
+  not hold (circle gaps, map exchange, column F text, course length, objects added in Purple Pen) stays as it
+  is, and only lines that differ are rewritten. `--new` writes the file from scratch *(Claude's call)*. The
+  export never deletes: an object that is in the file but not in the project stays and is reported as kept; the
+  sync (M3c) will decide deletions *(Claude's call)*. Team, relay and score courses are skipped and named.
+  The description standard comes from the base file (2018 for a new file). Where the model and Purple Pen
+  differ, a note says what was left out or kept. See ADR 0035.
 - **IOF XML 3.0 export**: see §5.5b.
 
 ### 5.5a Synchronisation with Purple Pen
@@ -339,6 +347,12 @@ Claude's call.)*
   that the file's version is one it knows and refuses otherwise, so a newer Purple Pen file is never damaged.
   Purple Pen 4 (4.0.0 beta) is installed on the author's Mac and already used for small courses *(user,
   2026-11-08)*; the reader and writer cover the 3.x and 4.0 files, and M3 tests the round trip with both.
+- **Built so far: the export half** (ADR 0035). Linking works so that the next export and the later sync find the
+  same objects: an export that creates a new file, or runs with `--new`, links the project (`sources.ppen`) when
+  it has no link yet, and stores the Purple Pen ids in the project. For the linked file the stored ids are
+  sent and new ids are stored; for any other target nothing is written back and the link stays *(Claude's
+  call)*. Without a link, starts, finishes and crossing points pair by code, else by order when the counts
+  match, all or nothing per kind. The user wants to keep using Purple Pen in parallel *(user, 2026-11-08)*.
 - **Not in scope.** Live editing by several people at the same moment. Sync is a step someone runs.
 
 ### 5.5b IOF XML 3.0 export
@@ -497,8 +511,12 @@ The builder may start the editor earlier if placing controls through the CLI tur
   symbols 702, 709, 710; IOF texts were read from mirrors (research §5).
 
 - **`.ppen` import against real events** (§5.5): tested with three core fixtures on generated maps; a real file
-  on the Lübeck map is still open. `sync` and the `.ppen` export (§5.5a) are not built; freemapper-print is to be
-  told when the export exists *(agreed with freemapper-print)*.
+  on the Lübeck map is still open. `sync` (§5.5a) is not built.
+- **`.ppen` export in Purple Pen 4.0** (§5.5): the export is tested by reading it back with the core reader and
+  by byte-identical re-export of three Purple Pen files. It has not been opened in Purple Pen 4.0 yet. The
+  author is asked to open `examples/luebeck-sprint/luebeck-sprint.ppen` and report; core plan Task 6 waits for
+  a Purple Pen 4.0 file to commit. freemapper-print is to be told that the export exists *(agreed with
+  freemapper-print)*.
 
 ## 10. Left to the builder
 

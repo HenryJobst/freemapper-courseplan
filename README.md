@@ -28,8 +28,9 @@ Geplant ist für die erste Version:
 - Prüfungen nach den Wettkampfbestimmungen 2026 mit Aufsätzen für regionale Empfehlungen, etwa Postenabstände,
   spitze und fast gestreckte Winkel und genug verschiedene erste Posten für eine kompakte Startliste, jeweils
   mit Quelle und mit begründeten Ausnahmen (`check`, schon nutzbar);
-- Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (der Import ist
-  schon nutzbar, `import`);
+- Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (Import und
+  Export sind schon nutzbar, `import` und `export --ppen`; der Abgleich fehlt noch, und der Export ist in Purple Pen 4.0
+  noch nicht geöffnet worden);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser, über die Kommandozeile oder über einen KI-Assistenten (MCP).
@@ -99,8 +100,15 @@ schreibt das Programm noch nicht, Mannschafts-, Staffel- und Score-Bahnen übers
 übernehmen Posten, Beschreibungen, Bahnen, Knickpunkte, abgeflaggte Strecken, Nummernlagen und Sonderobjekte aus einem
 Purple-Pen-Event, das für dieselbe Karte gezeichnet ist; der KI-Assistent hat dafür das Werkzeug `import_ppen`. Was
 das Modell nicht fassen kann, etwa Varianten, Score-Bahnen oder Lücken, nennt das Programm als Hinweis. Ein Projekt
-mit Inhalt ersetzt `import` nur mit `--replace`; Kategorien und akzeptierte Befunde bleiben dabei. Der Rückweg
-(Export und Abgleich) fehlt noch. Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgleichen) erklärt es.
+mit Inhalt ersetzt `import` nur mit `--replace`; Kategorien und akzeptierte Befunde bleiben dabei. Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgleichen) erklärt es.
+
+`freemapper-courseplan export <Projekt> --ppen <Datei>` schreibt die Einzelbahnen als Purple-Pen-Event; der
+KI-Assistent hat dafür das Werkzeug `export_ppen`. Eine vorhandene Datei ändert der Export an Ort und Stelle und
+lässt stehen, was das Projekt nicht kennt, etwa Lücken in Kreisen oder Kartenwechsel; mit `--new` schreibt er sie neu.
+Er löscht nie etwas und meldet, was in der Datei steht und im Projekt fehlt. Den Schreiber liefert `freemapper-course`
+in freemapper-core. Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) ist ein
+Export. **Purple Pen 4.0 hat die Datei noch nicht geöffnet.** Wer Purple Pen 4.0 hat, soll sie öffnen und melden, was
+ankommt. Den Abgleich in beide Richtungen mit Übernahme der Änderungen aus Purple Pen gibt es noch nicht.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

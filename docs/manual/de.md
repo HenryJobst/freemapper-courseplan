@@ -253,7 +253,7 @@ sie nicht erfinden.
 
 ## 9. Mit Purple Pen abgleichen
 
-Bisher geht nur der Weg hinein: `import` übernimmt ein Purple-Pen-Event (`.ppen`), das für dieselbe Karte gezeichnet
+Der Weg hinein ist `import`; der Weg zurück ist `export --ppen` (weiter unten). Ein Abgleich, der Änderungen aus Purple Pen zurückholt, fehlt noch. `import` übernimmt ein Purple-Pen-Event (`.ppen`), das für dieselbe Karte gezeichnet
 ist. Die Karte muss in OOM vorliegen und denselben Maßstab haben wie das Event.
 
 ```sh
@@ -279,6 +279,49 @@ fehlt in der Beschreibung und steht im Hinweis.
 
 Der KI-Assistent hat dafür das Werkzeug `import_ppen` mit `project`, `path` und `replace`. Die Entscheidungen
 dahinter stehen in ADR 0034.
+
+### Export nach Purple Pen
+
+```sh
+freemapper-courseplan export projekt.courseplan.toml --ppen event.ppen
+freemapper-courseplan export projekt.courseplan.toml --ppen event.ppen --new
+```
+
+Der Export schreibt die Einzelbahnen als Purple-Pen-Event. Gibt es die Datei schon, ändert er sie an Ort und
+Stelle: Was das Projekt nicht kennt, bleibt stehen, nämlich Lücken in Kreisen und Strecken, Kartenwechsel, Text
+in Spalte F der Beschreibung und die Länge einer geänderten Bahn. Nur Zeilen, die sich unterscheiden, werden neu
+geschrieben. Mit `--new` entsteht die Datei neu, und die alte geht verloren. Ohne vorhandene Datei legt der Export
+sie an; die Beschreibungen folgen dann dem Standard 2018. Ein vorhandenes Event behält seinen Standard.
+
+Der Export löscht nie. Steht ein Posten, eine Bahn oder ein Sonderobjekt in der Datei, aber nicht im Projekt, bleibt
+es dort, und das Programm meldet es als behalten. Das Projekt kann nicht wissen, ob es dort gelöscht oder in Purple
+Pen neu angelegt wurde. Das soll der spätere Abgleich entscheiden.
+
+Die Purple-Pen-Kennungen bestimmen, welches Objekt welches ist. Gilt die Datei als Partnerdatei des Projekts
+(`sources.ppen`), schickt der Export die gespeicherten Kennungen mit und speichert neue im Projekt. Das gilt auch,
+wenn der Export die Datei neu anlegt oder mit `--new` ersetzt und das Projekt noch keine Partnerdatei hat; dann trägt
+er sie ein. Hat das Projekt schon eine andere Partnerdatei, bleibt es dabei. Bei jedem anderen Ziel schreibt der Export
+nichts ins Projekt zurück. Ohne Verknüpfung ordnet er Starts, Ziele und Querungsstellen nach ihrem Code zu, sonst nach
+der Reihenfolge, wenn die Zahlen gleich sind (je Art ganz oder gar nicht).
+
+Das Programm nennt auf dem Terminal, was es nicht oder anders schreibt:
+
+- Mannschafts-, Staffel- und Score-Bahnen entfallen, jede mit ihrer Art.
+- Ein Symbol ohne Gegenstück in Purple Pen fehlt in der Beschreibung.
+- Ändern sich die Knickpunkte einer Strecke, verliert ihre teilweise abgeflaggte Strecke die Markierung.
+- Ein geänderter Titel der Veranstaltung gelangt nicht in eine vorhandene Datei.
+- Hat Purple Pen eine Strecke selbst abgeflaggt, die das Projekt nicht kennzeichnet, steht das als Hinweis da.
+
+Als Ziel sind die Projektdatei, die Karte und die Zieldatei von `--iof-xml` im selben Aufruf nicht erlaubt. Eine Basisdatei
+liest das Programm nur bis zur festen Größengrenze; eine kaputte oder fremde Datei gibt eine Fehlermeldung. Passt die
+Datei nicht zur Karte, schreibt der Export nichts.
+
+**Noch nicht in Purple Pen 4.0 geöffnet.** Die Datei wird mit dem Leser von freemapper-course wieder eingelesen, und der
+Export einer eingelesenen Datei ergibt dieselben Bytes. Das Beispiel
+[`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen) wartet auf einen Test mit Purple Pen 4.0.
+
+Der KI-Assistent hat dafür das Werkzeug `export_ppen` mit `project`, `path` und `new`; der Pfad muss auf `.ppen`
+enden. Der Schreiber liegt in `freemapper-course` (freemapper-core), die Entscheidungen stehen in ADR 0035.
 
 ## 10. Weitergeben: IOF-XML für OE
 

@@ -19,6 +19,7 @@ courses from a `.ppen`; its PDF then replaces this sketch.
 - `transcript.en.txt`, `transcript.de.txt`: the commands and their output
 - `check.en.txt`, `check.de.txt`: checking the course, with one accepted hint
 - `course-data.xml`: the course as IOF XML 3.0, made by `export` (see below)
+- `luebeck-sprint.ppen`: the course as a Purple Pen event, made by `export --ppen` (see below)
 - `preview.jpg`, `make-preview.py`: the sketch and its script
 
 ## How the course was set
@@ -107,6 +108,14 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-d
 
 The file validates against the IOF schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
 course-data.xml`). Its `createTime` is fixed at `2026-11-09T12:00:00Z` so a test can compare the file; a run of your own writes the current time in UTC. A test also reads it back with the IOF reader of freemapper-course. An import into OE, Purple Pen or Condes has not been tested, because nobody on the project has OE. If you do it, please report what arrives.
+
+## Purple Pen export
+
+```text
+$ freemapper-courseplan export luebeck-sprint.courseplan.toml --ppen luebeck-sprint.ppen
+```
+
+The file does not exist yet, so `export` writes it from scratch and records it in the project as `sources.ppen`. A test compares the file with a fresh export. Another reads it back and exports onto it a second time, with the same bytes. **The file has not been opened in Purple Pen 4.0.** If you have Purple Pen 4.0, please open it and report whether it loads and whether controls, course and numbers sit in the right place. The description texts are English because the example was made with the English interface.
 
 ## Making the sketch again
 

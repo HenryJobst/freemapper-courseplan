@@ -833,3 +833,88 @@ fn unlinked_starts_finishes_and_crossing_points_pair_by_their_order() {
     let text = first.text.clone();
     assert_eq!(changed_lines(&text, &out.text).len(), 2, "{}", out.text);
 }
+
+// ---- the committed example and the round trip through our own reader ----
+
+const EXAMPLE_PPEN: &str = "examples/luebeck-sprint/luebeck-sprint.ppen";
+
+/// The Lübeck example project as it is committed, with the map it names.
+fn luebeck_example() -> (Event, MapDocument) {
+    let path = repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+    let event = ProjectFile::load(&path).unwrap().event;
+    let map = read_map_file(&path.parent().unwrap().join(&event.sources.map)).unwrap();
+    (event, map)
+}
+
+/// The export `export --ppen examples/luebeck-sprint/luebeck-sprint.ppen` makes for a new file: no base,
+/// the map named relative to the `.ppen`, English texts.
+fn example_export() -> PpenExport {
+    let (event, map) = luebeck_example();
+    let target = Target {
+        base: None,
+        linked: true,
+        map_path: "../../tests/fixtures/maps/luebeck.omap".to_owned(),
+        lang: "en",
+    };
+    export_ppen(&event, &map, target).unwrap()
+}
+
+#[test]
+fn courseplan_reads_its_own_export_twice() {
+    let (original, map) = luebeck_example();
+    let first = example_export();
+    // Import the first export into a new project on the same map.
+    let import = import_ppen(first.text.as_bytes(), &map).unwrap();
+    let second = valid_event(&import);
+    // Our own export is read back without notes about anything we wrote.
+    assert_eq!(second.courses.len(), original.courses.len());
+    for c in &original.controls {
+        let name = match c.code.0.as_str() {
+            "S1" => "STA1",
+            "F1" => "FIN1",
+            other => other,
+        };
+        let back = second
+            .controls
+            .iter()
+            .find(|b| b.code.0 == name)
+            .unwrap_or_else(|| panic!("{name}"));
+        near(&back.map_mm, &c.map_mm, name);
+    }
+    for (a, b) in original.courses.iter().zip(&second.courses) {
+        assert_eq!(a.name, b.name);
+        let (x, y) = (numbers(&original, a), numbers(&second, b));
+        assert_eq!(x.len(), y.len(), "{}", a.name);
+        for (p, q) in x.iter().zip(&y) {
+            match (p, q) {
+                (None, None) => {}
+                (Some(p), Some(q)) => {
+                    assert!((p.direction - q.direction).abs() <= 0.01, "{}", a.name);
+                    assert!((p.gap_mm - q.gap_mm).abs() <= 0.01, "{}", a.name);
+                }
+                other => panic!("{}: {other:?}", a.name),
+            }
+        }
+    }
+    // Export again onto the first file, linked: the same bytes, and reading them gives the same project.
+    let again = export(&second, &map, first.text.as_bytes(), true);
+    assert_eq!(again.text, first.text);
+    let third = valid_event(&import_ppen(again.text.as_bytes(), &map).unwrap());
+    assert_eq!(third.controls, second.controls);
+    assert_eq!(third.courses, second.courses);
+    assert_eq!(third.specials, second.specials);
+}
+
+#[test]
+fn the_committed_example_ppen_is_the_current_export() {
+    let text = example_export().text;
+    let path = repo_root().join(EXAMPLE_PPEN);
+    if std::env::var_os("UPDATE_SNAPSHOT").is_some() {
+        std::fs::write(&path, &text).unwrap();
+    }
+    let committed = std::fs::read_to_string(&path).unwrap();
+    assert!(
+        text == committed,
+        "{EXAMPLE_PPEN} is stale; rerun with UPDATE_SNAPSHOT=1"
+    );
+}

@@ -29,8 +29,9 @@ Planned for the first version:
 - checks against the German competition rules (WKB) 2026 with overlays for regional recommendations, such as
   control distances, acute and almost straight angles and enough different first controls for a compact start
   list, each with its source and with exceptions you can give reasons for (`check`, usable now);
-- exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side (the import is
-  usable now, `import`);
+- exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side (import and
+  export are usable now, `import` and `export --ppen`; the sync is still missing, and the export has not been opened
+  in Purple Pen 4.0 yet);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser, the command line or an AI assistant (MCP).
@@ -100,8 +101,16 @@ relay and score courses are skipped. Chapter 10 of the
 take over controls, descriptions, courses, bends, marked routes, number positions and special objects from a Purple Pen event
 drawn for the same map; the AI assistant has the tool `import_ppen`. What the model cannot hold, such as variations,
 score courses or gaps, the program names in a note. `import` replaces a project that already has content only with
-`--replace`; classes and accepted findings stay. The way back (export and sync) is still missing. Chapter 9 of the
+`--replace`; classes and accepted findings stay. Chapter 9 of the
 [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) explains it.
+
+`freemapper-courseplan export <project> --ppen <file>` writes the individual courses as a Purple Pen event; the AI
+assistant has the tool `export_ppen`. It changes an existing file in place and leaves alone what the project does not
+know, such as circle gaps or map exchange; with `--new` it writes the file from scratch. It never deletes anything and
+reports what is in the file but not in the project. The writer is `freemapper-course` in freemapper-core. The example
+[`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) is such an export. **Purple Pen 4.0 has not
+opened the file yet.** If you have Purple Pen 4.0, please open it and report what arrives. The sync in both directions,
+which takes changes made in Purple Pen back into the project, does not exist yet.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

@@ -8,6 +8,17 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- `freemapper-courseplan export <Projekt> --ppen <Datei> [--new]` schreibt die Einzelbahnen als Purple-Pen-Event.
+  Eine vorhandene Datei ändert der Export an Ort und Stelle und lässt alles stehen, was das Projekt nicht kennt
+  (Lücken in Kreisen und Strecken, Kartenwechsel, Text in Spalte F, Bahnlänge); `--new` schreibt die Datei neu.
+  Der Export löscht nie: Was in der Datei steht und im Projekt fehlt, bleibt und wird als behalten gemeldet. Was
+  er nicht oder anders schreibt (Mannschafts-, Staffel- und Score-Bahnen, Symbole ohne Purple-Pen-Gegenstück,
+  abgeflaggte Teilstrecken nach geänderten Knickpunkten), nennt er als Hinweis. Eine neu angelegte Datei trägt er
+  im Projekt als `sources.ppen` ein, wenn dort noch keine steht; für diese Datei speichert er die
+  Purple-Pen-Kennungen im Projekt. Der KI-Assistent hat das Werkzeug `export_ppen`. Den Schreiber liefert
+  freemapper-core v0.4.0 (`freemapper-course`). **In Purple Pen 4.0 noch nicht geöffnet** (ADR 0035).
+- Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen); ein Test vergleicht es mit
+  einem frischen Export, ein zweiter liest es wieder ein und exportiert es auf sich selbst.
 - Ein Test liest den IOF-XML-Export (Lübeck-Beispiel und ein Ereignis mit Wechselpunkt) mit dem IOF-Leser von
   freemapper-course wieder ein und vergleicht Posten, Positionen, Bahnen, Reihenfolge und Nummernlagen.
 

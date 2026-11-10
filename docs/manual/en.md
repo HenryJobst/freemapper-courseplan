@@ -244,7 +244,7 @@ accepts one. You write the note or dictate it. The assistant should not invent o
 
 ## 9. Exchanging with Purple Pen
 
-For now the way in works only: `import` takes over a Purple Pen event (`.ppen`) drawn for the same map. The map
+The way in is `import`; the way back is `export --ppen` (below). A sync that brings changes from Purple Pen back is still missing. `import` takes over a Purple Pen event (`.ppen`) drawn for the same map. The map
 must be an OOM file at the same scale as the event.
 
 ```sh
@@ -270,6 +270,48 @@ control, is missing from the description and named in the note.
 
 The AI assistant has the tool `import_ppen` for this, with `project`, `path` and `replace`. The decisions behind
 it are in ADR 0034.
+
+### Export to Purple Pen
+
+```sh
+freemapper-courseplan export project.courseplan.toml --ppen event.ppen
+freemapper-courseplan export project.courseplan.toml --ppen event.ppen --new
+```
+
+The export writes the individual courses as a Purple Pen event. If the file exists, the export changes it in place.
+What the project does not know stays: gaps in circles and legs, map exchange, column F text of a description and the
+length of a changed course. Only lines that differ are rewritten. With `--new` the file is written from scratch and
+the old one is lost. If there is no file, the export creates it, with descriptions in the 2018 standard. An existing
+event keeps its standard.
+
+The export never deletes. If a control, course or special object is in the file but not in the project, it stays
+there and the program reports it as kept. The project cannot tell whether it was deleted here or added in Purple
+Pen. The later sync is to decide that.
+
+The Purple Pen ids decide which object is which. If the file is the project's linked file (`sources.ppen`), the export
+sends the stored ids and stores new ones in the project. That also holds when the export creates the file or replaces it
+with `--new` and the project has no linked file yet; it then records the file. If the project already has another linked
+file, that link stays. For any other target the export writes nothing back into the project. Without a link it pairs
+starts, finishes and crossing points by code, else by order when the counts are equal (all or nothing per kind).
+
+The program names on the terminal what it writes differently or not at all:
+
+- Team, relay and score courses are left out, each with its kind.
+- A symbol with no counterpart in Purple Pen is missing from the description.
+- If the bends of a leg change, its partial flagging loses the marking.
+- A changed event title does not reach an existing file.
+- If Purple Pen flags a leg by itself that the project does not mark, a note says so.
+
+The project file, the map and the `--iof-xml` target of the same call are not allowed as targets. The program reads a
+base file only up to a fixed size limit; a broken or foreign file gives an error message. If the file does not fit the
+map, the export writes nothing.
+
+**Not yet opened in Purple Pen 4.0.** The file reads back through the reader of freemapper-course, and exporting a file
+that was read gives the same bytes. The example
+[`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen) waits for a test with Purple Pen 4.0.
+
+The AI assistant has the tool `export_ppen` for this, with `project`, `path` and `new`; the path must end in `.ppen`.
+The writer lives in `freemapper-course` (freemapper-core); the decisions are in ADR 0035.
 
 ## 10. Handing on: IOF XML for OE
 
