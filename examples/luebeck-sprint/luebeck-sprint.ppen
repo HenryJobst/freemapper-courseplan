@@ -12,6 +12,7 @@
   </control>
   <control id="2" kind="finish">
     <location x="-95.8" y="-56.4" />
+    <description box="all" iof-2004-ref="14.3" />
   </control>
   <control id="3" kind="normal">
     <code>31</code>
