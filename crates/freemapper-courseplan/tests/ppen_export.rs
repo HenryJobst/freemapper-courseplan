@@ -548,7 +548,13 @@ fn export_from_scratch_reads_back() {
             });
         assert_eq!(b.kind, c.kind, "{}", c.code.0);
         near(&b.map_mm, &c.map_mm, &c.code.0);
-        assert_eq!(b.description, c.description, "{}", c.code.0);
+        if c.kind == ControlKind::CrossingPoint && c.description == Default::default() {
+            // The writer gives a crossing point without a symbol Purple Pen's own default (13.3),
+            // which the import reads as the 2024 instruction row 15.3.
+            assert_eq!(b.description.c.as_deref(), Some("15.3"), "{}", c.code.0);
+        } else {
+            assert_eq!(b.description, c.description, "{}", c.code.0);
+        }
     }
     fn rename(id: &str) -> &str {
         match id {

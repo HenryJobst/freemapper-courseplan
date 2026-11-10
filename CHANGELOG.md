@@ -6,6 +6,16 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.2] - 2026-11-10
+
+### Behoben
+
+- Purple Pen 4.0 stürzte beim Öffnen einer mit `export --ppen` geschriebenen `.ppen`-Datei ab: Ein Ziel ohne
+  Beschreibungssymbol brach die Beschreibungsansicht. Der Export gibt jedem Ziel, jeder Querungsstelle und jedem
+  Kartenausgabepunkt jetzt Purple Pens eigenes Symbol (14.3, 13.3, 13.6), und ein Export auf eine ältere Datei
+  ergänzt fehlende. freemapper-core 0.4.2 prüft die Ausgabe tiefer gegen die Anforderungen des Laders. Das
+  Beispiel `luebeck-sprint.ppen` ist neu erzeugt.
+
 ## [0.7.1] - 2026-11-10
 
 ### Behoben

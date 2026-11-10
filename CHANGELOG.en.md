@@ -6,6 +6,16 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-10
+
+### Fixed
+
+- Purple Pen 4.0 crashed while opening a `.ppen` written by `export --ppen`: a finish without a description symbol
+  broke the description view. The export now gives every finish, crossing point and map issue point Purple Pen's
+  own symbol (14.3, 13.3, 13.6), and an export onto an older file repairs the missing ones. freemapper-core 0.4.2
+  checks the output against the loader's requirements in more depth. The example `luebeck-sprint.ppen` is
+  regenerated.
+
 ## [0.7.1] - 2026-11-10
 
 ### Fixed
