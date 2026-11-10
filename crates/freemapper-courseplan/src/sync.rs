@@ -8,7 +8,7 @@ pub mod matching;
 pub mod merge3;
 pub mod view;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use freemapper_course::{KeptObject, PatchOptions, PpenWriteError, write_ppen_patch};
 use freemapper_courseplan_model::{Event, ModelError};
@@ -382,26 +382,59 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
     for s in &mut event.specials {
         s.set_ppen_id(None);
     }
-    for (t, name) in m.controls.iter().zip(&names.controls) {
-        if let (Some(ti), Some(name)) = (t.theirs, name)
-            && let Some(c) = event.controls.iter_mut().find(|c| &c.code.0 == name)
-        {
-            c.ppen_id = v.theirs.controls[ti].ppen_id;
-        }
+    let mut control_at: HashMap<&str, usize> = HashMap::new();
+    for (i, c) in event.controls.iter().enumerate() {
+        control_at.entry(c.code.0.as_str()).or_insert(i);
     }
-    for (t, name) in m.courses.iter().zip(&names.courses) {
-        if let (Some(ti), Some(name)) = (t.theirs, name)
-            && let Some(c) = event.courses.iter_mut().find(|c| &c.name == name)
-        {
-            c.ppen_id = v.theirs.courses[ti].ppen_id;
-        }
+    let mut course_at: HashMap<&str, usize> = HashMap::new();
+    for (i, c) in event.courses.iter().enumerate() {
+        course_at.entry(c.name.as_str()).or_insert(i);
     }
-    for (t, name) in m.specials.iter().zip(&names.specials) {
-        if let (Some(ti), Some(name)) = (t.theirs, name)
-            && let Some(s) = event.specials.iter_mut().find(|s| s.id() == name)
-        {
-            s.set_ppen_id(v.theirs.specials[ti].ppen_id());
-        }
+    let mut special_at: HashMap<&str, usize> = HashMap::new();
+    for (i, s) in event.specials.iter().enumerate() {
+        special_at.entry(s.id()).or_insert(i);
+    }
+    let control_ids: Vec<(usize, Option<u32>)> = m
+        .controls
+        .iter()
+        .zip(&names.controls)
+        .filter_map(|(t, name)| {
+            Some((
+                *control_at.get(name.as_deref()?)?,
+                v.theirs.controls[t.theirs?].ppen_id,
+            ))
+        })
+        .collect();
+    let course_ids: Vec<(usize, Option<u32>)> = m
+        .courses
+        .iter()
+        .zip(&names.courses)
+        .filter_map(|(t, name)| {
+            Some((
+                *course_at.get(name.as_deref()?)?,
+                v.theirs.courses[t.theirs?].ppen_id,
+            ))
+        })
+        .collect();
+    let special_ids: Vec<(usize, Option<u32>)> = m
+        .specials
+        .iter()
+        .zip(&names.specials)
+        .filter_map(|(t, name)| {
+            Some((
+                *special_at.get(name.as_deref()?)?,
+                v.theirs.specials[t.theirs?].ppen_id(),
+            ))
+        })
+        .collect();
+    for (i, id) in control_ids {
+        event.controls[i].ppen_id = id;
+    }
+    for (i, id) in course_ids {
+        event.courses[i].ppen_id = id;
+    }
+    for (i, id) in special_ids {
+        event.specials[i].set_ppen_id(id);
     }
 
     let written = export_ppen_as(

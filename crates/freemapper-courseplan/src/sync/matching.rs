@@ -4,6 +4,8 @@
 //! new on both sides. Purple Pen ids count only where the base holds the same id for an object of the same
 //! kind, so an id that is new, or comes from another file, never pairs two objects (D7).
 
+use std::collections::HashSet;
+
 use freemapper_courseplan_model::{Control, ControlKind, Course, MapPoint, SpecialObject};
 
 use super::view::Views;
@@ -150,11 +152,13 @@ fn match_items(base: &[Item], ours: &[Item], theirs: &[Item], has_base: bool) ->
         })
         .collect();
 
+    let claimed = |of: &[Option<usize>]| of.iter().flatten().copied().collect::<HashSet<usize>>();
+    let (ours_claimed, theirs_claimed) = (claimed(&ours_of), claimed(&theirs_of));
     let mut free_ours: Vec<usize> = (0..ours.len())
-        .filter(|i| !ours_of.contains(&Some(*i)))
+        .filter(|i| !ours_claimed.contains(i))
         .collect();
     let mut free_theirs: Vec<usize> = (0..theirs.len())
-        .filter(|i| !theirs_of.contains(&Some(*i)))
+        .filter(|i| !theirs_claimed.contains(i))
         .collect();
     let mut pairs = Vec::new();
     if !has_base {

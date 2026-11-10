@@ -758,3 +758,91 @@ fn variation_course_keeps_a_deleted_control_alive() {
         "only the variation course-control is left"
     );
 }
+
+/// The unchanged Purple Pen 4 file plus `controls` new controls and `courses` new courses of `stops` stops.
+fn with_many_additions(base: &str, controls: u32, courses: u32, stops: u32) -> String {
+    use std::fmt::Write as _;
+    let mut ctl = String::new();
+    for i in 0..controls {
+        let id = 1000 + i;
+        let (x, y) = (
+            f64::from(i % 100) * 2.0 - 100.0,
+            f64::from(i / 100) * 2.0 - 100.0,
+        );
+        write!(
+            ctl,
+            "  <control id=\"{id}\" kind=\"normal\">\n    <code>{}</code>\n    <location x=\"{x}\" y=\"{y}\" />\n  </control>\n",
+            1000 + i
+        )
+        .unwrap();
+    }
+    let mut crs = String::new();
+    let mut cc = String::new();
+    let mut next_cc = 1000u32;
+    for c in 0..courses {
+        let first = next_cc;
+        write!(
+            crs,
+            "  <course id=\"{}\" kind=\"normal\" order=\"{}\">\n    <name>P{c}</name>\n    <first course-control=\"{first}\" />\n    <options print-scale=\"4000\" description-kind=\"symbols\" />\n  </course>\n",
+            1000 + c,
+            2 + c
+        )
+        .unwrap();
+        let mut chain = vec![1u32]; // the start control
+        chain.extend((0..stops).map(|k| 1000 + (c * 7 + k * 13) % controls));
+        chain.push(2); // the finish
+        for (k, control) in chain.iter().enumerate() {
+            write!(
+                cc,
+                "  <course-control id=\"{}\" control=\"{control}\"",
+                next_cc + k as u32
+            )
+            .unwrap();
+            if k + 1 < chain.len() {
+                write!(
+                    cc,
+                    ">\n    <next course-control=\"{}\" />\n  </course-control>\n",
+                    next_cc + k as u32 + 1
+                )
+                .unwrap();
+            } else {
+                cc.push_str(" />\n");
+            }
+        }
+        next_cc += chain.len() as u32;
+    }
+    let at = base.find("  <course id=").unwrap();
+    let mut out = format!("{}{ctl}{crs}{}", &base[..at], &base[at..]);
+    let end = out.rfind("</course-scribe-event>").unwrap();
+    out.insert_str(end, &cc);
+    out
+}
+
+/// I2: classify and apply used to scan every field and every course per leg (88 s on 10,000 controls).
+#[test]
+fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
+    use freemapper_courseplan::ppen_import::import_ppen_as;
+    let (map, kind) = luebeck_map();
+    let base = fixture("luebeck-sprint-pp4-unchanged.ppen");
+    let theirs = with_many_additions(&base, 9_990, 999, 50);
+    let import = import_ppen_as(base.as_bytes(), &map, kind).unwrap();
+    let project = common::valid_event(&import);
+    let started = std::time::Instant::now();
+    let plan = sync_ppen(SyncInput {
+        project: &project,
+        base: Some(base.as_bytes()),
+        theirs: theirs.as_bytes(),
+        map: &map,
+        kind,
+        take: &[],
+        base_note: None,
+    })
+    .unwrap();
+    let elapsed = started.elapsed();
+    let (merged, _, _, _) = ready(Ok(plan));
+    assert_eq!(merged.courses.len(), project.courses.len() + 999);
+    assert!(
+        elapsed < std::time::Duration::from_secs(15),
+        "sync took {elapsed:?}"
+    );
+}

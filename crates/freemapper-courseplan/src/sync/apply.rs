@@ -171,6 +171,12 @@ struct Ctx<'a> {
     restored_sp: HashSet<usize>,
     added_courses: HashSet<String>,
     added_specials: Vec<(usize, String)>,
+    /// Codes of controls and special objects in the project, and the position of each control. Built after
+    /// the renames (`index_names`) and kept up to date by the additions, so adding n objects stays linear.
+    taken_codes: HashSet<String>,
+    control_pos: HashMap<String, usize>,
+    /// The first control of theirs per code.
+    theirs_by_code: HashMap<String, usize>,
 }
 
 impl<'a> Ctx<'a> {
@@ -245,12 +251,35 @@ impl<'a> Ctx<'a> {
             restored_sp: HashSet::new(),
             added_courses: HashSet::new(),
             added_specials: Vec::new(),
+            taken_codes: HashSet::new(),
+            control_pos: HashMap::new(),
+            theirs_by_code: {
+                let mut by_code = HashMap::new();
+                for (i, c) in v.theirs.controls.iter().enumerate() {
+                    by_code.entry(c.code.0.clone()).or_insert(i);
+                }
+                by_code
+            },
+        }
+    }
+
+    /// Builds the name indexes of the additions; the renames are done by then.
+    fn index_names(&mut self) {
+        self.taken_codes = self
+            .ev
+            .controls
+            .iter()
+            .map(|c| c.code.0.clone())
+            .chain(self.ev.specials.iter().map(|s| s.id().to_owned()))
+            .collect();
+        self.control_pos.clear();
+        for (i, c) in self.ev.controls.iter().enumerate() {
+            self.control_pos.entry(c.code.0.clone()).or_insert(i);
         }
     }
 
     fn code_taken(&self, name: &str) -> bool {
-        self.ev.controls.iter().any(|c| c.code.0 == name)
-            || self.ev.specials.iter().any(|s| s.id() == name)
+        self.taken_codes.contains(name)
     }
 
     fn course_idx(&self, name: &str) -> Option<usize> {
@@ -287,6 +316,10 @@ impl<'a> Ctx<'a> {
             });
         }
         c.code = ControlCode(name.clone());
+        self.taken_codes.insert(name.clone());
+        self.control_pos
+            .entry(name.clone())
+            .or_insert(self.ev.controls.len());
         self.ev.controls.push(c);
         self.ctl[id] = Some(name.clone());
         name
@@ -302,6 +335,7 @@ impl<'a> Ctx<'a> {
             });
         }
         set_id(&mut s, &name);
+        self.taken_codes.insert(name.clone());
         if !is_end(&s) {
             self.added_specials.push((idx, name.clone()));
         }
@@ -519,12 +553,7 @@ impl<'a> Ctx<'a> {
         if let CourseKind::Individual { controls } = &mut course.kind {
             let mut out = Vec::new();
             for cc in controls.iter() {
-                let ti = self
-                    .v
-                    .theirs
-                    .controls
-                    .iter()
-                    .position(|c| c.code == cc.code);
+                let ti = self.theirs_by_code.get(&cc.code.0).copied();
                 let Some(cid) = ti.and_then(|i| self.t_ctl[i]) else {
                     continue;
                 };
@@ -534,11 +563,9 @@ impl<'a> Ctx<'a> {
                 let mut cc = cc.clone();
                 cc.code = ControlCode(code.clone());
                 let central = self
-                    .ev
-                    .controls
-                    .iter()
-                    .find(|c| c.code.0 == code)
-                    .and_then(|c| c.number.as_ref());
+                    .control_pos
+                    .get(&code)
+                    .and_then(|&i| self.ev.controls[i].number.as_ref());
                 if cc.number.as_ref() == central {
                     cc.number = None;
                 }
@@ -599,33 +626,57 @@ impl<'a> Ctx<'a> {
         out
     }
 
-    /// Draws a leg on every course that runs between the two stops; `only_added` limits it to the courses
-    /// this sync added.
-    fn set_leg(&mut self, a: &str, b: &str, bends: &[(i64, i64)], taped: bool, only_added: bool) {
-        let bends = map_points(bends);
-        for course in &mut self.ev.courses {
-            if only_added && !self.added_courses.contains(&course.name) {
+    /// For every leg `(from, to)` the individual courses that run it: `(course index, position k in the
+    /// chain)`. Built once per apply; the stops do not change while the legs are drawn.
+    fn leg_index(&self) -> LegIndex {
+        let mut index: LegIndex = HashMap::new();
+        for (ci, course) in self.ev.courses.iter().enumerate() {
+            if !matches!(course.kind, CourseKind::Individual { .. }) {
                 continue;
             }
             let chain = Self::chain(course);
+            for (k, pair) in chain.windows(2).enumerate() {
+                index
+                    .entry((pair[0].clone(), pair[1].clone()))
+                    .or_default()
+                    .push((ci, k));
+            }
+        }
+        index
+    }
+
+    /// Draws a leg on every course that runs between the two stops; `only_added` limits it to the courses
+    /// this sync added.
+    fn set_leg(
+        &mut self,
+        index: &LegIndex,
+        (a, b): (String, String),
+        bends: &[(i64, i64)],
+        taped: bool,
+        only_added: bool,
+    ) {
+        let bends = map_points(bends);
+        for &(ci, k) in index.get(&(a, b)).into_iter().flatten() {
+            let course = &mut self.ev.courses[ci];
+            if only_added && !self.added_courses.contains(&course.name) {
+                continue;
+            }
             let CourseKind::Individual { controls } = &mut course.kind else {
                 continue;
             };
-            for k in 0..chain.len() - 1 {
-                if chain[k] != a || chain[k + 1] != b {
-                    continue;
-                }
-                if k == 0 {
-                    course.start_bends.clone_from(&bends);
-                    course.start_taped = taped;
-                } else {
-                    controls[k - 1].bends.clone_from(&bends);
-                    controls[k - 1].taped = taped;
-                }
+            if k == 0 {
+                course.start_bends.clone_from(&bends);
+                course.start_taped = taped;
+            } else {
+                controls[k - 1].bends.clone_from(&bends);
+                controls[k - 1].taped = taped;
             }
         }
     }
 }
+
+/// Legs to the courses and chain positions that run them.
+type LegIndex = HashMap<(String, String), Vec<(usize, usize)>>;
 
 /// The value of the winning side of an outcome.
 fn winner(o: &FieldOutcome, take: bool) -> Option<&FieldValue> {
@@ -685,6 +736,7 @@ pub fn apply(
     }
     cx.rename_controls(&code_renames);
     cx.rename_courses(&course_renames);
+    cx.index_names();
 
     // Objects new in Purple Pen, or put back by a conflict: controls and special objects, then courses.
     for (o, &t) in outcomes.iter().zip(&take) {
@@ -860,6 +912,7 @@ pub fn apply(
             _ => {}
         }
     }
+    let leg_index = cx.leg_index();
     for (o, &t) in outcomes.iter().zip(&take) {
         let FieldKey::Leg(a, b) = o.key else {
             continue;
@@ -869,7 +922,7 @@ pub fn apply(
         };
         if let Some(FieldValue::Leg(bends, taped)) = winner(o, t) {
             // Purple Pen's value wins on every drawing; the project's own value only reaches new courses.
-            cx.set_leg(&a, &b, bends, *taped, !t);
+            cx.set_leg(&leg_index, (a, b), bends, *taped, !t);
         }
     }
 

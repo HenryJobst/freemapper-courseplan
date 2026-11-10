@@ -34,3 +34,7 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# Debug builds run the sync on files of 10,000 controls in tests; dependencies (XML parsing) are optimized.
+[profile.dev.package."*"]
+opt-level = 2

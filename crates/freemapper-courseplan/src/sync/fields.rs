@@ -333,15 +333,9 @@ fn field_outcome(key: FieldKey, base: &Fields, ours: &Fields, theirs: &Fields) -
     }
 }
 
-/// All field values of an object on one side.
-fn whole(fields: &Fields, object: (ObjectKind, usize)) -> FieldValue {
-    FieldValue::Object(
-        fields
-            .iter()
-            .filter(|(k, _)| owner(k) == Some(object))
-            .map(|(_, v)| v.clone())
-            .collect(),
-    )
+/// All field values of an object on one side; `keys` are the object's fields on any side.
+fn whole(fields: &Fields, keys: &[FieldKey]) -> FieldValue {
+    FieldValue::Object(keys.iter().filter_map(|k| fields.get(k).cloned()).collect())
 }
 
 /// Classifies every field of every matched object, then the legs.
@@ -384,7 +378,8 @@ pub fn classify(v: &Views, m: &Matching, project: &Event) -> Vec<FieldOutcome> {
                 }
                 continue;
             }
-            let value = |present: bool, fields: &Fields| present.then(|| whole(fields, object));
+            let keys = groups.get(&object).map_or(&[][..], Vec::as_slice);
+            let value = |present: bool, fields: &Fields| present.then(|| whole(fields, keys));
             let (b, o, th) = (
                 value(t.base.is_some(), &base),
                 value(t.ours.is_some(), &ours),
