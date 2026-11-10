@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-10
+
 ### Added
 
 - `freemapper-courseplan export <project> --ppen <file> [--new]` writes the individual courses as a Purple Pen

@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.0] - 2026-11-10
+
 ### Hinzugefügt
 
 - `freemapper-courseplan export <Projekt> --ppen <Datei> [--new]` schreibt die Einzelbahnen als Purple-Pen-Event.
