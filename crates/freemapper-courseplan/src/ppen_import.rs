@@ -288,6 +288,17 @@ fn hundredths(v: f64) -> f64 {
     (v * 100.0).round() / 100.0
 }
 
+/// The courseplan description the import makes of Purple Pen symbol ids in columns C to H.
+#[cfg(test)]
+pub(crate) fn import_columns(columns: [Option<String>; 6]) -> ControlDescription {
+    let d = Description {
+        columns,
+        standard: "2018".to_owned(),
+        column_f_text: None,
+    };
+    Builder::default().description("1", &d)
+}
+
 impl Builder {
     fn control(&mut self, c: &freemapper_course::Control<MapCoord>) {
         // The fit places every control it can; a control no course uses may come without a position.
@@ -771,13 +782,13 @@ const BEND_2024: &str = "11.1";
 
 /// A Purple Pen symbol id mapped to IOF Control Descriptions 2024.
 #[derive(Debug, PartialEq)]
-struct Mapped {
-    id: String,
+pub(crate) struct Mapped {
+    pub(crate) id: String,
     /// The Purple Pen variant "objects of the same kind" (`10.1single`, `10.2single`, `11.15single`).
-    single: bool,
+    pub(crate) single: bool,
 }
 
-const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+pub(crate) const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
 /// The IOF Control Descriptions 2024 number of a Purple Pen symbol id, or `None` when 2024 has no such
 /// symbol. Purple Pen stores the 2004 numbers (its `symbols.xml`: "Uses the 2004 ids only") with suffixes
@@ -787,7 +798,7 @@ const DIRECTIONS: [&str; 8] = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 /// 11 to 12, column H from 12 to 13, special instructions from 13 to 15 and the finish rows from 14 to 16.
 /// Source: International Specification for Control Descriptions 2024 (IOF), compared with Purple Pen's
 /// `symbols.xml` at `201417f9`. 2004 12.3 (radio control) and 13.6 (map issue point) have no 2024 number.
-fn iof_2024(id: &str) -> Option<Mapped> {
+pub(crate) fn iof_2024(id: &str) -> Option<Mapped> {
     let split = id
         .char_indices()
         .find(|&(_, ch)| !(ch.is_ascii_digit() || ch == '.'))
