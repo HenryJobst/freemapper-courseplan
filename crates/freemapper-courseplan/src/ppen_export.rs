@@ -31,7 +31,14 @@
 //!   it cannot drift from it. A 2024 number that no Purple Pen id maps to has no counterpart in Purple Pen;
 //!   it is left out of the exported description and reported, never replaced by a different symbol. A
 //!   crossing point has one symbol in Purple Pen (column C); its other columns are left out and reported
-//!   the same way.
+//!   the same way. The bend's box depends on the file's description standard, so a patch maps the
+//!   descriptions in the base file's standard.
+//!
+//! [`export_ppen`] writes the mapped event as a new file, or into an existing one (the base) through the
+//! writer's patch. Before the patch, the `overlay` submodule puts the base file's own values back wherever
+//! the project still equals what the import made of the base file, so that an unchanged project gives the
+//! base file back byte for byte and a changed object keeps what the project does not hold. An export
+//! deletes nothing: an object of the base file the project does not mention is kept and noted.
 //!
 //! Terms follow `docs/glossary.md`.
 
@@ -40,23 +47,29 @@ use std::sync::OnceLock;
 
 use freemapper_course::{
     Control as PControl, ControlKind as PKind, Course as PCourse, CourseFilter,
-    CourseKind as PCourseKind, CourseSource, Description, ItemScaling, KeptObject, Leg, RawEvent,
-    RawPoint, SourceFormat, Special, Stop, course_obj_ratio, offset_from_placement,
+    CourseKind as PCourseKind, CourseSource, Description, DescriptionStandard, ItemScaling,
+    KeptObject, Leg, LineEnding, MapStandard, PatchOptions, PpenMap, PpenWriteError, RawEvent,
+    RawPoint, ScratchOptions, SourceFormat, Special, Stop, WriteNote, course_obj_ratio,
+    offset_from_placement, write_ppen, write_ppen_patch,
 };
 use freemapper_courseplan_model::{
-    Control, ControlDescription, ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement,
-    SpecialObject,
+    Control, ControlCode, ControlDescription, ControlKind, Course, CourseKind, Event, MapPoint,
+    NumberPlacement, SpecialObject,
 };
 
-use crate::map::MapKind;
+use crate::map::{MapKind, map_kind};
 use crate::numbers::{circle_outer_radius_mm, number_box_mm};
+use crate::omap::MapDocument;
 use crate::ppen_import::{DIRECTIONS, iof_2024};
+use crate::ppen_import::{PpenImportError, import_ppen};
 
 /// The project mapped onto a Purple Pen event, with what the mapping left out or changed.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ToRaw {
     pub event: RawEvent,
     pub notes: Vec<ExportNote>,
+    /// For each special object of `event`, the index of the project's special object it comes from.
+    pub(crate) specials_from: Vec<usize>,
 }
 
 /// Something the export did not write, or wrote differently from the project.
@@ -84,8 +97,195 @@ pub enum ExportNote {
         from: String,
         to: String,
     },
-    /// An object of the base file the project does not mention, kept as it was.
+    /// The bends of a leg changed that the base file flags only in part (from or up to a bend), and the
+    /// point where the flagging starts or stops is no longer a bend; the partial flagging was dropped.
+    PartialFlaggingDropped {
+        course: String,
+        from: String,
+        to: String,
+    },
+    /// An object of the base file the project does not mention, kept as it was. An export deletes
+    /// nothing.
     Kept(KeptObject),
+}
+
+/// A project written as a Purple Pen event.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PpenExport {
+    /// The file, byte order mark included.
+    pub text: String,
+    /// The Purple Pen id each written project object has in the file.
+    pub ids: ExportIds,
+    pub notes: Vec<ExportNote>,
+    /// The number of courses written.
+    pub courses: usize,
+}
+
+/// The Purple Pen ids of the written project objects: controls by code, courses by name, special
+/// objects (starts and finishes too) by id.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ExportIds {
+    pub controls: Vec<(ControlCode, u32)>,
+    pub courses: Vec<(String, u32)>,
+    pub specials: Vec<(String, u32)>,
+}
+
+/// Why a project could not be exported to a `.ppen`.
+#[derive(Debug, thiserror::Error)]
+pub enum PpenExportError {
+    /// The base file cannot be read or does not fit the project's map.
+    #[error(transparent)]
+    Base(#[from] PpenImportError),
+    #[error(transparent)]
+    Write(#[from] PpenWriteError),
+}
+
+/// Where an export goes.
+#[derive(Debug, Clone)]
+pub struct Target<'a> {
+    /// The existing `.ppen` to write into, `None` for a new file.
+    pub base: Option<&'a [u8]>,
+    /// The base is the file the project is linked to (`sources.ppen`), or the new file becomes it: the
+    /// project's Purple Pen ids belong to it and are sent.
+    pub linked: bool,
+    /// The map path a new file names, as Purple Pen stores it.
+    pub map_path: String,
+    /// The language of the descriptions of a new file, such as "de".
+    pub lang: &'a str,
+}
+
+/// Writes the project's courses as a Purple Pen event: into `target.base`, keeping everything the
+/// project does not change byte for byte, or as a new file.
+///
+/// A patch reads the base file, imports it onto `map` and puts the base file's own values back wherever the
+/// project still equals what the import made of them (see the `overlay` module), so that an unchanged
+/// project gives the base file back. Objects of the base file the project does not mention are kept and
+/// noted; nothing is deleted. The project's Purple Pen ids are used only when `target.linked`.
+///
+/// A new file names `target.map_path` as an OCAD map (Purple Pen reads `.omap` and `.xmap` maps so), states
+/// ISSprOM 2019 for sprint and schoolyard maps and ISOM 2017 for forest maps, IOF 2018 descriptions in
+/// `target.lang`, and has CRLF line ends, as Purple Pen 3.x on Windows writes.
+///
+/// # Errors
+/// [`PpenExportError::Base`] for a base file that cannot be read or does not fit the map,
+/// [`PpenExportError::Write`] for an event the writer refuses (a base file of an unknown Purple Pen
+/// version, two courses drawing one leg differently, a limit).
+pub fn export_ppen(
+    event: &Event,
+    map: &MapDocument,
+    target: Target<'_>,
+) -> Result<PpenExport, PpenExportError> {
+    let kind = map_kind(map);
+    let map_scale = map.georef.scale_denominator;
+    let (overlaid, written, mut notes) = match target.base {
+        None => {
+            let mapped = to_raw_in(
+                event,
+                kind,
+                map_scale,
+                ItemScaling::None,
+                DESCRIPTION_STANDARD,
+                target.linked,
+            );
+            let (controls, courses, specials) = overlay::origins(event, &mapped);
+            let options = ScratchOptions {
+                map: PpenMap::Ocad {
+                    path: target.map_path.clone(),
+                },
+                map_standard: match kind {
+                    MapKind::Sprint | MapKind::Schoolyard => MapStandard::Issprom2019,
+                    MapKind::Forest => MapStandard::Isom2017,
+                },
+                description_standard: DescriptionStandard::Iof2018,
+                description_lang: target.lang.to_owned(),
+                line_ending: LineEnding::Crlf,
+            };
+            let written = write_ppen(&mapped.event, &options)?;
+            let overlaid = overlay::Overlaid {
+                event: mapped.event,
+                controls,
+                courses,
+                specials,
+            };
+            (overlaid, written, mapped.notes)
+        }
+        Some(bytes) => {
+            let base = crate::ppen_import::read(bytes)?;
+            let import = import_ppen(bytes, map)?;
+            let standard = base_standard(&base, bytes);
+            let scaling = base.source.item_scaling.unwrap_or_default();
+            let mapped = to_raw_in(event, kind, map_scale, scaling, &standard, target.linked);
+            let notes = mapped.notes.clone();
+            let frame = overlay::Frame {
+                kind,
+                linked: target.linked,
+            };
+            let overlaid = overlay::overlay(mapped, event, &base, &import, &frame);
+            let options = PatchOptions {
+                delete: Default::default(),
+                ids_from_base: target.linked,
+            };
+            let written = write_ppen_patch(bytes, &overlaid.event, &options)?;
+            (overlaid, written, notes)
+        }
+    };
+
+    for note in &written.notes {
+        notes.push(match note.clone() {
+            WriteNote::FlaggingImplied { course, from, to } => {
+                ExportNote::FlaggingImplied { course, from, to }
+            }
+            WriteNote::PartialFlaggingDropped { course, from, to } => {
+                ExportNote::PartialFlaggingDropped { course, from, to }
+            }
+        });
+    }
+    notes.extend(written.kept.iter().cloned().map(ExportNote::Kept));
+
+    let mut ids = ExportIds::default();
+    for (origin, id) in overlaid.controls.iter().zip(&written.ids.controls) {
+        match origin {
+            overlay::Origin::Control(code) => ids.controls.push((code.clone(), *id)),
+            overlay::Origin::Special(s) => ids.specials.push((s.clone(), *id)),
+            overlay::Origin::Base => {}
+        }
+    }
+    ids.courses = overlaid
+        .courses
+        .iter()
+        .cloned()
+        .zip(written.ids.courses.iter().copied())
+        .collect();
+    ids.specials.extend(
+        overlaid
+            .specials
+            .iter()
+            .cloned()
+            .zip(written.ids.specials.iter().copied()),
+    );
+    Ok(PpenExport {
+        text: written.text,
+        ids,
+        notes,
+        courses: overlaid.event.courses.len(),
+    })
+}
+
+/// The description standard of a base file: that of its descriptions, else its `standards/@description`
+/// (the reader has parsed the file already), else 2004, the reader's default.
+fn base_standard(base: &RawEvent, bytes: &[u8]) -> String {
+    if let Some(d) = base.controls.iter().find_map(|c| c.description.as_ref()) {
+        return d.standard.clone();
+    }
+    let text = String::from_utf8_lossy(bytes);
+    let found = text.find("<standards").and_then(|at| {
+        let tag = &text[at..at + text[at..].find('>')?];
+        let rest = &tag[tag.find(" description=")? + " description=".len()..];
+        let quote = rest.chars().next()?;
+        let rest = &rest[1..];
+        Some(rest[..rest.find(quote)?].trim().to_owned())
+    });
+    found.unwrap_or_else(|| "2004".to_owned())
 }
 
 /// The description standard the export states. Purple Pen 3.x knows 2004 and 2018 and stores 2004 ids
@@ -95,12 +295,31 @@ pub(crate) const DESCRIPTION_STANDARD: &str = "2018";
 /// Maps `event` onto a Purple Pen event at map scale 1:`map_scale` with the course symbols scaled by
 /// `scaling`, for the overprint sizes of `kind`. `use_ids` sends the project's Purple Pen ids; without it
 /// every id is `None` and the writer assigns new ones. See the module for the rules.
-#[allow(dead_code)] // used by export_ppen
+#[cfg(test)]
 pub(crate) fn to_raw(
     event: &Event,
     kind: MapKind,
     map_scale: u32,
     scaling: ItemScaling,
+    use_ids: bool,
+) -> ToRaw {
+    to_raw_in(
+        event,
+        kind,
+        map_scale,
+        scaling,
+        DESCRIPTION_STANDARD,
+        use_ids,
+    )
+}
+
+/// [`to_raw`] for descriptions of the given standard (`"2004"`, `"2018"`), the base file's in a patch.
+fn to_raw_in(
+    event: &Event,
+    kind: MapKind,
+    map_scale: u32,
+    scaling: ItemScaling,
+    standard: &str,
     use_ids: bool,
 ) -> ToRaw {
     let id = |id: Option<u32>| id.filter(|_| use_ids);
@@ -139,7 +358,7 @@ pub(crate) fn to_raw(
             },
             position: Some(raw_point(&c.map_mm)),
             geo: None,
-            description: description(c, &mut notes),
+            description: description(c, standard, &mut notes),
         });
     }
     notes.extend(
@@ -168,21 +387,23 @@ pub(crate) fn to_raw(
             });
             continue;
         }
+        let print = PrintScale::of(course, map_scale, scaling);
         courses.push(raw_course(
             &by_code,
             course,
             kind,
-            map_scale,
-            scaling,
+            print,
             id(course.ppen_id),
         ));
     }
 
     let written: HashSet<&str> = courses.iter().map(|c| c.name.as_str()).collect();
     let mut specials = Vec::new();
-    for s in &event.specials {
+    let mut specials_from = Vec::new();
+    for (i, s) in event.specials.iter().enumerate() {
         if let Some(special) = raw_special(s, &written, id(s.ppen_id()), &mut notes) {
             specials.push(special);
+            specials_from.push(i);
         }
     }
 
@@ -200,6 +421,7 @@ pub(crate) fn to_raw(
             notes: Vec::new(),
         },
         notes,
+        specials_from,
     }
 }
 
@@ -216,8 +438,8 @@ fn raw_points(points: &[MapPoint]) -> Vec<RawPoint> {
 }
 
 /// The Purple Pen description of a control, `None` when no column has a symbol Purple Pen knows.
-fn description(c: &Control, notes: &mut Vec<ExportNote>) -> Option<Description> {
-    let (mut columns, mut left_out) = ppen_columns(&c.description, DESCRIPTION_STANDARD);
+fn description(c: &Control, standard: &str, notes: &mut Vec<ExportNote>) -> Option<Description> {
+    let (mut columns, mut left_out) = ppen_columns(&c.description, standard);
     if c.kind == ControlKind::CrossingPoint {
         // Purple Pen keeps one symbol for a crossing point: box "all", read back as column C.
         let given = [
@@ -249,7 +471,7 @@ fn description(c: &Control, notes: &mut Vec<ExportNote>) -> Option<Description> 
     );
     columns.iter().any(Option::is_some).then(|| Description {
         columns,
-        standard: DESCRIPTION_STANDARD.to_owned(),
+        standard: standard.to_owned(),
         column_f_text: None,
     })
 }
@@ -287,24 +509,36 @@ fn codes_not_stored(controls: &[PControl<RawPoint>]) -> Vec<String> {
     out
 }
 
-/// An individual course as a normal Purple Pen course.
+/// The print scale a course states in the file and the `CourseObjRatio` the reader computes from it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct PrintScale {
+    hint: Option<u32>,
+    ratio: f64,
+}
+
+impl PrintScale {
+    /// The project's: the planned print scale, else the map scale, which is what the project prints at.
+    fn of(course: &Course, map_scale: u32, scaling: ItemScaling) -> PrintScale {
+        let hint = course.planned_print_scale.unwrap_or(map_scale);
+        PrintScale {
+            hint: Some(hint),
+            ratio: course_obj_ratio(scaling, Some(f64::from(map_scale)), Some(f64::from(hint))),
+        }
+    }
+}
+
+/// An individual course as a normal Purple Pen course, its number offsets at `print`.
 fn raw_course(
     by_code: &HashMap<&str, &Control>,
     course: &Course,
     kind: MapKind,
-    map_scale: u32,
-    scaling: ItemScaling,
+    print: PrintScale,
     id: Option<u32>,
 ) -> PCourse<RawPoint> {
     let CourseKind::Individual { controls: ccs } = &course.kind else {
         unreachable!("only individual courses are written");
     };
-    let print_scale = course.planned_print_scale.unwrap_or(map_scale);
-    let ratio = course_obj_ratio(
-        scaling,
-        Some(f64::from(map_scale)),
-        Some(f64::from(print_scale)),
-    );
+    let ratio = print.ratio;
     let stop = |control: &str, number_text_at| Stop {
         control: control.to_owned(),
         kind: None,
@@ -348,7 +582,7 @@ fn raw_course(
         stops,
         climb_m: course.climb_m.map(f64::from),
         length_m: None,
-        print_scale_hint: Some(print_scale),
+        print_scale_hint: print.hint,
         course_obj_ratio: Some(ratio),
         secondary_title: None,
     }
@@ -513,6 +747,8 @@ pub(crate) fn ppen_columns(
     }
     (cols, left_out)
 }
+
+mod overlay;
 
 #[cfg(test)]
 mod tests;

@@ -944,3 +944,26 @@ fn the_writer_accepts_the_mapped_fixtures() {
         assert_eq!(back.controls.len(), mapped.event.controls.len(), "{name}");
     }
 }
+
+#[test]
+fn base_standard_comes_from_descriptions_then_the_event() {
+    let sample = String::from_utf8(fixture("sampleevent8.ppen")).unwrap();
+    let raw = read(sample.as_bytes()).unwrap();
+    assert_eq!(base_standard(&raw, sample.as_bytes()), "2018");
+    // Without a single description the event's standards element tells.
+    let bare: String = sample
+        .split_inclusive('\n')
+        .filter(|l| !l.contains("<description box"))
+        .collect();
+    let raw = read(bare.as_bytes()).unwrap();
+    assert!(raw.controls.iter().all(|c| c.description.is_none()));
+    assert_eq!(base_standard(&raw, bare.as_bytes()), "2018");
+    let single = bare.replace("description=\"2018\"", "description='2004'");
+    assert_eq!(base_standard(&raw, single.as_bytes()), "2004");
+    // Lincoln Park states none: 2004, the reader's default.
+    let lincoln = fixture("lincoln-park.ppen");
+    let raw = read(&lincoln).unwrap();
+    assert_eq!(base_standard(&raw, &lincoln), "2004");
+    let none = bare.replace("<standards map=\"2000\" description=\"2018\" />", "");
+    assert_eq!(base_standard(&raw, none.as_bytes()), "2004");
+}
