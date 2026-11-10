@@ -580,7 +580,7 @@ impl CoursePlanServer {
         use freemapper_courseplan::sync::SyncError;
         // Parser errors and the lists of an invalid merge quote the Purple Pen file: fixed texts only.
         if let SyncCmdError::Sync(path, error) = &e {
-            match error {
+            match error.as_ref() {
                 SyncError::Theirs(_) | SyncError::Base(_) | SyncError::Export(_) => {
                     return text(
                         &self.lang,
