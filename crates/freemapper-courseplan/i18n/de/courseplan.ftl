@@ -517,6 +517,7 @@ error-export-ppen-invalid = die Bahnen ergeben kein gültiges Purple-Pen-Event: 
 error-export-ppen-shared-leg = die Bahnen { $first } und { $second } zeichnen die Strecke { $from } nach { $to } verschieden, und Purple Pen kennt je Postenpaar nur eine Strecke
 error-export-ppen-shared-circle-gaps = die Bahnen { $first } und { $second } geben Posten { $control } bei 1:{ $scale } verschiedene Kreislücken
 error-export-ppen-limit = zu groß für ein Purple-Pen-Event: { $what }
+error-export-ppen-circle-gap-limit = zu groß für ein Purple-Pen-Event: die Bahnen würden mehr als { $limit } Kreislücken aus der vorhandenen Datei übernehmen
 word-export-why-marked-route = Purple Pen hat kein Objekt für die abgeflaggte Strecke, die Flaggung gehört dort zu den Strecken
 word-export-why-forbidden-route-with-several-points = Purple Pen zeichnet eine verbotene Route nur als einzelnes Kreuz
 word-export-why-no-course-left = es gehört nur zu Bahnen, die ausgelassen wurden

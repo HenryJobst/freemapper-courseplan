@@ -138,6 +138,12 @@ pub enum PpenExportError {
     Base(#[from] PpenImportError),
     #[error(transparent)]
     Write(#[from] PpenWriteError),
+    /// The stops of the project's courses would copy more circle gaps from the base file than the reader
+    /// takes from a whole file. A base control's gaps go to every stop at it, so a hostile base with many
+    /// gaps at a control that the project visits often would otherwise fill memory before the writer's
+    /// own limit check.
+    #[error("the courses would copy more than {limit} circle gaps from the base file")]
+    CircleGapLimit { limit: usize },
 }
 
 /// Where an export goes.
@@ -220,7 +226,7 @@ pub fn export_ppen(
                 kind,
                 linked: target.linked,
             };
-            let overlaid = overlay::overlay(mapped, event, &base, &import, &frame);
+            let overlaid = overlay::overlay(mapped, event, &base, &import, &frame)?;
             let options = PatchOptions {
                 delete: Default::default(),
                 ids_from_base: target.linked,

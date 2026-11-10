@@ -523,6 +523,7 @@ error-export-ppen-invalid = the courses give an invalid Purple Pen event: { $wha
 error-export-ppen-shared-leg = courses { $first } and { $second } draw the leg { $from } to { $to } differently, and Purple Pen keeps one leg per pair of controls
 error-export-ppen-shared-circle-gaps = courses { $first } and { $second } give control { $control } different circle gaps at 1:{ $scale }
 error-export-ppen-limit = too large for a Purple Pen event: { $what }
+error-export-ppen-circle-gap-limit = too large for a Purple Pen event: the courses would copy more than { $limit } circle gaps from the existing file
 word-export-why-marked-route = Purple Pen has no marked route object; the flagging belongs to the legs
 word-export-why-forbidden-route-with-several-points = Purple Pen draws a forbidden route only as a single cross
 word-export-why-no-course-left = it belongs only to courses that were left out

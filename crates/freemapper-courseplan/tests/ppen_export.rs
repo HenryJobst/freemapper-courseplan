@@ -700,3 +700,72 @@ fn a_comment_with_a_multibyte_character_does_not_upset_the_patch() {
         assert_eq!(out.text, hostile, "{comment}");
     }
 }
+
+#[test]
+fn copied_circle_gaps_are_bounded() {
+    use freemapper_course::model::{MAX_POINTS_PER_PATH, MAX_TOTAL_POINTS};
+    // Control 31 of Lincoln Park with the most circle gaps the reader takes at one control and scale.
+    let text = String::from_utf8(bytes("lincoln-park.ppen")).unwrap();
+    let many = vec!["1:2"; MAX_POINTS_PER_PATH].join(",");
+    let hostile = text.replace(
+        "<circle-gaps scale=\"5000\">224.4232:330.1188</circle-gaps>",
+        &format!("<circle-gaps scale=\"5000\">{many}</circle-gaps>"),
+    );
+    assert_ne!(hostile, text);
+    let map = frame_map(hostile.as_bytes());
+    let import = import_ppen(hostile.as_bytes(), &map).unwrap();
+    let mut event = valid_event(&import);
+    // A course that visits 31 often enough that its stops would copy more gaps than the reader allows.
+    let visits = MAX_TOTAL_POINTS / MAX_POINTS_PER_PATH + 1;
+    let mut long = event.courses[0].clone();
+    long.name = "Long".to_owned();
+    let stops = ccs(&mut long);
+    let template = stops[0].clone();
+    stops.clear();
+    for i in 0..2 * visits {
+        let mut cc = template.clone();
+        cc.code = ControlCode(if i % 2 == 0 { "31" } else { "32" }.to_owned());
+        cc.bends.clear();
+        stops.push(cc);
+    }
+    event.courses.push(long);
+    let got = export_ppen(&event, &map, target(Some(hostile.as_bytes()), false));
+    assert!(
+        matches!(got, Err(PpenExportError::CircleGapLimit { limit }) if limit == MAX_TOTAL_POINTS),
+        "{got:?}"
+    );
+}
+
+#[test]
+fn a_pair_visited_twice_keeps_its_map_exchange() {
+    // Exchanges runs 47, map exchange 81, 71. The crafted file goes on 71, 47, 71, 77, so the pair 47 to
+    // 71 comes twice: once through the map exchange and once straight.
+    let text = String::from_utf8(bytes("sampleevent8.ppen")).unwrap();
+    let old = "  <course-control id=\"307\" control=\"71\">\r\n    <next course-control=\"308\" />\r\n  </course-control>\r\n";
+    let new = concat!(
+        "  <course-control id=\"307\" control=\"71\">\r\n    <next course-control=\"317\" />\r\n  </course-control>\r\n",
+        "  <course-control id=\"317\" control=\"47\">\r\n    <next course-control=\"318\" />\r\n  </course-control>\r\n",
+        "  <course-control id=\"318\" control=\"71\">\r\n    <next course-control=\"308\" />\r\n  </course-control>\r\n",
+    );
+    assert!(text.contains(old));
+    let file = text.replace(old, new);
+    let map = frame_map(file.as_bytes());
+    let import = import_ppen(file.as_bytes(), &map).unwrap();
+    let mut event = valid_event(&import);
+    let course = course_mut(&mut event, "Exchanges");
+    let codes: Vec<&str> = match &course.kind {
+        CourseKind::Individual { controls } => controls.iter().map(|c| c.code.0.as_str()).collect(),
+        other => panic!("{other:?}"),
+    };
+    let at = codes.windows(4).position(|w| w == ["47", "71", "47", "71"]);
+    assert!(at.is_some(), "{codes:?}");
+    course.climb_m = Some(20);
+    let out = export(&event, &map, file.as_bytes(), false);
+    let mut base = read(&file);
+    base.courses
+        .iter_mut()
+        .find(|c| c.name == "Exchanges")
+        .unwrap()
+        .climb_m = Some(20.0);
+    assert_eq!(read(&out.text), base);
+}

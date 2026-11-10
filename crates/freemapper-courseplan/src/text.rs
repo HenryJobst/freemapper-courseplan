@@ -578,6 +578,11 @@ impl Localize for PpenExportError {
                 ),
                 W::Limit(what) => text(lang, "error-export-ppen-limit", &[("what", v(what))]),
             },
+            PpenExportError::CircleGapLimit { limit } => text(
+                lang,
+                "error-export-ppen-circle-gap-limit",
+                &[("limit", v(limit))],
+            ),
         }
     }
 }

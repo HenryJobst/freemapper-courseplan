@@ -38,7 +38,9 @@ use freemapper_courseplan_model::{
     SpecialObject,
 };
 
-use super::{PrintScale, ToRaw, raw_course};
+use freemapper_course::model::MAX_TOTAL_POINTS;
+
+use super::{PpenExportError, PrintScale, ToRaw, raw_course};
 use crate::map::MapKind;
 use crate::ppen_import::PpenImport;
 
@@ -372,13 +374,17 @@ fn same_special(a: &SpecialObject, b: &SpecialObject) -> bool {
 
 /// Puts the base file's values into `mapped`, the project as `to_raw` mapped it in the base file's
 /// standard and item scaling. See the module for the rules.
+///
+/// # Errors
+/// [`PpenExportError::CircleGapLimit`] when the stops would copy more circle gaps than
+/// `MAX_TOTAL_POINTS`.
 pub(super) fn overlay(
     mapped: ToRaw,
     project: &Event,
     base: &RawEvent,
     import: &PpenImport,
     frame: &Frame,
-) -> Overlaid {
+) -> Result<Overlaid, PpenExportError> {
     let sides = Sides::new(base, import, frame.linked);
     let (mut origins, course_names, special_ids) = origins(project, &mapped);
     let mut event = mapped.event;
@@ -464,10 +470,12 @@ pub(super) fn overlay(
             *out = b.clone();
             continue;
         }
-        let own: HashMap<(String, String), Segment<'_>> = segments(&sides, imported, b)
-            .into_iter()
-            .map(|(f, t, s)| ((f, t), s))
-            .collect();
+        // A course can visit a pair of controls more than once, through a map exchange on one visit
+        // and straight on another: every visit is kept, and each project leg picks the one it equals.
+        let mut own: HashMap<(String, String), Vec<Segment<'_>>> = HashMap::new();
+        for (f, t, s) in segments(&sides, imported, b) {
+            own.entry((f, t)).or_default().push(s);
+        }
         let course = Changed {
             p,
             imported,
@@ -480,10 +488,19 @@ pub(super) fn overlay(
         };
         *out = course.write(out);
     }
+    // Every stop at a control gets its gaps, so the copies are counted against the reader's budget
+    // before they are made: the reader charged the base file's stops, not the project's visits.
+    let mut copied = 0usize;
     for out in &mut event.courses {
         let scale = gap_key(base, out.print_scale_hint);
         for s in &mut out.stops {
             if let Some(g) = circle_gaps.get(&(s.control.as_str(), scale)) {
+                copied = copied.saturating_add(g.len());
+                if copied > MAX_TOTAL_POINTS {
+                    return Err(PpenExportError::CircleGapLimit {
+                        limit: MAX_TOTAL_POINTS,
+                    });
+                }
                 s.circle_gaps = g.to_vec();
             }
         }
@@ -537,12 +554,12 @@ pub(super) fn overlay(
     origins.extend(missing.iter().map(|_| Origin::Base));
     event.controls.extend(missing);
 
-    Overlaid {
+    Ok(Overlaid {
         event,
         controls: origins,
         courses: course_names,
         specials: special_ids,
-    }
+    })
 }
 
 /// A start or finish: the base file's when unchanged, else the base control with the project's code and
@@ -634,7 +651,8 @@ struct Changed<'a, 'b> {
     b: &'a PCourse<RawPoint>,
     p_controls: &'b HashMap<&'a str, &'a Control>,
     i_controls: &'b HashMap<&'a str, &'a Control>,
-    own: &'b HashMap<(String, String), Segment<'a>>,
+    /// The legs of the imported course by pair of stops, every visit in course order.
+    own: &'b HashMap<(String, String), Vec<Segment<'a>>>,
     direct: &'b HashMap<(String, String), Segment<'a>>,
     frame: &'b Frame,
 }
@@ -715,8 +733,19 @@ impl Changed<'_, '_> {
             };
             let key = (codes[k].to_owned(), codes[k + 1].to_owned());
             let mapped_leg = &mapped.legs[k];
-            match self.own.get(&key).or_else(|| self.direct.get(&key)) {
-                Some(seg) if seg.bends == bends && seg.taped == taped => {
+            // The course's own visits of the pair, else the leg another course draws between them.
+            let candidates: Vec<&Segment<'_>> = match self.own.get(&key) {
+                Some(visits) if !visits.is_empty() => visits.iter().collect(),
+                _ => self.direct.get(&key).into_iter().collect(),
+            };
+            let exact = candidates
+                .iter()
+                .find(|seg| seg.bends == bends && seg.taped == taped);
+            let retaped = candidates
+                .iter()
+                .find(|seg| seg.bends == bends && seg.inner.is_empty());
+            match (exact, retaped) {
+                (Some(seg), _) => {
                     for (i, leg) in seg.legs.iter().enumerate() {
                         legs.push(leg.clone());
                         if let Some(inner) = seg.inner.get(i) {
@@ -724,12 +753,12 @@ impl Changed<'_, '_> {
                         }
                     }
                 }
-                Some(seg) if seg.bends == bends && seg.inner.is_empty() => {
+                (None, Some(seg)) => {
                     let mut leg = seg.legs[0].clone();
                     leg.marked_route = mapped_leg.marked_route;
                     legs.push(leg);
                 }
-                _ => legs.push(mapped_leg.clone()),
+                (None, None) => legs.push(mapped_leg.clone()),
             }
             out_stops.push(stop);
         }
