@@ -17,10 +17,11 @@ The manual's sync chapter and the plan 2026-11-10-ppen-sync hold the details; th
   other is no conflict: the removal wins and a note says so. Purple Pen deleting a course with classes is a conflict.
 - **Stop lists** *(Claude's call)*. A diff3 over stop identities. A clean result counts only if it is a fixed point,
   meaning merging it again with either side returns it. Otherwise it is a conflict. Repeated identities (loops,
-  butterflies) can make a diff3 unstable, and an unstable merge could add a loop after a crash.
+  butterflies) can make a diff3 unstable, and an unstable merge could add a loop after a crash. The rule also turns some merges that were clean before, those that combine a move
+  with another edit, into conflicts. That is the safe direction; the reviewer counted 3,360 of 34.6M small triples.
 - **Number placements** *(Claude's call)*. The model has one central placement per control, so "automatic in this
   course" is not a value. When Purple Pen leaves a visit automatic, the central placement moves onto the other visits
-  of the control and the central one is dropped. A reset to automatic in Purple Pen therefore sticks. The verify step
+  of the control, in individual, team and relay courses, and the central one is dropped. A reset to automatic in Purple Pen therefore sticks. The verify step
   reads every number taken from Purple Pen back from the written file and refuses the sync on a mismatch.
 - **Matching** *(user: code or name, ids second; Claude's call for the order)*. Purple Pen id, then code or name,
   within one kind. Project ids are distrusted after a base that belongs to another link, so `export --ppen NEW`
