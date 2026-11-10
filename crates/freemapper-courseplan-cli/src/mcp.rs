@@ -1311,6 +1311,7 @@ impl CoursePlanServer {
                 "path": target.display().to_string(),
                 "courses": report.courses,
                 "skipped": skipped,
+                "geo_positions": report.geo_positions,
             }))
         })())
     }

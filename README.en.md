@@ -95,8 +95,8 @@ route analysis is missing, so it reports a straight leg through an out-of-bounds
 software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads
 back through the IOF reader of freemapper-course (freemapper-print's); a finished example is
 [`course-data.xml`](examples/luebeck-sprint/course-data.xml). An import into OE, Purple Pen or Condes has not been
-tested, because nobody on the project has OE. Reports from people with OE are welcome. Geo positions and taped legs are not written yet, and team,
-relay and score courses are skipped. Chapter 10 of the
+tested, because nobody on the project has OE. Reports from people with OE are welcome. If the map is georeferenced, the start, controls and finish also carry
+latitude and longitude (ADR 0039). Taped legs are not written yet, and team, relay and score courses are skipped. Chapter 10 of the
 [user manual](docs/manual/en.md#10-handing-on-iof-xml-for-oe) has the details.
 
 `freemapper-courseplan init <map> --ppen <file>` and `freemapper-courseplan import <project> --ppen <file>`
