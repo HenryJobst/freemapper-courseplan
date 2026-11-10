@@ -32,8 +32,7 @@ Planned for the first version:
   control distances, acute and almost straight angles and enough different first controls for a compact start
   list, each with its source and with exceptions you can give reasons for (`check`, usable now);
 - exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side (import and
-  export are usable now, `import` and `export --ppen`; the sync is still missing, and the export has not been opened
-  in Purple Pen 4.0 yet);
+  export and sync are usable now: `import`, `export --ppen` and `sync`; Purple Pen 4.0 opens the export);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser, the command line or an AI assistant (MCP).
@@ -76,7 +75,7 @@ individual courses. `freemapper-courseplan init <map>` creates the project file.
 placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course.
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up. The project file is TOML, and
-you can edit it by hand too. The program cannot edit or measure team, relay or score courses yet. It cannot print
+you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. The program cannot edit or measure team, relay or score courses yet. It cannot print
 courses either, and it does not read forest maps.
 
 `freemapper-courseplan check <project>` checks the individual courses against a rule profile, each finding with
@@ -111,8 +110,15 @@ assistant has the tool `export_ppen`. It changes an existing file in place and l
 know, such as circle gaps or map exchange; with `--new` it writes the file from scratch. It never deletes anything and
 reports what is in the file but not in the project. The writer is `freemapper-course` in freemapper-core. The example
 [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) is such an export. **Purple Pen 4.0 opens
-the file without an error, and its content looks right** (checked by the author, 2026-11-10). The sync in both directions,
-which takes changes made in Purple Pen back into the project, does not exist yet.
+the file without an error, and its content looks right** (checked by the author, 2026-11-10).
+
+`freemapper-courseplan sync <project>` merges the project with its linked `.ppen` in both directions. It compares the
+file as the last sync left it (the base copy `X.courseplan.ppen-base`, to be committed to git), the file now and the
+project now, field by field. A change on one side goes to the other. If both sides changed the same field differently,
+`sync` lists both values and writes nothing until you pick a side with `--take ours`, `--take theirs` or
+`--take KEY=SIDE`; `--dry-run` only reports. Classes, accepted findings and team, relay and score courses stay in the
+project. The AI assistant has the tools `sync_ppen` and `resolve_sync_conflict`. The editor's conflict panel comes
+with the editor. See chapter 9 of the [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) and ADR 0040.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

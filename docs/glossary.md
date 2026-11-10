@@ -108,7 +108,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Abgleich | sync | Zusammenführen der Projektdatei mit der verknüpften `.ppen` in beide Richtungen. | `sync` |
 | Partnerdatei | linked Purple Pen file | Die `.ppen`, mit der eine Veranstaltung abgeglichen wird. | `linked_ppen` |
 | Abgleichsbasis | sync base | Kopie der `.ppen` vom letzten Abgleich; dritte Fassung beim Zusammenführen. | `SyncBase` |
-| Konflikt | conflict | Objekt, das seit dem letzten Abgleich auf beiden Seiten verschieden geändert wurde. | `SyncConflict` |
+| Konflikt | conflict | Feld eines Objekts, das seit dem letzten Abgleich auf beiden Seiten verschieden geändert wurde (auch Löschen gegen Ändern). | `SyncConflict` |
 | Seitenwahl | pick | Ergebnis der Dreiwegeregel für ein Feld: unverändert, nur hier geändert, nur in der `.ppen` geändert, auf beiden Seiten gleich geändert oder Konflikt. | `sync::merge3::Pick` |
 | Purple-Pen-Sicht | Purple Pen view | Was der Import aus einer `.ppen` macht. Basis, Projekt (als Export auf die Basis) und Partnerdatei werden alle in dieser Sicht verglichen, damit Purple Pens Standardwerte und die verlustbehaftete Abbildung nicht als Änderung erscheinen. | `sync::view::Views` |
 | Zuordnung | matching | Ordnet die Objekte der drei Sichten einander zu: Purple-Pen-Kennung, dann Code oder Name, neue Objekte nach Code, Name oder Form. Jedes Objekt gehört zu höchstens einem Tripel. | `sync::matching::Matching`, `Triple` |

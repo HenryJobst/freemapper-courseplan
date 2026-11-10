@@ -353,6 +353,13 @@ Claude's call.)*
   sent and new ids are stored; for any other target nothing is written back and the link stays *(Claude's
   call)*. Without a link, starts, finishes and crossing points pair by code, else by order when the counts
   match, all or nothing per kind. The user wants to keep using Purple Pen in parallel *(user, 2026-11-08)*.
+- **Built** (ADR 0040). `sync` merges per field on the Purple Pen view (what the import makes of a `.ppen`), by a
+  three-way pick against the base copy `X.courseplan.ppen-base`, which sync strips of the map's `absolute-path`.
+  Open conflicts write nothing, also not the clean part *(Claude's call)*. `--take SIDE` settles all conflicts for one
+  call; `--take KEY=SIDE` and the MCP tool `resolve_sync_conflict` store a decision that holds while both values stay
+  the same. `--dry-run` writes nothing. Write order: `.ppen`, project, base copy; an interrupted sync converges or
+  is repaired on the next run. Known limit: central number placements are written into every course that visits
+  the control.
 - **Not in scope.** Live editing by several people at the same moment. Sync is a step someone runs.
 
 ### 5.5b IOF XML 3.0 export
@@ -445,7 +452,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 ### 5.8 Interfaces
 
 - **CLI**: `init` (event from a map, or from a `.ppen`), `check`, `import`, `export` (`--iof-xml`, `--ppen`),
-  `sync` (with the linked `.ppen`), `edit` (opens the editor).
+  `sync` (with the linked `.ppen`; built, ADR 0040), `edit` (opens the editor).
 - **MCP** (stdio): tools mirror the CLI, plus tools to list and change controls, courses and classes, and
   read-only map queries: objects and symbols near a point or in a region, the map extent *(Claude's call,
   after the review)*. The queries serve the column D proposal (§5.2) anyway; with them an agent can also
@@ -512,7 +519,10 @@ The builder may start the editor earlier if placing controls through the CLI tur
   symbols 702, 709, 710; IOF texts were read from mirrors (research §5).
 
 - **`.ppen` import against real events** (§5.5): tested with three core fixtures on generated maps; a real file
-  on the Lübeck map is still open. `sync` (§5.5a) is not built.
+  on the Lübeck map is still open.
+- **`sync` follow-ups** (§5.5a): the editor's conflict panel comes with M4. `PatchOptions::ids_first` is proposed to
+  freemapper-print and not yet agreed; without it a sync that swaps two codes and renames a course is refused
+  (ADR 0040).
 - **`.ppen` export in Purple Pen 4.0** (§5.5): the export is tested by reading it back with the core reader and
   by byte-identical re-export of three Purple Pen files. It has not been opened in Purple Pen 4.0 yet. The
   author is asked to open `examples/luebeck-sprint/luebeck-sprint.ppen` and report; core plan Task 6 waits for

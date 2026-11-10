@@ -6,6 +6,12 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `sync` gleicht das Projekt und die verknüpfte `.ppen` in beide Richtungen ab (ADR 0040). Es vergleicht Feld für Feld die Basiskopie `X.courseplan.ppen-base` (gehört in Git; `sync` entfernt daraus den Kartenpfad `absolute-path`), die Datei jetzt und das Projekt jetzt. Haben beide Seiten dasselbe Feld verschieden geändert, oder löscht die eine Seite, was die andere bearbeitet hat, nennt `sync` beide Werte und schreibt nichts. Mit `--take ours`, `--take theirs` oder `--take SCHLÜSSEL=SEITE` wählst du eine Seite, `--dry-run` schreibt nichts, `--json` gibt das Ergebnis maschinenlesbar aus. Ein unterbrochener Abgleich wird beim nächsten Lauf beendet. Der Abgleich lehnt Dateien aus einer unbekannten Purple-Pen-Version ab. Kategorien, akzeptierte Befunde und Mannschafts-, Staffel- und Score-Bahnen bleiben im Projekt.
+- Neue MCP-Werkzeuge `sync_ppen` und `resolve_sync_conflict`.
+- Die Projektdatei kennt eine optionale Tabelle `[sync]` mit Verknüpfung, Hashwert der Basiskopie und gespeicherten Entscheidungen. Das Format bleibt 1.
+
 ## [0.8.0] - 2026-11-10
 
 ### Hinzugefügt
