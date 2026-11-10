@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-11-10
+
 ### Fixed
 
 - The scale bar and the base area that freemapper 0.9.0 writes into the map (`freemapper:source=scale-bar` and

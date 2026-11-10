@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.3] - 2026-11-10
+
 ### Behoben
 
 - Der Maßstabsbalken und die Grundfläche, die freemapper 0.9.0 in die Karte schreibt (`freemapper:source=scale-bar`
