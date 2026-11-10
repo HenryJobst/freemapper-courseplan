@@ -1056,7 +1056,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                         print_scale_of(course, doc.georef.scale_denominator),
                     )
                 }
-                None => numbers::GapRange::FIXED,
+                None => numbers::GapRange::DEFAULT,
             };
             let kind = map_kind_for_file(&doc, &file.map_path());
             let placed = numbers::place_numbers(

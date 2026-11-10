@@ -6,6 +6,24 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.7.4] - 2026-11-10
+
+### Fixed
+
+- The Purple Pen export writes the variant `single` into the right box. The same feature in columns D and E over
+  a crossing or junction in column F now comes out as `single` in column F.
+- The export leaves out description symbols that the standard of the file does not have, such as 2.10 in a 2004
+  file, and names each symbol it left out (ADR 0037).
+- The export normalises the directions `0.1` and `0.2`. It writes plain 9.1 and 9.3 as `9.1high` and `9.3high`
+  and says so in a note.
+
+### Changed
+
+- Number placement and the description symbol tables now come from freemapper-core 0.6.0, the same code
+  freemapper-print uses. Positions change only in two edge cases: a bend closer to the circle than one line
+  width, and a rule minimum with three decimals. In the `luebeck-sprint` example no number moves (ADR 0036,
+  ADR 0037).
+
 ## [0.7.3] - 2026-11-10
 
 ### Fixed

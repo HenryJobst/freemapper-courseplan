@@ -79,4 +79,6 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0033](0033-iof-xml-export-writes-individual-courses-from-the-project.md) | IOF XML export writes individual courses from the project | Accepted | 2026-11-09 |
 | [0034](0034-ppen-import-uses-the-core-course-crate.md) | The .ppen import uses the core course crate | Accepted | 2026-11-09 |
 | [0035](0035-ppen-export-patches-the-linked-file.md) | The .ppen export patches the linked file | Accepted | 2026-11-10 |
+| [0036](0036-number-placement-uses-the-core-module.md) | Number placement uses the core module | Accepted | 2026-11-10 |
+| [0037](0037-description-symbols-from-the-core-crate.md) | Description symbols come from the core crate | Accepted | 2026-11-10 |
 | [0038](0038-sheet-furniture-and-map-kind-from-the-sidecar.md) | Sheet furniture and the map kind from the sidecar | Accepted | 2026-11-10 |

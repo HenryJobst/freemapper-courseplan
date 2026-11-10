@@ -36,3 +36,4 @@ keeps its stand-in of 0.6 × number height per digit until it takes over the sha
 - Placements stored before this change stay valid but are drawn a little differently: 0.175 mm farther out
   straight above, below or beside the circle, up to 0.6 mm closer on the diagonals.
 - The automatic placement keeps its gap of 0.5 mm; its conflict test uses the new box position.
+- The implementation now lives in freemapper-core (ADR 0036); this ADR keeps the rules.

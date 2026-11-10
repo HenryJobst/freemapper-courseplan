@@ -8,6 +8,8 @@ use freemapper_courseplan_model::{
     ScoreControl, SpecialObject,
 };
 
+use freemapper_course::description_symbols::{DIRECTIONS, iof_2024};
+
 use super::*;
 use crate::check::testing::{code, course, event, map, point_object, pt};
 use crate::map::{MapKind, map_kind};
@@ -19,17 +21,22 @@ fn some(s: &str) -> Option<String> {
     Some(s.to_owned())
 }
 
-/// Every Purple Pen id the import's table knows (the enumeration of the inverse, forwards).
+/// Every Purple Pen id the import's table knows, without the direction forms that 2024 has no number for
+/// (`0.1NE`, `0.2N`: the core mapping writes the cardinal form as `0.1` and the diagonal form as `0.2`).
 fn all_ids() -> Vec<String> {
     let mut suffixes = vec![""];
     suffixes.extend(DIRECTIONS);
     suffixes.extend(["high", "deep", "single", "control"]);
+    let cardinal = |s: &str| matches!(s, "N" | "E" | "S" | "W");
     let mut ids = Vec::new();
     for section in 0..=15 {
         for item in 1..=30 {
             for suffix in &suffixes {
                 let id = format!("{section}.{item}{suffix}");
-                if iof_2024(&id).is_some() {
+                let wrong_form =
+                    (section == 0 && item == 1 && !suffix.is_empty() && !cardinal(suffix))
+                        || (section == 0 && item == 2 && cardinal(suffix));
+                if !wrong_form && iof_2024(&id).is_some() {
                     ids.push(id);
                 }
             }
@@ -42,38 +49,71 @@ fn from_columns(columns: [Option<String>; 6]) -> ControlDescription {
     import_columns(columns)
 }
 
-/// Both standards Purple Pen writes; they differ only in the box of the bend.
-fn round_trips(d: &ControlDescription) {
+/// The columns of a crossing point, which may keep an instruction row in column C where a normal control
+/// may not (see `instruction_row_stays_out_of_column_c_of_a_normal_control`).
+fn export_columns(d: &ControlDescription, standard: &str) -> PpenColumns {
+    ppen_columns(d, standard, ControlKind::CrossingPoint)
+}
+
+fn refused(notes: &[ColumnNote]) -> bool {
+    notes
+        .iter()
+        .any(|n| matches!(n, ColumnNote::Refused { .. }))
+}
+
+/// Both standards Purple Pen writes. Where the core mapping refuses a symbol (the file's standard lacks
+/// it, or the column does not offer it), nothing is promised; otherwise the import gives the description
+/// back. Returns whether the description was written whole.
+fn round_trips(d: &ControlDescription) -> bool {
+    let mut whole = true;
     for standard in ["2004", "2018"] {
-        let (cols, left_out) = ppen_columns(d, standard);
-        assert!(left_out.is_empty(), "{d:?}: {left_out:?}");
-        assert_eq!(&from_columns(cols.clone()), d, "{standard} via {cols:?}");
+        let out = export_columns(d, standard);
+        if refused(&out.notes) {
+            whole = false;
+            continue;
+        }
+        assert_eq!(
+            &from_columns(out.columns.clone()),
+            d,
+            "{standard} via {:?}",
+            out.columns
+        );
     }
+    whole
 }
 
 #[test]
 fn ppen_symbol_inverts_iof_2024() {
     let ids = all_ids();
     assert!(ids.len() > 150);
-    // One id per column.
-    for i in 0..6 {
-        for id in &ids {
+    // One id per column; every id fits some column in both standards or is a 2018 symbol.
+    for id in &ids {
+        let mut fits = false;
+        for i in 0..6 {
             let mut cols: [Option<String>; 6] = Default::default();
             cols[i] = Some(id.clone());
-            round_trips(&from_columns(cols));
+            let d = from_columns(cols);
+            fits |= export_columns(&d, "2018")
+                .notes
+                .iter()
+                .all(|n| !matches!(n, ColumnNote::Refused { .. }));
+            round_trips(&d);
         }
+        assert!(fits, "{id} fits no column of a 2018 file");
     }
     // Two ids in neighbouring columns (D with E, F with G), which exercise the bend and `single` rules.
+    let mut written = 0;
     for (a, b) in [(1, 2), (3, 4)] {
         for x in &ids {
             for y in &ids {
                 let mut cols: [Option<String>; 6] = Default::default();
                 cols[a] = Some(x.clone());
                 cols[b] = Some(y.clone());
-                round_trips(&from_columns(cols));
+                written += usize::from(round_trips(&from_columns(cols)));
             }
         }
     }
+    assert!(written > 1000, "{written}");
 }
 
 #[test]
@@ -86,9 +126,9 @@ fn explicit_rows() {
             f: f.and_then(some),
             ..Default::default()
         };
-        ppen_columns(&d, "2004").0
+        ppen_columns(&d, "2004", ControlKind::CrossingPoint).columns
     };
-    let one = |d: ControlDescription| ppen_columns(&d, "2004").0;
+    let one = |d: ControlDescription| export_columns(&d, "2004").columns;
     let d = |x: &str| ControlDescription {
         d: some(x),
         ..Default::default()
@@ -114,50 +154,67 @@ fn explicit_rows() {
     let bend = col(None, Some("11.1"));
     assert_eq!((&bend[3], &bend[4]), (&None, &some("11.7")));
     // From 2018 on the bend is in box F (sampleevent8, standard 2018).
-    let bend = ppen_columns(
+    let bend = export_columns(
         &ControlDescription {
             f: some("11.1"),
             ..Default::default()
         },
         "2018",
     )
-    .0;
+    .columns;
     assert_eq!((&bend[3], &bend[4]), (&some("11.7"), &None));
-    let kept = one(ControlDescription {
-        f: some("11.1"),
-        g: some("12.1N"),
-        ..Default::default()
-    });
-    assert_eq!((&kept[3], &kept[4]), (&some("11.7"), &some("11.1N")));
-    // Objects of the same kind.
+    // 2004 with G taken: the core mapping refuses the bend in F (a bend belongs in G there). The old
+    // inverse wrote 11.7 in F, which Purple Pen's 2004 popup does not offer.
+    let kept = export_columns(
+        &ControlDescription {
+            f: some("11.1"),
+            g: some("12.1N"),
+            ..Default::default()
+        },
+        "2004",
+    );
+    assert_eq!(
+        (&kept.columns[3], &kept.columns[4]),
+        (&None, &some("11.1N"))
+    );
+    assert_eq!(
+        kept.notes,
+        vec![ColumnNote::Refused {
+            column: 'F',
+            id: "11.1".to_owned(),
+            reason: Refusal::WrongColumn,
+        }]
+    );
+    // Objects of the same kind: a combination in F with the same feature in D and E is the variant
+    // `single` of the combination, and the feature stays in D (D never carries a description of its own).
     let single = one(ControlDescription {
-        d: some("10.1"),
-        e: some("10.1"),
+        d: some("5.2"),
+        e: some("5.2"),
+        f: some("10.1"),
         ..Default::default()
     });
-    assert_eq!((&single[1], &single[2]), (&some("10.1single"), &None));
-    let single = one(ControlDescription {
-        d: some("12.14"),
-        e: some("12.14"),
+    assert_eq!(
+        (&single[1], &single[2], &single[3]),
+        (&some("5.2"), &None, &some("10.1single"))
+    );
+    // "Between" keeps both features and writes the plain symbol in G: Purple Pen rejects 11.15single.
+    let between = one(ControlDescription {
+        d: some("5.2"),
+        e: some("5.2"),
+        g: some("12.14"),
         ..Default::default()
     });
-    assert_eq!(single[1], some("11.15single"));
-    // Equal ids without a `single` variant stay in both columns.
+    assert_eq!(
+        (&between[1], &between[2], &between[4]),
+        (&some("5.2"), &some("5.2"), &some("11.15"))
+    );
+    // Equal ids without a combination in F stay in both columns.
     let both = one(ControlDescription {
         d: some("5.2"),
         e: some("5.2"),
         ..Default::default()
     });
     assert_eq!((&both[1], &both[2]), (&some("5.2"), &some("5.2")));
-}
-
-#[test]
-fn plain_id_wins_over_variants() {
-    let t = inverse();
-    assert_eq!(t["10.1"], "10.1");
-    assert_eq!(t["15.5"], "13.5");
-    assert_eq!(t["12.14"], "11.15");
-    assert_eq!(t["9.1"], "9.1");
 }
 
 #[test]
@@ -169,13 +226,131 @@ fn symbol_without_purple_pen_id_is_reported() {
         h: some("13.9"),
         ..Default::default()
     };
-    let (cols, left_out) = ppen_columns(&d, "2018");
-    assert_eq!(cols[1], some("5.2"));
-    assert_eq!((&cols[2], &cols[5]), (&None, &None));
+    let out = export_columns(&d, "2018");
+    assert_eq!(out.columns[1], some("5.2"));
+    assert_eq!((&out.columns[2], &out.columns[5]), (&None, &None));
+    let refusal = |column, id: &str| ColumnNote::Refused {
+        column,
+        id: id.to_owned(),
+        reason: Refusal::NoPurplePenId,
+    };
+    assert_eq!(out.notes, vec![refusal('E', "99.9"), refusal('H', "13.9")]);
+}
+
+#[test]
+fn symbol_of_2018_in_a_2004_base_is_refused_and_noted() {
+    let mut ev = event(&[("31", 10.0, 10.0)], vec![]);
+    ev.controls[0].description = ControlDescription {
+        d: some("2.10"),
+        e: some("5.2"),
+        ..Default::default()
+    };
+    let got = to_raw_in(&ev, MapKind::Sprint, 4000, ItemScaling::None, "2004", true);
+    let d = raw_control(&got.event, "31").description.clone().unwrap();
+    assert_eq!(d.columns, [None, None, some("5.2"), None, None, None]);
+    assert!(got.notes.contains(&ExportNote::SymbolNotInStandard {
+        control: "31".to_owned(),
+        column: 'D',
+        id: "2.10".to_owned(),
+        standard: "2004".to_owned(),
+    }));
+    // The same symbol goes into a 2018 file.
+    let got = sprint(&ev);
+    let d = raw_control(&got.event, "31").description.clone().unwrap();
+    assert_eq!(d.columns[1], some("2.10"));
+}
+
+#[test]
+fn note_names_the_standard_the_export_used() {
+    let refused = || ColumnNote::Refused {
+        column: 'D',
+        id: "2.10".to_owned(),
+        reason: Refusal::NotInStandard(Standard::Iof2004),
+    };
+    let standard_of = |file: &str| match export_note("31", file, refused()) {
+        ExportNote::SymbolNotInStandard { standard, .. } => standard,
+        other => panic!("unexpected note {other:?}"),
+    };
+    assert_eq!(standard_of("2004"), "2004");
+    assert_eq!(standard_of("2024"), "2024");
+    // An unknown value is exported as 2018, so the note says 2018.
+    assert_eq!(standard_of("1999"), "2018");
+}
+
+#[test]
+fn plain_height_is_written_as_high_and_noted() {
+    let mut ev = event(&[("31", 10.0, 10.0)], vec![]);
+    ev.controls[0].description = ControlDescription {
+        f: some("9.1"),
+        ..Default::default()
+    };
+    let got = sprint(&ev);
+    let d = raw_control(&got.event, "31").description.clone().unwrap();
+    assert_eq!(d.columns[3], some("9.1high"));
+    assert!(got.notes.contains(&ExportNote::SymbolVariantChosen {
+        control: "31".to_owned(),
+        column: 'F',
+        id: "9.1".to_owned(),
+        written: "9.1high".to_owned(),
+    }));
+}
+
+#[test]
+fn single_variant_round_trips_through_the_file() {
+    let imported = from_columns([None, some("5.2"), None, some("10.1single"), None, None]);
+    // The import names the feature in D and E, the combination in F.
     assert_eq!(
-        left_out,
-        vec![('E', "99.9".to_owned()), ('H', "13.9".to_owned())]
+        (&imported.d, &imported.e, &imported.f),
+        (&some("5.2"), &some("5.2"), &some("10.1"))
     );
+    let out = export_columns(&imported, "2018");
+    assert!(out.notes.is_empty(), "{:?}", out.notes);
+    assert_eq!(
+        out.columns,
+        [None, some("5.2"), None, some("10.1single"), None, None]
+    );
+    // Through the writer and the reader of a whole file.
+    let mut ev = event(&[("31", 10.0, 10.0)], vec![]);
+    ev.controls[0].description = imported.clone();
+    let got = sprint(&ev);
+    let d = raw_control(&got.event, "31").description.clone().unwrap();
+    assert_eq!(d.columns, out.columns);
+}
+
+#[test]
+fn diagonal_column_c_is_written_as_0_2() {
+    let c = |id: &str| {
+        let d = ControlDescription {
+            c: some(id),
+            ..Default::default()
+        };
+        export_columns(&d, "2018").columns[0].clone()
+    };
+    assert_eq!(c("0.2NE"), some("0.2NE"));
+    assert_eq!(c("0.1N"), some("0.1N"));
+    // The cardinal form named with a diagonal direction (and the other way round) is normalised.
+    assert_eq!(c("0.1NE"), some("0.2NE"));
+    assert_eq!(c("0.2N"), some("0.1N"));
+}
+
+#[test]
+fn instruction_row_stays_out_of_column_c_of_a_normal_control() {
+    let d = ControlDescription {
+        c: some("15.3"),
+        ..Default::default()
+    };
+    let out = ppen_columns(&d, "2018", ControlKind::Control);
+    assert_eq!(out.columns[0], None);
+    assert_eq!(
+        out.notes,
+        vec![ColumnNote::Refused {
+            column: 'C',
+            id: "15.3".to_owned(),
+            reason: Refusal::WrongColumn,
+        }]
+    );
+    let out = ppen_columns(&d, "2018", ControlKind::CrossingPoint);
+    assert_eq!(out.columns[0], some("13.3"));
 }
 
 // ---- to_raw ----
@@ -600,9 +775,9 @@ fn course_fields() {
 fn descriptions_go_through_ppen_columns() {
     let mut ev = event(&[("31", 10.0, 10.0), ("32", 20.0, 10.0)], vec![]);
     ev.controls[0].description = ControlDescription {
-        d: some("10.1"),
-        e: some("10.1"),
-        f: some("11.1"),
+        d: some("5.2"),
+        e: some("5.2"),
+        f: some("10.1"),
         h: some("13.9"),
         ..Default::default()
     };
@@ -610,7 +785,7 @@ fn descriptions_go_through_ppen_columns() {
     let d = raw_control(&got.event, "31").description.clone().unwrap();
     assert_eq!(
         d.columns,
-        [None, some("10.1single"), None, some("11.7"), None, None]
+        [None, some("5.2"), None, some("10.1single"), None, None]
     );
     assert_eq!(d.standard, DESCRIPTION_STANDARD);
     assert_eq!(d.column_f_text, None);
@@ -822,6 +997,18 @@ fn round_trip(name: &str) {
                 .collect::<Vec<_>>()
         });
         let want = want.filter(|cols| cols.iter().any(Option::is_some));
+        // The same feature in D and E over a combination in F is written as the variant `single` (the
+        // import reads both forms alike, so the export picks the one Purple Pen offers).
+        let want = want.map(|mut cols| {
+            if cols[1].is_some()
+                && cols[1] == cols[2]
+                && matches!(cols[3].as_deref(), Some("10.1" | "10.2"))
+            {
+                cols[2] = None;
+                cols[3] = cols[3].take().map(|f| format!("{f}single"));
+            }
+            cols
+        });
         let have = c.description.as_ref().map(|d| d.columns.to_vec());
         assert_eq!(have, want, "{what}");
     }

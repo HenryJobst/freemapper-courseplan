@@ -49,5 +49,6 @@ that number and code are clearly assigned to the circle. Both are qualitative.
 - Automatic placement can now store gaps above 0.5 mm, up to the maximum, where the preferred direction is
   covered at the minimum gap.
 - freemapper-print builds the same steps and ranking into the shared placement module.
+- The implementation now lives in freemapper-core (ADR 0036); this ADR keeps the rules.
 
 Source: spec §5.3 and §5.6, plan 2026-11-09-number-gap-range, user rulings of 2026-11-09

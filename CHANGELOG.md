@@ -6,6 +6,24 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.7.4] - 2026-11-10
+
+### Behoben
+
+- Der Export nach Purple Pen schreibt die Variante `single` in das richtige Feld. Dasselbe Merkmal in den
+  Spalten D und E über einer Kreuzung oder Einmündung in Spalte F steht jetzt als `single` in Spalte F.
+- Der Export lässt Beschreibungssymbole aus, die der Standard der Datei nicht kennt, etwa 2.10 in einer Datei von
+  2004, und nennt jedes ausgelassene Symbol (ADR 0037).
+- Der Export vereinheitlicht die Richtungen `0.1` und `0.2`. Das einfache 9.1 und 9.3 schreibt er als `9.1high`
+  und `9.3high` und weist in einem Hinweis darauf hin.
+
+### Geändert
+
+- Die Lage der Postennummern und die Tabellen der Beschreibungssymbole kommen jetzt aus freemapper-core 0.6.0,
+  demselben Code, den freemapper-print nutzt. Die Lagen ändern sich nur in zwei Randfällen: bei einem Knick, der
+  näher als eine Linienbreite am Kreis liegt, und bei einem Regelminimum mit drei Nachkommastellen. Im Beispiel
+  `luebeck-sprint` verschiebt sich keine Nummer (ADR 0036, ADR 0037).
+
 ## [0.7.3] - 2026-11-10
 
 ### Behoben

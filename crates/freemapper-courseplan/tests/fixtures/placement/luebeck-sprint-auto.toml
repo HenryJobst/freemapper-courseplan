@@ -1,0 +1,6 @@
+# auto_place(keep_existing = false) of every course of examples/luebeck-sprint, today's code.
+format = 1
+
+[[course]]
+name = "A"
+placements = [{ direction = 0.0, gap = 0.5 }, { direction = 87.5, gap = 0.5 }, { direction = 3.1, gap = 0.5 }, { direction = 290.0, gap = 0.5 }, { direction = 138.5, gap = 0.5 }, { direction = 237.1, gap = 0.5 }, { direction = 157.7, gap = 0.5 }]

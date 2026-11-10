@@ -29,10 +29,12 @@
 //!   unlinked base file, starts, finishes and crossing points that pair neither by id nor by name pair by
 //!   their order ([`kth_renames`]).
 //! - Descriptions: a `.ppen` stores Purple Pen's symbol ids, which are 2004 numbers with suffixes, while the
-//!   project stores IOF Control Descriptions 2024 numbers. [`ppen_columns`] inverts the import's table
-//!   ([`iof_2024`]). The inverse is built by enumerating every Purple Pen id through the import's table, so
-//!   it cannot drift from it. A 2024 number that no Purple Pen id maps to has no counterpart in Purple Pen;
-//!   it is left out of the exported description and reported, never replaced by a different symbol. A
+//!   project stores IOF Control Descriptions 2024 numbers. [`ppen_columns`] wraps the inverse of
+//!   `freemapper-course` (core ADR 0017, ADR 0037), which is built from the symbol database, so it cannot
+//!   drift from the import. A 2024 number that no Purple Pen id maps to has no counterpart in Purple Pen;
+//!   one the file's standard lacks, or the column does not offer, is left out of the exported description
+//!   and reported, never replaced by a different symbol. Where Purple Pen has several ids (9.1, 9.3), the
+//!   export writes one and says so. A
 //!   crossing point has one symbol in Purple Pen (column C); its other columns are left out and reported
 //!   the same way. The bend's box depends on the file's description standard, so a patch maps the
 //!   descriptions in the base file's standard.
@@ -45,9 +47,12 @@
 //!
 //! Terms follow `docs/glossary.md`.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
-use std::sync::OnceLock;
+use std::collections::{HashMap, HashSet};
 
+use freemapper_course::description_symbols::{
+    ColumnNote, PpenColumns, Refusal, Standard, ppen_columns as core_columns, ppen_symbol,
+    symbol_kind,
+};
 use freemapper_course::{
     Control as PControl, ControlKind as PKind, Course as PCourse, CourseFilter,
     CourseKind as PCourseKind, CourseSource, Description, DescriptionStandard, ItemScaling,
@@ -63,7 +68,6 @@ use freemapper_courseplan_model::{
 use crate::map::{MapKind, map_kind};
 use crate::numbers::{circle_outer_radius_mm, number_box_mm};
 use crate::omap::MapDocument;
-use crate::ppen_import::{DIRECTIONS, iof_2024};
 use crate::ppen_import::{PpenImport, PpenImportError};
 
 /// The project mapped onto a Purple Pen event, with what the mapping left out or changed.
@@ -89,6 +93,29 @@ pub enum ExportNote {
         control: String,
         column: char,
         id: String,
+    },
+    /// A symbol the file's description standard lacks, left out: the 2018 symbols 2.10 and 15.6, say, in a
+    /// 2004 file. `standard` is the one the export used: the file's `"2004"`, `"2018"` or `"2024"`, and
+    /// `"2018"` for any other value.
+    SymbolNotInStandard {
+        control: String,
+        column: char,
+        id: String,
+        standard: String,
+    },
+    /// A symbol Purple Pen has, but not in this column: its description popup does not offer it there.
+    SymbolWrongColumn {
+        control: String,
+        column: char,
+        id: String,
+    },
+    /// Purple Pen has several symbols for the project's `id` and the export wrote `written`: 9.1 and 9.3
+    /// (height or depth, height on slope) are written as `9.1high` and `9.3high`.
+    SymbolVariantChosen {
+        control: String,
+        column: char,
+        id: String,
+        written: String,
     },
     /// A normal control whose code a re-import would not give back: one with blanks at an end, which the
     /// reader trims. Starts, finishes and crossing points get no note, although Purple Pen stores
@@ -310,7 +337,10 @@ pub fn export_ppen_as(
         ids.specials.iter_mut().for_each(|(s, _)| name(s));
         for note in &mut notes {
             match note {
-                ExportNote::SymbolWithoutPpenId { control, .. } => name(control),
+                ExportNote::SymbolWithoutPpenId { control, .. }
+                | ExportNote::SymbolNotInStandard { control, .. }
+                | ExportNote::SymbolWrongColumn { control, .. }
+                | ExportNote::SymbolVariantChosen { control, .. } => name(control),
                 ExportNote::FlaggingImplied { from, to, .. }
                 | ExportNote::PartialFlaggingDropped { from, to, .. } => {
                     name(from);
@@ -594,7 +624,10 @@ fn raw_points(points: &[MapPoint]) -> Vec<RawPoint> {
 
 /// The Purple Pen description of a control, `None` when no column has a symbol Purple Pen knows.
 fn description(c: &Control, standard: &str, notes: &mut Vec<ExportNote>) -> Option<Description> {
-    let (mut columns, mut left_out) = ppen_columns(&c.description, standard);
+    let PpenColumns {
+        mut columns,
+        notes: mut column_notes,
+    } = ppen_columns(&c.description, standard, c.kind);
     if c.kind == ControlKind::CrossingPoint {
         // Purple Pen keeps one symbol for a crossing point: box "all", read back as column C.
         let given = [
@@ -607,22 +640,33 @@ fn description(c: &Control, standard: &str, notes: &mut Vec<ExportNote>) -> Opti
         for (i, id) in given.into_iter().enumerate() {
             let column = char::from(b'D' + i as u8);
             if let Some(id) = id
-                && !left_out.iter().any(|(col, _)| *col == column)
+                && !column_notes
+                    .iter()
+                    .any(|n| matches!(n, ColumnNote::Refused { column: col, .. } if *col == column))
             {
-                left_out.push((column, id.clone()));
+                column_notes.push(ColumnNote::Refused {
+                    column,
+                    id: id.clone(),
+                    reason: Refusal::NoPurplePenId,
+                });
             }
         }
-        left_out.sort();
+        // Columns D to H are not written, so a variant chosen there did not happen either.
+        column_notes.retain(|n| match n {
+            ColumnNote::VariantChosen { column, .. } => *column == 'C',
+            ColumnNote::Refused { .. } => true,
+        });
+        column_notes.sort_by_key(|n| match n {
+            ColumnNote::Refused { column, .. } | ColumnNote::VariantChosen { column, .. } => {
+                *column
+            }
+        });
         columns[1..].fill(None);
     }
     notes.extend(
-        left_out
+        column_notes
             .into_iter()
-            .map(|(column, id)| ExportNote::SymbolWithoutPpenId {
-                control: c.code.0.clone(),
-                column,
-                id,
-            }),
+            .map(|n| export_note(&c.code.0, standard, n)),
     );
     columns.iter().any(Option::is_some).then(|| Description {
         columns,
@@ -818,71 +862,91 @@ fn raw_special(
     })
 }
 
-/// The Purple Pen symbol id of each IOF 2024 number the import can produce. Where two Purple Pen ids give
-/// the same number (`10.1` and `10.1single`, `13.5` and `13.5control`), the plain id wins.
-fn inverse() -> &'static BTreeMap<String, String> {
-    static TABLE: OnceLock<BTreeMap<String, String>> = OnceLock::new();
-    TABLE.get_or_init(|| {
-        let mut suffixes = vec![""];
-        suffixes.extend(DIRECTIONS);
-        suffixes.extend(["high", "deep", "single", "control"]);
-        let mut table: BTreeMap<String, String> = BTreeMap::new();
-        for section in 0..=15 {
-            for item in 1..=30 {
-                for suffix in &suffixes {
-                    let id = format!("{section}.{item}{suffix}");
-                    let Some(mapped) = iof_2024(&id) else {
-                        continue;
-                    };
-                    // The plain id comes first and is never replaced by a longer one.
-                    table.entry(mapped.id).or_insert(id);
-                }
-            }
-        }
-        table
-    })
-}
-
-/// 2024 numbers of "objects of the same kind" (crossing, junction, between): Purple Pen has one symbol
-/// with the variant `single` for the pair of columns D and E.
-const SINGLE_CAPABLE: [&str; 3] = ["10.1", "10.2", "12.14"];
-
-/// Purple Pen symbol ids for boxes C..H of one courseplan description, and the (column, 2024 id) pairs
-/// that have no Purple Pen id and are left out.
+/// The Purple Pen symbol ids for boxes C..H of one courseplan description, and what the core mapping
+/// left out or chose on the way (core ADR 0017).
 ///
-/// Two import rules run backwards: in a file of description standard `"2004"`, the bend `11.1` in column F
-/// goes to box G as `11.7` when G is empty (2004 has the bend in G; the import moves it to F); from 2018 on
-/// it stays in box F, where Purple Pen keeps it (sampleevent8, standard 2018, box F). And D equal to E with
-/// a `single` variant becomes `<id>single` in D with E empty.
+/// A thin wrapper on [`core_columns`]: it turns the description into the column array and the file's
+/// standard string into a [`Standard`]. The core mapping does not know the control kind, so the wrapper
+/// keeps the instruction rows (15.x, 16.x) out of column C of a normal control, as `write_ppen` does; only a
+/// crossing point keeps them there.
 pub(crate) fn ppen_columns(
     d: &ControlDescription,
     standard: &str,
-) -> ([Option<String>; 6], Vec<(char, String)>) {
-    let table = inverse();
-    let mut cols: [Option<String>; 6] = Default::default();
-    let mut left_out = Vec::new();
-    let given = [&d.c, &d.d, &d.e, &d.f, &d.g, &d.h];
-    for (i, id) in given.into_iter().enumerate() {
-        let Some(id) = id else { continue };
-        match table.get(id) {
-            Some(pp) => cols[i] = Some(pp.clone()),
-            None => left_out.push((char::from(b'C' + i as u8), id.clone())),
-        }
-    }
-    // Bend: column F in the project, column G in a 2004 file.
-    if standard == "2004" && d.f.as_deref() == Some("11.1") && cols[3].is_some() && d.g.is_none() {
-        cols[4] = cols[3].take();
-    }
-    // Objects of the same kind: one symbol with the variant "single" in D, E empty.
-    if let (Some(dd), Some(ee)) = (&d.d, &d.e)
-        && dd == ee
-        && SINGLE_CAPABLE.contains(&dd.as_str())
-        && let Some(pp) = &cols[1]
+    kind: ControlKind,
+) -> PpenColumns {
+    let standard = Standard::from_description(standard).unwrap_or(Standard::Iof2018);
+    let mut given = [&d.c, &d.d, &d.e, &d.f, &d.g, &d.h].map(Clone::clone);
+    let mut notes = Vec::new();
+    if kind == ControlKind::Control
+        && let Some(id) = given[0].as_deref()
+        && let Ok(inverse) = ppen_symbol(id, standard)
+        && symbol_kind(&inverse.id, standard).is_some_and(|k| ('V'..='Z').contains(&k))
     {
-        cols[1] = Some(format!("{pp}single"));
-        cols[2] = None;
+        notes.push(ColumnNote::Refused {
+            column: 'C',
+            id: id.to_owned(),
+            reason: Refusal::WrongColumn,
+        });
+        given[0] = None;
     }
-    (cols, left_out)
+    let mut out = core_columns(&given, standard);
+    notes.append(&mut out.notes);
+    notes.sort_by_key(|n| match n {
+        ColumnNote::Refused { column, .. } | ColumnNote::VariantChosen { column, .. } => *column,
+    });
+    out.notes = notes;
+    out
+}
+
+/// The export note for what the core mapping reported about one symbol of `control`.
+fn export_note(control: &str, standard: &str, note: ColumnNote) -> ExportNote {
+    let control = control.to_owned();
+    // Name the standard `ppen_columns` used, which is 2018 for a value it does not know.
+    let standard = if Standard::from_description(standard).is_some() {
+        standard.trim()
+    } else {
+        "2018"
+    };
+    match note {
+        ColumnNote::Refused {
+            column,
+            id,
+            reason: Refusal::NoPurplePenId,
+        } => ExportNote::SymbolWithoutPpenId {
+            control,
+            column,
+            id,
+        },
+        ColumnNote::Refused {
+            column,
+            id,
+            reason: Refusal::NotInStandard(_),
+        } => ExportNote::SymbolNotInStandard {
+            control,
+            column,
+            id,
+            standard: standard.to_owned(),
+        },
+        ColumnNote::Refused {
+            column,
+            id,
+            reason: Refusal::WrongColumn,
+        } => ExportNote::SymbolWrongColumn {
+            control,
+            column,
+            id,
+        },
+        ColumnNote::VariantChosen {
+            column,
+            id,
+            written,
+        } => ExportNote::SymbolVariantChosen {
+            control,
+            column,
+            id,
+            written,
+        },
+    }
 }
 
 mod overlay;

@@ -496,6 +496,46 @@ impl Localize for ExportNote {
                     ("id", v(id)),
                 ],
             ),
+            ExportNote::SymbolNotInStandard {
+                control,
+                column,
+                id,
+                standard,
+            } => t(
+                "export-ppen-note-symbol-not-in-standard",
+                &[
+                    ("control", v(control)),
+                    ("column", v(column)),
+                    ("id", v(id)),
+                    ("standard", v(standard)),
+                ],
+            ),
+            ExportNote::SymbolWrongColumn {
+                control,
+                column,
+                id,
+            } => t(
+                "export-ppen-note-symbol-wrong-column",
+                &[
+                    ("control", v(control)),
+                    ("column", v(column)),
+                    ("id", v(id)),
+                ],
+            ),
+            ExportNote::SymbolVariantChosen {
+                control,
+                column,
+                id,
+                written,
+            } => t(
+                "export-ppen-note-symbol-variant-chosen",
+                &[
+                    ("control", v(control)),
+                    ("column", v(column)),
+                    ("id", v(id)),
+                    ("written", v(written)),
+                ],
+            ),
             ExportNote::CodeNotStored { code } => {
                 t("export-ppen-note-code-not-stored", &[("code", v(code))])
             }
@@ -891,6 +931,8 @@ mod tests {
             "kind",
             "path",
             "source",
+            "standard",
+            "written",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
