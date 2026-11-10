@@ -181,61 +181,16 @@ struct Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     fn new(project: &Event, v: &'a Views, m: &'a Matching) -> Self {
-        let mut ctl = vec![None; m.controls.len()];
-        for (id, t) in m.controls.iter().enumerate() {
-            let Some(c) = t.ours.and_then(|oi| v.ours.controls.get(oi)) else {
-                continue;
-            };
-            let by_id = c.ppen_id.and_then(|pid| {
-                v.ours_ids
-                    .controls
-                    .iter()
-                    .find(|(_, i)| *i == pid)
-                    .map(|(code, _)| code.0.clone())
-            });
-            ctl[id] = by_id
-                .or_else(|| Some(c.code.0.clone()))
-                .filter(|n| project.controls.iter().any(|p| &p.code.0 == n));
-        }
-        let mut sp = vec![None; m.specials.len()];
-        for (id, t) in m.specials.iter().enumerate() {
-            let Some(s) = t.ours.and_then(|oi| v.ours.specials.get(oi)) else {
-                continue;
-            };
-            let same_kind = |name: &str| {
-                project
-                    .specials
-                    .iter()
-                    .find(|p| p.id() == name)
-                    .is_some_and(|p| std::mem::discriminant(p) == std::mem::discriminant(s))
-            };
-            let by_id = s.ppen_id().and_then(|pid| {
-                v.ours_ids
-                    .specials
-                    .iter()
-                    .find(|(n, i)| *i == pid && same_kind(n))
-                    .map(|(n, _)| n.clone())
-            });
-            sp[id] = by_id
-                .or_else(|| Some(s.id().to_owned()))
-                .filter(|n| same_kind(n));
-        }
-        let mut co = vec![None; m.courses.len()];
-        for (id, t) in m.courses.iter().enumerate() {
-            let Some(c) = t.ours.and_then(|oi| v.ours.courses.get(oi)) else {
-                continue;
-            };
-            let by_id = c.ppen_id.and_then(|pid| {
-                v.ours_ids
-                    .courses
-                    .iter()
-                    .find(|(_, i)| *i == pid)
-                    .map(|(n, _)| n.clone())
-            });
-            co[id] = by_id
-                .or_else(|| Some(c.name.clone()))
-                .filter(|n| project.courses.iter().any(|p| &p.name == n));
-        }
+        let names = super::view::project_names(project, &v.ours, &v.ours_ids);
+        let by_triple = |triples: &[super::matching::Triple], names: &[Option<String>]| {
+            triples
+                .iter()
+                .map(|t| t.ours.and_then(|oi| names.get(oi).cloned().flatten()))
+                .collect::<Vec<_>>()
+        };
+        let ctl = by_triple(&m.controls, &names.controls);
+        let sp = by_triple(&m.specials, &names.specials);
+        let co = by_triple(&m.courses, &names.courses);
         Ctx {
             v,
             m,
@@ -881,8 +836,7 @@ pub fn apply(
                 }
             }
             (FieldKey::Special(id), Some(FieldValue::Shape(points, courses))) => {
-                let idx = id - m.controls.len();
-                let Some(name) = cx.sp[idx].clone() else {
+                let Some(name) = cx.sp.get(id).cloned().flatten() else {
                     continue;
                 };
                 let old: Vec<String> = cx
@@ -1281,6 +1235,7 @@ mod tests {
             ours,
             theirs,
             ours_ids: ids,
+            ours_names: Default::default(),
             skipped: vec![],
         };
         let m = match_sides(&v, true);

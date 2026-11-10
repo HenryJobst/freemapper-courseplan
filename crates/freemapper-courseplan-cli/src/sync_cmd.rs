@@ -8,7 +8,7 @@ use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::sync::base::{
     BaseState, base_path, base_state, fnv1a64, strip_absolute_path,
 };
-use freemapper_courseplan::sync::decide::Take;
+use freemapper_courseplan::sync::decide::{Take, contradicting_take};
 use freemapper_courseplan::sync::merge3::Pick;
 use freemapper_courseplan::sync::{SyncError, SyncInput, SyncPlan, SyncReport, sync_ppen};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, sync_error, sync_value, text};
@@ -50,6 +50,8 @@ pub(crate) enum SyncCmdError {
     /// The link points at the project file or its map.
     Overwrites(PathBuf),
     Sync(PathBuf, SyncError),
+    /// The base copy matches its recorded hash but cannot be read as a Purple Pen event.
+    BaseUnusable(PathBuf),
     /// A `--take KEY=SIDE` names no open conflict.
     TakeKey(String),
     /// An error variant that cannot occur here; the word says which.
@@ -100,6 +102,11 @@ impl SyncCmdError {
                 &[("path", path_arg(&path))],
             ),
             SyncCmdError::Sync(path, e) => sync_error(&e, lang, &path.display().to_string()),
+            SyncCmdError::BaseUnusable(path) => text(
+                lang,
+                "error-sync-base-unusable",
+                &[("path", path_arg(&path))],
+            ),
             SyncCmdError::TakeKey(key) => text(
                 lang,
                 "error-sync-take-unknown-key",
@@ -247,7 +254,13 @@ fn sync_inner(
             take,
             base_note: base_note.clone(),
         })
-        .map_err(|e| SyncCmdError::Sync(ppen_path.clone(), e))
+        .map_err(|e| match e {
+            // A base copy that cannot be read, though its hash fits: only deleting it helps (M10).
+            SyncError::Base(_) if state == BaseState::Use => {
+                SyncCmdError::BaseUnusable(base_file.clone())
+            }
+            e => SyncCmdError::Sync(ppen_path.clone(), e),
+        })
     };
     let plan = if store_only {
         // Only the decisions are wanted: take nothing, so the plan is always the conflict branch.
@@ -264,6 +277,17 @@ fn sync_inner(
     } else {
         run(&file.event, take)?
     };
+
+    // A `KEY=SIDE` that names no conflict is refused whether or not conflicts remain (M11).
+    if !store_only {
+        let (SyncPlan::Conflicts(report) | SyncPlan::Ready { report, .. }) = &plan;
+        if let Some(Take::One(key, _)) = take
+            .iter()
+            .find(|t| matches!(t, Take::One(key, _) if !report.conflict_keys.contains(key)))
+        {
+            return Err(SyncCmdError::TakeKey(key.clone()));
+        }
+    }
 
     let outcome = |report, written, ppen_changed, decisions| SyncOutcome {
         report,
@@ -487,15 +511,43 @@ fn print_outcome(o: &SyncOutcome, lang: &Lang) {
     }
 }
 
+/// The `--take` values as takes. A value that is no side and a contradiction are usage errors (exit 2),
+/// worded in `lang`.
+fn parse_takes(lang: &Lang, values: &[String]) -> Result<Vec<Take>, Failure> {
+    let takes = values
+        .iter()
+        .map(|v| {
+            v.parse::<Take>().map_err(|e| {
+                Failure::Usage(text(
+                    lang,
+                    "error-sync-take-parse",
+                    &[("value", FluentValue::from(e.0))],
+                ))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    match contradicting_take(&takes) {
+        None => Ok(takes),
+        Some(None) => Err(Failure::Usage(text(lang, "error-sync-take-twice-all", &[]))),
+        Some(Some(key)) => Err(Failure::Usage(text(
+            lang,
+            "error-sync-take-twice-key",
+            &[("key", FluentValue::from(key))],
+        ))),
+    }
+}
+
 /// The `sync` command. Exit code 1 when conflicts remain.
 pub(crate) fn sync(
     lang: &Lang,
     project: &Path,
     dry_run: bool,
-    take: &[Take],
+    take: &[String],
     json: bool,
 ) -> Result<(), Failure> {
-    let outcome = sync_file(project, dry_run, take).map_err(|e| Failure::Error(e.message(lang)))?;
+    let take = parse_takes(lang, take)?;
+    let outcome =
+        sync_file(project, dry_run, &take).map_err(|e| Failure::Error(e.message(lang)))?;
     if json {
         let value = sync_json(&outcome, lang);
         println!(

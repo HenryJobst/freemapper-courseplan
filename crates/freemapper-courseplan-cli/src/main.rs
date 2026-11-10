@@ -20,7 +20,6 @@ use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::init::init_project;
 use freemapper_courseplan::map::{MapKind, map_kind_for_file};
 use freemapper_courseplan::omap::read::read_map_file;
-use freemapper_courseplan::sync::decide::Take;
 use freemapper_courseplan::text::{
     FluentValue, Lang, Localize, available, detect_lang, parse_lang_arg, text,
 };
@@ -93,7 +92,7 @@ enum Command {
         dry_run: bool,
         /// Pick a side for conflicts: ours, theirs, KEY=ours or KEY=theirs
         #[arg(long, value_name = "SIDE")]
-        take: Vec<Take>,
+        take: Vec<String>,
         /// Print the result as JSON
         #[arg(long)]
         json: bool,

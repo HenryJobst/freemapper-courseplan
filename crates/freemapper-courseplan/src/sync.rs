@@ -16,7 +16,7 @@ use freemapper_courseplan_model::{Event, ModelError};
 use self::apply::{Applied, SyncNote, apply};
 use self::decide::{SyncConflict, Take, conflict_key, conflicts, render, resolve};
 use self::fields::{FieldKey, FieldOutcome, FieldValue, ObjectKind, classify};
-use self::matching::{Matching, match_sides};
+use self::matching::{Matching, match_sides, match_sides_with};
 use self::merge3::Pick;
 use self::view::{Views, views};
 use crate::map::MapKind;
@@ -87,6 +87,8 @@ pub struct SyncReport {
     pub notes: Vec<SyncNote>,
     /// Stored decisions that no longer fit.
     pub stale: Vec<String>,
+    /// The keys of every conflict of this run, those settled by a decision or a take included.
+    pub conflict_keys: Vec<String>,
 }
 
 /// The outcome of [`sync_ppen`].
@@ -107,24 +109,35 @@ pub enum SyncPlan {
     },
 }
 
-fn changes(outcomes: &[FieldOutcome], v: &Views, m: &Matching) -> Vec<SyncChange> {
+/// What the sync changes: Purple Pen's and the project's own changes, what both sides changed the same way,
+/// and the conflicts with the side picked for them.
+fn changes(
+    outcomes: &[FieldOutcome],
+    sides: &HashMap<String, freemapper_courseplan_model::Side>,
+    has_base: bool,
+    v: &Views,
+    m: &Matching,
+) -> Vec<SyncChange> {
+    use freemapper_courseplan_model::Side;
     outcomes
         .iter()
         .filter_map(|o| {
-            let value = match o.pick {
-                Pick::Ours => o.ours.as_ref(),
-                Pick::Theirs => o.theirs.as_ref(),
-                Pick::Both => o.merged.as_ref(),
+            let key = || conflict_key(o, v, m);
+            let (side, shown) = match o.pick {
+                Pick::Ours => (Pick::Ours, o.ours.as_ref()),
+                Pick::Theirs => (Pick::Theirs, o.theirs.as_ref()),
+                // Without a base everything both sides hold alike would count; it is no change.
+                Pick::Both if !has_base => return None,
+                Pick::Both => (Pick::Both, o.merged.as_ref().or(o.ours.as_ref())),
+                Pick::Conflict => match sides.get(&key())? {
+                    Side::Ours => (Pick::Ours, o.ours.as_ref()),
+                    Side::Theirs => (Pick::Theirs, o.theirs.as_ref()),
+                },
                 _ => return None,
             };
-            if o.pick == Pick::Both && o.merged.is_none() {
-                return None;
-            }
-            let merged = o.merged.as_ref().map(|x: &FieldValue| x as &FieldValue);
-            let shown = if o.pick == Pick::Both { merged } else { value };
             Some(SyncChange {
-                key: conflict_key(o, v, m),
-                side: o.pick,
+                key: key(),
+                side,
                 value: render(shown, v, m),
             })
         })
@@ -381,7 +394,10 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
     }
 
     let v = views(project, base, theirs, map, kind)?;
-    let m = match_sides(&v, base.is_some());
+    // The project's Purple Pen ids belong to the linked file, unless the base copy was ignored because the
+    // link changed: then they may come from another file (M12).
+    let trust_ids = !matches!(base_note, Some(SyncNote::BaseIgnored { why: "other link" }));
+    let m = match_sides_with(&v, base.is_some(), trust_ids);
     let outcomes = classify(&v, &m, project);
     let open_list = conflicts(&outcomes, &v, &m);
     let stored = project
@@ -389,14 +405,16 @@ pub fn sync_ppen(input: SyncInput<'_>) -> Result<SyncPlan, SyncError> {
         .as_ref()
         .map_or(&[][..], |s| s.decisions.as_slice());
     let resolution = resolve(&open_list, stored, take);
+    let conflict_keys: Vec<String> = open_list.iter().map(|c| c.key.clone()).collect();
     let mut report = SyncReport {
-        changes: changes(&outcomes, &v, &m),
+        changes: changes(&outcomes, &resolution.sides, base.is_some(), &v, &m),
         conflicts: open_list
             .into_iter()
             .filter(|c| resolution.open.contains(&c.key))
             .collect(),
         notes: base_note.iter().cloned().collect(),
         stale: resolution.stale.clone(),
+        conflict_keys,
     };
     report
         .notes
@@ -613,6 +631,7 @@ mod tests {
             ours: empty,
             theirs,
             ours_ids: Default::default(),
+            ours_names: Default::default(),
             skipped: Vec::new(),
         }
     }

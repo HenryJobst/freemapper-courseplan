@@ -503,6 +503,7 @@ mod tests {
             ours,
             theirs,
             ours_ids: Default::default(),
+            ours_names: Default::default(),
             skipped: vec![],
         }
     }

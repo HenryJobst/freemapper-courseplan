@@ -965,3 +965,92 @@ fn a_number_reset_to_automatic_in_purple_pen_sticks() {
     assert!(report.changes.is_empty(), "{:?}", report.changes);
     assert!(numbers(&m2, "B", "32").is_none());
 }
+
+/// Purple Pen moves the start: the project follows. The key of a special object's own field used to
+/// subtract the number of controls from the object's index.
+#[test]
+fn a_start_moved_in_purple_pen_follows() {
+    let s = setup();
+    let from = "<location x=\"-97.4\" y=\"3.6\" />";
+    assert!(s.base.contains(from));
+    let theirs = s.base.replacen(from, "<location x=\"-97\" y=\"3.6\" />", 1);
+    let (merged, _, _, report) = ready(s.run(&s.project, &theirs, &[]));
+    let start = merged
+        .specials
+        .iter()
+        .find(|x| x.id() == "S1")
+        .expect("the start");
+    let freemapper_courseplan_model::SpecialObject::Start { map_mm, .. } = start else {
+        panic!()
+    };
+    assert!((map_mm.x - (-97.0)).abs() < 2e-3, "{map_mm:?}");
+    assert!(
+        report.changes.iter().any(|c| c.key == "special/S1"),
+        "{:?}",
+        report.changes
+    );
+}
+
+/// M1: a conflict settled by a take is a change of the report, with the side that won; so is a change that
+/// both sides made the same way.
+#[test]
+fn the_report_lists_settled_conflicts_and_same_changes() {
+    let s = setup();
+    let theirs = purple_pen_saves(&s.base, |e| control(e, "34").map_mm.x += 1.0, false);
+    let mut ours = s.project.clone();
+    control(&mut ours, "34").map_mm.x += 2.0;
+    let (_, _, _, report) = ready(s.run(&ours, &theirs, &[Take::All(Side::Theirs)]));
+    let change = report
+        .changes
+        .iter()
+        .find(|c| c.key == "control/34/position")
+        .expect("the settled conflict is listed");
+    assert_eq!(
+        change.side,
+        freemapper_courseplan::sync::merge3::Pick::Theirs
+    );
+    // Both sides move 34 to the same place.
+    let mut same = s.project.clone();
+    control(&mut same, "34").map_mm.x += 1.0;
+    let (_, _, _, report) = ready(s.run(&same, &theirs, &[]));
+    let change = report
+        .changes
+        .iter()
+        .find(|c| c.key == "control/34/position")
+        .expect("the same change is listed");
+    assert_eq!(change.side, freemapper_courseplan::sync::merge3::Pick::Both);
+}
+
+/// M12: after a base copy was ignored because the link changed, the project's Purple Pen ids may come from
+/// another file; they must not pair objects.
+#[test]
+fn project_ids_do_not_pair_objects_after_another_link() {
+    let s = setup();
+    // Purple Pen's control 37 is called 99 there; the project still calls it 37 (same Purple Pen id).
+    let theirs = s.base.replacen("<code>37</code>", "<code>99</code>", 1);
+    let run = |why: &'static str| {
+        sync_ppen(SyncInput {
+            project: &s.project,
+            base: None,
+            theirs: theirs.as_bytes(),
+            map: &s.map,
+            kind: s.kind,
+            take: &[Take::All(Side::Theirs)],
+            base_note: Some(SyncNote::BaseIgnored { why }),
+        })
+    };
+    let keys = |why: &'static str| -> Vec<String> {
+        let (_, _, _, report) = ready(run(why));
+        report.changes.iter().map(|c| c.key.clone()).collect()
+    };
+    let missing = keys("missing");
+    let other = keys("other link");
+    assert!(
+        missing.iter().any(|k| k == "control/37/code"),
+        "ids pair 37 with 99: {missing:?}"
+    );
+    assert!(
+        !other.iter().any(|k| k == "control/37/code"),
+        "ids must not pair: {other:?}"
+    );
+}

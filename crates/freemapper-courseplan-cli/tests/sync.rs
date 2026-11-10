@@ -456,3 +456,202 @@ fn help_is_localized() {
     let de = run(dir.path(), "de", &["sync", "--help"]);
     assert!(stdout(&de).contains("Seite"), "{}", stdout(&de));
 }
+
+/// M1: after `--take` the output lists what changed instead of "Nothing to do".
+#[test]
+fn a_take_is_reported_as_a_change() {
+    let (dir, _project) = two_conflicts();
+    let out = run(
+        dir.path(),
+        "en",
+        &[
+            "sync",
+            "event.courseplan.toml",
+            "--take",
+            "theirs",
+            "--json",
+        ],
+    );
+    assert!(out.status.success(), "{}{}", stdout(&out), stderr(&out));
+    let json: serde_json::Value = serde_json::from_str(&stdout(&out)).unwrap();
+    let keys: Vec<&str> = json["changes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c["key"].as_str())
+        .collect();
+    assert!(keys.contains(&"control/34/position"), "{json}");
+    assert!(keys.contains(&"control/35/position"), "{json}");
+}
+
+#[test]
+fn a_take_text_does_not_say_nothing_to_do() {
+    let (dir, _project) = two_conflicts();
+    let out = run(
+        dir.path(),
+        "en",
+        &["sync", "event.courseplan.toml", "--take", "ours"],
+    );
+    assert!(out.status.success(), "{}{}", stdout(&out), stderr(&out));
+    assert!(!stdout(&out).contains("Nothing to do"), "{}", stdout(&out));
+}
+
+/// M11: a key that is no conflict is refused whether or not conflicts remain.
+#[test]
+fn an_unknown_take_key_is_refused_without_conflicts_too() {
+    let (dir, project) = synced();
+    let before = files(dir.path(), &project);
+    let out = run(
+        dir.path(),
+        "en",
+        &["sync", "event.courseplan.toml", "--take", "control/99=ours"],
+    );
+    assert_eq!(out.status.code(), Some(1), "{}", stdout(&out));
+    assert!(stderr(&out).contains("control/99"), "{}", stderr(&out));
+    assert_eq!(files(dir.path(), &project), before);
+}
+
+#[test]
+fn two_different_sides_for_the_same_thing_are_refused() {
+    let (dir, project) = two_conflicts();
+    let before = files(dir.path(), &project);
+    for args in [
+        vec!["--take", "ours", "--take", "theirs"],
+        vec![
+            "--take",
+            "control/34/position=ours",
+            "--take",
+            "control/34/position=theirs",
+        ],
+    ] {
+        let mut full = vec!["sync", "event.courseplan.toml"];
+        full.extend(args);
+        let out = run(dir.path(), "en", &full);
+        assert_eq!(
+            out.status.code(),
+            Some(2),
+            "{}{}",
+            stdout(&out),
+            stderr(&out)
+        );
+        assert!(stderr(&out).contains("--take"), "{}", stderr(&out));
+        assert_eq!(files(dir.path(), &project), before);
+    }
+}
+
+#[test]
+fn a_bad_take_is_reported_in_german() {
+    let (dir, _project) = synced();
+    let out = run(
+        dir.path(),
+        "de",
+        &["sync", "event.courseplan.toml", "--take", "mine"],
+    );
+    assert_eq!(out.status.code(), Some(2), "{}", stderr(&out));
+    assert!(stderr(&out).contains("erwartet"), "{}", stderr(&out));
+    assert!(!stderr(&out).contains("expected"), "{}", stderr(&out));
+}
+
+/// M3: decisions stored before the first sync do not make the base look foreign.
+#[test]
+fn decisions_before_the_first_sync_keep_it_a_first_sync() {
+    let (dir, _project) = linked();
+    // Without a base every difference is a conflict.
+    edit(
+        &dir.path().join("event.courseplan.toml"),
+        P34,
+        "map_mm = [-1.0, -12.4]",
+    );
+    edit(&ppen(dir.path()), Q34, "<location x=\"-1.4\" y=\"12.4\" />");
+    edit(
+        &dir.path().join("event.courseplan.toml"),
+        P35,
+        "map_mm = [-28.0, 10.2]",
+    );
+    edit(
+        &ppen(dir.path()),
+        Q35,
+        "<location x=\"-28.4\" y=\"-10.2\" />",
+    );
+    let out = run(
+        dir.path(),
+        "en",
+        &[
+            "sync",
+            "event.courseplan.toml",
+            "--take",
+            "control/34/position=theirs",
+        ],
+    );
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}{}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let stored = std::fs::read_to_string(dir.path().join("event.courseplan.toml")).unwrap();
+    assert!(stored.contains("sync.decisions"), "{stored}");
+    let again = run(
+        dir.path(),
+        "en",
+        &["sync", "event.courseplan.toml", "--dry-run"],
+    );
+    let text = stdout(&again);
+    assert!(!text.contains("another Purple Pen file"), "{text}");
+    assert!(text.contains("first sync"), "{text}");
+}
+
+/// M5: special objects show under the project's names.
+#[test]
+fn conflict_keys_use_the_project_names_of_special_objects() {
+    let (dir, project) = synced();
+    edit(&project, "map_mm = [-97.4, -3.6]", "map_mm = [-97.0, -3.6]");
+    edit(
+        &ppen(dir.path()),
+        "<location x=\"-97.4\" y=\"3.6\" />",
+        "<location x=\"-96.0\" y=\"3.6\" />",
+    );
+    let out = run(dir.path(), "en", &["sync", "event.courseplan.toml"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}{}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let text = stdout(&out);
+    assert!(text.contains("special/S1"), "{text}");
+    assert!(!text.contains("STA1"), "{text}");
+}
+
+/// M10: a base copy that cannot be read says how to get out.
+#[test]
+fn a_damaged_base_copy_names_the_file_to_delete() {
+    let (dir, project) = synced();
+    let base = base_path(&project);
+    std::fs::write(&base, "this is no Purple Pen file").unwrap();
+    let hash = fnv1a64(b"this is no Purple Pen file");
+    let text = std::fs::read_to_string(&project).unwrap();
+    let old = text
+        .lines()
+        .find(|l| l.starts_with("base_fnv1a64"))
+        .unwrap()
+        .to_owned();
+    std::fs::write(
+        &project,
+        text.replace(&old, &format!("base_fnv1a64 = \"{hash}\"")),
+    )
+    .unwrap();
+    let out = run(dir.path(), "en", &["sync", "event.courseplan.toml"]);
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "{}{}",
+        stdout(&out),
+        stderr(&out)
+    );
+    let err = stderr(&out);
+    assert!(err.contains("ppen-base"), "{err}");
+    assert!(err.to_lowercase().contains("delete"), "{err}");
+}

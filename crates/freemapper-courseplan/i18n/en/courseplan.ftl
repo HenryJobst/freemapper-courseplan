@@ -653,7 +653,11 @@ sync-note-leg-change-dropped = the changed bends or marking of the leg { $from }
 sync-note-new-name-taken = the new object { $from } from Purple Pen is called { $to } in the project, because the project already uses { $from }
 sync-note-base-ignored = { $why }. Without a base copy, the sync deletes nothing and treats every difference as a conflict
 error-sync-internal = internal error in sync ({ $what }). Please report this
-sync-note-first-sync = first sync of this project with this file. There is no base copy yet, so the sync deletes nothing and treats every difference as a conflict; it writes the base copy now
+error-sync-take-parse = Expected ours, theirs, KEY=ours or KEY=theirs after --take, got `{ $value }`.
+error-sync-take-twice-all = --take names ours and theirs for all conflicts. Give one side.
+error-sync-take-twice-key = --take names two different sides for { $key }. Give one side.
+error-sync-base-unusable = The base copy { $path } cannot be read as a Purple Pen event. Delete that file and run sync again: the sync then works without a base, deletes nothing and asks about every difference.
+sync-note-first-sync = first sync of this project with this file. There is no base copy yet, so the sync deletes nothing and treats every difference as a conflict; it writes the base copy when it has finished without open conflicts
 sync-note-base-repaired = an earlier sync did not write the base copy. It matches the linked file again now
 sync-note-not-written = not written to Purple Pen: { $note }
 word-sync-why-missing = there is no usable base copy

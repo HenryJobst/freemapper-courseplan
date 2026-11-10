@@ -56,6 +56,23 @@ impl FromStr for Take {
     }
 }
 
+/// A take that contradicts another: two different bare sides (`None`), or two different sides for one key
+/// (`Some(key)`). The first such case, if any.
+pub fn contradicting_take(takes: &[Take]) -> Option<Option<String>> {
+    for (i, a) in takes.iter().enumerate() {
+        for b in &takes[i + 1..] {
+            match (a, b) {
+                (Take::All(x), Take::All(y)) if x != y => return Some(None),
+                (Take::One(k, x), Take::One(l, y)) if k == l && x != y => {
+                    return Some(Some(k.clone()));
+                }
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
 /// What the stored decisions and the takes make of the open conflicts.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Resolution {
@@ -67,7 +84,8 @@ pub struct Resolution {
     pub open: Vec<String>,
 }
 
-/// Percent-encodes `/`, `%` and `=` so a name fits into one key segment.
+/// Percent-encodes `/`, `%`, `=`, `#` and `-` so a name fits into one key segment: `#` marks the visit of a
+/// number key and `-` joins the two ends of a leg key.
 fn escape(name: &str) -> String {
     let mut out = String::with_capacity(name.len());
     for c in name.chars() {
@@ -75,24 +93,30 @@ fn escape(name: &str) -> String {
             '/' => out.push_str("%2F"),
             '%' => out.push_str("%25"),
             '=' => out.push_str("%3D"),
+            '#' => out.push_str("%23"),
+            '-' => out.push_str("%2D"),
             c => out.push(c),
         }
     }
     out
 }
 
-/// A name of an object: the base's, or ours when the object is new, or theirs.
+/// A name of an object: the project's, else the base's, else theirs (M5). The project's name is the one the
+/// user reads in the project file: a start is `S1` there, `STA1` in Purple Pen.
 fn pick_name<T>(
     t: &Triple,
     v: &Views,
     get: impl Fn(&crate::ppen_import::PpenImport) -> &[T],
     name: impl Fn(&T) -> String,
+    ours_names: &[Option<String>],
 ) -> String {
     let from = |imp: &crate::ppen_import::PpenImport, i: Option<usize>| {
         i.and_then(|i| get(imp).get(i)).map(&name)
     };
-    from(&v.base, t.base)
+    t.ours
+        .and_then(|i| ours_names.get(i).cloned().flatten())
         .or_else(|| from(&v.ours, t.ours))
+        .or_else(|| from(&v.base, t.base))
         .or_else(|| from(&v.theirs, t.theirs))
         .unwrap_or_default()
 }
@@ -100,21 +124,45 @@ fn pick_name<T>(
 fn control_name(id: usize, v: &Views, m: &Matching) -> String {
     m.controls
         .get(id)
-        .map(|t| pick_name(t, v, |i| &i.controls, |c| c.code.0.clone()))
+        .map(|t| {
+            pick_name(
+                t,
+                v,
+                |i| &i.controls,
+                |c| c.code.0.clone(),
+                &v.ours_names.controls,
+            )
+        })
         .unwrap_or_default()
 }
 
 fn special_name(index: usize, v: &Views, m: &Matching) -> String {
     m.specials
         .get(index)
-        .map(|t| pick_name(t, v, |i| &i.specials, |s| s.id().to_owned()))
+        .map(|t| {
+            pick_name(
+                t,
+                v,
+                |i| &i.specials,
+                |s| s.id().to_owned(),
+                &v.ours_names.specials,
+            )
+        })
         .unwrap_or_default()
 }
 
 fn course_name(id: usize, v: &Views, m: &Matching) -> String {
     m.courses
         .get(id)
-        .map(|t| pick_name(t, v, |i| &i.courses, |c| c.name.clone()))
+        .map(|t| {
+            pick_name(
+                t,
+                v,
+                |i| &i.courses,
+                |c| c.name.clone(),
+                &v.ours_names.courses,
+            )
+        })
         .unwrap_or_default()
 }
 
@@ -141,10 +189,8 @@ pub fn conflict_key(o: &FieldOutcome, v: &Views, m: &Matching) -> String {
                 ControlField::Column(c) => format!("control/{name}/column/{c}"),
             }
         }
-        FieldKey::Special(id) => format!(
-            "special/{}",
-            escape(&special_name(id - m.controls.len(), v, m))
-        ),
+        // The identity of a special object's own field is its index among the special objects.
+        FieldKey::Special(id) => format!("special/{}", escape(&special_name(id, v, m))),
         FieldKey::Course(id, field) => {
             let name = course(id);
             match field {
@@ -226,7 +272,14 @@ impl KindWord {
 
 fn render_value(value: &FieldValue, v: &Views, m: &Matching) -> String {
     match value {
-        FieldValue::Code(s) | FieldValue::Name(s) => s.clone(),
+        // A name that reads like one of the words a front end translates is quoted, so it stays a name.
+        FieldValue::Code(s) | FieldValue::Name(s) => {
+            if crate::text::is_sync_word(s) {
+                format!("\"{s}\"")
+            } else {
+                s.clone()
+            }
+        }
         FieldValue::Kind(k) => KindWord::of(*k).as_str().to_owned(),
         FieldValue::Point(x, y) => format!("{}, {} mm", mm(*x), mm(*y)),
         FieldValue::Column(c) => c.clone().unwrap_or_else(|| "empty".to_owned()),
@@ -287,7 +340,11 @@ pub fn conflicts(outcomes: &[FieldOutcome], v: &Views, m: &Matching) -> Vec<Sync
             let theirs = render(o.theirs.as_ref(), v, m);
             SyncConflict {
                 key: conflict_key(o, v, m),
-                base: render(o.base.as_ref(), v, m),
+                // A value the base did not have is no deletion: there was none.
+                base: o
+                    .base
+                    .as_ref()
+                    .map_or_else(|| "none".to_owned(), |b| render(Some(b), v, m)),
                 fingerprint: fingerprint(&ours, &theirs),
                 ours,
                 theirs,
@@ -391,6 +448,32 @@ mod tests {
     }
 
     #[test]
+    fn contradicting_takes_are_found() {
+        let one = |k: &str, s| Take::One(k.to_owned(), s);
+        assert_eq!(contradicting_take(&[]), None);
+        assert_eq!(
+            contradicting_take(&[Take::All(Side::Ours), Take::All(Side::Ours)]),
+            None
+        );
+        assert_eq!(
+            contradicting_take(&[Take::All(Side::Ours), Take::All(Side::Theirs)]),
+            Some(None)
+        );
+        assert_eq!(
+            contradicting_take(&[
+                one("a", Side::Ours),
+                Take::All(Side::Theirs),
+                one("a", Side::Theirs)
+            ]),
+            Some(Some("a".to_owned()))
+        );
+        assert_eq!(
+            contradicting_take(&[one("a", Side::Ours), one("b", Side::Theirs)]),
+            None
+        );
+    }
+
+    #[test]
     fn take_parses() {
         assert_eq!("ours".parse(), Ok(Take::All(Side::Ours)));
         assert_eq!(
@@ -406,6 +489,9 @@ mod tests {
     fn escapes_reserved_characters() {
         assert_eq!(escape("A/B"), "A%2FB");
         assert_eq!(escape("50%=x"), "50%25%3Dx");
+        // `#` marks the visit of a number key and `-` joins the ends of a leg key.
+        assert_eq!(escape("31#2"), "31%232");
+        assert_eq!(escape("a-b"), "a%2Db");
     }
 
     #[test]
@@ -437,6 +523,7 @@ mod tests {
             ours: import.clone(),
             theirs: import,
             ours_ids: Default::default(),
+            ours_names: Default::default(),
             skipped: vec![],
         };
         let m = Matching {
@@ -458,6 +545,46 @@ mod tests {
         assert_eq!(conflict_key(&o, &v, &m), "course/A%2FB/stops");
         let cs = conflicts(&[o], &v, &m);
         assert_eq!(cs[0].ours, "deleted");
+    }
+
+    #[test]
+    fn names_that_look_like_words_are_quoted_and_a_missing_base_is_none() {
+        let empty = crate::ppen_import::PpenImport {
+            controls: vec![],
+            specials: vec![],
+            courses: vec![],
+            notes: vec![],
+        };
+        let v = Views {
+            base: empty.clone(),
+            ours: empty.clone(),
+            theirs: empty,
+            ours_ids: Default::default(),
+            ours_names: Default::default(),
+            skipped: vec![],
+        };
+        let m = Matching::default();
+        let name = FieldValue::Name("none".to_owned());
+        assert_eq!(render(Some(&name), &v, &m), "\"none\"");
+        assert_eq!(render(Some(&FieldValue::Name("A".to_owned())), &v, &m), "A");
+        assert_eq!(render(None, &v, &m), "deleted");
+        let o = FieldOutcome {
+            key: FieldKey::Course(0, CourseField::Climb),
+            pick: Pick::Conflict,
+            base: None,
+            ours: Some(FieldValue::Scale(Some(1))),
+            theirs: Some(FieldValue::Scale(Some(2))),
+            merged: None,
+        };
+        let m = Matching {
+            courses: vec![Triple {
+                base: None,
+                ours: None,
+                theirs: None,
+            }],
+            ..Default::default()
+        };
+        assert_eq!(conflicts(&[o], &v, &m)[0].base, "none");
     }
 
     #[test]

@@ -139,7 +139,13 @@ fn pair(
     pairs
 }
 
-fn match_items(base: &[Item], ours: &[Item], theirs: &[Item], has_base: bool) -> Vec<Triple> {
+fn match_items(
+    base: &[Item],
+    ours: &[Item],
+    theirs: &[Item],
+    has_base: bool,
+    trust_ids: bool,
+) -> Vec<Triple> {
     let mut theirs_of = vec![None; base.len()];
     let mut ours_of = vec![None; base.len()];
     claim(theirs, base, &mut theirs_of);
@@ -161,7 +167,7 @@ fn match_items(base: &[Item], ours: &[Item], theirs: &[Item], has_base: bool) ->
         .filter(|i| !theirs_claimed.contains(i))
         .collect();
     let mut pairs = Vec::new();
-    if !has_base {
+    if !has_base && trust_ids {
         // The project's ids belong to the linked file; they count where theirs holds the same id.
         pairs.extend(pair(
             ours,
@@ -227,9 +233,15 @@ fn match_items(base: &[Item], ours: &[Item], theirs: &[Item], has_base: bool) ->
 }
 
 /// Matches the objects of the three views. `has_base` is false for a sync without a base copy; then the
-/// project's Purple Pen ids that the linked file holds too count, and starts, finishes and crossing points
+/// project's Purple Pen ids that the linked file holds too count (unless `trust_ids` is false), and starts, finishes and crossing points
 /// pair by their order (D14).
 pub fn match_sides(v: &Views, has_base: bool) -> Matching {
+    match_sides_with(v, has_base, true)
+}
+
+/// Like [`match_sides`]; with `trust_ids` false the project's Purple Pen ids are not compared with the
+/// linked file's, because they may come from another file (M12).
+pub fn match_sides_with(v: &Views, has_base: bool, trust_ids: bool) -> Matching {
     let items = |i: &super::super::ppen_import::PpenImport| {
         (
             i.controls.iter().map(control_item).collect::<Vec<_>>(),
@@ -241,9 +253,9 @@ pub fn match_sides(v: &Views, has_base: bool) -> Matching {
     let (oc, os, ok) = items(&v.ours);
     let (tc, ts, tk) = items(&v.theirs);
     Matching {
-        controls: match_items(&bc, &oc, &tc, has_base),
-        specials: match_items(&bs, &os, &ts, has_base),
-        courses: match_items(&bk, &ok, &tk, has_base),
+        controls: match_items(&bc, &oc, &tc, has_base, trust_ids),
+        specials: match_items(&bs, &os, &ts, has_base, trust_ids),
+        courses: match_items(&bk, &ok, &tk, has_base, trust_ids),
     }
 }
 
@@ -288,6 +300,7 @@ mod tests {
             ours,
             theirs,
             ours_ids: Default::default(),
+            ours_names: Default::default(),
             skipped: Vec::new(),
         }
     }

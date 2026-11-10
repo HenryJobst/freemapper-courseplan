@@ -19,8 +19,80 @@ pub struct Views {
     pub theirs: PpenImport,
     /// The Purple Pen ids the export gave the project's objects in the file `ours` was imported from.
     pub ours_ids: ExportIds,
+    /// The project's own name of each object of the ours view, by index: Purple Pen's import names a start
+    /// `STA1`, the project calls it `S1`. `None` when the project has no such object.
+    pub ours_names: OursNames,
     /// The `CourseSkipped` and `SpecialSkipped` notes of the ours export ("not written to Purple Pen").
     pub skipped: Vec<ExportNote>,
+}
+
+/// Project names of the objects of the ours view, by index into the view.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct OursNames {
+    pub controls: Vec<Option<String>>,
+    pub specials: Vec<Option<String>>,
+    pub courses: Vec<Option<String>>,
+}
+
+/// The project's names for the objects of `ours`, found through the Purple Pen ids the export gave them.
+pub(super) fn project_names(project: &Event, ours: &PpenImport, ids: &ExportIds) -> OursNames {
+    let controls = ours
+        .controls
+        .iter()
+        .map(|c| {
+            let by_id = c.ppen_id.and_then(|pid| {
+                ids.controls
+                    .iter()
+                    .find(|(_, i)| *i == pid)
+                    .map(|(code, _)| code.0.clone())
+            });
+            by_id
+                .or_else(|| Some(c.code.0.clone()))
+                .filter(|n| project.controls.iter().any(|p| &p.code.0 == n))
+        })
+        .collect();
+    let specials = ours
+        .specials
+        .iter()
+        .map(|s| {
+            let same_kind = |name: &str| {
+                project
+                    .specials
+                    .iter()
+                    .find(|p| p.id() == name)
+                    .is_some_and(|p| std::mem::discriminant(p) == std::mem::discriminant(s))
+            };
+            let by_id = s.ppen_id().and_then(|pid| {
+                ids.specials
+                    .iter()
+                    .find(|(n, i)| *i == pid && same_kind(n))
+                    .map(|(n, _)| n.clone())
+            });
+            by_id
+                .or_else(|| Some(s.id().to_owned()))
+                .filter(|n| same_kind(n))
+        })
+        .collect();
+    let courses = ours
+        .courses
+        .iter()
+        .map(|c| {
+            let by_id = c.ppen_id.and_then(|pid| {
+                ids.courses
+                    .iter()
+                    .find(|(_, i)| *i == pid)
+                    .map(|(n, _)| n.clone())
+            });
+            by_id
+                .or_else(|| Some(c.name.clone()))
+                .filter(|n| project.courses.iter().any(|p| &p.name == n))
+        })
+        .collect();
+    OursNames {
+        controls,
+        specials,
+        courses,
+    }
 }
 
 fn quiet(mut import: PpenImport) -> PpenImport {
@@ -112,11 +184,13 @@ pub fn views(
             )
         })
         .collect();
+    let ours_names = project_names(project, &ours_view, &exported.ids);
     Ok(Views {
         base: base_view,
         ours: ours_view,
         theirs: theirs_view,
         ours_ids: exported.ids,
+        ours_names,
         skipped,
     })
 }

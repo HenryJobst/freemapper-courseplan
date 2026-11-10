@@ -597,16 +597,38 @@ impl Localize for SyncNote {
     }
 }
 
+/// The words of a rendered sync value that a front end translates.
+const SYNC_WORDS: [&str; 7] = [
+    "deleted",
+    "none",
+    "empty",
+    "control",
+    "crossing point",
+    "start",
+    "finish",
+];
+
+/// Whether `raw` is one of the words [`sync_value`] translates. A name that is one is rendered in quotes.
+pub fn is_sync_word(raw: &str) -> bool {
+    SYNC_WORDS.contains(&raw)
+}
+
 /// A value of a sync conflict or change as the user reads it. The values are rendered in English; the
-/// whole-value words (`deleted`, the control kinds, `none`, `empty`) are translated, any other value
-/// (positions, stop lists) is language-neutral and stays.
+/// whole-value words (`deleted`, the control kinds, `none`, `empty`) are translated, in a value of several
+/// parts (`35; control; empty`) each part, any other value (positions, stop lists) is language-neutral and
+/// stays.
 pub fn sync_value(lang: &Lang, raw: &str) -> String {
-    let prefix = if matches!(raw, "deleted" | "none" | "empty") {
-        "word-sync-value"
-    } else {
-        "word-sync-kind"
-    };
-    word(lang, prefix, raw)
+    raw.split("; ")
+        .map(|part| {
+            let prefix = if matches!(part, "deleted" | "none" | "empty") {
+                "word-sync-value"
+            } else {
+                "word-sync-kind"
+            };
+            word(lang, prefix, part)
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 /// The text of a refused or failed sync of the linked file `path`.
@@ -1051,6 +1073,12 @@ mod tests {
     fn sync_values_and_notes_speak_german() {
         let de = de();
         assert_eq!(sync_value(&de, "deleted"), "gelöscht");
+        assert_eq!(
+            sync_value(&de, "35; control; -1.2, 3 mm; empty"),
+            "35; Posten; -1.2, 3 mm; leer"
+        );
+        // A name that reads like a word is quoted by the renderer and stays.
+        assert_eq!(sync_value(&de, "\"none\""), "\"none\"");
         assert_eq!(sync_value(&de, "crossing point"), "Querungsstelle");
         assert_eq!(sync_value(&de, "-1.200, 12.400 mm"), "-1.200, 12.400 mm");
         let en = Lang::english();

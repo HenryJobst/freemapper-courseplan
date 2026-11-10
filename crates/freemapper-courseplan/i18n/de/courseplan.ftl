@@ -647,7 +647,11 @@ sync-note-leg-change-dropped = die geänderten Knickpunkte oder die Flaggung der
 sync-note-new-name-taken = das neue Objekt { $from } aus Purple Pen heißt im Projekt { $to }, weil das Projekt { $from } schon vergeben hat
 sync-note-base-ignored = { $why }. Ohne Basiskopie löscht der Abgleich nichts und behandelt jeden Unterschied als Konflikt
 error-sync-internal = interner Fehler im Abgleich ({ $what }). Bitte melden
-sync-note-first-sync = erster Abgleich dieses Projekts mit dieser Datei. Es gibt noch keine Basiskopie, deshalb löscht der Abgleich nichts und behandelt jeden Unterschied als Konflikt; er schreibt jetzt die Basiskopie
+error-sync-take-parse = Nach --take erwartet: ours, theirs, KEY=ours oder KEY=theirs, bekommen: `{ $value }`.
+error-sync-take-twice-all = --take nennt ours und theirs für alle Konflikte. Gib eine Seite an.
+error-sync-take-twice-key = --take nennt zwei verschiedene Seiten für { $key }. Gib eine Seite an.
+error-sync-base-unusable = Die Basiskopie { $path } lässt sich nicht als Purple-Pen-Event lesen. Lösche die Datei und führe sync erneut aus: Der Abgleich arbeitet dann ohne Basis, löscht nichts und fragt bei jedem Unterschied nach.
+sync-note-first-sync = erster Abgleich dieses Projekts mit dieser Datei. Es gibt noch keine Basiskopie, deshalb löscht der Abgleich nichts und behandelt jeden Unterschied als Konflikt; er schreibt die Basiskopie, sobald er ohne offene Konflikte durchgelaufen ist
 sync-note-base-repaired = ein früherer Abgleich hat die Basiskopie nicht geschrieben. Sie stimmt jetzt wieder mit der verknüpften Datei überein
 sync-note-not-written = nicht nach Purple Pen geschrieben: { $note }
 word-sync-why-missing = es gibt keine brauchbare Basiskopie

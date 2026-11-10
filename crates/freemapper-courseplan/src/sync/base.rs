@@ -151,6 +151,9 @@ pub fn base_state(
     base: Option<&[u8]>,
     theirs: &[u8],
 ) -> BaseState {
+    // A `[sync]` table that holds only stored decisions (written before the first sync) says nothing about
+    // a link or a base copy.
+    let sync = sync.filter(|s| s.ppen.is_some() || s.base_fnv1a64.is_some());
     let Some(sync) = sync else {
         return if base.is_none() {
             BaseState::First
@@ -364,6 +367,27 @@ mod tests {
         let (b, n) = BaseState::First.resolve(None, b"t");
         assert!(b.is_none());
         assert_eq!(n, Some(SyncNote::FirstSync));
+    }
+
+    /// M3: decisions stored before the first sync make a `[sync]` table with nothing else in it.
+    #[test]
+    fn decisions_alone_are_still_a_first_sync() {
+        let only_decisions = SyncState {
+            decisions: vec![freemapper_courseplan_model::SyncDecision {
+                key: "control/34/position".to_owned(),
+                take: freemapper_courseplan_model::Side::Ours,
+                fingerprint: "0".repeat(16),
+            }],
+            ..SyncState::default()
+        };
+        assert_eq!(
+            base_state(Some(&only_decisions), Path::new("a.ppen"), None, b"t"),
+            BaseState::First
+        );
+        assert_eq!(
+            base_state(Some(&only_decisions), Path::new("a.ppen"), Some(b"x"), b"t"),
+            BaseState::Ignore("missing")
+        );
     }
 
     #[test]
