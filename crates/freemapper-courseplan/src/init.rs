@@ -7,7 +7,7 @@ use freemapper_courseplan_model::{
 };
 use thiserror::Error;
 
-use crate::map::{MapKind, map_kind};
+use crate::map::{MapKind, map_kind_for_file};
 use crate::omap::OmapError;
 use crate::omap::read::read_map_file;
 
@@ -44,7 +44,7 @@ pub fn new_event(
         source,
     };
     let doc = read_map_file(map_path).map_err(map_error)?;
-    if map_kind(&doc) == MapKind::Forest {
+    if map_kind_for_file(&doc, map_path) == MapKind::Forest {
         return Err(InitError::ForestNotSupported);
     }
     let map_abs = map_path

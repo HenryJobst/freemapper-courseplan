@@ -138,8 +138,20 @@ pub fn read(bytes: &[u8]) -> Result<RawEvent, PpenImportError> {
 /// [`PpenImportError::Read`] for a file that cannot be read, [`PpenImportError::Fit`] for one that does not
 /// fit the map (another scale, controls off the map).
 pub fn import_ppen(bytes: &[u8], map: &MapDocument) -> Result<PpenImport, PpenImportError> {
+    import_ppen_as(bytes, map, map_kind(map))
+}
+
+/// Like [`import_ppen`], with the map kind decided by the caller (see `map_kind_for_file`).
+///
+/// # Errors
+/// As [`import_ppen`].
+pub fn import_ppen_as(
+    bytes: &[u8],
+    map: &MapDocument,
+    kind: MapKind,
+) -> Result<PpenImport, PpenImportError> {
     let fitted = fit(read(bytes)?, map, &FitOptions::default())?;
-    let mut import = from_fitted_in(fitted.event, map_kind(map), map_bounds(map));
+    let mut import = from_fitted_in(fitted.event, kind, map_bounds(map));
     let fit_notes = fitted
         .notes
         .into_iter()

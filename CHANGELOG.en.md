@@ -6,6 +6,18 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Fixed
+
+- The scale bar and the base area that freemapper 0.9.0 writes into the map (`freemapper:source=scale-bar` and
+  `base`) no longer count as map objects and no longer move the map edge. The `map_edge` check finds controls at
+  the south edge again.
+
+### Changed
+
+- The map kind comes first from `map_kind` in the `freemapper.toml` next to the map, then from the symbol set
+  name (case does not matter) and the scale, as freemapper-print decides it. An unknown value or a broken file
+  is skipped, not reported (ADR 0038).
+
 ## [0.7.2] - 2026-11-10
 
 ### Fixed

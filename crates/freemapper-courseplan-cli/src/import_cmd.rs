@@ -4,11 +4,12 @@
 use std::path::{Path, PathBuf};
 
 use freemapper_courseplan::init::{InitError, create_project, link_from_project, new_event};
+use freemapper_courseplan::map::{MapKind, map_kind_for_file};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_import::{
-    ImportNote, MAX_COURSE_FILE_BYTES, PpenImportError, import_ppen,
+    ImportNote, MAX_COURSE_FILE_BYTES, PpenImportError, import_ppen_as,
 };
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{Event, ProjectError, ProjectFile};
@@ -153,6 +154,7 @@ pub(crate) fn read_course_file(path: &Path) -> Result<Vec<u8>, ReadFileError> {
 fn bring_in(
     event: &mut Event,
     doc: &MapDocument,
+    kind: MapKind,
     bytes: &[u8],
     link: PathBuf,
     replace: bool,
@@ -163,7 +165,7 @@ fn bring_in(
     if has_content && !replace {
         return Err(ImportError::NeedsReplace(project.to_path_buf()));
     }
-    let import = import_ppen(bytes, doc).map_err(ImportError::Ppen)?;
+    let import = import_ppen_as(bytes, doc, kind).map_err(ImportError::Ppen)?;
     let report = ImportReport {
         controls: import.controls.len(),
         courses: import.courses.len(),
@@ -187,7 +189,8 @@ pub(crate) fn import_ppen_file(
     let doc = read_oom(&file.map_path())?;
     let bytes = read_ppen_file(ppen)?;
     let link = link_for(project, ppen);
-    let report = bring_in(&mut file.event, &doc, &bytes, link, replace, project)?;
+    let kind = map_kind_for_file(&doc, &file.map_path());
+    let report = bring_in(&mut file.event, &doc, kind, &bytes, link, replace, project)?;
     file.save().map_err(ImportError::Project)?;
     Ok(report)
 }
@@ -204,7 +207,15 @@ pub(crate) fn init_from_ppen(
     let doc = read_oom(map)?;
     let bytes = read_ppen_file(ppen)?;
     let link = link_for(project, ppen);
-    let report = bring_in(&mut event, &doc, &bytes, link, false, project)?;
+    let report = bring_in(
+        &mut event,
+        &doc,
+        map_kind_for_file(&doc, map),
+        &bytes,
+        link,
+        false,
+        project,
+    )?;
     let file = create_project(project, event).map_err(ImportError::Init)?;
     Ok((file, report))
 }

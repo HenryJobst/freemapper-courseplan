@@ -8,12 +8,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use freemapper_courseplan::check::{
-    ArgValue, Args, CheckReport, Finding, Location, check_event, source_text,
+    ArgValue, Args, CheckReport, Finding, Location, check_event_as, source_text,
 };
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::edit::{self, Accepted, LegStart};
 use freemapper_courseplan::init::{InitError, init_project};
-use freemapper_courseplan::map::{FeatureGeometry, MapIndex, map_kind};
+use freemapper_courseplan::map::{FeatureGeometry, MapIndex, map_kind_for_file};
 use freemapper_courseplan::numbers::{self, MAX_GAP_MM};
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
@@ -636,7 +636,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "title": event.event.title,
                 "map": event.sources.map.display().to_string(),
-                "map_kind": map_kind(&doc).as_str(),
+                "map_kind": map_kind_for_file(&doc, &file.map_path()).as_str(),
                 "scale": scale,
                 "rule_profile": event.event.rule_profile,
                 "rule_overlays": event.event.rule_overlays,
@@ -1158,19 +1158,20 @@ impl CoursePlanServer {
                     let rules = self.rule_set(&file.event)?;
                     numbers::gap_range(
                         &rules,
-                        map_kind(&doc),
+                        map_kind_for_file(&doc, &file.map_path()),
                         file.event.event.discipline,
                         print_scale_of(course, doc.georef.scale_denominator),
                     )
                 }
                 None => numbers::GapRange::FIXED,
             };
+            let kind = map_kind_for_file(&doc, &file.map_path());
             let placed = numbers::place_numbers(
                 &mut file.event,
                 &req.name.0,
                 &MapIndex::from_document(&doc),
                 doc.georef.scale_denominator,
-                map_kind(&doc),
+                kind,
                 gaps,
                 flag(req.overwrite),
             )
@@ -1257,7 +1258,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "extent": extent_json(MapIndex::from_document(&doc).extent()),
                 "scale": doc.georef.scale_denominator,
-                "map_kind": map_kind(&doc).as_str(),
+                "map_kind": map_kind_for_file(&doc, &file.map_path()).as_str(),
             }))
         })())
     }
@@ -1271,7 +1272,12 @@ impl CoursePlanServer {
             let file = self.load(&req.project)?;
             let rules = self.rule_set(&file.event)?;
             let doc = self.read_map(&file)?;
-            let report = check_event(&file.event, &doc, &rules);
+            let report = check_event_as(
+                &file.event,
+                &doc,
+                map_kind_for_file(&doc, &file.map_path()),
+                &rules,
+            );
             Ok(report_json(&rules, &file.event, &report, &self.lang))
         })())
     }

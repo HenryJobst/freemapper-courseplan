@@ -7,12 +7,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use freemapper_courseplan::init::link_from_project;
 use freemapper_courseplan::iof_xml::{IofXmlError, SkippedCourse, export_iof_xml};
-use freemapper_courseplan::map::map_kind;
+use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::omap::OmapError;
 use freemapper_courseplan::omap::model::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_export::{
-    ExportIds, ExportNote, PpenExportError, Target, export_ppen,
+    ExportIds, ExportNote, PpenExportError, Target, export_ppen_as,
 };
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
 use freemapper_courseplan_model::{ControlCode, Event, ProjectError, ProjectFile, write_atomic};
@@ -121,7 +121,7 @@ pub(crate) fn export_iof_xml_file(
     let exported = export_iof_xml(
         &file.event,
         doc.georef.scale_denominator,
-        map_kind(&doc),
+        map_kind_for_file(&doc, &file.map_path()),
         created,
     )
     .map_err(ExportError::Course)?;
@@ -209,9 +209,10 @@ pub(crate) fn export_ppen_file(
         )
         .replace('\\', "/");
     let lang_code = lang.code();
-    let exported = export_ppen(
+    let exported = export_ppen_as(
         &file.event,
         &doc,
+        map_kind_for_file(&doc, &file.map_path()),
         Target {
             base: base.as_deref(),
             linked,

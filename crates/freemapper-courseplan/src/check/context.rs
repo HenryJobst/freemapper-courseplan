@@ -70,8 +70,12 @@ impl CourseContext<'_> {
 
 impl<'a> CheckContext<'a> {
     pub fn new(event: &'a Event, map: &'a MapDocument) -> CheckContext<'a> {
+        CheckContext::with_kind(event, map, map_kind(map))
+    }
+
+    /// Like [`CheckContext::new`], with the map kind decided by the caller (see `map_kind_for_file`).
+    pub fn with_kind(event: &'a Event, map: &'a MapDocument, kind: MapKind) -> CheckContext<'a> {
         let map_scale = map.georef.scale_denominator;
-        let kind = map_kind(map);
         let mut courses = Vec::new();
         let mut unresolved = Vec::new();
         for course in &event.courses {

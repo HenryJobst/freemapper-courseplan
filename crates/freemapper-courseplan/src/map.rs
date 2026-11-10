@@ -4,6 +4,7 @@
 //! millimetres (map scale, y down). It is a linear scan; there is no spatial index in M1.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use freemapper_courseplan_model::MapPoint;
 
@@ -70,6 +71,56 @@ pub fn map_kind(doc: &MapDocument) -> MapKind {
     }
 }
 
+/// Name of the sidecar file next to a map (written by freemapper, read by freemapper-print).
+const SIDECAR_FILE: &str = "freemapper.toml";
+
+/// The kind from `map_kind` in `freemapper.toml` next to `map_path`. A missing or malformed file,
+/// a missing key and an unknown value (a kind this version does not know) all give `None`.
+fn sidecar_kind(map_path: &Path) -> Option<MapKind> {
+    let text = std::fs::read_to_string(map_path.parent()?.join(SIDECAR_FILE)).ok()?;
+    let table: toml::Table = text.parse().ok()?;
+    match table.get("map_kind")?.as_str()? {
+        "sprint" => Some(MapKind::Sprint),
+        "schoolyard" => Some(MapKind::Schoolyard),
+        "forest" => Some(MapKind::Forest),
+        _ => None,
+    }
+}
+
+/// The kind from the symbol set name (case-insensitive) and the scale, as freemapper-print decides it.
+/// `None` where the pair is ambiguous.
+fn kind_from_name(doc: &MapDocument) -> Option<MapKind> {
+    let name = doc.symbol_set.name.to_lowercase();
+    let scale = doc.georef.scale_denominator;
+    if name.contains("issprom") || name.contains("sprint") {
+        return match scale {
+            3000..=5000 => Some(MapKind::Sprint),
+            1000 => Some(MapKind::Schoolyard),
+            _ => None,
+        };
+    }
+    if name.contains("isom") {
+        return (5000..=15000).contains(&scale).then_some(MapKind::Forest);
+    }
+    (7500..=15000).contains(&scale).then_some(MapKind::Forest)
+}
+
+/// The kind of the map in `map_path`: `map_kind` in the `freemapper.toml` next to it first, then the
+/// symbol set name and scale as freemapper-print reads them, then [`map_kind`] (ADR 0038).
+pub fn map_kind_for_file(doc: &MapDocument, map_path: &Path) -> MapKind {
+    sidecar_kind(map_path)
+        .or_else(|| kind_from_name(doc))
+        .unwrap_or_else(|| map_kind(doc))
+}
+
+/// Objects freemapper adds around the terrain: the sheet frame, the scale bar and the base area.
+/// They are no map features and do not count for the map extent.
+pub fn is_sheet_furniture(tags: &[(String, String)]) -> bool {
+    tags.iter().any(|(k, v)| {
+        k == "freemapper:source" && matches!(v.as_str(), "sheet" | "scale-bar" | "base")
+    })
+}
+
 /// What `from_document` needs to know about a symbol, looked up once per symbol id.
 struct SymbolInfo {
     symbol_type: u32,
@@ -94,11 +145,7 @@ impl MapIndex {
         let mut symbols: HashMap<u32, Option<SymbolInfo>> = HashMap::new();
         for part in &doc.parts {
             for object in &part.objects {
-                if object
-                    .tags
-                    .iter()
-                    .any(|(k, v)| k == "freemapper:source" && v == "sheet")
-                {
+                if is_sheet_furniture(&object.tags) {
                     continue;
                 }
                 let Some(symbol) = symbols
@@ -424,6 +471,81 @@ mod tests {
         assert_eq!(
             map_kind(&document(10000, "ISOM 2017", vec![])),
             MapKind::Forest
+        );
+    }
+
+    fn tagged(mut object: MapObject, source: &str) -> MapObject {
+        object.tags = vec![("freemapper:source".into(), source.into())];
+        object
+    }
+
+    #[test]
+    fn scale_bar_and_base_are_no_features_and_keep_the_extent() {
+        let terrain = path(1, vec![MapCoord::new(0, 0), MapCoord::new(10_000, 10_000)]);
+        let bar = tagged(
+            path(
+                1,
+                vec![MapCoord::new(0, 90_000), MapCoord::new(5000, 90_000)],
+            ),
+            "scale-bar",
+        );
+        let base = tagged(path(2, square(-5000, -5000, 100_000, 100_000)), "base");
+        let index = MapIndex::from_document(&document(4000, "X", vec![terrain, bar, base]));
+        assert_eq!(index.len(), 1);
+        let (min, max) = index.extent().unwrap();
+        assert_eq!((min.x, min.y, max.x, max.y), (0.0, 0.0, 10.0, 10.0));
+    }
+
+    fn with_sidecar(text: Option<&str>) -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::tempdir().unwrap();
+        if let Some(text) = text {
+            std::fs::write(dir.path().join("freemapper.toml"), text).unwrap();
+        }
+        let map = dir.path().join("m.omap");
+        (dir, map)
+    }
+
+    #[test]
+    fn sidecar_decides_first() {
+        let doc = document(2500, "ISSprOM 2019", vec![]);
+        let (_d, map) = with_sidecar(Some("map_kind = \"schoolyard\"\n"));
+        assert_eq!(map_kind_for_file(&doc, &map), MapKind::Schoolyard);
+        assert_eq!(map_kind(&doc), MapKind::Sprint);
+    }
+
+    #[test]
+    fn unknown_or_broken_sidecar_falls_through() {
+        let doc = document(4000, "ISSprOM 2019", vec![]);
+        for text in [
+            Some("map_kind = \"gym\"\n"),
+            Some("map_kind = [\n"),
+            Some("title = \"x\"\n"),
+            None,
+        ] {
+            let (_d, map) = with_sidecar(text);
+            assert_eq!(map_kind_for_file(&doc, &map), MapKind::Sprint, "{text:?}");
+        }
+    }
+
+    #[test]
+    fn set_name_is_case_insensitive() {
+        let (_d, map) = with_sidecar(None);
+        assert_eq!(
+            map_kind_for_file(&document(4000, "issprom 2019", vec![]), &map),
+            MapKind::Sprint
+        );
+        assert_eq!(
+            map_kind_for_file(&document(10000, "isom 2017", vec![]), &map),
+            MapKind::Forest
+        );
+        assert_eq!(
+            map_kind_for_file(&document(10000, "Custom", vec![]), &map),
+            MapKind::Forest
+        );
+        // Print leaves ISOM at 1:4000 unknown; the old thresholds decide.
+        assert_eq!(
+            map_kind_for_file(&document(4000, "ISOM 2017", vec![]), &map),
+            MapKind::Sprint
         );
     }
 

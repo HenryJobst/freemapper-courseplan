@@ -17,7 +17,7 @@ use clap::{Arg, ArgMatches, CommandFactory, FromArgMatches, Parser, Subcommand};
 use edit_cmd::{ClassCmd, ControlCmd, CourseCmd, Failure, SpecialCmd};
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::init::init_project;
-use freemapper_courseplan::map::{MapKind, map_kind};
+use freemapper_courseplan::map::{MapKind, map_kind_for_file};
 use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::text::{
     FluentValue, Lang, Localize, available, detect_lang, parse_lang_arg, text,
@@ -509,7 +509,7 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
             ],
         )
     })?;
-    let kind = match map_kind(&doc) {
+    let kind = match map_kind_for_file(&doc, &map_path) {
         MapKind::Sprint => "word-map-sprint",
         MapKind::Schoolyard => "word-map-schoolyard",
         MapKind::Forest => "word-map-forest",

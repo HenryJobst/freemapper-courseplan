@@ -26,6 +26,7 @@ use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef, SpecialObject,
 };
 
+use crate::map::MapKind;
 use crate::omap::MapDocument;
 use crate::rules::{
     FIELD_DISCIPLINES, FIELD_MAP_KINDS, FIELD_PRINT_SCALES, FilterArg, PROPOSAL_DOC, Rule, RuleSet,
@@ -730,6 +731,16 @@ pub fn check_of(key: &str) -> Option<&'static Check> {
 /// Checks the individual courses of `event` on `map` against `rules`.
 pub fn check_event(event: &Event, map: &MapDocument, rules: &RuleSet) -> CheckReport {
     run_checks(&CheckContext::new(event, map), rules, CHECKS)
+}
+
+/// Like [`check_event`], with the map kind decided by the caller (see `map_kind_for_file`).
+pub fn check_event_as(
+    event: &Event,
+    map: &MapDocument,
+    kind: MapKind,
+    rules: &RuleSet,
+) -> CheckReport {
+    run_checks(&CheckContext::with_kind(event, map, kind), rules, CHECKS)
 }
 
 /// The engine behind [`check_event`], with the check table as a parameter for tests.
