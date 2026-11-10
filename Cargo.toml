@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*"]
 
 [workspace.package]
-version = "0.7.5"
+version = "0.8.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/HenryJobst/freemapper-courseplan"
@@ -12,10 +12,10 @@ rust-version = "1.88"
 [workspace.dependencies]
 freemapper-courseplan-model = { path = "crates/freemapper-courseplan-model" }
 freemapper-courseplan = { path = "crates/freemapper-courseplan" }
-freemapper-text = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.6.1" }
-freemapper-rules = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.6.1" }
-freemapper-omap = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.6.1" }
-freemapper-course = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.6.1" }
+freemapper-text = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.7.0" }
+freemapper-rules = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.7.0" }
+freemapper-omap = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.7.0" }
+freemapper-course = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.7.0" }
 serde = { version = "1", features = ["derive"] }
 toml = "1.2.1"
 toml_edit = { version = "=0.25.17", features = ["serde"] }

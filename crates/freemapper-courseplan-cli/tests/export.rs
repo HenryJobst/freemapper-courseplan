@@ -797,3 +797,74 @@ fn both_formats_in_one_call_are_written() {
     assert!(result.status.success(), "{}", stderr(&result));
     assert!(xml.exists() && ppen.exists());
 }
+
+/// Exports the Lübeck map to IOF XML; without `georeferenced` its georeferencing is cut down to a local
+/// coordinate system, which has no grid.
+fn export_with_map(lang: &str, georeferenced: bool) -> (Output, String) {
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("luebeck.omap");
+    let text =
+        std::fs::read_to_string(repo_root().join("tests/fixtures/maps/luebeck.omap")).unwrap();
+    let text = if georeferenced {
+        text
+    } else {
+        let start = text.find("<georeferencing").unwrap();
+        let end = text.find("</georeferencing>").unwrap() + "</georeferencing>".len();
+        format!(
+            "{}<georeferencing scale=\"4000\"><projected_crs id=\"Local\"/></georeferencing>{}",
+            &text[..start],
+            &text[end..]
+        )
+    };
+    std::fs::write(&map, text).unwrap();
+    let init = run(dir.path(), "en", &["init", map.to_str().unwrap()]);
+    assert!(init.status.success(), "{}", stderr(&init));
+    let project = dir.path().join("luebeck.courseplan.toml");
+    let out = dir.path().join("out.xml");
+    let result = run(
+        dir.path(),
+        lang,
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--iof-xml",
+            out.to_str().unwrap(),
+        ],
+    );
+    let xml = std::fs::read_to_string(&out).unwrap_or_default();
+    (result, xml)
+}
+
+#[test]
+fn a_map_without_georeferencing_gets_the_no_geo_message_and_no_position() {
+    let (result, xml) = export_with_map("en", false);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        stdout(&result).contains("no usable georeferencing"),
+        "{}",
+        stdout(&result)
+    );
+    assert!(xml.contains("<CourseData"), "{xml}");
+    assert!(!xml.contains("<Position"), "{xml}");
+}
+
+#[test]
+fn the_no_geo_message_is_german_in_german() {
+    let (result, _) = export_with_map("de", false);
+    assert!(
+        stdout(&result).contains("keine nutzbare Georeferenzierung"),
+        "{}",
+        stdout(&result)
+    );
+}
+
+#[test]
+fn a_georeferenced_map_gets_no_no_geo_message() {
+    let (result, _) = export_with_map("en", true);
+    assert!(result.status.success(), "{}", stderr(&result));
+    assert!(
+        !stdout(&result).contains("georeferencing"),
+        "{}",
+        stdout(&result)
+    );
+}

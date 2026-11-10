@@ -82,3 +82,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0036](0036-number-placement-uses-the-core-module.md) | Number placement uses the core module | Accepted | 2026-11-10 |
 | [0037](0037-description-symbols-from-the-core-crate.md) | Description symbols come from the core crate | Accepted | 2026-11-10 |
 | [0038](0038-sheet-furniture-and-map-kind-from-the-sidecar.md) | Sheet furniture and the map kind from the sidecar | Accepted | 2026-11-10 |
+| [0039](0039-iof-xml-positions-from-the-map-georeferencing.md) | IOF XML positions come from the map georeferencing | Accepted | 2026-11-10 |

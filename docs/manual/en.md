@@ -330,7 +330,10 @@ Things to know:
 
 - Team, relay and score courses are not written. The program names each skipped course with its kind.
 - If the target is the project file or the map, `export` stops with an error and leaves both untouched.
-- Geo positions and taped legs are missing for now. The map extent is written as 0/0 mm.
+- If the map is georeferenced, start, controls and finish carry latitude and longitude with six decimals. Without
+  georeferencing, or with a coordinate system the program does not support, the file has map positions only, and
+  `export` says so. OE, OCAD and Condes have not been tested with these positions.
+- Taped legs are missing for now. The map extent is written as 0/0 mm.
 - The time `createTime` is UTC and carries the marker `Z`. It does not affect the courses.
 - The example [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) validates against the IOF schema,
   and a test reads the export back through the IOF reader of freemapper-course (freemapper-print's). An import into

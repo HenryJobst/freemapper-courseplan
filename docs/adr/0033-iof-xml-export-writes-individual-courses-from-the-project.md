@@ -20,7 +20,7 @@ validate the output with `xmllint`; where it is missing, the schema tests pass w
   no sign flips, also in `MapTextPosition`. The first draft mirrored y; that was wrong. Purple Pen, OCAD and
   Condes write y up against the standard (freemapper-print ADR 0010). Whether OE12 tolerates the standard's
   direction is unknown (see the addendum) *(Claude's call)*.
-- **Map positions only.** No geo positions until `freemapper-georef` exists. `Map` needs two corner positions;
+- **Map positions only.** No geo positions until `freemapper-georef` exists (ADR 0039 adds them). `Map` needs two corner positions;
   they are written as 0/0 mm because the extent is unknown. Taped legs are not written yet.
 - **Number positions** are the offset of the number box centre from the control, from the `number_rect` that
   `check` uses; a course override beats the control's placement. The caller passes the `MapKind`, read from the

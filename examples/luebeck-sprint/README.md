@@ -107,7 +107,7 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-d
 ```
 
 Die Datei besteht die Prüfung gegen das IOF-Schema (`xmllint --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd
-course-data.xml`). Ihr `createTime` ist fest auf `2026-11-09T12:00:00Z` gesetzt, damit der Test die Datei vergleichen kann; ein eigener Lauf schreibt die aktuelle Zeit in UTC. Außerdem liest ein Test sie mit dem IOF-Leser von freemapper-course wieder ein. Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Wer es tut, soll melden, was ankommt.
+course-data.xml`). Ihr `createTime` ist fest auf `2026-11-09T12:00:00Z` gesetzt, damit der Test die Datei vergleichen kann; ein eigener Lauf schreibt die aktuelle Zeit in UTC. Außerdem liest ein Test sie mit dem IOF-Leser von freemapper-course wieder ein. Die Lübecker Karte ist georeferenziert, deshalb tragen Start, Posten und Ziel Breite und Länge. Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Wer es tut, soll melden, was ankommt.
 
 ## Export nach Purple Pen
 

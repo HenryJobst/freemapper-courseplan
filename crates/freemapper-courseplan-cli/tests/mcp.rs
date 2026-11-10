@@ -1306,6 +1306,7 @@ fn export_iof_xml_writes_the_file() {
     );
     assert_eq!(done["courses"], 0, "{done}");
     assert_eq!(done["skipped"], json!([]), "{done}");
+    assert_eq!(done["geo_positions"], json!(true), "{done}");
     assert_eq!(done["path"], json!(target.display().to_string()), "{done}");
     assert!(
         std::fs::read_to_string(&target)

@@ -3,11 +3,13 @@
 //! The writer turns an [`Event`] and the map scale into one XML string. Only individual courses are
 //! written; other kinds are skipped and named in the result. Positions are map mm at the map scale
 //! with the y axis pointing down (the schema counts y in units below the centre), as the project stores them, so y is written unmirrored. Geographic
-//! positions are not written (they need `freemapper-georef`, ADR 0033). Terms follow
-//! `docs/glossary.md`.
+//! positions (`Position`, latitude and longitude with six decimals) are written when the caller passes the
+//! [`MapGrid`] of a georeferenced map; the grid gives them in the same map frame, so nothing is flipped.
+//! Terms follow `docs/glossary.md`.
 
 use std::io;
 
+pub use freemapper_course::MapGrid;
 use freemapper_courseplan_model::{
     Control, ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
 };
@@ -28,6 +30,8 @@ const CREATOR: &str = "freemapper-courseplan";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct IofXmlExport {
     pub xml: String,
+    /// The controls carry a geographic `Position` (the map was georeferenced).
+    pub geo_positions: bool,
     pub skipped: Vec<SkippedCourse>,
 }
 
@@ -175,11 +179,30 @@ fn position(w: &mut Out, name: &str, x: f64, y: f64) -> io::Result<()> {
     Ok(())
 }
 
-fn control_element(w: &mut Out, kind: &str, id: &str, at: &MapPoint) -> io::Result<()> {
+/// Latitude and longitude of `at` as a `Position` element, six decimals.
+fn geo_position(w: &mut Out, grid: &MapGrid, at: &MapPoint) -> io::Result<()> {
+    let (lat, lng) = grid.latlon_of((at.x, at.y));
+    w.create_element("Position")
+        .with_attribute(("lat", format!("{lat:.6}").as_str()))
+        .with_attribute(("lng", format!("{lng:.6}").as_str()))
+        .write_empty()?;
+    Ok(())
+}
+
+fn control_element(
+    w: &mut Out,
+    kind: &str,
+    id: &str,
+    at: &MapPoint,
+    geo: Option<&MapGrid>,
+) -> io::Result<()> {
     w.create_element("Control")
         .with_attribute(("type", kind))
         .write_inner_content(|w| {
             text_element(w, "Id", id)?;
+            if let Some(grid) = geo {
+                geo_position(w, grid, at)?;
+            }
             position(w, "MapPosition", at.x, at.y)
         })?;
     Ok(())
@@ -215,6 +238,7 @@ fn course_element(w: &mut Out, out: &CourseOut<'_>) -> io::Result<()> {
 fn write_document(
     event: &Event,
     map_scale: u32,
+    geo: Option<&MapGrid>,
     created: &str,
     courses: &[CourseOut<'_>],
 ) -> io::Result<Vec<u8>> {
@@ -237,7 +261,7 @@ fn write_document(
                     })?;
                     for special in &event.specials {
                         if let Some((kind, id, at)) = start_or_finish(special) {
-                            control_element(w, kind, id, at)?;
+                            control_element(w, kind, id, at, geo)?;
                         }
                     }
                     for control in &event.controls {
@@ -245,7 +269,7 @@ fn write_document(
                             ControlKind::Control => "Control",
                             ControlKind::CrossingPoint => "CrossingPoint",
                         };
-                        control_element(w, kind, &control.code.0, &control.map_mm)?;
+                        control_element(w, kind, &control.code.0, &control.map_mm, geo)?;
                     }
                     for out in courses {
                         course_element(w, out)?;
@@ -269,7 +293,8 @@ fn write_document(
 /// Writes the individual courses of `event` as IOF XML 3.0 `CourseData`.
 ///
 /// `map_scale` is the scale denominator and `map_kind` the kind of the map (it sets the overprint sizes
-/// for the number positions), `created` an ISO 8601 date and time such as
+/// for the number positions), `geo` the grid of the georeferenced map, which adds a geographic `Position`
+/// to every control (none without it), `created` an ISO 8601 date and time such as
 /// `2026-11-09T12:00:00Z` for `createTime`. Team, relay and score courses are left out and named in
 /// [`IofXmlExport::skipped`].
 ///
@@ -279,6 +304,7 @@ pub fn export_iof_xml(
     event: &Event,
     map_scale: u32,
     map_kind: MapKind,
+    geo: Option<&MapGrid>,
     created: &str,
 ) -> Result<IofXmlExport, IofXmlError> {
     let mut courses = Vec::new();
@@ -299,8 +325,12 @@ pub fn export_iof_xml(
             });
         }
     }
-    let bytes = write_document(event, map_scale, created, &courses)
+    let bytes = write_document(event, map_scale, geo, created, &courses)
         .expect("writing to a Vec<u8> cannot fail");
     let xml = String::from_utf8(bytes).expect("quick-xml writes UTF-8 from UTF-8 input");
-    Ok(IofXmlExport { xml, skipped })
+    Ok(IofXmlExport {
+        xml,
+        geo_positions: geo.is_some(),
+        skipped,
+    })
 }

@@ -342,7 +342,10 @@ Was du wissen solltest:
   ihrer Art.
 - Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
   unberührt.
-- Geopositionen und abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
+- Ist die Karte georeferenziert, tragen Start, Posten und Ziel Breite und Länge mit sechs Nachkommastellen. Fehlt die
+  Georeferenzierung oder nutzt die Karte ein Koordinatensystem, das das Programm nicht kennt, enthält die Datei nur
+  Kartenpositionen, und `export` sagt das. OE, OCAD und Condes sind mit diesen Positionen nicht getestet.
+- Abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
 - Die Uhrzeit `createTime` ist UTC und trägt das Zeichen `Z`. Für die Bahnen spielt sie keine Rolle.
 - Das Beispiel [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema
   geprüft, und ein Test liest den Export mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder

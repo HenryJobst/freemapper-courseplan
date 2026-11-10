@@ -94,8 +94,9 @@ fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnu
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
 geprüft und lässt sich mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder einlesen; ein
 fertiges Beispiel ist [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Ein Import in OE, Purple Pen
-oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Rückmeldungen von Leuten mit OE sind willkommen. Geopositionen und abgeflaggte Strecken
-schreibt das Programm noch nicht, Mannschafts-, Staffel- und Score-Bahnen überspringt es. Kapitel 10 des
+oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Rückmeldungen von Leuten mit OE sind willkommen. Ist die Karte georeferenziert, tragen Start, Posten und Ziel
+auch Breite und Länge (ADR 0039). Abgeflaggte Strecken schreibt das Programm noch nicht, Mannschafts-, Staffel- und
+Score-Bahnen überspringt es. Kapitel 10 des
 [Handbuchs](docs/manual/de.md#10-weitergeben-iof-xml-für-oe) nennt die Einzelheiten.
 
 `freemapper-courseplan init <Karte> --ppen <Datei>` und `freemapper-courseplan import <Projekt> --ppen <Datei>`
