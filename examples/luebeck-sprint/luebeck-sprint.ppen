@@ -44,7 +44,7 @@
   <course id="1" kind="normal" order="1">
     <name>A</name>
     <first course-control="1" />
-    <options print-scale="4000" climb="5" />
+    <options print-scale="4000" climb="5" description-kind="symbols" />
   </course>
   <course-control id="1" control="1">
     <next course-control="2" />
