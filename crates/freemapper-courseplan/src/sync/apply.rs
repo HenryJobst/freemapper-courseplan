@@ -31,6 +31,9 @@ pub enum SyncNote {
     NewNameTaken { from: String, to: String },
     /// The stored base copy was not used.
     BaseIgnored { why: &'static str },
+    /// The first sync of this project with this file: there is no base copy yet, so every difference
+    /// counts as a conflict and nothing is deleted. Not a problem.
+    FirstSync,
     /// The stored base copy was repaired.
     BaseRepaired,
     /// An object the project holds that Purple Pen's normal courses cannot.

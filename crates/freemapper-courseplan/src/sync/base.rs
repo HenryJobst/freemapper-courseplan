@@ -131,6 +131,9 @@ pub enum BaseState {
     /// The last sync stopped after it wrote the project: the recorded hash is the linked file's, so the
     /// linked file is the base.
     Repair,
+    /// The first sync: the project has no `[sync]` yet and no base copy exists. Nothing is wrong; the
+    /// sync runs without a base, as with `Ignore`, but says so neutrally.
+    First,
     /// Sync without a base. `why` is `"missing"`, `"other link"` or `"hash"`.
     Ignore(&'static str),
 }
@@ -149,7 +152,11 @@ pub fn base_state(
     theirs: &[u8],
 ) -> BaseState {
     let Some(sync) = sync else {
-        return BaseState::Ignore("missing");
+        return if base.is_none() {
+            BaseState::First
+        } else {
+            BaseState::Ignore("missing")
+        };
     };
     if sync.ppen.as_deref() != Some(link) {
         return BaseState::Ignore("other link");
@@ -180,6 +187,7 @@ impl BaseState {
                 Some(Cow::Owned(strip_absolute_path(theirs))),
                 Some(SyncNote::BaseRepaired),
             ),
+            BaseState::First => (None, Some(SyncNote::FirstSync)),
             BaseState::Ignore(why) => (None, Some(SyncNote::BaseIgnored { why })),
         }
     }
@@ -332,6 +340,7 @@ mod tests {
             base_state(Some(&s), Path::new("a.ppen"), None, b"theirs"),
             BaseState::Ignore("missing")
         );
+        // A base file without any `[sync]` is not a normal first sync.
         assert_eq!(
             base_state(None, Path::new("a.ppen"), Some(b"base"), b"theirs"),
             BaseState::Ignore("missing")
@@ -344,6 +353,17 @@ mod tests {
             base_state(Some(&no_hash), Path::new("a.ppen"), Some(b"base"), b"t"),
             BaseState::Ignore("missing")
         );
+    }
+
+    #[test]
+    fn first_sync_has_its_own_state_and_note() {
+        assert_eq!(
+            base_state(None, Path::new("a.ppen"), None, b"theirs"),
+            BaseState::First
+        );
+        let (b, n) = BaseState::First.resolve(None, b"t");
+        assert!(b.is_none());
+        assert_eq!(n, Some(SyncNote::FirstSync));
     }
 
     #[test]

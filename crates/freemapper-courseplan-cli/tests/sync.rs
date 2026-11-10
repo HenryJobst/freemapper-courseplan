@@ -133,6 +133,39 @@ fn first_sync_writes_base_and_hash() {
 }
 
 #[test]
+fn first_sync_says_so_neutrally() {
+    let (dir, _project) = linked();
+    let out = run(
+        dir.path(),
+        "en",
+        &["sync", "event.courseplan.toml", "--dry-run"],
+    );
+    let text = stdout(&out);
+    assert!(text.contains("first sync"), "{text}");
+    assert!(!text.contains("no usable base copy"), "{text}");
+    let de = run(
+        dir.path(),
+        "de",
+        &["sync", "event.courseplan.toml", "--dry-run"],
+    );
+    assert!(stdout(&de).contains("erster Abgleich"), "{}", stdout(&de));
+}
+
+#[test]
+fn damaged_base_is_still_reported() {
+    let (dir, project) = synced();
+    std::fs::remove_file(base_path(&project)).unwrap();
+    let out = run(
+        dir.path(),
+        "en",
+        &["sync", "event.courseplan.toml", "--dry-run"],
+    );
+    let text = stdout(&out);
+    assert!(text.contains("no usable base copy"), "{text}");
+    assert!(!text.contains("first sync"), "{text}");
+}
+
+#[test]
 fn dry_run_writes_nothing() {
     let (dir, project) = synced();
     edit(&project, P34, "map_mm = [-1.0, -12.4]");

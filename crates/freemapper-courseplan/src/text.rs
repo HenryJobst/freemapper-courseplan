@@ -588,6 +588,7 @@ impl Localize for SyncNote {
                 "sync-note-base-ignored",
                 &[("why", v(word(lang, "word-sync-why", why)))],
             ),
+            SyncNote::FirstSync => t("sync-note-first-sync", &[]),
             SyncNote::BaseRepaired => t("sync-note-base-repaired", &[]),
             SyncNote::NotWritten(note) => {
                 t("sync-note-not-written", &[("note", v(note.localize(lang)))])
@@ -1056,6 +1057,7 @@ mod tests {
         assert_eq!(sync_value(&en, "finish"), "finish");
         for note in [
             SyncNote::BaseRepaired,
+            SyncNote::FirstSync,
             SyncNote::BaseIgnored { why: "hash" },
             SyncNote::DeletionKept {
                 control: s("36"),

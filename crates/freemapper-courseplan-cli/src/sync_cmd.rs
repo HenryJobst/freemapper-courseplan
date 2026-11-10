@@ -13,7 +13,7 @@ use freemapper_courseplan::sync::merge3::Pick;
 use freemapper_courseplan::sync::{SyncError, SyncInput, SyncPlan, SyncReport, sync_ppen};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, sync_error, sync_value, text};
 use freemapper_courseplan_model::{
-    ProjectError, ProjectFile, SyncDecision, SyncState, write_atomic,
+    ProjectError, ProjectFile, Side, SyncDecision, SyncState, write_atomic,
 };
 
 use crate::edit_cmd::{Failure, map_load_error};
@@ -52,6 +52,8 @@ pub(crate) enum SyncCmdError {
     Sync(PathBuf, SyncError),
     /// A `--take KEY=SIDE` names no open conflict.
     TakeKey(String),
+    /// An error variant that cannot occur here; the word says which.
+    Internal(&'static str),
     /// The linked file changed between the first read and the write (Purple Pen saved meanwhile).
     ChangedMeanwhile(PathBuf),
     /// The first write succeeded and a later one failed; `sync` finishes the job.
@@ -63,6 +65,19 @@ pub(crate) enum SyncCmdError {
 
 impl SyncCmdError {
     pub(crate) fn message(self, lang: &Lang) -> String {
+        self.message_with(lang, &|e| e.localize(lang), &|path, e| {
+            map_load_error(lang, path, e)
+        })
+    }
+
+    /// The text of the error; `project` and `map` word the errors of the project file and the map
+    /// (the MCP server redacts them).
+    pub(crate) fn message_with(
+        self,
+        lang: &Lang,
+        project: &dyn Fn(ProjectError) -> String,
+        map: &dyn Fn(&Path, OmapError) -> String,
+    ) -> String {
         let path_arg = |p: &Path| FluentValue::from(p.display().to_string());
         match self {
             SyncCmdError::NoLink(path) => {
@@ -74,11 +89,11 @@ impl SyncCmdError {
                 &[("path", path_arg(&path))],
             ),
             SyncCmdError::Read(path, e) => e.message(lang, &path),
-            SyncCmdError::Project(e) => e.localize(lang),
+            SyncCmdError::Project(e) => project(e),
             SyncCmdError::NotMap(path) => {
                 text(lang, "error-import-not-map", &[("path", path_arg(&path))])
             }
-            SyncCmdError::Map(path, e) => map_load_error(lang, &path, e),
+            SyncCmdError::Map(path, e) => map(&path, e),
             SyncCmdError::Overwrites(path) => text(
                 lang,
                 "error-export-overwrites-input",
@@ -89,6 +104,11 @@ impl SyncCmdError {
                 lang,
                 "error-sync-take-unknown-key",
                 &[("key", FluentValue::from(key))],
+            ),
+            SyncCmdError::Internal(what) => text(
+                lang,
+                "error-sync-internal",
+                &[("what", FluentValue::from(what))],
             ),
             SyncCmdError::ChangedMeanwhile(path) => text(
                 lang,
@@ -109,7 +129,7 @@ impl SyncCmdError {
                                 .join(", "),
                         ),
                     ),
-                    ("source", FluentValue::from(source.localize(lang))),
+                    ("source", FluentValue::from(project(source))),
                 ],
             ),
         }
@@ -123,8 +143,11 @@ impl From<ExportError> for SyncCmdError {
             ExportError::NotMap(path) => SyncCmdError::NotMap(path),
             ExportError::Map(path, e) => SyncCmdError::Map(path, e),
             ExportError::Overwrites(path) => SyncCmdError::Overwrites(path),
-            // `open_inputs` returns no other variant.
-            other => unreachable!("open_inputs returned {other:?}"),
+            // `open_inputs` returns none of these; each still maps to a clear error rather than a panic.
+            ExportError::Course(_) => SyncCmdError::Internal("course"),
+            ExportError::Ppen(..) => SyncCmdError::Internal("ppen"),
+            ExportError::ReadTarget(path, e) => SyncCmdError::Read(path, e),
+            ExportError::IdsNotStored(_, e) => SyncCmdError::Project(e),
         }
     }
 }
@@ -168,6 +191,22 @@ pub(crate) fn sync_file(
     dry_run: bool,
     take: &[Take],
 ) -> Result<SyncOutcome, SyncCmdError> {
+    sync_inner(project, dry_run, take, false)
+}
+
+/// Stores the decision for one open conflict in the project file, with the fingerprint of the conflict as
+/// it is now, and nothing else. The key must name a conflict of the sync as it would run without any
+/// stored decision; a decision stored before for the key is replaced.
+pub(crate) fn store_decision(project: &Path, key: &str, side: Side) -> Result<(), SyncCmdError> {
+    sync_inner(project, false, &[Take::One(key.to_owned(), side)], true).map(drop)
+}
+
+fn sync_inner(
+    project: &Path,
+    dry_run: bool,
+    take: &[Take],
+    store_only: bool,
+) -> Result<SyncOutcome, SyncCmdError> {
     let first = ProjectFile::load(project).map_err(SyncCmdError::Project)?;
     let Some(link) = first.event.sources.ppen.clone() else {
         return Err(SyncCmdError::NoLink(project.to_path_buf()));
@@ -190,6 +229,14 @@ pub(crate) fn sync_file(
     );
     let (base, base_note) = state.resolve(stored_base.as_deref(), &theirs);
     let kind = map_kind_for_file(&doc, &file.map_path());
+    // The event as it is without any stored decision.
+    let bare = {
+        let mut bare = file.event.clone();
+        if let Some(sync) = &mut bare.sync {
+            sync.decisions.clear();
+        }
+        bare
+    };
     let run = |event, take: &[Take]| {
         sync_ppen(SyncInput {
             project: event,
@@ -202,7 +249,21 @@ pub(crate) fn sync_file(
         })
         .map_err(|e| SyncCmdError::Sync(ppen_path.clone(), e))
     };
-    let plan = run(&file.event, take)?;
+    let plan = if store_only {
+        // Only the decisions are wanted: take nothing, so the plan is always the conflict branch.
+        match run(&bare, &[])? {
+            plan @ SyncPlan::Conflicts(_) => plan,
+            SyncPlan::Ready { .. } => {
+                let key = take.iter().find_map(|t| match t {
+                    Take::One(key, _) => Some(key.clone()),
+                    Take::All(_) => None,
+                });
+                return Err(SyncCmdError::TakeKey(key.unwrap_or_default()));
+            }
+        }
+    } else {
+        run(&file.event, take)?
+    };
 
     let outcome = |report, written, ppen_changed, decisions| SyncOutcome {
         report,
@@ -222,10 +283,6 @@ pub(crate) fn sync_file(
                 return Ok(outcome(report, false, false, 0));
             }
             // The conflicts as they are without any stored decision give each key its fingerprint.
-            let mut bare = file.event.clone();
-            if let Some(sync) = &mut bare.sync {
-                sync.decisions.clear();
-            }
             let all = match run(&bare, &[])? {
                 SyncPlan::Conflicts(all) => all.conflicts,
                 SyncPlan::Ready { .. } => Vec::new(),
@@ -329,6 +386,7 @@ pub(crate) fn sync_json(o: &SyncOutcome, lang: &Lang) -> serde_json::Value {
     let base = match o.base {
         BaseState::Use => "use",
         BaseState::Repair => "repair",
+        BaseState::First => "first",
         BaseState::Ignore(_) => "ignore",
     };
     serde_json::json!({

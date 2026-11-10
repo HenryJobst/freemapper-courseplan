@@ -32,6 +32,8 @@ use rmcp::{ErrorData as McpError, ServerHandler, ServiceExt, tool, tool_handler,
 use serde_json::{Map, Value, json};
 
 use crate::edit_cmd;
+use crate::sync_cmd::{SyncCmdError, store_decision, sync_file, sync_json};
+use freemapper_courseplan::sync::decide::Take;
 
 mod params;
 use params::*;
@@ -571,6 +573,13 @@ impl CoursePlanServer {
         let out = change(&mut file)?;
         file.save().map_err(|e| project_error(&self.lang, e))?;
         Ok(out)
+    }
+
+    /// A sync error as text for the assistant, with the same redaction as the other tools.
+    fn sync_failed(&self, e: SyncCmdError) -> String {
+        e.message_with(&self.lang, &|e| project_error(&self.lang, e), &|p, e| {
+            map_error(&self.lang, p, e)
+        })
     }
 
     fn refused(&self, e: edit::EditError) -> String {
@@ -1383,6 +1392,37 @@ impl CoursePlanServer {
         })())
     }
 
+    #[tool(description = "Sync the project with its linked Purple Pen file")]
+    async fn sync_ppen(
+        &self,
+        Parameters(req): Parameters<SyncPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply((|| {
+            let project = resolve_project(&self.lang, &req.project)?;
+            let take: Vec<Take> = req
+                .take
+                .map(|side| Take::All(side.into()))
+                .into_iter()
+                .collect();
+            let outcome =
+                sync_file(&project, flag(req.dry_run), &take).map_err(|e| self.sync_failed(e))?;
+            Ok(sync_json(&outcome, &self.lang))
+        })())
+    }
+
+    #[tool(description = "Store the answer to one sync conflict")]
+    async fn resolve_sync_conflict(
+        &self,
+        Parameters(req): Parameters<ResolveSyncConflict>,
+    ) -> Result<CallToolResult, McpError> {
+        reply((|| {
+            let project = resolve_project(&self.lang, &req.project)?;
+            store_decision(&project, &req.key, req.take.into()).map_err(|e| self.sync_failed(e))?;
+            let outcome = sync_file(&project, true, &[]).map_err(|e| self.sync_failed(e))?;
+            Ok(sync_json(&outcome, &self.lang))
+        })())
+    }
+
     #[tool(description = "Accept a finding")]
     async fn accept_finding(
         &self,
@@ -1741,7 +1781,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 34);
+            assert_eq!(tools.len(), 36);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));
