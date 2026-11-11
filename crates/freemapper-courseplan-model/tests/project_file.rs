@@ -1107,3 +1107,24 @@ fn project_without_sync_writes_no_sync_table() {
     let text = std::fs::read_to_string(&project.path).unwrap();
     assert!(!text.contains("sync"), "{text}");
 }
+
+#[cfg(unix)]
+#[test]
+fn write_atomic_does_not_follow_a_symlink_at_the_tmp_name_and_keeps_the_mode() {
+    use std::os::unix::fs::{PermissionsExt, symlink};
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("event.toml");
+    std::fs::write(&target, "old").unwrap();
+    std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
+    let victim = dir.path().join("victim");
+    std::fs::write(&victim, "keep").unwrap();
+    symlink(&victim, dir.path().join("event.toml.tmp")).unwrap();
+
+    freemapper_courseplan_model::write_atomic(&target, "new").unwrap();
+
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), "new");
+    assert_eq!(std::fs::read_to_string(&victim).unwrap(), "keep");
+    let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o640);
+    assert!(!dir.path().join("event.toml.tmp").exists());
+}

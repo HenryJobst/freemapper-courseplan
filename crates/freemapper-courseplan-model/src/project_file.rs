@@ -40,6 +40,13 @@ pub enum ModelError {
     /// `what` is "control code", "special object id", "course name" or "class name".
     #[error("{what} \"{value}\" is empty or starts or ends with a space")]
     BlankName { what: &'static str, value: String },
+    /// `what` is as for `BlankName`, or "accepted finding note".
+    #[error("{what} is {len} characters long, at most {limit} are allowed")]
+    TooLong {
+        what: &'static str,
+        limit: usize,
+        len: usize,
+    },
     /// An accepted finding needs a note; only an empty or blank one is refused.
     #[error("the note of accepted finding {rule} is empty")]
     BlankNote { rule: String },
@@ -406,7 +413,22 @@ pub fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
-    let result = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
+    let result = (|| {
+        use std::io::Write as _;
+        // A stale or planted file (or link) at the temporary name is removed, never written through.
+        let _ = std::fs::remove_file(&tmp);
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        file.write_all(text.as_bytes())?;
+        if let Ok(meta) = std::fs::metadata(path) {
+            // The new file keeps the access mode of the one it replaces.
+            let _ = file.set_permissions(meta.permissions());
+        }
+        drop(file);
+        std::fs::rename(&tmp, path)
+    })();
     if let Err(source) = result {
         let _ = std::fs::remove_file(&tmp);
         return Err(ProjectError::Write {

@@ -5,6 +5,11 @@ use std::collections::HashSet;
 
 use crate::{ControlCode, CourseKind, Event, FORMAT_VERSION, ModelError, RelayPart, SpecialObject};
 
+/// Longest control code or special object id, in characters (the limit of freemapper-course).
+pub const MAX_CODE_CHARS: usize = 64;
+/// Longest course or class name and longest note, in characters.
+pub const MAX_NAME_CHARS: usize = 200;
+
 /// Finds every inconsistency of the event, in file order. An empty list means the event is consistent.
 pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut errors = Vec::new();
@@ -20,6 +25,12 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     }
 
     for finding in &event.accepted_findings {
+        check_len(
+            &mut errors,
+            "accepted finding note",
+            &finding.note,
+            MAX_NAME_CHARS,
+        );
         if finding.note.trim().is_empty() {
             errors.push(ModelError::BlankNote {
                 rule: finding.rule.clone(),
@@ -31,6 +42,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     let mut reported: HashSet<&ControlCode> = HashSet::new();
     for control in &event.controls {
         check_name(&mut errors, "control code", &control.code.0);
+        check_len(&mut errors, "control code", &control.code.0, MAX_CODE_CHARS);
         if !codes.insert(&control.code) && reported.insert(&control.code) {
             errors.push(ModelError::DuplicateControl(control.code.clone()));
         }
@@ -42,6 +54,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     for class in &event.classes {
         let name = class.name.as_str();
         check_name(&mut errors, "class name", name);
+        check_len(&mut errors, "class name", name, MAX_NAME_CHARS);
         if !class_names.insert(name) && reported_classes.insert(name) {
             errors.push(ModelError::DuplicateClass(class.name.clone()));
         }
@@ -54,6 +67,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     for special in &event.specials {
         let id = special.id();
         check_name(&mut errors, "special object id", id);
+        check_len(&mut errors, "special object id", id, MAX_CODE_CHARS);
         if let Some((kind, needed, have)) = shape(special)
             && have < needed
         {
@@ -110,6 +124,7 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     for course in &event.courses {
         let name = &course.name;
         check_name(&mut errors, "course name", name);
+        check_len(&mut errors, "course name", name, MAX_NAME_CHARS);
         if !course_names.insert(name) {
             errors.push(ModelError::DuplicateCourse(name.clone()));
         }
@@ -180,6 +195,14 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
     }
 
     errors
+}
+
+/// Reports a text of more than `limit` characters.
+fn check_len(errors: &mut Vec<ModelError>, what: &'static str, value: &str, limit: usize) {
+    let len = value.chars().count();
+    if len > limit {
+        errors.push(ModelError::TooLong { what, limit, len });
+    }
 }
 
 /// Reports a name that is empty or has white space at its start or end. Such names cannot be told

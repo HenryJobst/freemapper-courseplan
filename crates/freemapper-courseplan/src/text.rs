@@ -154,6 +154,15 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::TooLong { what, limit, len } => text(
+                lang,
+                "error-model-too-long",
+                &[
+                    ("what", v(word(lang, "word-name", what))),
+                    ("limit", v(limit)),
+                    ("len", v(len)),
+                ],
+            ),
             ModelError::BlankNote { rule } => {
                 text(lang, "error-model-blank-note", &[("name", v(rule))])
             }
@@ -954,6 +963,8 @@ mod tests {
             "kind",
             "errors",
             "what",
+            "len",
+            "limit",
             "version",
             "x",
             "y",
@@ -1360,6 +1371,11 @@ mod tests {
             ModelError::BlankName {
                 what: "control code",
                 value: s(" 31"),
+            },
+            ModelError::TooLong {
+                what: "course name",
+                limit: 200,
+                len: 201,
             },
             ModelError::BlankNote { rule: s("r") },
             ModelError::CodeClashesWithSpecial(code("S1")),
