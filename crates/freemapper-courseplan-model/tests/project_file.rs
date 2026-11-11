@@ -216,6 +216,60 @@ fn save_after_removing_course_drops_it() {
 }
 
 #[test]
+fn save_refuses_a_file_changed_since_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    std::fs::write(&file, "other bytes\n").unwrap();
+    project.event.event.title = "Quay".to_owned();
+    let err = project.save().unwrap_err();
+    assert!(
+        matches!(&err, ProjectError::ChangedMeanwhile { path } if path == &file),
+        "{err:?}"
+    );
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), "other bytes\n");
+    assert!(!dir.path().join("event.toml.tmp").exists());
+}
+
+#[test]
+fn save_refuses_a_file_deleted_since_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    project.event.event.title = "Quay".to_owned();
+    let err = project.save().unwrap_err();
+    assert!(
+        matches!(err, ProjectError::ChangedMeanwhile { .. }),
+        "{err:?}"
+    );
+    assert!(!file.exists());
+}
+
+#[test]
+fn two_saves_in_a_row_work() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = copy_fixture(dir.path(), "commented.toml");
+    let mut project = ProjectFile::load(&file).unwrap();
+    project.event.event.title = "Quay".to_owned();
+    project.save().unwrap();
+    project.event.event.title = "Dock".to_owned();
+    project.save().unwrap();
+    assert_eq!(ProjectFile::load(&file).unwrap().event.event.title, "Dock");
+}
+
+#[test]
+fn create_then_save_works() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = dir.path().join("event.toml");
+    let event = ProjectFile::load(&fixture("minimal.toml")).unwrap().event;
+    let mut created = ProjectFile::create(&file, event).unwrap();
+    created.event.event.title = "Quay".to_owned();
+    created.save().unwrap();
+    assert_eq!(ProjectFile::load(&file).unwrap().event.event.title, "Quay");
+}
+
+#[test]
 fn create_refuses_existing_file() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("event.toml");
@@ -366,20 +420,20 @@ fn clearing_an_optional_field_removes_its_key() {
 }
 
 #[test]
-fn failed_save_keeps_original_and_removes_tmp() {
+fn failed_save_keeps_original() {
     let dir = tempfile::tempdir().unwrap();
     let file = copy_fixture(dir.path(), "commented.toml");
     let mut project = ProjectFile::load(&file).unwrap();
     project.event.event.title = "Quay".to_owned();
-    // A non-empty directory in place of the file makes the rename fail on every platform.
-    std::fs::remove_file(&file).unwrap();
-    std::fs::create_dir(&file).unwrap();
-    std::fs::write(file.join("keep"), "x").unwrap();
+    // A directory in place of the temporary file makes the write fail on every platform (the guard has
+    // already passed, because the project file itself is untouched).
+    let before = std::fs::read_to_string(&file).unwrap();
+    let tmp = dir.path().join("event.toml.tmp");
+    std::fs::create_dir(&tmp).unwrap();
     let err = project.save().unwrap_err();
     assert!(matches!(err, ProjectError::Write { .. }), "{err:?}");
     assert!(err.to_string().starts_with("cannot write "), "{err}");
-    assert!(!dir.path().join("event.toml.tmp").exists());
-    assert_eq!(std::fs::read_to_string(file.join("keep")).unwrap(), "x");
+    assert_eq!(std::fs::read_to_string(&file).unwrap(), before);
 }
 
 /// A file written by `create` from minimal.toml plus control 33 and course B, loaded again.
@@ -1052,4 +1106,25 @@ fn project_without_sync_writes_no_sync_table() {
     assert_eq!(back.format, 1);
     let text = std::fs::read_to_string(&project.path).unwrap();
     assert!(!text.contains("sync"), "{text}");
+}
+
+#[cfg(unix)]
+#[test]
+fn write_atomic_does_not_follow_a_symlink_at_the_tmp_name_and_keeps_the_mode() {
+    use std::os::unix::fs::{PermissionsExt, symlink};
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("event.toml");
+    std::fs::write(&target, "old").unwrap();
+    std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
+    let victim = dir.path().join("victim");
+    std::fs::write(&victim, "keep").unwrap();
+    symlink(&victim, dir.path().join("event.toml.tmp")).unwrap();
+
+    freemapper_courseplan_model::write_atomic(&target, "new").unwrap();
+
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), "new");
+    assert_eq!(std::fs::read_to_string(&victim).unwrap(), "keep");
+    let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
+    assert_eq!(mode, 0o640);
+    assert!(!dir.path().join("event.toml.tmp").exists());
 }

@@ -40,6 +40,13 @@ pub enum ModelError {
     /// `what` is "control code", "special object id", "course name" or "class name".
     #[error("{what} \"{value}\" is empty or starts or ends with a space")]
     BlankName { what: &'static str, value: String },
+    /// `what` is as for `BlankName`, or "accepted finding note".
+    #[error("{what} is {len} characters long, at most {limit} are allowed")]
+    TooLong {
+        what: &'static str,
+        limit: usize,
+        len: usize,
+    },
     /// An accepted finding needs a note; only an empty or blank one is refused.
     #[error("the note of accepted finding {rule} is empty")]
     BlankNote { rule: String },
@@ -99,6 +106,9 @@ pub enum ProjectError {
     /// `message` already names the file.
     #[error("{message}")]
     Parse { path: PathBuf, message: String },
+    /// `save` found the file different from the text this `ProjectFile` read or wrote last, or gone.
+    #[error("{} changed since it was read; nothing was written", path.display())]
+    ChangedMeanwhile { path: PathBuf },
     #[error("{} is not a consistent event:{}", path.display(), list_errors(errors))]
     Invalid {
         path: PathBuf,
@@ -113,6 +123,8 @@ pub struct ProjectFile {
     pub event: Event,
     /// Kept for writing changes back without losing comments and layout.
     document: DocumentMut,
+    /// The text read from the file or written to it last; `save` refuses when the file differs.
+    loaded: String,
 }
 
 impl ProjectFile {
@@ -159,6 +171,7 @@ impl ProjectFile {
             path: path.to_owned(),
             event,
             document,
+            loaded: text.to_owned(),
         })
     }
 
@@ -171,19 +184,36 @@ impl ProjectFile {
                 path: path.to_owned(),
             });
         }
-        write_atomic(path, &document.to_string())?;
+        let loaded = document.to_string();
+        write_atomic(path, &loaded)?;
         Ok(ProjectFile {
             path: path.to_owned(),
             event,
             document,
+            loaded,
         })
     }
 
     /// Validates the event and writes it back. Values that did not change stay as written, with
     /// their comments; a changed value keeps the comment next to it and stays inline if it was.
     /// Saving an unchanged event leaves the file byte for byte as it was.
+    ///
+    /// The file is read again first. If its text is not the text this value read or wrote last, or the file
+    /// is gone, nothing is written and the error is [`ProjectError::ChangedMeanwhile`]. Only the window
+    /// between that read and the rename stays open.
     pub fn save(&mut self) -> Result<(), ProjectError> {
         check(&self.path, &self.event)?;
+        match std::fs::read_to_string(&self.path) {
+            Ok(now) if now == self.loaded => {}
+            Ok(_) => return Err(self.changed()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Err(self.changed()),
+            Err(source) => {
+                return Err(ProjectError::Read {
+                    path: self.path.clone(),
+                    source,
+                });
+            }
+        }
         let fresh = fresh_document(&self.path, &self.event)?;
         let mut merged = self.document.clone();
         let mut reordered = false;
@@ -191,9 +221,17 @@ impl ProjectFile {
         if reordered {
             renumber(merged.as_table_mut(), &mut 0);
         }
-        write_atomic(&self.path, &merged.to_string())?;
+        let text = merged.to_string();
+        write_atomic(&self.path, &text)?;
         self.document = merged;
+        self.loaded = text;
         Ok(())
+    }
+
+    fn changed(&self) -> ProjectError {
+        ProjectError::ChangedMeanwhile {
+            path: self.path.clone(),
+        }
     }
 
     /// The map file: `sources.map`, relative to the folder of the project file unless absolute.
@@ -375,7 +413,22 @@ pub fn write_atomic(path: &Path, text: &str) -> Result<(), ProjectError> {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
-    let result = std::fs::write(&tmp, text).and_then(|()| std::fs::rename(&tmp, path));
+    let result = (|| {
+        use std::io::Write as _;
+        // A stale or planted file (or link) at the temporary name is removed, never written through.
+        let _ = std::fs::remove_file(&tmp);
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)?;
+        file.write_all(text.as_bytes())?;
+        if let Ok(meta) = std::fs::metadata(path) {
+            // The new file keeps the access mode of the one it replaces.
+            let _ = file.set_permissions(meta.permissions());
+        }
+        drop(file);
+        std::fs::rename(&tmp, path)
+    })();
     if let Err(source) = result {
         let _ = std::fs::remove_file(&tmp);
         return Err(ProjectError::Write {

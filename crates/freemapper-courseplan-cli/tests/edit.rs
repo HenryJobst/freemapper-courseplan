@@ -1345,3 +1345,30 @@ fn course_numbers_move_outward_within_the_range() {
     );
     assert!(gap > 0.5 && gap <= 5.0, "gap {gap}");
 }
+
+#[cfg(debug_assertions)]
+#[test]
+fn cli_reports_changed_meanwhile_with_exit_1() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let before = std::fs::read_to_string(&project).unwrap();
+    let out = Command::new(BIN)
+        .current_dir(dir.path())
+        .env_remove("FREEMAPPER_LANG")
+        .env("LANG", "C")
+        .env("FREEMAPPER_TEST_TOUCH_PROJECT", "1")
+        .args(["--lang", "en", "control", "add", p, "--at", "1,1"])
+        .output()
+        .unwrap();
+    assert_eq!(out.status.code(), Some(1), "{}", stdout(&out));
+    assert!(
+        stderr(&out).contains("changed since it was read; nothing was written"),
+        "{}",
+        stderr(&out)
+    );
+    // Only the touch itself changed the file.
+    assert_eq!(
+        std::fs::read_to_string(&project).unwrap(),
+        format!("{before}\n# touched\n")
+    );
+}

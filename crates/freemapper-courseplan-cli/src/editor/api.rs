@@ -2,7 +2,9 @@
 //! revision, and the JSON the page reads (`api/state`, `api/revision`, `api/overlay`) (ADR 0046).
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use axum::http::StatusCode;
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::sync::base::fnv1a64;
@@ -10,8 +12,11 @@ use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::{ProjectError, ProjectFile};
 use serde_json::{Value, json};
 
+use super::EditorState;
+use super::history::HistoryError;
 use super::map_view::{FileStamp, MapEntry};
 use super::overlay::r3;
+use crate::mcp::{EDITOR_TOOLS, OpError};
 
 /// The fingerprint of the project file (FNV-1a 64 over its bytes, 16 hex digits).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -166,7 +171,11 @@ fn plain_dates(value: &mut Value) {
 }
 
 /// `GET api/state`. A broken project file or map gives only `revision` and `error`.
-pub(crate) fn state_json(loaded: &Loaded, map: Result<&MapEntry, &str>) -> Value {
+pub(crate) fn state_json(
+    loaded: &Loaded,
+    map: Result<&MapEntry, &str>,
+    undo: (Option<&str>, Option<&str>),
+) -> Value {
     let broken = |error: &str| json!({ "revision": loaded.revision.0, "error": error });
     let file = match &loaded.file {
         Ok(file) => file,
@@ -211,7 +220,7 @@ pub(crate) fn state_json(loaded: &Loaded, map: Result<&MapEntry, &str>) -> Value
             "extent": extent,
         },
         "courses": courses,
-        "undo": { "undo": Value::Null, "redo": Value::Null },
+        "undo": { "undo": undo.0, "redo": undo.1 },
         "link": { "ppen": ppen.map(|p| p.display().to_string()) },
         "error": Value::Null,
     })
@@ -276,4 +285,174 @@ pub(crate) fn overlay_query(raw: Option<&str>) -> Result<Option<String>, ()> {
         course = Some(decode(value).ok_or(())?);
     }
     Ok(course)
+}
+
+/// Status and JSON body of an operation or history answer.
+pub(crate) type Reply = (StatusCode, Value);
+
+/// The text of a catalog message without arguments.
+fn msg(lang: &Lang, id: &str) -> String {
+    text(lang, id, &[])
+}
+
+/// The project text of a source, when it is UTF-8.
+fn text_of(source: &Source) -> Option<String> {
+    match source {
+        Source::Bytes(bytes) => std::str::from_utf8(bytes).ok().map(str::to_owned),
+        _ => None,
+    }
+}
+
+/// Reads the project file again into the state and returns its text.
+fn reload(st: &mut EditorState) -> Option<String> {
+    // The stamp comes first: a write after the read then shows up as a changed stamp.
+    st.stamp = FileStamp::of(&st.project).ok();
+    let source = Source::of(&st.project);
+    let revision = source.revision();
+    let text = text_of(&source);
+    st.loaded = Arc::new(Loaded::from_source(&st.project, &st.lang, source, revision));
+    text
+}
+
+fn conflict(st: &EditorState, error: String) -> Reply {
+    (
+        StatusCode::CONFLICT,
+        json!({ "error": error, "revision": st.loaded.revision.0 }),
+    )
+}
+
+/// Projects that get a write between the first read and the tool (tests only).
+#[cfg(test)]
+pub(super) static RACE: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(test)]
+fn race_hook(path: &Path) {
+    use std::io::Write as _;
+    if RACE
+        .lock()
+        .is_ok_and(|paths| paths.iter().any(|p| p == path))
+        && let Ok(mut file) = std::fs::OpenOptions::new().append(true).open(path)
+    {
+        let _ = file.write_all(b"\n# raced\n");
+    }
+}
+
+/// Takes the injected field `project` out of the list of expected fields in a serde error text.
+pub(crate) fn without_project_field(message: &str) -> String {
+    message
+        .replace("`project`, ", "")
+        .replace("`project` or ", "")
+        .replace(", `project`", "")
+}
+
+/// One editor operation (`POST api/op/{tool}`), under the state lock: read the file, compare the revision
+/// the page saw, run the MCP tool, read the file again and record the step (ADR 0043).
+pub(crate) fn run_op(
+    st: &mut EditorState,
+    tool: &str,
+    revision: Option<&str>,
+    args: Option<Value>,
+) -> Reply {
+    let lang = st.lang.clone();
+    let fail = |status, id: &str| (status, json!({ "error": msg(&lang, id) }));
+    if !EDITOR_TOOLS.contains(&tool) {
+        return fail(StatusCode::NOT_FOUND, "editor-op-unknown");
+    }
+    let Some(revision) = revision else {
+        return fail(StatusCode::BAD_REQUEST, "editor-op-no-revision");
+    };
+    let Some(args @ Value::Object(_)) = args else {
+        return fail(StatusCode::BAD_REQUEST, "editor-op-bad-body");
+    };
+    let before = reload(st);
+    if let Err(e) = &st.loaded.file {
+        let e = e.clone();
+        return conflict(st, e);
+    }
+    let seen = st.loaded.revision.clone();
+    if seen.0 != revision {
+        return conflict(st, msg(&lang, "editor-op-stale"));
+    }
+    // The tool reads the file again. If another program wrote in between, `before` is not what the tool
+    // will start from, and a step recorded from it would let undo drop that write.
+    #[cfg(test)]
+    race_hook(&st.project);
+    if std::fs::read(&st.project).ok().as_deref() != before.as_deref().map(str::as_bytes) {
+        reload(st);
+        return conflict(st, msg(&lang, "editor-op-stale"));
+    }
+    match st.server.call_json(&st.project, tool, args) {
+        Ok(result) => {
+            let after = reload(st);
+            if let (Some(before), Some(after)) = (before, after)
+                && before != after
+            {
+                let label = msg(&lang, &format!("editor-op-{}", tool.replace('_', "-")));
+                st.history.record(label, before, after);
+            }
+            (
+                StatusCode::OK,
+                json!({ "revision": st.loaded.revision.0, "result": result }),
+            )
+        }
+        Err(OpError::UnknownTool) => fail(StatusCode::NOT_FOUND, "editor-op-unknown"),
+        Err(OpError::BadArgs(message)) => (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": tidy(&without_project_field(&message), &[]) }),
+        ),
+        Err(OpError::Io) => {
+            reload(st);
+            fail(StatusCode::INTERNAL_SERVER_ERROR, "editor-io-failed")
+        }
+        Err(OpError::Refused(message)) => {
+            reload(st);
+            if st.loaded.revision == seen {
+                (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    json!({ "error": tidy(&message, &[&st.project]) }),
+                )
+            } else {
+                // Someone wrote the file while the operation ran, and the save guard refused.
+                conflict(st, msg(&lang, "editor-op-stale"))
+            }
+        }
+    }
+}
+
+/// `POST api/undo` and `POST api/redo`. Like an operation, they name the revision the page saw: a second
+/// tab that shows an older revision must not revert what the first tab did.
+pub(crate) fn run_history(st: &mut EditorState, redo: bool, revision: Option<&str>) -> Reply {
+    let lang = st.lang.clone();
+    let Some(revision) = revision else {
+        return (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": msg(&lang, "editor-op-no-revision") }),
+        );
+    };
+    reload(st);
+    if st.loaded.revision.0 != revision {
+        return conflict(st, msg(&lang, "editor-op-stale"));
+    }
+    let result = if redo {
+        st.history.redo(&st.project)
+    } else {
+        st.history.undo(&st.project)
+    };
+    reload(st);
+    match result {
+        Ok(_) => (StatusCode::OK, json!({ "revision": st.loaded.revision.0 })),
+        Err(HistoryError::Nothing) => {
+            let id = if redo {
+                "editor-redo-nothing"
+            } else {
+                "editor-undo-nothing"
+            };
+            conflict(st, msg(&lang, id))
+        }
+        Err(HistoryError::Changed) => conflict(st, msg(&lang, "editor-undo-changed")),
+        Err(HistoryError::Write(reason)) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            json!({ "error": tidy(&format!("{}: {reason}", msg(&lang, "editor-undo-failed")), &[&st.project]) }),
+        ),
+    }
 }

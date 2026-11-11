@@ -433,8 +433,18 @@ fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
 /// source line, a value, a field name), so only the position stays, with a fixed reason from
 /// the catalog. Read errors keep the OS text.
 fn project_error(lang: &Lang, error: ProjectError) -> String {
+    if matches!(
+        error,
+        ProjectError::Read { .. } | ProjectError::Write { .. }
+    ) {
+        IO_FAILED.with(|failed| failed.set(true));
+    }
     let (path, message) = match error {
         ProjectError::Parse { path, message } => (path, message),
+        ProjectError::ChangedMeanwhile { path } => {
+            let path = FluentValue::from(path.display().to_string());
+            return text(lang, "mcp-error-project-changed", &[("path", path)]);
+        }
         // The detail lists keys, codes and names from the file: only for a courseplan project.
         ProjectError::Invalid { ref path, .. } if !is_courseplan_project(path) => {
             let path = FluentValue::from(path.display().to_string());
@@ -571,6 +581,7 @@ impl CoursePlanServer {
     ) -> Result<T, String> {
         let mut file = self.load(project)?;
         let out = change(&mut file)?;
+        crate::edit_cmd::test_touch_project(&file.path);
         file.save().map_err(|e| project_error(&self.lang, e))?;
         Ok(out)
     }
@@ -669,7 +680,294 @@ impl CoursePlanServer {
         &self,
         Parameters(req): Parameters<ProjectOnly>,
     ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+        reply(self.event_info_op(req))
+    }
+
+    #[tool(description = "List the controls")]
+    async fn list_controls(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.list_controls_op(req))
+    }
+
+    #[tool(description = "List the courses")]
+    async fn list_courses(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.list_courses_op(req))
+    }
+
+    #[tool(description = "List the special objects")]
+    async fn list_specials(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.list_specials_op(req))
+    }
+
+    #[tool(description = "List the classes")]
+    async fn list_classes(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.list_classes_op(req))
+    }
+
+    #[tool(description = "Add a control")]
+    async fn add_control(
+        &self,
+        Parameters(req): Parameters<AddControl>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_control_op(req))
+    }
+
+    #[tool(description = "Move a control")]
+    async fn move_control(
+        &self,
+        Parameters(req): Parameters<MoveControl>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.move_control_op(req))
+    }
+
+    #[tool(description = "Remove a control")]
+    async fn remove_control(
+        &self,
+        Parameters(req): Parameters<ControlRef>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_control_op(req))
+    }
+
+    #[tool(description = "Describe a control")]
+    async fn describe_control(
+        &self,
+        Parameters(req): Parameters<DescribeControl>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.describe_control_op(req))
+    }
+
+    #[tool(description = "Set the number placement of a control")]
+    async fn set_control_number(
+        &self,
+        Parameters(req): Parameters<SetControlNumber>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_control_number_op(req))
+    }
+
+    #[tool(description = "Add a special object")]
+    async fn add_special(
+        &self,
+        Parameters(req): Parameters<AddSpecial>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_special_op(req))
+    }
+
+    #[tool(description = "Remove a special object")]
+    async fn remove_special(
+        &self,
+        Parameters(req): Parameters<RemoveSpecial>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_special_op(req))
+    }
+
+    #[tool(description = "Set the courses of a special object")]
+    async fn set_special_courses(
+        &self,
+        Parameters(req): Parameters<SetSpecialCourses>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_special_courses_op(req))
+    }
+
+    #[tool(description = "Add a class")]
+    async fn add_class(
+        &self,
+        Parameters(req): Parameters<AddClass>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_class_op(req))
+    }
+
+    #[tool(description = "Change the rule category or expected starters of a class")]
+    async fn set_class(
+        &self,
+        Parameters(req): Parameters<SetClass>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_class_op(req))
+    }
+
+    #[tool(description = "Remove a class")]
+    async fn remove_class(
+        &self,
+        Parameters(req): Parameters<RemoveClass>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_class_op(req))
+    }
+
+    #[tool(description = "Add an individual course")]
+    async fn add_course(
+        &self,
+        Parameters(req): Parameters<AddCourse>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_course_op(req))
+    }
+
+    #[tool(description = "Remove a course")]
+    async fn remove_course(
+        &self,
+        Parameters(req): Parameters<CourseRef>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_course_op(req))
+    }
+
+    #[tool(description = "Replace the controls of a course")]
+    async fn set_course_controls(
+        &self,
+        Parameters(req): Parameters<SetCourseControls>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_course_controls_op(req))
+    }
+
+    #[tool(description = "Set the bends and the marked-route flag of one leg")]
+    async fn set_leg(
+        &self,
+        Parameters(req): Parameters<SetLeg>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_leg_op(req))
+    }
+
+    #[tool(description = "Change classes, climb or print scale of a course")]
+    async fn set_course_details(
+        &self,
+        Parameters(req): Parameters<SetCourseDetails>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_course_details_op(req))
+    }
+
+    #[tool(description = "Place the control numbers of a course")]
+    async fn place_numbers(
+        &self,
+        Parameters(req): Parameters<PlaceNumbers>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.place_numbers_op(req))
+    }
+
+    #[tool(description = "Set the number placement of a control in a course")]
+    async fn set_course_number(
+        &self,
+        Parameters(req): Parameters<SetCourseNumber>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_course_number_op(req))
+    }
+
+    #[tool(description = "Map objects near a position")]
+    async fn map_features_near(
+        &self,
+        Parameters(req): Parameters<FeaturesNear>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.map_features_near_op(req))
+    }
+
+    #[tool(description = "Extent of the map")]
+    async fn map_extent(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.map_extent_op(req))
+    }
+
+    #[tool(description = "Check the courses")]
+    async fn check(
+        &self,
+        Parameters(req): Parameters<ProjectOnly>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.check_op(req))
+    }
+
+    #[tool(description = "Export the courses as IOF XML 3.0")]
+    async fn export_iof_xml(
+        &self,
+        Parameters(req): Parameters<ExportIofXml>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.export_iof_xml_op(req))
+    }
+
+    #[tool(description = "Export the courses to a Purple Pen event")]
+    async fn export_ppen(
+        &self,
+        Parameters(req): Parameters<ExportPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.export_ppen_op(req))
+    }
+
+    #[tool(description = "Import a Purple Pen event")]
+    async fn import_ppen(
+        &self,
+        Parameters(req): Parameters<ImportPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.import_ppen_op(req))
+    }
+
+    #[tool(description = "Sync the project with its linked Purple Pen file")]
+    async fn sync_ppen(
+        &self,
+        Parameters(req): Parameters<SyncPpen>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.sync_ppen_op(req))
+    }
+
+    #[tool(description = "Store the answer to one sync conflict")]
+    async fn resolve_sync_conflict(
+        &self,
+        Parameters(req): Parameters<ResolveSyncConflict>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.resolve_sync_conflict_op(req))
+    }
+
+    #[tool(description = "Accept a finding")]
+    async fn accept_finding(
+        &self,
+        Parameters(req): Parameters<AcceptFinding>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.accept_finding_op(req))
+    }
+
+    #[tool(description = "Remove an accepted finding")]
+    async fn remove_accepted_finding(
+        &self,
+        Parameters(req): Parameters<RemoveAcceptedFinding>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_accepted_finding_op(req))
+    }
+
+    #[tool(description = "Set the rule profile")]
+    async fn set_rule_profile(
+        &self,
+        Parameters(req): Parameters<SetRuleProfile>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_rule_profile_op(req))
+    }
+
+    #[tool(description = "Set the start window")]
+    async fn set_start_window(
+        &self,
+        Parameters(req): Parameters<SetStartWindow>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_start_window_op(req))
+    }
+
+    #[tool(description = "Start an event from an OOM map")]
+    async fn init_event(
+        &self,
+        Parameters(req): Parameters<InitEvent>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.init_event_op(req))
+    }
+}
+
+/// The tool bodies as plain operations: the `#[tool]` methods above and the editor call them.
+impl CoursePlanServer {
+    fn event_info_op(&self, req: ProjectOnly) -> Answer {
+        {
             let file = self.load(&req.project)?;
             let doc = self.read_map(&file)?;
             let scale = doc.georef.scale_denominator;
@@ -696,25 +994,17 @@ impl CoursePlanServer {
                 },
                 "courses": courses,
             }))
-        })())
+        }
     }
 
-    #[tool(description = "List the controls")]
-    async fn list_controls(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.load(&req.project).map(|file| {
+    fn list_controls_op(&self, req: ProjectOnly) -> Answer {
+        self.load(&req.project).map(|file| {
             json!({ "controls": file.event.controls.iter().map(control_json).collect::<Vec<_>>() })
-        }))
+        })
     }
 
-    #[tool(description = "List the courses")]
-    async fn list_courses(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn list_courses_op(&self, req: ProjectOnly) -> Answer {
+        {
             let file = self.load(&req.project)?;
             let doc = self.read_map(&file)?;
             let scale = doc.georef.scale_denominator;
@@ -725,25 +1015,17 @@ impl CoursePlanServer {
                 .map(|c| course_json(&file.event, c, scale, &self.lang))
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(json!({ "courses": courses }))
-        })())
+        }
     }
 
-    #[tool(description = "List the special objects")]
-    async fn list_specials(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.load(&req.project).map(|file| {
+    fn list_specials_op(&self, req: ProjectOnly) -> Answer {
+        self.load(&req.project).map(|file| {
             json!({ "specials": file.event.specials.iter().map(special_json).collect::<Vec<_>>() })
-        }))
+        })
     }
 
-    #[tool(description = "List the classes")]
-    async fn list_classes(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.load(&req.project).map(|file| {
+    fn list_classes_op(&self, req: ProjectOnly) -> Answer {
+        self.load(&req.project).map(|file| {
             let classes: Vec<Value> = file
                 .event
                 .classes
@@ -757,15 +1039,11 @@ impl CoursePlanServer {
                 })
                 .collect();
             json!({ "classes": classes })
-        }))
+        })
     }
 
-    #[tool(description = "Add a control")]
-    async fn add_control(
-        &self,
-        Parameters(req): Parameters<AddControl>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn add_control_op(&self, req: AddControl) -> Answer {
+        self.edit(&req.project, |file| {
             let extent = self.extent(file)?;
             let kind = if flag(req.crossing_point) {
                 ControlKind::CrossingPoint
@@ -781,15 +1059,11 @@ impl CoursePlanServer {
             )
             .map_err(|e| self.refused(e))?;
             Ok(json!({ "code": code.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Move a control")]
-    async fn move_control(
-        &self,
-        Parameters(req): Parameters<MoveControl>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn move_control_op(&self, req: MoveControl) -> Answer {
+        self.edit(&req.project, |file| {
             let extent = self.extent(file)?;
             edit::move_control(
                 &mut file.event,
@@ -799,15 +1073,11 @@ impl CoursePlanServer {
             )
             .map_err(|e| self.refused(e))?;
             Ok(json!({ "code": req.code.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Remove a control")]
-    async fn remove_control(
-        &self,
-        Parameters(req): Parameters<ControlRef>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn remove_control_op(&self, req: ControlRef) -> Answer {
+        self.edit(&req.project, |file| {
             let removed = edit::remove_control(&mut file.event, &ControlCode(req.code.0.clone()))
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
@@ -815,15 +1085,11 @@ impl CoursePlanServer {
                 "left_courses": removed.courses,
                 "cleared_legs": cleared_json(&removed.cleared),
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Describe a control")]
-    async fn describe_control(
-        &self,
-        Parameters(req): Parameters<DescribeControl>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn describe_control_op(&self, req: DescribeControl) -> Answer {
+        self.edit(&req.project, |file| {
             let key = ControlCode(req.code.0.clone());
             // An unknown code is reported by the edit operation below.
             let current = file
@@ -855,15 +1121,11 @@ impl CoursePlanServer {
                 "code": req.code.0,
                 "description": serde_json::to_value(&description).unwrap_or(Value::Null),
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the number placement of a control")]
-    async fn set_control_number(
-        &self,
-        Parameters(req): Parameters<SetControlNumber>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_control_number_op(&self, req: SetControlNumber) -> Answer {
+        self.edit(&req.project, |file| {
             let number = self.number_arg(req.direction, req.gap_mm, req.clear)?;
             edit::set_central_number(
                 &mut file.event,
@@ -872,15 +1134,11 @@ impl CoursePlanServer {
             )
             .map_err(|e| self.refused(e))?;
             Ok(json!({ "code": req.code.0, "number": placement(&number) }))
-        }))
+        })
     }
 
-    #[tool(description = "Add a special object")]
-    async fn add_special(
-        &self,
-        Parameters(req): Parameters<AddSpecial>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn add_special_op(&self, req: AddSpecial) -> Answer {
+        self.edit(&req.project, |file| {
             let kind = req.kind;
             let wrong = |id: &str| {
                 text(
@@ -962,26 +1220,18 @@ impl CoursePlanServer {
             let extent = self.extent(file)?;
             edit::add_special(&mut file.event, extent, special).map_err(|e| self.refused(e))?;
             Ok(json!({ "id": req.id.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Remove a special object")]
-    async fn remove_special(
-        &self,
-        Parameters(req): Parameters<RemoveSpecial>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn remove_special_op(&self, req: RemoveSpecial) -> Answer {
+        self.edit(&req.project, |file| {
             edit::remove_special(&mut file.event, &req.id.0).map_err(|e| self.refused(e))?;
             Ok(json!({ "id": req.id.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the courses of a special object")]
-    async fn set_special_courses(
-        &self,
-        Parameters(req): Parameters<SetSpecialCourses>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_special_courses_op(&self, req: SetSpecialCourses) -> Answer {
+        self.edit(&req.project, |file| {
             let courses = match (req.courses, flag(req.all)) {
                 (Some(list), false) => {
                     let names = name_list(list);
@@ -996,15 +1246,11 @@ impl CoursePlanServer {
             edit::set_special_courses(&mut file.event, &req.id.0, courses.clone())
                 .map_err(|e| self.refused(e))?;
             Ok(json!({ "id": req.id.0, "courses": courses }))
-        }))
+        })
     }
 
-    #[tool(description = "Add a class")]
-    async fn add_class(
-        &self,
-        Parameters(req): Parameters<AddClass>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn add_class_op(&self, req: AddClass) -> Answer {
+        self.edit(&req.project, |file| {
             let class = Class {
                 name: req.name.0.clone(),
                 rule_category: req.rule_category,
@@ -1012,15 +1258,11 @@ impl CoursePlanServer {
             };
             edit::add_class(&mut file.event, class).map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Change the rule category or expected starters of a class")]
-    async fn set_class(
-        &self,
-        Parameters(req): Parameters<SetClass>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_class_op(&self, req: SetClass) -> Answer {
+        self.edit(&req.project, |file| {
             let conflict = |arg: &str, other: &str| {
                 text(
                     &self.lang,
@@ -1063,26 +1305,18 @@ impl CoursePlanServer {
                 "rule_category": class.rule_category,
                 "expected_starters": class.expected_starters,
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Remove a class")]
-    async fn remove_class(
-        &self,
-        Parameters(req): Parameters<RemoveClass>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn remove_class_op(&self, req: RemoveClass) -> Answer {
+        self.edit(&req.project, |file| {
             edit::remove_class(&mut file.event, &req.name.0).map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Add an individual course")]
-    async fn add_course(
-        &self,
-        Parameters(req): Parameters<AddCourse>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn add_course_op(&self, req: AddCourse) -> Answer {
+        self.edit(&req.project, |file| {
             let controls = code_list(req.controls.unwrap_or_default())
                 .into_iter()
                 .map(edit_cmd::course_control)
@@ -1102,26 +1336,18 @@ impl CoursePlanServer {
             };
             edit::add_course(&mut file.event, course).map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Remove a course")]
-    async fn remove_course(
-        &self,
-        Parameters(req): Parameters<CourseRef>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn remove_course_op(&self, req: CourseRef) -> Answer {
+        self.edit(&req.project, |file| {
             edit::remove_course(&mut file.event, &req.name.0).map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Replace the controls of a course")]
-    async fn set_course_controls(
-        &self,
-        Parameters(req): Parameters<SetCourseControls>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_course_controls_op(&self, req: SetCourseControls) -> Answer {
+        self.edit(&req.project, |file| {
             let codes = code_list(req.codes);
             let sequence: Vec<ControlCode> = codes.iter().cloned().map(ControlCode).collect();
             let cleared = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
@@ -1131,15 +1357,11 @@ impl CoursePlanServer {
                 "controls": codes,
                 "cleared_legs": cleared_json(&cleared),
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the bends and the marked-route flag of one leg")]
-    async fn set_leg(
-        &self,
-        Parameters(req): Parameters<SetLeg>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_leg_op(&self, req: SetLeg) -> Answer {
+        self.edit(&req.project, |file| {
             // The assistant counts from 1 as on the map; the library counts from 0.
             let bad_index = |index: u32| {
                 self.refused(edit::EditError::BadIndex {
@@ -1163,15 +1385,11 @@ impl CoursePlanServer {
                 },
             )?;
             Ok(json!({ "name": req.name.0, "bends": count, "taped": taped }))
-        }))
+        })
     }
 
-    #[tool(description = "Change classes, climb or print scale of a course")]
-    async fn set_course_details(
-        &self,
-        Parameters(req): Parameters<SetCourseDetails>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_course_details_op(&self, req: SetCourseDetails) -> Answer {
+        self.edit(&req.project, |file| {
             let climb = match (req.climb_m, flag(req.no_climb)) {
                 (Some(c), _) => Some(Some(c)),
                 (None, true) => Some(None),
@@ -1189,15 +1407,11 @@ impl CoursePlanServer {
             edit::set_course_details(&mut file.event, &req.name.0, classes, climb, scale)
                 .map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0 }))
-        }))
+        })
     }
 
-    #[tool(description = "Place the control numbers of a course")]
-    async fn place_numbers(
-        &self,
-        Parameters(req): Parameters<PlaceNumbers>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn place_numbers_op(&self, req: PlaceNumbers) -> Answer {
+        self.edit(&req.project, |file| {
             let doc = self.read_map(file)?;
             // The course must exist first; an unknown name keeps the not-found error of the edit.
             let gaps = match file.event.courses.iter().find(|c| c.name == req.name.0) {
@@ -1224,15 +1438,11 @@ impl CoursePlanServer {
             )
             .map_err(|e| self.refused(e))?;
             Ok(json!({ "name": req.name.0, "placed": placed }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the number placement of a control in a course")]
-    async fn set_course_number(
-        &self,
-        Parameters(req): Parameters<SetCourseNumber>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_course_number_op(&self, req: SetCourseNumber) -> Answer {
+        self.edit(&req.project, |file| {
             let number = self.number_arg(req.direction, req.gap_mm, req.clear)?;
             // The assistant counts from 1 as on the map; the library counts from 0.
             let bad_index = || {
@@ -1255,51 +1465,23 @@ impl CoursePlanServer {
                 other => self.refused(other),
             })?;
             Ok(json!({ "name": req.name.0, "after": req.after, "number": placement(&number) }))
-        }))
+        })
     }
 
-    #[tool(description = "Map objects near a position")]
-    async fn map_features_near(
-        &self,
-        Parameters(req): Parameters<FeaturesNear>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
-            let file = self.load(&req.project)?;
-            let doc = self.read_map(&file)?;
-            let index = MapIndex::from_document(&doc);
-            let limit = req
-                .limit
-                .map_or(LIMIT_DEFAULT, |l| l as usize)
-                .clamp(1, LIMIT_MAX);
-            let at = MapPoint { x: req.x, y: req.y };
-            let near = index.features_near(at, req.radius_mm);
-            let total = near.len();
-            let features: Vec<Value> = near
-                .into_iter()
-                .take(limit)
-                .map(|(f, distance)| {
-                    json!({
-                        "symbol_code": f.symbol_code,
-                        "kind": match f.geometry {
-                            FeatureGeometry::Point(_) => "point",
-                            FeatureGeometry::Line(_) => "line",
-                            FeatureGeometry::Area(_) => "area",
-                        },
-                        "distance_mm": round(distance, 2),
-                        "part": f.part,
-                    })
-                })
-                .collect();
-            Ok(json!({ "features": features, "total": total }))
-        })())
+    fn map_features_near_op(&self, req: FeaturesNear) -> Answer {
+        let file = self.load(&req.project)?;
+        let doc = self.read_map(&file)?;
+        let index = MapIndex::from_document(&doc);
+        Ok(features_near_json(
+            &index,
+            MapPoint { x: req.x, y: req.y },
+            req.radius_mm,
+            req.limit,
+        ))
     }
 
-    #[tool(description = "Extent of the map")]
-    async fn map_extent(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn map_extent_op(&self, req: ProjectOnly) -> Answer {
+        {
             let file = self.load(&req.project)?;
             let doc = self.read_map(&file)?;
             Ok(json!({
@@ -1307,15 +1489,11 @@ impl CoursePlanServer {
                 "scale": doc.georef.scale_denominator,
                 "map_kind": map_kind_for_file(&doc, &file.map_path()).as_str(),
             }))
-        })())
+        }
     }
 
-    #[tool(description = "Check the courses")]
-    async fn check(
-        &self,
-        Parameters(req): Parameters<ProjectOnly>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn check_op(&self, req: ProjectOnly) -> Answer {
+        {
             let file = self.load(&req.project)?;
             let rules = self.rule_set(&file.event)?;
             let doc = self.read_map(&file)?;
@@ -1326,15 +1504,11 @@ impl CoursePlanServer {
                 &rules,
             );
             Ok(report_json(&rules, &file.event, &report, &self.lang))
-        })())
+        }
     }
 
-    #[tool(description = "Export the courses as IOF XML 3.0")]
-    async fn export_iof_xml(
-        &self,
-        Parameters(req): Parameters<ExportIofXml>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn export_iof_xml_op(&self, req: ExportIofXml) -> Answer {
+        {
             let project = resolve_project(&self.lang, &req.project)?;
             let target = resolve_xml(&self.lang, &req.path)?;
             let report = crate::export_cmd::export_iof_xml_file(
@@ -1360,15 +1534,11 @@ impl CoursePlanServer {
                 "skipped": skipped,
                 "geo_positions": report.geo_positions,
             }))
-        })())
+        }
     }
 
-    #[tool(description = "Export the courses to a Purple Pen event")]
-    async fn export_ppen(
-        &self,
-        Parameters(req): Parameters<ExportPpen>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn export_ppen_op(&self, req: ExportPpen) -> Answer {
+        {
             let project = resolve_project(&self.lang, &req.project)?;
             let target = resolve_ppen(&self.lang, &req.path)?;
             let report =
@@ -1398,15 +1568,11 @@ impl CoursePlanServer {
                 "patched": report.patched,
                 "ids_stored": report.ids_stored,
             }))
-        })())
+        }
     }
 
-    #[tool(description = "Import a Purple Pen event")]
-    async fn import_ppen(
-        &self,
-        Parameters(req): Parameters<ImportPpen>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn import_ppen_op(&self, req: ImportPpen) -> Answer {
+        {
             let project = resolve_project(&self.lang, &req.project)?;
             let ppen = resolve_ppen(&self.lang, &req.path)?;
             let report = crate::import_cmd::import_ppen_file(&project, &ppen, flag(req.replace))
@@ -1427,15 +1593,11 @@ impl CoursePlanServer {
                 "courses": report.courses,
                 "notes": notes,
             }))
-        })())
+        }
     }
 
-    #[tool(description = "Sync the project with its linked Purple Pen file")]
-    async fn sync_ppen(
-        &self,
-        Parameters(req): Parameters<SyncPpen>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn sync_ppen_op(&self, req: SyncPpen) -> Answer {
+        {
             let project = self.sync_project(&req.project)?;
             let take: Vec<Take> = req
                 .take
@@ -1445,28 +1607,20 @@ impl CoursePlanServer {
             let outcome =
                 sync_file(&project, flag(req.dry_run), &take).map_err(|e| self.sync_failed(e))?;
             Ok(sync_json(&outcome, &self.lang))
-        })())
+        }
     }
 
-    #[tool(description = "Store the answer to one sync conflict")]
-    async fn resolve_sync_conflict(
-        &self,
-        Parameters(req): Parameters<ResolveSyncConflict>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn resolve_sync_conflict_op(&self, req: ResolveSyncConflict) -> Answer {
+        {
             let project = self.sync_project(&req.project)?;
             store_decision(&project, &req.key, req.take.into()).map_err(|e| self.sync_failed(e))?;
             let outcome = sync_file(&project, true, &[]).map_err(|e| self.sync_failed(e))?;
             Ok(sync_json(&outcome, &self.lang))
-        })())
+        }
     }
 
-    #[tool(description = "Accept a finding")]
-    async fn accept_finding(
-        &self,
-        Parameters(req): Parameters<AcceptFinding>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn accept_finding_op(&self, req: AcceptFinding) -> Answer {
+        self.edit(&req.project, |file| {
             let rules = self.rule_set(&file.event)?;
             let finding = named_finding(req.rule, req.controls, req.legs, req.course, req.note);
             // The stored entry carries the leg ends `accept_finding` took from the course.
@@ -1475,15 +1629,11 @@ impl CoursePlanServer {
             let mut value = accepted_json(&stored);
             value["replaced"] = json!(done == Accepted::NoteReplaced);
             Ok(value)
-        }))
+        })
     }
 
-    #[tool(description = "Remove an accepted finding")]
-    async fn remove_accepted_finding(
-        &self,
-        Parameters(req): Parameters<RemoveAcceptedFinding>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn remove_accepted_finding_op(&self, req: RemoveAcceptedFinding) -> Answer {
+        self.edit(&req.project, |file| {
             let finding =
                 named_finding(req.rule, req.controls, req.legs, req.course, String::new());
             let removed = edit::remove_accepted_finding(&mut file.event, &finding.key())
@@ -1492,15 +1642,11 @@ impl CoursePlanServer {
                 "rule": finding.rule,
                 "removed": removed.iter().map(accepted_json).collect::<Vec<_>>(),
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the rule profile")]
-    async fn set_rule_profile(
-        &self,
-        Parameters(req): Parameters<SetRuleProfile>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_rule_profile_op(&self, req: SetRuleProfile) -> Answer {
+        self.edit(&req.project, |file| {
             let overlays = name_list(req.overlays.unwrap_or_default());
             let set = edit::set_rule_profile(&mut file.event, &req.base.0, &overlays)
                 .map_err(|e| self.refused(e))?;
@@ -1509,26 +1655,18 @@ impl CoursePlanServer {
                 "rule_overlays": set.overlays,
                 "rules": set.rules.len(),
             }))
-        }))
+        })
     }
 
-    #[tool(description = "Set the start window")]
-    async fn set_start_window(
-        &self,
-        Parameters(req): Parameters<SetStartWindow>,
-    ) -> Result<CallToolResult, McpError> {
-        reply(self.edit(&req.project, |file| {
+    fn set_start_window_op(&self, req: SetStartWindow) -> Answer {
+        self.edit(&req.project, |file| {
             edit::set_start_window(&mut file.event, req.minutes).map_err(|e| self.refused(e))?;
             Ok(json!({ "start_window_min": req.minutes }))
-        }))
+        })
     }
 
-    #[tool(description = "Start an event from an OOM map")]
-    async fn init_event(
-        &self,
-        Parameters(req): Parameters<InitEvent>,
-    ) -> Result<CallToolResult, McpError> {
-        reply((|| {
+    fn init_event_op(&self, req: InitEvent) -> Answer {
+        {
             let map = resolve_map(&self.lang, &req.map)?;
             let project = match &req.project {
                 Some(p) => resolve_project(&self.lang, p)?,
@@ -1537,8 +1675,180 @@ impl CoursePlanServer {
             let created = init_project(&map, &project, req.title.clone())
                 .map_err(|e| init_error(&self.lang, e))?;
             Ok(json!({ "project": created.path.display().to_string() }))
-        })())
+        }
     }
+}
+
+/// Tools the browser editor may run as operations: they edit the project and take only plain
+/// arguments besides the project.
+pub(crate) const EDITOR_TOOLS: &[&str] = &[
+    "add_control",
+    "move_control",
+    "remove_control",
+    "describe_control",
+    "set_control_number",
+    "add_special",
+    "remove_special",
+    "set_special_courses",
+    "add_class",
+    "set_class",
+    "remove_class",
+    "add_course",
+    "remove_course",
+    "set_course_controls",
+    "set_leg",
+    "set_course_details",
+    "place_numbers",
+    "set_course_number",
+    "accept_finding",
+    "remove_accepted_finding",
+    "set_rule_profile",
+    "set_start_window",
+    "resolve_sync_conflict",
+];
+
+/// Tools the editor does not run as operations: they take file paths, or they are reads served
+/// by dedicated routes. A new MCP tool must join one of the two lists (a test enforces it).
+#[cfg(test)]
+pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
+    "init_event",
+    "export_iof_xml",
+    "export_ppen",
+    "import_ppen",
+    "sync_ppen",
+    "event_info",
+    "list_controls",
+    "list_courses",
+    "list_specials",
+    "list_classes",
+    "map_features_near",
+    "map_extent",
+    "check",
+];
+
+thread_local! {
+    /// Set when a project file could not be read or written; `call_json` turns it into [`OpError::Io`].
+    static IO_FAILED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Why `call_json` did not run a tool.
+#[derive(Debug, PartialEq)]
+pub(crate) enum OpError {
+    UnknownTool,
+    BadArgs(String),
+    /// The project file could not be read or written: a problem of the machine, not of the request.
+    Io,
+    /// The tool refused; the text is the redacted message the MCP tool returns.
+    Refused(String),
+}
+
+impl CoursePlanServer {
+    /// Runs one tool by name on `project` with JSON arguments, as the MCP tool would. `args`
+    /// must not carry `project`; unknown fields are refused by the tool's parameter type.
+    pub(crate) fn call_json(
+        &self,
+        project: &std::path::Path,
+        tool: &str,
+        args: Value,
+    ) -> Result<Value, OpError> {
+        let Value::Object(mut map) = args else {
+            return Err(OpError::BadArgs("arguments must be an object".to_owned()));
+        };
+        if map.contains_key("project") {
+            return Err(OpError::BadArgs(
+                "arguments must not carry `project`".to_owned(),
+            ));
+        }
+        map.insert(
+            "project".to_owned(),
+            Value::String(project.to_string_lossy().into_owned()),
+        );
+        macro_rules! run {
+            ($ty:ty, $op:ident) => {{
+                let req: $ty = serde_json::from_value(Value::Object(map))
+                    .map_err(|e| OpError::BadArgs(e.to_string()))?;
+                IO_FAILED.with(|failed| failed.set(false));
+                self.$op(req).map_err(|message| {
+                    if IO_FAILED.with(|failed| failed.replace(false)) {
+                        OpError::Io
+                    } else {
+                        OpError::Refused(message)
+                    }
+                })
+            }};
+        }
+        match tool {
+            "event_info" => run!(ProjectOnly, event_info_op),
+            "list_controls" => run!(ProjectOnly, list_controls_op),
+            "list_courses" => run!(ProjectOnly, list_courses_op),
+            "list_specials" => run!(ProjectOnly, list_specials_op),
+            "list_classes" => run!(ProjectOnly, list_classes_op),
+            "add_control" => run!(AddControl, add_control_op),
+            "move_control" => run!(MoveControl, move_control_op),
+            "remove_control" => run!(ControlRef, remove_control_op),
+            "describe_control" => run!(DescribeControl, describe_control_op),
+            "set_control_number" => run!(SetControlNumber, set_control_number_op),
+            "add_special" => run!(AddSpecial, add_special_op),
+            "remove_special" => run!(RemoveSpecial, remove_special_op),
+            "set_special_courses" => run!(SetSpecialCourses, set_special_courses_op),
+            "add_class" => run!(AddClass, add_class_op),
+            "set_class" => run!(SetClass, set_class_op),
+            "remove_class" => run!(RemoveClass, remove_class_op),
+            "add_course" => run!(AddCourse, add_course_op),
+            "remove_course" => run!(CourseRef, remove_course_op),
+            "set_course_controls" => run!(SetCourseControls, set_course_controls_op),
+            "set_leg" => run!(SetLeg, set_leg_op),
+            "set_course_details" => run!(SetCourseDetails, set_course_details_op),
+            "place_numbers" => run!(PlaceNumbers, place_numbers_op),
+            "set_course_number" => run!(SetCourseNumber, set_course_number_op),
+            "map_features_near" => run!(FeaturesNear, map_features_near_op),
+            "map_extent" => run!(ProjectOnly, map_extent_op),
+            "check" => run!(ProjectOnly, check_op),
+            "export_iof_xml" => run!(ExportIofXml, export_iof_xml_op),
+            "export_ppen" => run!(ExportPpen, export_ppen_op),
+            "import_ppen" => run!(ImportPpen, import_ppen_op),
+            "sync_ppen" => run!(SyncPpen, sync_ppen_op),
+            "resolve_sync_conflict" => run!(ResolveSyncConflict, resolve_sync_conflict_op),
+            "accept_finding" => run!(AcceptFinding, accept_finding_op),
+            "remove_accepted_finding" => run!(RemoveAcceptedFinding, remove_accepted_finding_op),
+            "set_rule_profile" => run!(SetRuleProfile, set_rule_profile_op),
+            "set_start_window" => run!(SetStartWindow, set_start_window_op),
+            "init_event" => run!(InitEvent, init_event_op),
+            _ => Err(OpError::UnknownTool),
+        }
+    }
+}
+
+/// The map objects within `radius_mm` of `at`, nearest first: the answer of `map_features_near`, which the
+/// editor's `api/map/near` serves from its cached index (ADR 0047).
+pub(crate) fn features_near_json(
+    index: &MapIndex,
+    at: MapPoint,
+    radius_mm: f64,
+    limit: Option<u32>,
+) -> Value {
+    let limit = limit
+        .map_or(LIMIT_DEFAULT, |l| l as usize)
+        .clamp(1, LIMIT_MAX);
+    let near = index.features_near(at, radius_mm);
+    let total = near.len();
+    let features: Vec<Value> = near
+        .into_iter()
+        .take(limit)
+        .map(|(f, distance)| {
+            json!({
+                "symbol_code": f.symbol_code,
+                "kind": match f.geometry {
+                    FeatureGeometry::Point(_) => "point",
+                    FeatureGeometry::Line(_) => "line",
+                    FeatureGeometry::Area(_) => "area",
+                },
+                "distance_mm": round(distance, 2),
+                "part": f.part,
+            })
+        })
+        .collect();
+    json!({ "features": features, "total": total })
 }
 
 fn extent_json(extent: Option<(MapPoint, MapPoint)>) -> Value {
@@ -1615,6 +1925,150 @@ mod tests {
     use super::*;
     use freemapper_courseplan::check::{LegEnd, LegSpan};
     use freemapper_courseplan::text::available;
+
+    fn test_project(dir: &std::path::Path) -> std::path::PathBuf {
+        use freemapper_courseplan_model::{EventMeta, FORMAT_VERSION, Sources};
+        std::fs::copy(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../tests/fixtures/maps/forest-sample.omap"
+            ),
+            dir.join("map.omap"),
+        )
+        .unwrap();
+        let path = dir.join("event.courseplan.toml");
+        let event = Event {
+            format: FORMAT_VERSION,
+            event: EventMeta {
+                title: "T".to_owned(),
+                date: None,
+                discipline: Default::default(),
+                rule_profile: "wkb-2026".to_owned(),
+                rule_overlays: Vec::new(),
+                start_window_min: None,
+            },
+            sources: Sources {
+                map: "map.omap".into(),
+                ppen: None,
+            },
+            classes: vec![],
+            controls: vec![],
+            specials: vec![],
+            courses: vec![],
+            accepted_findings: vec![],
+            sync: None,
+        };
+        ProjectFile::create(&path, event).unwrap();
+        path
+    }
+
+    fn server() -> CoursePlanServer {
+        CoursePlanServer::new(available().into_iter().next().unwrap())
+    }
+
+    /// A position inside the map.
+    fn inside(server: &CoursePlanServer, project: &std::path::Path) -> Value {
+        let info = server
+            .map_extent_op(ProjectOnly {
+                project: project.display().to_string(),
+            })
+            .unwrap();
+        let (min, max) = (&info["extent"]["min"], &info["extent"]["max"]);
+        json!({
+            "x": (min["x"].as_f64().unwrap() + max["x"].as_f64().unwrap()) / 2.0,
+            "y": (min["y"].as_f64().unwrap() + max["y"].as_f64().unwrap()) / 2.0,
+        })
+    }
+
+    #[test]
+    fn every_tool_is_editor_or_excluded() {
+        let server = server();
+        let mut router: Vec<String> = server
+            .tool_router
+            .list_all()
+            .iter()
+            .map(|t| t.name.to_string())
+            .collect();
+        router.sort();
+        let mut listed: Vec<String> = EDITOR_TOOLS
+            .iter()
+            .chain(EDITOR_EXCLUDED)
+            .map(|s| (*s).to_owned())
+            .collect();
+        listed.sort();
+        let before = listed.len();
+        listed.dedup();
+        assert_eq!(before, listed.len(), "a tool is in both lists or twice");
+        assert_eq!(router, listed);
+    }
+
+    #[test]
+    fn call_json_matches_the_tool() {
+        let server = server();
+        let (a, b) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+        let (pa, pb) = (test_project(a.path()), test_project(b.path()));
+        let at = inside(&server, &pa);
+        let via_json = server
+            .call_json(&pa, "add_control", json!({ "at": at }))
+            .unwrap();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let result = runtime
+            .block_on(server.add_control(Parameters(AddControl {
+                project: pb.display().to_string(),
+                at: serde_json::from_value(at).unwrap(),
+                code: None,
+                crossing_point: None,
+            })))
+            .unwrap();
+        assert_eq!(result.is_error, Some(false));
+        let text = result.content[0].as_text().unwrap().text.clone();
+        let mut via_tool: Value = serde_json::from_str(&text).unwrap();
+        via_tool.as_object_mut().unwrap().remove("ok");
+        assert_eq!(via_json, via_tool);
+        assert_eq!(
+            std::fs::read_to_string(&pa).unwrap(),
+            std::fs::read_to_string(&pb).unwrap()
+        );
+    }
+
+    #[test]
+    fn call_json_refuses_project_in_args() {
+        let server = server();
+        let dir = tempfile::tempdir().unwrap();
+        let path = test_project(dir.path());
+        let at = inside(&server, &path);
+        let result = server.call_json(&path, "add_control", json!({ "at": at, "project": "x" }));
+        assert!(matches!(result, Err(OpError::BadArgs(_))), "{result:?}");
+    }
+
+    #[test]
+    fn call_json_refuses_unknown_field() {
+        let server = server();
+        let dir = tempfile::tempdir().unwrap();
+        let path = test_project(dir.path());
+        let at = inside(&server, &path);
+        let result = server.call_json(&path, "add_control", json!({ "at": at, "nope": 1 }));
+        assert!(matches!(result, Err(OpError::BadArgs(_))), "{result:?}");
+        let result = server.call_json(&path, "no_such_tool", json!({}));
+        assert_eq!(result, Err(OpError::UnknownTool));
+    }
+
+    #[test]
+    fn call_json_reports_a_refused_edit_and_keeps_the_file() {
+        let server = server();
+        let dir = tempfile::tempdir().unwrap();
+        let path = test_project(dir.path());
+        let before = std::fs::read_to_string(&path).unwrap();
+        let result = server.call_json(
+            &path,
+            "add_control",
+            json!({ "at": { "x": 1.0e9, "y": 1.0e9 } }),
+        );
+        assert!(matches!(result, Err(OpError::Refused(_))), "{result:?}");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), before);
+    }
 
     #[test]
     fn a_finding_at_two_legs_names_both_positions() {

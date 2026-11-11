@@ -154,6 +154,15 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::TooLong { what, limit, len } => text(
+                lang,
+                "error-model-too-long",
+                &[
+                    ("what", v(word(lang, "word-name", what))),
+                    ("limit", v(limit)),
+                    ("len", v(len)),
+                ],
+            ),
             ModelError::BlankNote { rule } => {
                 text(lang, "error-model-blank-note", &[("name", v(rule))])
             }
@@ -215,6 +224,11 @@ impl Localize for ProjectError {
                 lang,
                 "error-project-write",
                 &[("path", v(path.display())), ("source", v(source))],
+            ),
+            ProjectError::ChangedMeanwhile { path } => text(
+                lang,
+                "error-project-changed",
+                &[("path", v(path.display()))],
             ),
             ProjectError::AlreadyExists { path } => text(
                 lang,
@@ -949,6 +963,8 @@ mod tests {
             "kind",
             "errors",
             "what",
+            "len",
+            "limit",
             "version",
             "x",
             "y",
@@ -1356,6 +1372,11 @@ mod tests {
                 what: "control code",
                 value: s(" 31"),
             },
+            ModelError::TooLong {
+                what: "course name",
+                limit: 200,
+                len: 201,
+            },
             ModelError::BlankNote { rule: s("r") },
             ModelError::CodeClashesWithSpecial(code("S1")),
             ModelError::DuplicateCourseInSpecial {
@@ -1411,6 +1432,7 @@ mod tests {
                 source: io(),
             },
             ProjectError::AlreadyExists { path: path() },
+            ProjectError::ChangedMeanwhile { path: path() },
             ProjectError::Parse {
                 path: path(),
                 message: "cannot parse ev/x.toml: TOML parse error at line 3".into(),

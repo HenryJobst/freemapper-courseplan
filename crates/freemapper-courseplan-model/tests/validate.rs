@@ -1,6 +1,8 @@
 //! Consistency checks on names, ids and geometry (final review of M2a, items 2, 3 and 13).
 
-use freemapper_courseplan_model::{ControlCode, Event, ModelError, validate};
+use freemapper_courseplan_model::{
+    ControlCode, Event, MAX_CODE_CHARS, MAX_NAME_CHARS, ModelError, validate,
+};
 
 /// A consistent event with start S1, finish F1, controls 31 and 32, course A and class H21, plus
 /// `extra` appended as more TOML.
@@ -229,4 +231,41 @@ fn a_blank_accepted_finding_note_is_refused() {
     }
     let e = event("\n[[accepted_findings]]\nrule = \"r\"\nnote = \"ok\"\n");
     assert_eq!(validate(&e), vec![]);
+}
+
+#[test]
+fn over_long_codes_names_and_notes_are_refused() {
+    let mut e = event("");
+    let code = "9".repeat(MAX_CODE_CHARS + 1);
+    e.controls[0].code = ControlCode(code.clone());
+    e.courses[0].name = "n".repeat(MAX_NAME_CHARS + 1);
+    e.classes[0].name = "c".repeat(MAX_NAME_CHARS + 1);
+    let errors = validate(&e);
+    let too_long = |what: &'static str, limit: usize| ModelError::TooLong {
+        what,
+        limit,
+        len: limit + 1,
+    };
+    assert!(errors.contains(&too_long("control code", MAX_CODE_CHARS)));
+    assert!(errors.contains(&too_long("course name", MAX_NAME_CHARS)));
+    assert!(errors.contains(&too_long("class name", MAX_NAME_CHARS)));
+
+    let long_note = "x".repeat(MAX_NAME_CHARS + 1);
+    let e = event(&format!(
+        "\n[[accepted_findings]]\nrule = \"r\"\nnote = \"{long_note}\"\n"
+    ));
+    assert_eq!(
+        validate(&e),
+        vec![too_long("accepted finding note", MAX_NAME_CHARS)]
+    );
+
+    // The limits themselves are fine; characters are counted, not bytes.
+    let mut e = event("");
+    e.controls[0].code = ControlCode("9".repeat(MAX_CODE_CHARS));
+    e.courses[0].name = "ä".repeat(MAX_NAME_CHARS);
+    assert!(
+        !validate(&e)
+            .iter()
+            .any(|error| matches!(error, ModelError::TooLong { .. }))
+    );
 }
