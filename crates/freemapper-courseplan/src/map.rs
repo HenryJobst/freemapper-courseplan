@@ -197,6 +197,12 @@ impl MapIndex {
         Some((min, max))
     }
 
+    /// An index over given features, for tests that build a map by hand.
+    #[cfg(test)]
+    pub(crate) fn from_features(features: Vec<MapFeature>) -> MapIndex {
+        MapIndex { features }
+    }
+
     /// Every feature, in map order.
     pub fn features(&self) -> &[MapFeature] {
         &self.features

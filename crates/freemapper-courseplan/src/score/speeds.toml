@@ -1,0 +1,73 @@
+# Speed classes of the cost surface (ADR 0061), keyed by ISSprOM symbol code.
+# A code matches itself and its sub-codes (505 matches 505.1, not 5051); the longest matching code wins.
+#
+# kind = "block"   impassable; the cell cannot be entered (not for the crossings below)
+# kind = "cross"   crossing over a blocked cell (bridge, crossing point): the cell is passable again
+# kind = "ground"  ground cover; the slowest cover on a cell wins
+# kind = "fast"    surface that replaces the ground cover (paths, roads, paved areas); the fastest wins
+# factor           time per metre relative to level open ground (1.0 = the runner's pace)
+#
+# Anything not listed (and no map object at all) counts as level open ground, factor 1.0.
+
+[[class]]
+kind = "block"
+codes = ["201", "301", "307", "410", "515", "518", "520", "521", "529", "708", "709", "714"]
+
+[[class]]
+kind = "cross"
+codes = ["512", "519", "710"]
+
+[[class]]
+kind = "fast"
+factor = 0.80
+codes = ["501", "502", "503", "504"]
+
+[[class]]
+kind = "fast"
+factor = 0.85
+codes = ["505"]
+
+[[class]]
+kind = "fast"
+factor = 0.90
+codes = ["506", "507", "508"]
+
+[[class]]
+kind = "fast"
+factor = 1.25
+codes = ["532"]
+
+[[class]]
+kind = "ground"
+factor = 1.1
+codes = ["402"]
+
+[[class]]
+kind = "ground"
+factor = 1.3
+codes = ["213", "407", "413", "210"]
+
+[[class]]
+kind = "ground"
+factor = 1.5
+codes = ["403", "404", "412", "113"]
+
+[[class]]
+kind = "ground"
+factor = 1.6
+codes = ["310", "406", "414"]
+
+[[class]]
+kind = "ground"
+factor = 2.0
+codes = ["208", "405", "409"]
+
+[[class]]
+kind = "ground"
+factor = 2.5
+codes = ["308", "408"]
+
+[[class]]
+kind = "ground"
+factor = 3.0
+codes = ["302"]
