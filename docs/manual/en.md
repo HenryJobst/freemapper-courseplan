@@ -171,14 +171,14 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
   would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
   smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m).
-  Out-of-bounds and dangerous areas are excluded.
+  Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded.
 - `score draft` picks controls from these sites and gives them values and codes, so that the good runner scores
-  87 to 93 percent of all points within the limit and the very good runner takes every control and finishes after
-  95 to 100 percent of it. Both bands are settings of the event. Without `--apply` it only prints the draft. With
+  87 to 93 percent of all points by default within the limit and the very good runner takes every control and
+  finishes after 95 to 100 percent of it by default. Both bands are settings of the event. Without `--apply` it only prints the draft. With
   `--apply` it adds the controls and creates the score course, or replaces the controls of an existing score course
   and removes the controls that only it used. A course of another kind is refused. The editor can undo the change.
 - `--link "X,Y;X,Y"` makes two positions a mandatory link; each must be the position of a candidate from `score
-  suggest`. Repeat the option for more links.
+  suggest`, run with a `--limit` of at least 60, the pool the draft uses. Repeat the option for more links.
 - When no draft meets both bands, the command exits with 1. It names each missed band with the size of the miss, and
   one hint: a longer or shorter limit, more suitable sites, a faster good runner, or that these inputs cannot work.
 - `score length` analyses a course that exists, for example after you moved a control, and reports the same bands and

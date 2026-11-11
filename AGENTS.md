@@ -25,7 +25,7 @@ Tell the person these limits before you start:
   courses are not built. Export writes individual courses only, skips the others and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
   `score draft` and `score length` read the map and search routes, so they take seconds: about 1 s on a small
-  sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Luebeck map (release build). A draft
+  sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Lübeck map (release build). A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in

@@ -103,6 +103,7 @@ fn ctx<'a>(specials: &'a [SpecialObject], existing: &'a [MapPoint]) -> SuggestCo
         min_distance_mm: 1.0,
         existing,
         limit: 50,
+        line_margin_mm: 1.0,
     }
 }
 
@@ -178,6 +179,20 @@ fn blocked_and_out_of_bounds_are_excluded() {
     };
     let found = suggest(&index, &travel, &ctx(&specials, &[])).unwrap();
     assert_eq!(positions(&found), vec![(80.0, 20.0)]);
+}
+
+#[test]
+fn sites_on_a_forbidden_route_line_are_excluded() {
+    let index = MapIndex::from_features(vec![boulder(40.0, 20.0), boulder(60.0, 20.0)]);
+    // The line runs through the first site; the second is 20 mm from it, far outside the margin.
+    let specials = [SpecialObject::ForbiddenRoute {
+        id: "V1".into(),
+        ppen_id: None,
+        points: vec![p(40.0, 0.0), p(40.0, 40.0)],
+        courses: vec![],
+    }];
+    let found = suggest(&index, &Fake::plain(), &ctx(&specials, &[])).unwrap();
+    assert_eq!(positions(&found), vec![(60.0, 20.0)]);
 }
 
 #[test]
@@ -603,6 +618,7 @@ fn luebeck_timing_for_limit_60() {
         finish: at(false),
         specials,
         min_distance_mm: 3.0,
+        line_margin_mm: 1.0,
         existing: &[],
         limit: 60,
     };

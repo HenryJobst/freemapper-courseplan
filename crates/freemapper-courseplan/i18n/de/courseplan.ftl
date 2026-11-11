@@ -741,8 +741,9 @@ mcp-instructions =
     Datei, wie sie war. Einzel- und Score-Bahnen lassen sich bearbeiten und prüfen, eine gemessene Länge haben nur Einzelbahnen. Eine
     Score-Bahn legt add_score_course an; ihre Posten setzen set_score_controls und set_control_value, ihre
     Pflichtverbindungen add_score_link und remove_score_link, Zeitlimit und Abzug set_score_course_details und die
-    Punktespanne und Paces der Veranstaltung set_score_settings. Mannschafts- und Staffelbahnen lassen sich noch nicht
-    bearbeiten. check prüft die Bahnen
+    Punktespanne und Paces der Veranstaltung set_score_settings. score_suggest listet Postenplätze, score_draft entwirft
+    eine Score-Bahn und schreibt nur mit apply true, score_length analysiert eine vorhandene. Alle drei brauchen
+    Sekunden. Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten. check prüft die Bahnen
     gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
     (set_start_window) oder Regelkategorie und erwartete Starterzahl einer Kategorie (set_class); fehlen sie, führt
     check die Prüfregel als übersprungen. Einen Befund, den der Bahnleger so haben will, bekommt accept_finding mit
@@ -1492,3 +1493,4 @@ cli-score-length-very-good = sehr guter Läufer: { $points } Punkte, im Ziel nac
 cli-score-length-ok = beide Läufer liegen in den Bändern
 cli-score-bad-link-ends = { $value } ist keine Verbindung; schreibe zwei Positionen als X,Y;X,Y
 cli-score-bad-distance = { $value } ist keine Entfernung; gib Kartenmillimeter an, null oder mehr
+mcp-error-interrupted = der Vorgang wurde vor dem Ende abgebrochen

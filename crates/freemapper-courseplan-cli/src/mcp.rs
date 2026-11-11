@@ -65,11 +65,12 @@ fn failure(message: String) -> Result<CallToolResult, McpError> {
 
 /// Runs a long operation off the server's thread, so other requests are not held up by it.
 async fn blocking(
+    lang: Lang,
     work: impl FnOnce() -> Answer + Send + 'static,
 ) -> Result<CallToolResult, McpError> {
     match tokio::task::spawn_blocking(work).await {
         Ok(answer) => reply(answer),
-        Err(_) => failure("the operation was interrupted".to_owned()),
+        Err(_) => failure(text(&lang, "mcp-error-interrupted", &[])),
     }
 }
 
@@ -998,7 +999,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<ScoreSuggest>,
     ) -> Result<CallToolResult, McpError> {
         let server = self.clone();
-        blocking(move || server.score_suggest_op(req)).await
+        blocking(self.lang.clone(), move || server.score_suggest_op(req)).await
     }
 
     #[tool(description = "Draft a score course")]
@@ -1007,7 +1008,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<ScoreDraft>,
     ) -> Result<CallToolResult, McpError> {
         let server = self.clone();
-        blocking(move || server.score_draft_op(req)).await
+        blocking(self.lang.clone(), move || server.score_draft_op(req)).await
     }
 
     #[tool(description = "Analyse the length of a score course")]
@@ -1016,7 +1017,7 @@ impl CoursePlanServer {
         Parameters(req): Parameters<CourseRef>,
     ) -> Result<CallToolResult, McpError> {
         let server = self.clone();
-        blocking(move || server.score_length_op(req)).await
+        blocking(self.lang.clone(), move || server.score_length_op(req)).await
     }
 
     #[tool(description = "Place the control numbers of a course")]

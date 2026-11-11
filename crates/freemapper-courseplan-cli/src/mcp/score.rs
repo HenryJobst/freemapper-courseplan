@@ -5,7 +5,9 @@
 
 use freemapper_courseplan::edit;
 use freemapper_courseplan::map::{MapIndex, MapKind, map_kind_for_file};
-use freemapper_courseplan::score::candidates::{Candidate, SuggestContext, suggest_with};
+use freemapper_courseplan::score::candidates::{
+    Candidate, FORBIDDEN_LINE_MARGIN_M, SuggestContext, suggest_with,
+};
 use freemapper_courseplan::score::points::assign_values;
 use freemapper_courseplan::score::travel::{
     CostSurface, Pace, RouteParams, SharedRoutes, TravelTime,
@@ -61,6 +63,11 @@ struct Computed {
     settings: ScoreSettings,
 }
 
+/// The forbidden-route margin of the candidates in map millimetres.
+fn line_margin_mm(scale: u32) -> f64 {
+    FORBIDDEN_LINE_MARGIN_M * 1000.0 / f64::from(scale.max(1))
+}
+
 fn round1(x: f64) -> f64 {
     (x * 10.0).round() / 10.0
 }
@@ -87,15 +94,16 @@ fn course_uses(kind: &CourseKind, code: &ControlCode) -> bool {
     }
 }
 
-/// The out-of-bounds and dangerous areas that apply to `course` (all of them without a course),
-/// the ones `check` blocks.
+/// The out-of-bounds and dangerous areas, which the surface blocks, and the forbidden routes, which only
+/// keep candidates away (ADR 0068), that apply to `course` (all of them without a course).
 fn area_specials(event: &Event, course: Option<&str>) -> Vec<SpecialObject> {
     event
         .specials
         .iter()
         .filter(|s| match s {
             SpecialObject::OutOfBoundsArea { courses, .. }
-            | SpecialObject::DangerousArea { courses, .. } => {
+            | SpecialObject::DangerousArea { courses, .. }
+            | SpecialObject::ForbiddenRoute { courses, .. } => {
                 course.is_none_or(|name| courses.is_empty() || courses.iter().any(|c| c == name))
             }
             _ => false,
@@ -253,6 +261,7 @@ impl CoursePlanServer {
                 min_distance_mm,
                 existing: &existing,
                 limit,
+                line_margin_mm: line_margin_mm(world.scale),
             },
         )
         .map_err(|e| self.locs(&e))?;
@@ -578,6 +587,7 @@ impl CoursePlanServer {
                 min_distance_mm,
                 existing: &existing,
                 limit: DEFAULT_LIMIT,
+                line_margin_mm: line_margin_mm(world.scale),
             },
         )
         .map_err(|e| self.locs(&e))?;

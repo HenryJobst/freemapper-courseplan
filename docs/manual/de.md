@@ -180,15 +180,15 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
   der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
   `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
-  sonst 30 m). Sperr- und Gefahrengebiete sind ausgeschlossen.
+  sonst 30 m). Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen.
 - `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
-  87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist nach 95 bis 100 Prozent des Limits
-  im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
+  standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
+  95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
   `--apply` legt er die Posten an und erstellt die Score-Bahn, oder er ersetzt die Posten einer vorhandenen
   Score-Bahn und entfernt die Posten, die nur sie nutzte. Eine Bahn anderer Art wird abgelehnt. Im Editor lässt sich
   die Änderung rückgängig machen.
 - `--link "X,Y;X,Y"` macht zwei Positionen zu einer Pflichtverbindung; jede muss die Position eines Kandidaten aus
-  `score suggest` sein. Die Option lässt sich für weitere Verbindungen wiederholen.
+  `score suggest` sein, mit einem `--limit` von mindestens 60 aufgerufen, dem Pool des Entwurfs. Die Option lässt sich für weitere Verbindungen wiederholen.
 - Trifft kein Entwurf beide Bänder, endet der Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
   Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, ein schnellerer guter Läufer
   oder dass diese Eingaben nicht gehen.

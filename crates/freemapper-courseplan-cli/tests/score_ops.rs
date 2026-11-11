@@ -341,3 +341,228 @@ fn draft_is_deterministic() {
     assert_eq!(out(&args(&one)), out(&args(&two)));
     assert_eq!(std::fs::read(&one).unwrap(), std::fs::read(&two).unwrap());
 }
+
+fn ok(args: &[&str]) -> Output {
+    let o = run(args);
+    assert_eq!(o.status.code(), Some(0), "{args:?}: {}", err(&o));
+    o
+}
+
+fn course(project: &Path, name: &str) -> Value {
+    let all = json_of(&run(&["list", "courses", p(project), "--json"]));
+    all["courses"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["name"] == name)
+        .unwrap()
+        .clone()
+}
+
+fn codes(project: &Path) -> Vec<String> {
+    let all = json_of(&run(&["list", "controls", p(project), "--json"]));
+    all["controls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["code"].to_string().trim_matches('"').to_owned())
+        .collect()
+}
+
+#[test]
+fn draft_on_a_course_of_another_kind_is_refused() {
+    let (_dir, project) = fixture();
+    ok(&[
+        "course",
+        "add",
+        p(&project),
+        "A",
+        "--start",
+        "S1",
+        "--finish",
+        "F1",
+    ]);
+    let before = std::fs::read(&project).unwrap();
+    let o = run(&[
+        "score",
+        "draft",
+        p(&project),
+        "A",
+        "--time-limit",
+        LIMIT,
+        "--apply",
+    ]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("score course"), "{}", err(&o));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn redraft_keeps_the_course_details_and_the_other_courses_controls() {
+    let (_dir, project) = fixture();
+    // A control that an individual course uses must survive, and its code must stay out of the draft.
+    ok(&[
+        "control",
+        "add",
+        p(&project),
+        "--at",
+        "-80,0",
+        "--code",
+        "31",
+    ]);
+    ok(&[
+        "course",
+        "add",
+        p(&project),
+        "A",
+        "--start",
+        "S1",
+        "--finish",
+        "F1",
+        "--controls",
+        "31",
+    ]);
+    ok(&[
+        "course",
+        "add",
+        p(&project),
+        "Sc",
+        "--kind",
+        "score",
+        "--start",
+        "S1",
+        "--finish",
+        "F1",
+        "--time-limit",
+        LIMIT,
+        "--penalty",
+        "9",
+    ]);
+    let first = json_of(&run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--apply",
+        "--json",
+    ]));
+    let drafted: Vec<String> = first["controls"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["code"].to_string().trim_matches('"').to_owned())
+        .collect();
+    assert!(!drafted.contains(&"31".to_owned()), "{drafted:?}");
+    let all = codes(&project);
+    assert_eq!(all.len(), drafted.len() + 1, "{all:?}");
+    let again = json_of(&run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--apply",
+        "--json",
+    ]));
+    assert_eq!(again["replaced"], true);
+    assert_eq!(codes(&project).len(), drafted.len() + 1);
+    assert!(codes(&project).contains(&"31".to_owned()));
+    let sc = course(&project, "Sc");
+    assert_eq!(sc["start"], "S1");
+    assert_eq!(sc["finish"], "F1");
+    assert_eq!(sc["score"]["penalty_per_min"], 9);
+    assert_eq!(sc["score"]["penalty_is_default"], false);
+    assert_eq!(
+        course(&project, "A")["controls"].as_array().unwrap().len(),
+        1
+    );
+}
+
+#[test]
+fn limit_zero_returns_no_candidates() {
+    let (_dir, project) = fixture();
+    let v = json_of(&run(&[
+        "score",
+        "suggest",
+        p(&project),
+        "--limit",
+        "0",
+        "--json",
+    ]));
+    assert_eq!(v["count"], 0);
+    assert!(v["candidates"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn length_of_an_unknown_course_is_refused() {
+    let (_dir, project) = fixture();
+    let o = run(&["score", "length", p(&project), "Nope"]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("Nope"), "{}", err(&o));
+}
+
+#[test]
+fn a_link_position_that_is_no_candidate_is_refused() {
+    let (_dir, project) = fixture();
+    let before = std::fs::read(&project).unwrap();
+    let o = run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--link",
+        "-80,0;-80,5",
+        "--apply",
+    ]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("lies on no candidate"), "{}", err(&o));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn apply_with_links_stores_them() {
+    let (_dir, project) = fixture();
+    let v = json_of(&run(&["score", "suggest", p(&project), "--json"]));
+    let list = v["candidates"].as_array().unwrap();
+    let at = |c: &Value| {
+        (
+            c["at"]["x"].as_f64().unwrap(),
+            c["at"]["y"].as_f64().unwrap(),
+        )
+    };
+    // The two corners of one building that lie nearest to each other.
+    let a = at(&list[0]);
+    let b = list[1..]
+        .iter()
+        .map(at)
+        .min_by(|p, q| {
+            let d = |r: &(f64, f64)| (r.0 - a.0).hypot(r.1 - a.1);
+            d(p).total_cmp(&d(q))
+        })
+        .unwrap();
+    let link = format!("{},{};{},{}", a.0, a.1, b.0, b.1);
+    let v = json_of(&run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--link",
+        &link,
+        "--apply",
+        "--json",
+    ]));
+    assert_eq!(v["links"].as_array().unwrap().len(), 1, "{v}");
+    let stored = course(&project, "Sc");
+    assert_eq!(
+        stored["score"]["links"].as_array().unwrap().len(),
+        1,
+        "{stored}"
+    );
+}

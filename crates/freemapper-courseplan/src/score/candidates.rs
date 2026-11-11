@@ -35,7 +35,14 @@ pub struct SuggestContext<'a> {
     pub existing: &'a [MapPoint],
     /// Most candidates returned.
     pub limit: usize,
+    /// Sites closer than this to a forbidden-route line are left out, in map millimetres
+    /// ([`FORBIDDEN_LINE_MARGIN_M`] on the ground).
+    pub line_margin_mm: f64,
 }
+
+/// Distance in metres on the ground from a forbidden-route line within which a site is rejected: about
+/// one cell of the fine cost surface. The surface itself blocks areas only (ADR 0068).
+pub const FORBIDDEN_LINE_MARGIN_M: f64 = 4.0;
 
 /// Weights of difficulty (sum 1): little route choice, an unclear feature, crowded surroundings.
 const W_NO_CHOICE: f64 = 0.5;
@@ -195,12 +202,33 @@ fn raw_sites(index: &MapIndex) -> Vec<Site> {
     sites
 }
 
-fn forbidden(specials: &[SpecialObject], at: &MapPoint) -> bool {
+/// Distance from `p` to the segment `a` to `b`.
+fn segment_distance(p: &MapPoint, a: &MapPoint, b: &MapPoint) -> f64 {
+    let (dx, dy) = (b.x - a.x, b.y - a.y);
+    let len2 = dx * dx + dy * dy;
+    let t = if len2 == 0.0 {
+        0.0
+    } else {
+        (((p.x - a.x) * dx + (p.y - a.y) * dy) / len2).clamp(0.0, 1.0)
+    };
+    dist(
+        p,
+        &MapPoint {
+            x: a.x + t * dx,
+            y: a.y + t * dy,
+        },
+    )
+}
+
+fn forbidden(specials: &[SpecialObject], at: &MapPoint, line_margin_mm: f64) -> bool {
     specials.iter().any(|s| match s {
         SpecialObject::OutOfBoundsArea { polygon, .. }
         | SpecialObject::DangerousArea { polygon, .. } => {
             inside_area(at, std::slice::from_ref(polygon))
         }
+        SpecialObject::ForbiddenRoute { points, .. } => points
+            .windows(2)
+            .any(|w| segment_distance(at, &w[0], &w[1]) <= line_margin_mm),
         _ => false,
     })
 }
@@ -327,7 +355,7 @@ pub fn suggest_with(
     // The pool: sites outside forbidden areas with standing room.
     let pool: Vec<(&Site, MapPoint)> = raw
         .iter()
-        .filter(|s| !forbidden(ctx.specials, &s.at))
+        .filter(|s| !forbidden(ctx.specials, &s.at, ctx.line_margin_mm))
         .filter_map(|s| route_end(fine, s).map(|end| (s, end)))
         .collect();
     // Distance to the nearest of start, finish, existing and kept controls: the minimum distance rule and

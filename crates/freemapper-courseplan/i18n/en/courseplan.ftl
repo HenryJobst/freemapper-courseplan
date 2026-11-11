@@ -747,7 +747,8 @@ mcp-instructions =
     individual courses have a measured length. A score course is made by add_score_course; set_score_controls and
     set_control_value set its controls, add_score_link and remove_score_link its mandatory links,
     set_score_course_details the time limit and the penalty, and set_score_settings the point range and the paces
-    of the event. Team and relay courses cannot be edited yet.
+    of the event. score_suggest lists control sites, score_draft drafts a score course and writes only with apply
+    true, score_length analyses an existing one. All three take seconds. Team and relay courses cannot be edited yet.
     check tests the courses against the rule profile of the event, which set_rule_profile changes. Some checks
     need the start window (set_start_window) or the rule category and expected starters of a class (set_class);
     without them check lists the rule as skipped. A finding the course setter wants as it is gets accept_finding
@@ -1497,3 +1498,4 @@ cli-score-length-very-good = very good runner: { $points } points, finishes afte
 cli-score-length-ok = both runners are inside the bands
 cli-score-bad-link-ends = { $value } is not a link; write two positions as X,Y;X,Y
 cli-score-bad-distance = { $value } is not a distance; give map millimetres, zero or more
+mcp-error-interrupted = the operation was interrupted before it finished
