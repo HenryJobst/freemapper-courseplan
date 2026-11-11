@@ -2,8 +2,14 @@
 
 pub mod candidates;
 pub mod code;
+pub mod links;
 pub mod points;
+pub mod tour;
 pub mod travel;
+
+pub use tour::{
+    LengthIssue, LengthReport, ScoredControl, Tour, analyse_length, best_tour, best_tour_seeded,
+};
 
 /// Why the score code could not do what was asked. Matchable; a text per variant joins the Fluent
 /// catalogs with the operations that raise it.
@@ -38,4 +44,14 @@ pub enum ScoreError {
     BadValue { value: u8, value_max: u8 },
     #[error("{values} values but {coords} positions were given")]
     PositionsMismatch { values: usize, coords: usize },
+    #[error("the link between controls {a} and {b} does not fit the time limit")]
+    LinkDoesNotFit { a: usize, b: usize },
+    #[error(
+        "the link between controls {a} and {b} names a control that does not exist or the same control twice"
+    )]
+    BadLink { a: usize, b: usize },
+    #[error(
+        "the links at control {control} do not form a chain: a control may have at most two links and they may not close a ring"
+    )]
+    LinksNotAChain { control: usize },
 }
