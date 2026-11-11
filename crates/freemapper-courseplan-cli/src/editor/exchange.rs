@@ -55,7 +55,7 @@ pub(crate) fn download_stem(project: &Path) -> String {
     }
 }
 
-fn fail(status: StatusCode, lang: &Lang, id: &str) -> Reply {
+pub(super) fn fail(status: StatusCode, lang: &Lang, id: &str) -> Reply {
     (status, json!({ "error": msg(lang, id) }))
 }
 
@@ -134,7 +134,7 @@ pub(crate) fn iof_xml(project: &Path, lang: &Lang) -> Result<XmlDownload, Reply>
 }
 
 /// Reads the project again and checks that the page saw its current revision.
-fn current_for_write(st: &mut EditorState, revision: Option<&str>) -> Result<(), Reply> {
+pub(super) fn current_for_write(st: &mut EditorState, revision: Option<&str>) -> Result<(), Reply> {
     let lang = st.lang.clone();
     let Some(revision) = revision else {
         return Err(fail(
@@ -156,7 +156,7 @@ fn current_for_write(st: &mut EditorState, revision: Option<&str>) -> Result<(),
 
 /// The linked `.ppen` of the project: it must end in `.ppen` and must not be a symbolic link (the rules of
 /// the MCP sync).
-fn linked_ppen(st: &EditorState) -> Result<PathBuf, Reply> {
+pub(super) fn linked_ppen(st: &EditorState, no_link: &str) -> Result<PathBuf, Reply> {
     let lang = &st.lang;
     let Ok(file) = &st.loaded.file else {
         return Err(fail(
@@ -166,11 +166,7 @@ fn linked_ppen(st: &EditorState) -> Result<PathBuf, Reply> {
         ));
     };
     let Some(link) = &file.event.sources.ppen else {
-        return Err(fail(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            lang,
-            "editor-export-no-link",
-        ));
+        return Err(fail(StatusCode::UNPROCESSABLE_ENTITY, lang, no_link));
     };
     let target = st.project.parent().unwrap_or(Path::new("")).join(link);
     let is_ppen = target
@@ -217,7 +213,7 @@ fn export_linked(st: &mut EditorState, revision: Option<&str>) -> Reply {
     if let Err(reply) = current_for_write(st, revision) {
         return reply;
     }
-    let target = match linked_ppen(st) {
+    let target = match linked_ppen(st, "editor-export-no-link") {
         Ok(target) => target,
         Err(reply) => return reply,
     };

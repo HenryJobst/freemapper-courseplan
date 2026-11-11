@@ -33,6 +33,7 @@ mod history;
 mod map_view;
 mod overlay;
 mod symbols;
+mod sync_panel;
 #[cfg(test)]
 mod tests;
 
@@ -114,6 +115,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
             // The shell limits bodies to 1 MiB; this inner layer wins for the upload (ADR 0053).
             post(api_import_ppen).layer(DefaultBodyLimit::max(MAX_COURSE_FILE_BYTES)),
         )
+        .route(&format!("{prefix}/api/sync"), post(api_sync))
         .route(&format!("{prefix}/api/undo"), post(api_undo))
         .route(&format!("{prefix}/api/redo"), post(api_redo))
         .route(&format!("{prefix}/api/quit"), post(quit).with_state(stop))
@@ -358,6 +360,15 @@ async fn api_import_ppen(
     let revision = page_revision(&headers);
     serialized(state, move |st| {
         exchange::import_ppen(st, revision.as_deref(), replace, &body)
+    })
+    .await
+}
+
+/// `POST api/sync {dry_run, take}`: syncs the project with its linked Purple Pen file (ADR 0054).
+async fn api_sync(State(state): State<Shared>, headers: HeaderMap, body: Bytes) -> Response {
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        sync_panel::sync(st, revision.as_deref(), &body)
     })
     .await
 }

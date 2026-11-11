@@ -13,6 +13,7 @@ import * as numbers from "./numbers.js";
 import * as specials from "./specials.js";
 import * as findings from "./findings.js";
 import * as exchange from "./exchange.js";
+import * as sync from "./sync.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -672,6 +673,14 @@ exchange.bind({
   written: exchangeWritten,
 });
 
+// Sync with Purple Pen (ADR 0054). It uses the same hooks: a real sync and a conflict choice run one at a time.
+sync.bind({
+  revision: () => state.revision,
+  link: () => state.data?.link?.ppen ?? null,
+  exclusive,
+  written: exchangeWritten,
+});
+
 const propActions = {
   describe: describeControl,
   rules: () => state.rules,
@@ -1247,7 +1256,7 @@ function bindMapInput() {
       view.panBy(dx * (v.x1 - v.x0) * PAN_STEP, dy * (v.y1 - v.y0) * PAN_STEP);
     },
     help: () => helpDialog.showModal(),
-    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open || findings.dialogOpen() || exchange.dialogOpen(),
+    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open || findings.dialogOpen() || exchange.dialogOpen() || sync.dialogOpen(),
   });
 }
 

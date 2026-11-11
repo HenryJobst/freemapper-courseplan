@@ -192,6 +192,13 @@ dialog h2 { margin-top: 0; font-size: 1.05rem; }
 #report-notes { max-height: 14rem; overflow: auto; margin: 0 0 0.75rem; padding-left: 1.1rem; }
 #report-lines { margin: 0 0 0.5rem; padding-left: 1.1rem; }
 #import-has-content, #import-replace-warning { margin: 0.25rem 0; }
+#sync-dialog { max-width: 42rem; }
+#sync-changes { max-height: 10rem; overflow: auto; margin: 0 0 0.5rem; padding-left: 1.1rem; }
+#sync-conflicts { max-height: 16rem; overflow: auto; }
+.sync-conflict { border: 1px solid var(--line); border-radius: 4px; padding: 0.4rem 0.6rem; margin-bottom: 0.4rem; }
+.sync-conflict dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.1rem 0.8rem; margin: 0.25rem 0 0.4rem; }
+.sync-conflict dd { margin: 0; overflow-wrap: anywhere; }
+#sync-stale, #sync-result, #sync-notes { margin: 0 0 0.5rem; padding-left: 1.1rem; }
 dialog button { font: inherit; }
 
 @media (max-width: 800px) {

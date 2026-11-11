@@ -175,6 +175,25 @@ fn test_touch(ppen: &Path) {
 #[cfg(not(debug_assertions))]
 fn test_touch(_ppen: &Path) {}
 
+/// Files that get a write at the moment `test_touch` runs (editor tests only): the linked file simulates
+/// Purple Pen saving, the project simulates another program saving.
+#[cfg(test)]
+pub(crate) static TOUCH: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(test)]
+fn test_touch_listed(paths: &[&Path]) {
+    use std::io::Write;
+    for path in paths {
+        if TOUCH
+            .lock()
+            .is_ok_and(|list| list.iter().any(|p| p == path))
+            && let Ok(mut file) = std::fs::OpenOptions::new().append(true).open(path)
+        {
+            let _ = file.write_all(b"\n# touched\n");
+        }
+    }
+}
+
 /// The base copy, or `None` when the file does not exist.
 fn read_base(path: &Path) -> Result<Option<Vec<u8>>, SyncCmdError> {
     match read_course_file(path) {
@@ -367,6 +386,8 @@ fn sync_inner(
             });
 
             test_touch(&ppen_path);
+            #[cfg(test)]
+            test_touch_listed(&[&ppen_path, project]);
             let again = read_course_file(&ppen_path)
                 .map_err(|e| SyncCmdError::Read(ppen_path.clone(), e))?;
             if again != theirs {

@@ -2760,3 +2760,368 @@ mod exchange {
         );
     }
 }
+
+mod sync_panel {
+    use super::*;
+    use serde_json::{Value, json};
+    use std::path::{Path, PathBuf};
+
+    const P31: &str = "map_mm = [-50.1, -3.6]";
+    const Q31: &str = "<location x=\"-50.1\" y=\"3.6\" />";
+
+    fn router_for(path: &Path) -> axum::Router {
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
+    }
+
+    async fn call(
+        app: &axum::Router,
+        method: &str,
+        uri: &str,
+        revision: Option<&str>,
+        body: Vec<u8>,
+    ) -> (StatusCode, Value) {
+        let mut request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", "application/json");
+        if let Some(revision) = revision {
+            request = request.header("x-courseplan-revision", revision);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::from(body)).unwrap())
+            .await
+            .unwrap();
+        let (parts, body) = response.into_parts();
+        let bytes = axum::body::to_bytes(body, usize::MAX).await.unwrap();
+        (
+            parts.status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
+    async fn revision(app: &axum::Router) -> String {
+        let (_, state) = call(app, "GET", "/tok/api/state", None, Vec::new()).await;
+        state["revision"].as_str().unwrap().to_owned()
+    }
+
+    async fn sync(app: &axum::Router, body: Value, revision: Option<&str>) -> (StatusCode, Value) {
+        call(
+            app,
+            "POST",
+            "/tok/api/sync",
+            revision,
+            body.to_string().into_bytes(),
+        )
+        .await
+    }
+
+    async fn undo_label(app: &axum::Router) -> Value {
+        call(app, "GET", "/tok/api/state", None, Vec::new()).await.1["undo"]["undo"].clone()
+    }
+
+    fn edit(path: &Path, from: &str, to: &str) {
+        let text = std::fs::read_to_string(path).unwrap();
+        assert!(text.contains(from), "{from}");
+        std::fs::write(path, text.replacen(from, to, 1)).unwrap();
+    }
+
+    /// The Luebeck example, linked to `out.ppen` and synced once (the base copy exists).
+    fn synced(dir: &Path) -> PathBuf {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+        std::fs::copy(
+            format!("{root}/tests/fixtures/maps/luebeck.omap"),
+            dir.join("luebeck.omap"),
+        )
+        .unwrap();
+        let text = std::fs::read_to_string(format!(
+            "{root}/examples/luebeck-sprint/luebeck-sprint.courseplan.toml"
+        ))
+        .unwrap()
+        .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+        let project = dir.join("event.courseplan.toml");
+        std::fs::write(&project, text).unwrap();
+        crate::export_cmd::export_ppen_file(
+            &project,
+            &dir.join("out.ppen"),
+            false,
+            &Lang::english(),
+        )
+        .unwrap();
+        crate::sync_cmd::sync_file(&project, false, &[]).unwrap();
+        project
+    }
+
+    /// Both sides move control 31: a conflict.
+    fn conflict_pair(dir: &Path) -> PathBuf {
+        let project = synced(dir);
+        edit(&project, P31, "map_mm = [-45.0, -3.6]");
+        edit(
+            &dir.join("out.ppen"),
+            Q31,
+            "<location x=\"-55.0\" y=\"3.6\" />",
+        );
+        project
+    }
+
+    fn files(dir: &Path) -> [Option<Vec<u8>>; 3] {
+        let project = dir.join("event.courseplan.toml");
+        [
+            std::fs::read(dir.join("out.ppen")).ok(),
+            std::fs::read(&project).ok(),
+            std::fs::read(freemapper_courseplan::sync::base::base_path(&project)).ok(),
+        ]
+    }
+
+    #[tokio::test]
+    async fn sync_dry_run_lists_conflicts_like_mcp() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let app = router_for(&project);
+        let before = files(dir.path());
+        let (status, mut got) = sync(&app, json!({"dry_run": true, "take": null}), None).await;
+        assert_eq!(status, StatusCode::OK, "{got}");
+        assert_eq!(files(dir.path()), before, "a dry run writes nothing");
+        assert_eq!(got["revision"], revision(&app).await);
+        got.as_object_mut().unwrap().remove("revision");
+        let server = crate::mcp::CoursePlanServer::new(Lang::english());
+        let mcp = server
+            .call_json(&project, "sync_ppen", json!({"dry_run": true}))
+            .unwrap();
+        assert_eq!(got, mcp);
+        assert_eq!(got["conflicts"].as_array().unwrap().len(), 1);
+        assert_eq!(got["conflicts"][0]["key"], "control/31/position");
+        assert_eq!(got["written"], false);
+    }
+
+    #[tokio::test]
+    async fn resolve_then_sync_writes_all_three_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let app = router_for(&project);
+        let before = files(dir.path());
+        // Open conflicts: a real sync writes nothing.
+        let rev = revision(&app).await;
+        let (status, open) = sync(&app, json!({"dry_run": false, "take": null}), Some(&rev)).await;
+        assert_eq!(status, StatusCode::OK, "{open}");
+        assert_eq!(open["written"], false);
+        assert_eq!(open["conflicts"].as_array().unwrap().len(), 1);
+        assert_eq!(files(dir.path()), before);
+        // Choose Purple Pen through the operation.
+        let key = open["conflicts"][0]["key"].clone();
+        let (status, chosen) = call(
+            &app,
+            "POST",
+            "/tok/api/op/resolve_sync_conflict",
+            Some(&rev),
+            json!({"key": key, "take": "theirs"})
+                .to_string()
+                .into_bytes(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{chosen}");
+        assert!(chosen["result"]["conflicts"].as_array().unwrap().is_empty());
+        let rev = chosen["revision"].as_str().unwrap().to_owned();
+        assert_eq!(rev, revision(&app).await);
+        assert!(undo_label(&app).await.is_string());
+        let (status, done) = sync(&app, json!({"dry_run": false, "take": null}), Some(&rev)).await;
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(done["written"], true, "{done}");
+        let after = files(dir.path());
+        assert!(
+            after[1] != before[1] && after[2].is_some(),
+            "project and base"
+        );
+        let text = String::from_utf8(after[1].clone().unwrap()).unwrap();
+        assert!(
+            text.contains("map_mm = [-55.0, -3.6]"),
+            "Purple Pen's position"
+        );
+        assert!(!text.contains("decisions"), "stored choices are gone");
+        // The linked file keeps Purple Pen's position as well.
+        let ppen = String::from_utf8(after[0].clone().unwrap()).unwrap();
+        assert!(ppen.contains("<location x=\"-55.0\" y=\"3.6\" />"));
+        assert_eq!(done["revision"], revision(&app).await);
+        assert!(undo_label(&app).await.is_null(), "the sync clears history");
+        // Nothing left to do.
+        let (_, again) = sync(&app, json!({"dry_run": true, "take": null}), None).await;
+        assert!(again["conflicts"].as_array().unwrap().is_empty());
+        assert!(again["changes"].as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn take_applies_to_every_conflict_of_the_call() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let app = router_for(&project);
+        let rev = revision(&app).await;
+        let (status, done) =
+            sync(&app, json!({"dry_run": false, "take": "ours"}), Some(&rev)).await;
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(done["written"], true);
+        let ppen = std::fs::read_to_string(dir.path().join("out.ppen")).unwrap();
+        assert!(
+            ppen.contains("<location x=\"-45\" y=\"3.6\" />"),
+            "ours wins: {ppen}"
+        );
+    }
+
+    #[tokio::test]
+    async fn sync_without_link_is_422_with_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = state::project(dir.path());
+        let app = router_for(&project);
+        let before = std::fs::read(&project).unwrap();
+        let rev = revision(&app).await;
+        for body in [
+            json!({"dry_run": true, "take": null}),
+            json!({"dry_run": false, "take": null}),
+        ] {
+            let (status, got) = sync(&app, body, Some(&rev)).await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{got}");
+            let want =
+                freemapper_courseplan::text::text(&Lang::english(), "editor-sync-no-link", &[]);
+            assert_eq!(got["error"], want);
+        }
+        assert_eq!(std::fs::read(&project).unwrap(), before);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn symlinked_link_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let real = dir.path().join("real.ppen");
+        std::fs::rename(dir.path().join("out.ppen"), &real).unwrap();
+        std::os::unix::fs::symlink(&real, dir.path().join("out.ppen")).unwrap();
+        let app = router_for(&project);
+        let (before, rev) = (std::fs::read(&real).unwrap(), revision(&app).await);
+        for body in [
+            json!({"dry_run": true, "take": null}),
+            json!({"dry_run": false, "take": "theirs"}),
+        ] {
+            let (status, got) = sync(&app, body, Some(&rev)).await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{got}");
+            let want = freemapper_courseplan::text::text(
+                &Lang::english(),
+                "editor-export-link-refused",
+                &[],
+            );
+            assert_eq!(got["error"], want);
+        }
+        // The choice goes through the same check.
+        let (status, _) = call(
+            &app,
+            "POST",
+            "/tok/api/op/resolve_sync_conflict",
+            Some(&rev),
+            json!({"key": "control/31/position", "take": "theirs"})
+                .to_string()
+                .into_bytes(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(std::fs::read(&real).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn bad_requests_are_400_and_a_real_sync_needs_the_revision() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let app = router_for(&project);
+        let before = files(dir.path());
+        let rev = revision(&app).await;
+        for body in [
+            "{}",
+            "not json",
+            r#"{"dry_run": true, "take": "both"}"#,
+            r#"{"dry_run": true, "take": null, "path": "/etc/passwd"}"#,
+            r#"{"dry_run": "yes", "take": null}"#,
+        ] {
+            let (status, _) = call(
+                &app,
+                "POST",
+                "/tok/api/sync",
+                Some(&rev),
+                body.as_bytes().to_vec(),
+            )
+            .await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        }
+        let (status, _) = sync(&app, json!({"dry_run": false, "take": "ours"}), None).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let (status, _) = sync(
+            &app,
+            json!({"dry_run": false, "take": "ours"}),
+            Some("0000000000000000"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(files(dir.path()), before);
+    }
+
+    #[tokio::test]
+    async fn a_purple_pen_save_during_the_sync_writes_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = conflict_pair(dir.path());
+        let app = router_for(&project);
+        let ppen = dir.path().join("out.ppen");
+        let rev = revision(&app).await;
+        super::super::super::sync_cmd::TOUCH
+            .lock()
+            .unwrap()
+            .push(ppen.clone());
+        let (status, got) = sync(
+            &app,
+            json!({"dry_run": false, "take": "theirs"}),
+            Some(&rev),
+        )
+        .await;
+        super::super::super::sync_cmd::TOUCH
+            .lock()
+            .unwrap()
+            .retain(|p| p != &ppen);
+        assert_eq!(status, StatusCode::CONFLICT, "{got}");
+        assert!(got["error"].as_str().unwrap().contains("out.ppen"));
+        assert!(
+            !got["error"]
+                .as_str()
+                .unwrap()
+                .contains(dir.path().to_str().unwrap())
+        );
+        let text = std::fs::read_to_string(&project).unwrap();
+        assert!(text.contains("map_mm = [-45.0, -3.6]"), "project untouched");
+    }
+
+    #[tokio::test]
+    async fn a_project_write_during_the_sync_is_409_and_the_revision_moves_on() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = synced(dir.path());
+        // Only Purple Pen moves control 31: a clean sync.
+        edit(
+            &dir.path().join("out.ppen"),
+            Q31,
+            "<location x=\"-55.0\" y=\"3.6\" />",
+        );
+        let app = router_for(&project);
+        let rev = revision(&app).await;
+        super::super::super::sync_cmd::TOUCH
+            .lock()
+            .unwrap()
+            .push(project.clone());
+        let (status, got) = sync(&app, json!({"dry_run": false, "take": null}), Some(&rev)).await;
+        super::super::super::sync_cmd::TOUCH
+            .lock()
+            .unwrap()
+            .retain(|p| p != &project);
+        assert_eq!(status, StatusCode::CONFLICT, "{got}");
+        let stale = freemapper_courseplan::text::text(&Lang::english(), "editor-op-stale", &[]);
+        assert_eq!(got["error"], stale);
+        assert_ne!(
+            got["revision"], rev,
+            "the answer carries the file as it is now"
+        );
+        assert_eq!(got["revision"], revision(&app).await);
+    }
+}

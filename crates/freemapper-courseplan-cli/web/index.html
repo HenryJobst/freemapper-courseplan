@@ -53,7 +53,7 @@
         <li><button type="button" id="menu-export-xml" data-text="editor-menu-export-xml"></button></li>
         <li><button type="button" id="menu-export-ppen" data-text="editor-menu-export-ppen"></button></li>
         <li><button type="button" id="menu-import" data-text="editor-menu-import"></button></li>
-        <li><button type="button" id="menu-sync" data-text="editor-menu-sync" disabled></button></li>
+        <li><button type="button" id="menu-sync" data-text="editor-menu-sync"></button></li>
         <li><button type="button" id="menu-close" data-text="editor-menu-close"></button></li>
       </ul>
     </details>
@@ -125,6 +125,39 @@
         <button type="button" id="import-cancel" data-text="editor-cancel"></button>
       </div>
     </form>
+  </dialog>
+  <dialog id="sync-warn-dialog" aria-labelledby="sync-warn-title">
+    <h2 id="sync-warn-title" data-text="editor-sync-warn-title"></h2>
+    <p data-text="editor-sync-warn-text"></p>
+    <p><label class="check"><input id="sync-warn-hide" type="checkbox"> <span data-text="editor-sync-warn-hide"></span></label></p>
+    <div class="dialog-buttons">
+      <button type="button" id="sync-warn-continue" data-text="editor-sync-warn-continue" autofocus></button>
+      <button type="button" id="sync-warn-cancel" data-text="editor-cancel"></button>
+    </div>
+  </dialog>
+  <dialog id="sync-dialog" aria-labelledby="sync-title">
+    <h2 id="sync-title" data-text="editor-sync-title"></h2>
+    <p><strong data-text="editor-sync-linked"></strong>: <span id="sync-file"></span></p>
+    <p id="sync-status" role="status"></p>
+    <p class="field-error" id="sync-error" role="alert" hidden></p>
+    <div id="sync-body" hidden>
+      <h3 id="sync-changes-heading" data-text="editor-sync-changes"></h3>
+      <ul id="sync-changes"></ul>
+      <h3 id="sync-conflicts-heading"><span data-text="editor-sync-conflicts"></span> (<span id="sync-conflict-count"></span> <span data-text="editor-sync-conflicts-open"></span>)</h3>
+      <div id="sync-conflicts"></div>
+      <p id="sync-all" class="sync-all"><button type="button" id="sync-all-ours" data-text="editor-sync-all-ours"></button> <button type="button" id="sync-all-theirs" data-text="editor-sync-all-theirs"></button></p>
+      <p id="sync-all-note" data-text="editor-sync-all-note"></p>
+      <p id="sync-resolve-first" data-text="editor-sync-resolve-first"></p>
+      <p id="sync-history-note" data-text="editor-sync-history-note"></p>
+      <ul id="sync-stale"></ul>
+      <ul id="sync-result"></ul>
+      <h3 id="sync-notes-heading" data-text="editor-sync-notes"></h3>
+      <ul id="sync-notes"></ul>
+    </div>
+    <div class="dialog-buttons">
+      <button type="button" id="sync-run" data-text="editor-sync-run" disabled></button>
+      <button type="button" id="sync-close" data-text="editor-sync-close" autofocus></button>
+    </div>
   </dialog>
   <dialog id="report-dialog" aria-labelledby="report-title">
     <h2 id="report-title"></h2>

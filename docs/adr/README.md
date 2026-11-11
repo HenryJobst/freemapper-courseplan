@@ -97,3 +97,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0051](0051-description-pickers-use-core-symbol-ids.md) | Description pickers list the symbols from core | Accepted | 2026-11-11 |
 | [0052](0052-editor-findings-panel.md) | Editor: findings come from api/check | Accepted | 2026-11-11 |
 | [0053](0053-editor-export-and-import.md) | Editor: export and import | Accepted | 2026-11-11 |
+| [0054](0054-editor-sync-panel.md) | Editor: sync panel with conflict choices | Accepted | 2026-11-11 |

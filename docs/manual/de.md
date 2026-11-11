@@ -313,8 +313,13 @@ verknüpfte Purple-Pen-Datei des Projekts.
   oder Sonderobjekte hat, wird abgelehnt, solange du „Ersetzen“ nicht ankreuzt; das ersetzt alle drei. Der Import
   ändert die Verknüpfung `sources.ppen` nicht: Der Editor erfährt nie, wo die Datei liegt. Ein Fenster listet die
   Hinweise. Dateien über 50 MiB werden abgelehnt (ADR 0053).
+- **Mit Purple Pen abgleichen…** Nimmt die Datei aus `sources.ppen`, wie `sync`. Schließe die Veranstaltung vorher
+  in Purple Pen; ein Hinweis sagt das und lässt sich für die Sitzung abschalten. Das Fenster listet Änderungen und
+  Konflikte. Jeder Konflikt hat „Courseplan behalten“ und „Purple Pen übernehmen“; „Alle Courseplan“ und „Alle
+  Purple Pen“ gleichen sofort ab und nehmen überall diese Seite. „Abgleichen“ ist möglich, wenn kein Konflikt offen
+  ist (ADR 0054).
 
-Das Schreiben in die verknüpfte Datei und der Import leeren den Rückgängig-Verlauf, weil sie mehr als einen Schritt
+Das Schreiben in die verknüpfte Datei, der Import und der Abgleich leeren den Rückgängig-Verlauf, weil sie mehr als einen Schritt
 ändern.
 
 ### Rückgängig und Wiederholen

@@ -298,8 +298,12 @@ Purple Pen file.
   courses or special objects is refused unless you tick "Replace", which replaces all three. The import does not
   change the link `sources.ppen`: the editor never learns where the file lives. A dialog lists the notes. Files
   over 50 MiB are refused (ADR 0053).
+- **Sync with Purple Pen...** Uses the file `sources.ppen` names, like `sync`. Close the event in Purple Pen first;
+  a warning says so and can be silenced for the session. The panel lists the changes and the conflicts. Each
+  conflict has "Keep courseplan" and "Take Purple Pen"; "All courseplan" and "All Purple Pen" sync at once with that
+  side everywhere. "Sync" is on when no conflict is open (ADR 0054).
 
-Writing to the linked file and importing clear the undo history, because they change more than one step.
+Writing to the linked file, importing and syncing clear the undo history, because they change more than one step.
 
 ### Undo and redo
 
