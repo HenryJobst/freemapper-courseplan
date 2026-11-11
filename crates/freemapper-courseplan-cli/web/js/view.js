@@ -85,10 +85,12 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 // The map layer: one <image> of api/map.svg for the visible part plus 50 % margin on every side, requested
 // 150 ms after the view stops moving, never while it moves. The old image stays until the new one has loaded.
 // The image is an <image> element, never inline SVG: the clip ids of one SVG would clash with the page's own.
-// When the server refuses the section (413), `onError` gets its localized text; a later success gets null.
+// With a course name set (`setCourse`), the server paints the renderer's own course symbols over the map: the print
+// preview. When the server refuses the section (413), `onError` gets its localized text; a later success gets null.
 export function bindMapLayer(group, view, onError = () => {}) {
   let timer = null;
   let ticket = 0;
+  let course = null;
 
   async function load(force) {
     const mine = ++ticket;
@@ -99,11 +101,11 @@ export function bindMapLayer(group, view, onError = () => {}) {
     const side = Math.max(rect.x1 - rect.x0, rect.y1 - rect.y0);
     const zoom = Math.min(view.scale * (window.devicePixelRatio || 1), MAX_IMAGE_SIDE_PX / side);
     const q = [rect.x0, rect.y0, rect.x1, rect.y1, zoom].map((n) => Number(n.toFixed(4)));
-    const url = `api/map.svg?x0=${q[0]}&y0=${q[1]}&x1=${q[2]}&y1=${q[3]}&zoom=${q[4]}`;
+    const url = `api/map.svg?x0=${q[0]}&y0=${q[1]}&x1=${q[2]}&y1=${q[3]}&zoom=${q[4]}${course ? `&course=${encodeURIComponent(course)}` : ""}`;
     // One request: the body is the SVG (shown through a blob URL) or the server's reason for refusing.
     let blobUrl;
     try {
-      const answer = await fetch(url, force ? { cache: "reload" } : {});
+      const answer = await fetch(url, force || course ? { cache: "reload" } : {});
       if (mine !== ticket) return;
       if (!answer.ok) {
         onError(await answer.text());
@@ -145,5 +147,11 @@ export function bindMapLayer(group, view, onError = () => {}) {
     clearTimeout(timer);
     timer = setTimeout(() => load(false), SETTLE_MS);
   });
-  return { refresh: (force = false) => load(force) };
+  return {
+    refresh: (force = false) => load(force),
+    // The course to preview, or null for the plain map. The caller refreshes afterwards.
+    setCourse: (name) => {
+      course = name;
+    },
+  };
 }

@@ -32,6 +32,7 @@ mod exchange;
 mod history;
 mod map_view;
 mod overlay;
+mod print_layer;
 mod render_map;
 mod symbols;
 mod sync_panel;
@@ -501,6 +502,49 @@ async fn api_overlay(State(state): State<Shared>, RawQuery(query): RawQuery) -> 
     blocking_response(move || overlay_response(&loaded, &entry, course.as_deref(), &lang)).await
 }
 
+/// The number gap range of the named course under the event's rule set, or the default without a course.
+#[allow(clippy::result_large_err)]
+fn gaps_for(
+    event: &freemapper_courseplan_model::Event,
+    course: Option<&str>,
+    kind: freemapper_courseplan::map::MapKind,
+    scale: u32,
+    lang: &Lang,
+) -> Result<freemapper_courseplan::numbers::GapRange, Response> {
+    let Some(found) = course.and_then(|name| event.courses.iter().find(|c| c.name == name)) else {
+        return Ok(freemapper_courseplan::numbers::GapRange::DEFAULT);
+    };
+    let rules = freemapper_courseplan::rules::load_rule_set(
+        &event.event.rule_profile,
+        &event.event.rule_overlays,
+    )
+    .map_err(|e| {
+        plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            api::tidy(&e.localize(lang), &[]),
+        )
+    })?;
+    Ok(freemapper_courseplan::numbers::gap_range(
+        &rules,
+        kind,
+        event.event.discipline,
+        freemapper_courseplan::rules::print_scale_of(found, scale),
+    ))
+}
+
+/// The answer for a course the editor cannot draw. A score, team or relay course (or one naming something the
+/// event lacks) is not a missing resource: the page says why nothing is drawn.
+fn course_error(e: &freemapper_courseplan::course::CourseError, lang: &Lang) -> Response {
+    use freemapper_courseplan::course::CourseError;
+    let status = match e {
+        CourseError::NotSupported { .. } | CourseError::UnknownReference { .. } => {
+            StatusCode::UNPROCESSABLE_ENTITY
+        }
+        CourseError::UnknownCourse(_) => StatusCode::NOT_FOUND,
+    };
+    plain(status, api::tidy(&e.localize(lang), &[]))
+}
+
 fn overlay_response(
     loaded: &Loaded,
     entry: &map_view::MapEntry,
@@ -513,38 +557,58 @@ fn overlay_response(
     let scale = entry.doc.georef.scale_denominator;
     let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
     let event = &file.event;
-    let gaps = match course.and_then(|name| event.courses.iter().find(|c| c.name == name)) {
-        Some(found) => match freemapper_courseplan::rules::load_rule_set(
-            &event.event.rule_profile,
-            &event.event.rule_overlays,
-        ) {
-            Ok(rules) => freemapper_courseplan::numbers::gap_range(
-                &rules,
-                kind,
-                event.event.discipline,
-                freemapper_courseplan::rules::print_scale_of(found, scale),
-            ),
-            Err(e) => {
-                return plain(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    api::tidy(&e.localize(lang), &[]),
-                );
-            }
-        },
-        None => freemapper_courseplan::numbers::GapRange::DEFAULT,
+    let gaps = match gaps_for(event, course, kind, scale, lang) {
+        Ok(gaps) => gaps,
+        Err(response) => return response,
     };
     match overlay::overlay(event, course, &entry.index, scale, kind, gaps) {
         Ok(overlay) => axum::Json(overlay).into_response(),
-        // A score, team or relay course (or one naming something the event lacks) is not a missing
-        // resource: the page says why nothing is drawn.
-        Err(
-            e @ (freemapper_courseplan::course::CourseError::NotSupported { .. }
-            | freemapper_courseplan::course::CourseError::UnknownReference { .. }),
-        ) => plain(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            api::tidy(&e.localize(lang), &[]),
+        Err(e) => course_error(&e, lang),
+    }
+}
+
+/// The map section with the renderer's own course layer over it (the print preview, ADR 0057).
+fn preview_svg(
+    loaded: &Loaded,
+    entry: &map_view::MapEntry,
+    course: &str,
+    rect: PageRect,
+    zoom: f64,
+    lang: &Lang,
+) -> Response {
+    let Ok(file) = &loaded.file else {
+        return plain(StatusCode::INTERNAL_SERVER_ERROR, String::new());
+    };
+    let scale = entry.doc.georef.scale_denominator;
+    let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+    let event = &file.event;
+    let gaps = match gaps_for(event, Some(course), kind, scale, lang) {
+        Ok(gaps) => gaps,
+        Err(response) => return response,
+    };
+    let layer = match print_layer::course_overprint(
+        event,
+        course,
+        &entry.index,
+        scale,
+        kind,
+        gaps,
+        entry.view.mapping(),
+    ) {
+        Ok(layer) => layer,
+        Err(e) => return course_error(&e, lang),
+    };
+    svg_response(entry.view.svg_with_course(rect, zoom, layer), lang)
+}
+
+fn svg_response(svg: Result<String, MapViewError>, lang: &Lang) -> Response {
+    match svg {
+        Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
+        Err(MapViewError::TooLarge) => plain(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            text(lang, "editor-map-too-large", &[]),
         ),
-        Err(e) => plain(StatusCode::NOT_FOUND, api::tidy(&e.localize(lang), &[])),
+        Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
     }
 }
 
@@ -573,6 +637,8 @@ struct SvgQuery {
     x1: Option<f64>,
     y1: Option<f64>,
     zoom: Option<f64>,
+    /// The course whose renderer layer is painted over the map (print preview).
+    course: Option<String>,
 }
 
 impl SvgQuery {
@@ -580,6 +646,12 @@ impl SvgQuery {
         let mut q = SvgQuery::default();
         for pair in raw.split('&').filter(|p| !p.is_empty()) {
             let (key, value) = pair.split_once('=')?;
+            if key == "course" {
+                if q.course.replace(api::decode(value)?).is_some() {
+                    return None;
+                }
+                continue;
+            }
             let slot = match key {
                 "x0" => &mut q.x0,
                 "y0" => &mut q.y0,
@@ -629,24 +701,21 @@ async fn map_svg(State(state): State<Shared>, RawQuery(query): RawQuery) -> Resp
             text(lang, "editor-map-bad-request", &[]),
         )
     };
-    let Some((rect, zoom)) = query
-        .and_then(|raw| SvgQuery::parse(&raw))
-        .and_then(|q| parse_rect(&q))
-    else {
+    let Some(parsed) = query.and_then(|raw| SvgQuery::parse(&raw)) else {
         return bad(&lang);
     };
+    let Some((rect, zoom)) = parse_rect(&parsed) else {
+        return bad(&lang);
+    };
+    let course = parsed.course;
     let loaded = current(&state).await;
     let entry = match map_of(&state, &loaded).await {
         Ok(entry) => entry,
         Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
     };
-    blocking_response(move || match entry.view.svg_for(rect, zoom) {
-        Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
-        Err(MapViewError::TooLarge) => plain(
-            StatusCode::PAYLOAD_TOO_LARGE,
-            text(&lang, "editor-map-too-large", &[]),
-        ),
-        Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    blocking_response(move || match course.as_deref() {
+        None => svg_response(entry.view.svg_for(rect, zoom), &lang),
+        Some(name) => preview_svg(&loaded, &entry, name, rect, zoom, &lang),
     })
     .await
 }

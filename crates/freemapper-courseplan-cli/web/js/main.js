@@ -34,6 +34,8 @@ const state = {
   seen: null,
   closed: false,
   revision: null,
+  // The print preview is on: the map shows the renderer's course layer, the overlay is hidden, nothing is edited.
+  preview: false,
   // The answer of api/rules (profiles, overlays, categories), or null while unknown: the panels then take text.
   rules: null,
 };
@@ -311,6 +313,7 @@ function refreshConfirm() {
 
 // Deleting asks first when a course visits the control.
 function requestDelete() {
+  if (state.preview) return;
   const selected = state.selection;
   if (draft) {
     // While a line or an area is drawn, Delete takes back its last point.
@@ -725,6 +728,43 @@ document.getElementById("undo-btn").addEventListener("click", () => history(fals
 document.getElementById("redo-btn").addEventListener("click", () => history(true));
 document.getElementById("help-btn").addEventListener("click", () => helpDialog.showModal());
 
+// The course whose renderer layer the map image shows now, or null for the plain map.
+let previewShown = null;
+
+// Brings the print preview in line with the state: only a selected course can be previewed. `force` loads the map
+// image again even when the course is the same (the project changed).
+function syncPreview(force = false) {
+  if (state.preview && !state.course) state.preview = false;
+  const button = document.getElementById("preview-btn");
+  button.disabled = !state.course;
+  button.setAttribute("aria-pressed", String(state.preview));
+  svg.dataset.preview = String(state.preview);
+  for (const layer of [document.getElementById("layer-overlay"), findingsLayer]) {
+    layer.style.display = state.preview ? "none" : "";
+  }
+  const want = state.preview ? state.course : null;
+  if (want !== previewShown || (force && want)) {
+    previewShown = want;
+    state.mapLayer?.setCourse(want);
+    state.mapLayer?.refresh(true);
+  }
+}
+
+function togglePreview() {
+  if (!state.preview && !state.course) return;
+  state.preview = !state.preview;
+  if (state.preview) {
+    pendingLeg = null;
+    draft = null;
+    tools.setTool("select");
+  }
+  syncPreview();
+  redraw();
+  status.say(state.preview ? "editor-status-preview-on" : "editor-status-preview-off");
+}
+
+document.getElementById("preview-btn").addEventListener("click", togglePreview);
+
 async function loadOverlay(course) {
   const query = course ? `?course=${encodeURIComponent(course)}` : "";
   const answer = await get(`api/overlay${query}`);
@@ -777,6 +817,7 @@ async function selectKey(key) {
     state.selection = { kind, id };
     if (!overlayHas(kind, id)) await loadOverlay(null);
   }
+  syncPreview();
   redraw();
 }
 
@@ -890,6 +931,7 @@ async function loadState(announce) {
   updateHistoryButtons();
   refreshConfirm();
   await loadOverlay(state.course);
+  syncPreview(true);
   keepLegSelection();
   redraw();
   findings.schedule();
@@ -1015,7 +1057,7 @@ function dropBend() {
 
 function startNudge(dx, dy) {
   const selected = state.selection;
-  if (!selected || busy) return;
+  if (!selected || busy || state.preview) return;
   const c = state.overlay?.controls.find((x) => x.code === String(selected.id));
   if (!c) return;
   nudge ??= { code: c.code, orig: [...c.at], dx: 0, dy: 0 };
@@ -1106,12 +1148,21 @@ function bindMapInput() {
   svg.addEventListener("pointerdown", (evt) => {
     if (!evt.isPrimary || evt.button !== 0 || busy) return;
     const at = view.screenToMap(evt);
-    const hit = tools.getTool() === "select" ? hitControl(at) : null;
-    if (tools.getTool() === "course" && state.overlay) {
+    const hit = tools.getTool() === "select" && !state.preview ? hitControl(at) : null;
+    if (tools.getTool() === "course" && state.overlay && !state.preview) {
       const box = numbers.numberAt(state.overlay.numbers, at, 0);
       if (box) numberDrag = { number: box, start: at, orig: [...box.centre], moved: false };
     }
     press = { id: evt.pointerId, x: evt.clientX, y: evt.clientY, moved: false, target: evt.target, at };
+    if (state.preview) {
+      // Read-only: a press only pans.
+      try {
+        svg.setPointerCapture(evt.pointerId);
+      } catch {
+        // The pointer is gone already.
+      }
+      return;
+    }
     if (hit) {
       const c = state.overlay.controls.find((x) => x.code === hit);
       drag = { code: hit, start: at, orig: [...c.at], moved: false };
@@ -1216,7 +1267,7 @@ function bindMapInput() {
       }
       return;
     }
-    if (finished.moved) return;
+    if (finished.moved || state.preview) return;
     const tool = tools.getTool();
     if (tool === "course") courseClick(finished.at);
     else if (tool === "special") specialClick(finished.at);
@@ -1267,6 +1318,7 @@ function bindMapInput() {
       }
     },
     tool: tools.setTool,
+    preview: togglePreview,
     nudge: startNudge,
     commitNudge,
     canNudge: () => state.selection?.kind === "control",

@@ -65,7 +65,7 @@ function drawControl(c, o, selection, parent, halos) {
 }
 
 function drawStart(s, o, selection, parent, halos) {
-  const r = o.sizes.circle_r * 1.15;
+  const r = o.sizes.start_r;
   const group = el("g", { class: "sym" }, parent);
   // A triangle pointing east, turned counter-clockwise on the paper by angle_deg.
   el("polygon", {
@@ -79,10 +79,10 @@ function drawStart(s, o, selection, parent, halos) {
 }
 
 function drawFinish(f, o, selection, parent, halos) {
-  const r = o.sizes.circle_r;
+  const r = o.sizes.finish_outer_r;
   const group = el("g", { class: "sym" }, parent);
   el("circle", { cx: f.at[0], cy: f.at[1], r, "stroke-width": o.sizes.line, fill: "none" }, group);
-  el("circle", { cx: f.at[0], cy: f.at[1], r: r * 0.7, "stroke-width": o.sizes.line, fill: "none" }, group);
+  el("circle", { cx: f.at[0], cy: f.at[1], r: o.sizes.finish_inner_r, "stroke-width": o.sizes.line, fill: "none" }, group);
   return tag(group, "special", f.id, selection, halos, () =>
     el("circle", { cx: f.at[0], cy: f.at[1], r: r * 1.5, class: "halo", "stroke-width": o.sizes.line * 1.5 }));
 }

@@ -678,8 +678,8 @@ mod overlay {
         let first = &o.legs[0];
         assert_eq!(first.after, 0);
         assert_eq!(first.points, [p(0.0, 0.0), p(50.0, 0.0)]);
-        // Cut by the circle radius 3.0 at both ends.
-        assert_eq!(first.drawn, [p(3.0, 0.0), p(47.0, 0.0)]);
+        // Cut by the start triangle's circumradius 7 / sqrt(3) at the start, by the circle radius 3.0 at the control.
+        assert_eq!(first.drawn, [p(4.041, 0.0), p(47.0, 0.0)]);
         assert_eq!(o.legs[1].after, 1);
         assert!(!first.taped);
     }
@@ -1395,6 +1395,38 @@ mod state {
         assert_eq!(status, StatusCode::OK);
         assert_eq!(headers["content-type"], "image/svg+xml");
         assert!(body.starts_with("<svg"), "{body}");
+    }
+
+    #[tokio::test]
+    async fn map_svg_with_a_course_paints_the_renderers_course_layer() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let get = |query: &'static str| {
+            let app = app.clone();
+            async move {
+                raw(
+                    &app,
+                    Request::get(format!(
+                        "/tok/api/map.svg?x0=0&y0=0&x1=400&y1=300&zoom=2{query}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+                )
+                .await
+            }
+        };
+        let (plain, _, plain_body) = get("").await;
+        let (status, headers, with) = get("&course=A").await;
+        assert_eq!((plain, status), (StatusCode::OK, StatusCode::OK), "{with}");
+        assert_eq!(headers["content-type"], "image/svg+xml");
+        assert!(
+            with.len() > plain_body.len(),
+            "no course layer in the image"
+        );
+        // The plain map is unchanged afterwards: the layer lives for one render.
+        assert_eq!(get("").await.2, plain_body);
+        assert_eq!(get("&course=Nope").await.0, StatusCode::NOT_FOUND);
+        assert_eq!(get("&course=A&course=A").await.0, StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

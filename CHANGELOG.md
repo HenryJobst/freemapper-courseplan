@@ -6,6 +6,14 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Der Editor hat eine Druckvorschau (ADR 0057). Die Schaltfläche „Druckvorschau“ oder die Taste P zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet: Der Server gibt die Bahn an den Renderer (freemapper-core 0.15.0), der Start, Posten, Ziel, Strecken, Sonderobjekte und Nummern als Purpurebenen ins Kartenbild malt. Das Overlay ist dabei ausgeblendet, und es lässt sich nichts bearbeiten. Ein Test vergleicht Kreise, Strecken und Nummernfelder des Overlays mit denen des Renderers.
+
+### Behoben
+
+- Das Overlay zeichnet Start und Ziel in den IOF-Größen und lässt Strecken dort enden, wo der Renderer sie enden lässt: am Eck des Starts, am äußeren Zielkreis, am Postenkreis, an der Querungsstelle selbst. Vorher schnitt es jede Strecke an beiden Enden mit dem Radius des Postenkreises ab.
+
 ## [0.10.0] - 2026-11-11
 
 ### Hinzugefügt

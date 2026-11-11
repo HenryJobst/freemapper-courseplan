@@ -6,6 +6,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- The editor has a print preview (ADR 0057). The "Print preview" button or the P key shows the selected course the way freemapper-print draws it. The server hands the course to the renderer (freemapper-core 0.15.0), which paints start, controls, finish, legs, special objects and numbers as purple layers into the map image. The overlay is hidden and nothing can be edited meanwhile. A test compares the overlay's circles, legs and number boxes with the renderer's.
+
+### Fixed
+
+- The overlay draws start and finish at the IOF sizes and ends legs where the renderer ends them: at the start triangle's corner, at the outer finish circle, at the control circle, at the crossing point itself. Before, it cut every leg at both ends by the control circle's radius.
+
 ## [0.10.0] - 2026-11-11
 
 ### Added

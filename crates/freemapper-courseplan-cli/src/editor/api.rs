@@ -249,7 +249,7 @@ pub(crate) fn revision_json(loaded: &Loaded) -> Value {
 }
 
 /// The value of a query parameter, percent-decoded (`+` is a space).
-fn decode(raw: &str) -> Option<String> {
+pub(super) fn decode(raw: &str) -> Option<String> {
     let bytes = raw.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;

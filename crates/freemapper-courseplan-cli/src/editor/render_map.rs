@@ -6,13 +6,14 @@
 #![allow(dead_code)]
 
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, RwLock};
 
 use freemapper_courseplan::map::MapIndex;
 use freemapper_courseplan::omap::MapDocument;
 use freemapper_render::build::{BuildReport, Orientation, PageSpec, Paper, build_page};
-use freemapper_render::page::{PageMapping, PaperBox, RenderedPage};
+use freemapper_render::overprint::{IOF_PURPLE, on_map};
+use freemapper_render::page::{Overprint, PageMapping, PaperBox, RenderedPage};
 use freemapper_render::svg::{SvgError, SvgView, write_svg};
 
 use super::map_view::{Affine, MapHit, MapView, MapViewError, PageRect};
@@ -60,11 +61,36 @@ fn affine_of(mapping: PageMapping) -> Result<Affine, MapViewError> {
     })
 }
 
+fn check_view(rect: PageRect, zoom: f64) -> Result<(), MapViewError> {
+    let (w, h) = (rect.x1 - rect.x0, rect.y1 - rect.y0);
+    let valid = [rect.x0, rect.y0, rect.x1, rect.y1, zoom]
+        .iter()
+        .all(|v| v.is_finite())
+        && w > 0.0
+        && h > 0.0
+        && zoom > 0.0;
+    if !valid {
+        return Err(MapViewError::Render("invalid rectangle or zoom".into()));
+    }
+    if w * zoom > MAX_PIXELS || h * zoom > MAX_PIXELS {
+        return Err(MapViewError::TooLarge);
+    }
+    Ok(())
+}
+
+fn svg_error(e: SvgError) -> MapViewError {
+    match e {
+        SvgError::TooLarge => MapViewError::TooLarge,
+        other => MapViewError::Render(other.to_string()),
+    }
+}
+
 type ViewKey = [u64; 5];
 
 /// The map as the renderer draws it.
 pub(crate) struct RenderMap {
-    page: RenderedPage,
+    /// Behind a lock only because the print preview sets `overprint` for the length of one render.
+    page: RwLock<RenderedPage>,
     affine: Affine,
     codes: HashMap<u32, String>,
     /// The last SVG: a repeated view (a reload, a second tab) does not render again. The lock is held only to
@@ -124,7 +150,7 @@ impl RenderMap {
         let (clipped, incomplete) = limits_of(&report);
         Ok(Self {
             view_box,
-            page,
+            page: RwLock::new(page),
             affine,
             codes,
             last: Mutex::new(None),
@@ -168,19 +194,7 @@ impl MapView for RenderMap {
     }
 
     fn svg_for(&self, rect: PageRect, zoom: f64) -> Result<String, MapViewError> {
-        let (w, h) = (rect.x1 - rect.x0, rect.y1 - rect.y0);
-        let valid = [rect.x0, rect.y0, rect.x1, rect.y1, zoom]
-            .iter()
-            .all(|v| v.is_finite())
-            && w > 0.0
-            && h > 0.0
-            && zoom > 0.0;
-        if !valid {
-            return Err(MapViewError::Render("invalid rectangle or zoom".into()));
-        }
-        if w * zoom > MAX_PIXELS || h * zoom > MAX_PIXELS {
-            return Err(MapViewError::TooLarge);
-        }
+        check_view(rect, zoom)?;
         let key: ViewKey = [rect.x0, rect.y0, rect.x1, rect.y1, zoom].map(f64::to_bits);
         {
             let last = self.last.lock().unwrap_or_else(|e| e.into_inner());
@@ -198,18 +212,44 @@ impl MapView for RenderMap {
             zoom,
         };
         self.renders.fetch_add(1, Ordering::Relaxed);
-        let svg = write_svg(&self.page, &view).map_err(|e| match e {
-            SvgError::TooLarge => MapViewError::TooLarge,
-            other => MapViewError::Render(other.to_string()),
-        })?;
+        let svg = {
+            let page = self.page.read().unwrap_or_else(|e| e.into_inner());
+            write_svg(&page, &view).map_err(svg_error)?
+        };
         *self.last.lock().unwrap_or_else(|e| e.into_inner()) = Some((key, svg.clone()));
         Ok(svg)
+    }
+
+    /// Not cached: the course changes with every edit. The lower layer is placed among the map colours by
+    /// `on_map`; the page has no overprint again when the render is done.
+    fn svg_with_course(
+        &self,
+        rect: PageRect,
+        zoom: f64,
+        overprint: Overprint,
+    ) -> Result<String, MapViewError> {
+        check_view(rect, zoom)?;
+        let view = SvgView {
+            rect: Some(PaperBox {
+                min: (rect.x0, rect.y0),
+                max: (rect.x1, rect.y1),
+            }),
+            zoom,
+        };
+        self.renders.fetch_add(1, Ordering::Relaxed);
+        let mut page = self.page.write().unwrap_or_else(|e| e.into_inner());
+        page.overprint = on_map(overprint, IOF_PURPLE, &page.colours, &page.primitives);
+        let svg = write_svg(&page, &view);
+        page.overprint = Overprint::default();
+        svg.map_err(svg_error)
     }
 
     /// The map objects under `page`, topmost first. `object` is the renderer's object number (the objects it
     /// draws, in the order of the map parts; ADR 0023 of freemapper-core), not an index into the file.
     fn hit_at(&self, page: (f64, f64), tolerance_mm: f64) -> Vec<MapHit> {
         self.page
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
             .hits_at(page, tolerance_mm)
             .into_iter()
             .map(|h| MapHit {

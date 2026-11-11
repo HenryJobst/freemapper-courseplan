@@ -21,7 +21,7 @@ mod stops;
 mod tables;
 
 pub use context::{CheckContext, CourseContext};
-pub use geometry::drawn_part;
+pub use geometry::{drawn_part, drawn_part_between};
 
 use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef, SpecialObject,

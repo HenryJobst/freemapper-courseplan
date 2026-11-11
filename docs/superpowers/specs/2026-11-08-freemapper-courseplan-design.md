@@ -497,10 +497,13 @@ Paths are relative to the project file. The editor keeps comments it did not cre
     stamp. A map larger than A3 at map scale is clipped and the status bar says so; a renderer that leaves out or
     shortens objects sets an "incomplete" notice; a section too large to draw answers 413 with a message and the
     overlay stays *(user)*. `PlaceholderMap` remains for unit tests.
-  - **Not built yet:** the print preview toggle and the parity test between the overlay and the print overprint
-    (plan Task 20). Both wait until freemapper-print's course layer lands in `RenderedPage`; they do not block the
-    release (plan, Task 20). Stage 7 is this documentation (manual chapter 4, READMEs, changelogs);
-    release 0.10.0 follows the final review.
+  - **Built (Task 20, ADR 0057):** the print preview and the parity test. `GET api/map.svg` takes `course=NAME`;
+    the server builds the course as a renderer event, calls `freemapper_render::overprint` (core v0.15.0) and paints
+    the layers into the image, uncached. The toolbar button "Print preview" (key P) turns it on for the selected
+    course, hides the overlay and makes the page read-only *(Claude's call)*. The test `overlay_matches_renderer_overprint`
+    compares circle centres and radii, start and finish, legs and number centres within 0.01 mm. The overlay now
+    uses the IOF start and finish sizes and the renderer's leg ends. Open: number box width (ADR 0057).
+    Stage 7 is the documentation (manual chapter 4, READMEs, changelogs).
 
 ## 6. AI support
 
@@ -546,7 +549,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
    Under way: stage 1 (read-only preview with a placeholder map), stage 2 (editing controls, save guard,
    undo), stage 3 (courses, bends, numbers, special objects), stage 4 (control descriptions), stage 5 (findings,
-   export and import, sync) and stage 6 (the real map) are built; the print preview waits for freemapper-print; see §5.8.
+   export and import, sync) and stage 6 (the real map) are built; the print preview (stage 7, Task 20, ADR 0057) is built on the course layer of freemapper-core 0.15.0; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 

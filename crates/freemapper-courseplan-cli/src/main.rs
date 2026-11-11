@@ -703,6 +703,10 @@ mod tests {
         ("editor/sync_panel.rs", include_str!("editor/sync_panel.rs")),
         ("editor/history.rs", include_str!("editor/history.rs")),
         ("editor/overlay.rs", include_str!("editor/overlay.rs")),
+        (
+            "editor/print_layer.rs",
+            include_str!("editor/print_layer.rs"),
+        ),
         ("editor/symbols.rs", include_str!("editor/symbols.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),

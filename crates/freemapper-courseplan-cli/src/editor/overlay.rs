@@ -3,16 +3,18 @@
 //! boxes come from the same placement code the checks use, and numbers without a stored placement sit where
 //! `auto_place` would put them.
 
-use freemapper_courseplan::check::drawn_part;
+use freemapper_courseplan::check::drawn_part_between;
 use freemapper_courseplan::course::{CourseError, control_numbers, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
 use freemapper_courseplan::numbers::{
-    GapRange, auto_place, base_scale, number_box_mm, number_centre, overprint_sizes,
+    GapRange, auto_place, base_scale, number_box_mm, number_centre,
 };
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
 };
 use serde::Serialize;
+
+use super::print_layer::course_symbol_sizes;
 
 /// Rounds a JSON number to 0.001 mm.
 pub(crate) fn r3(value: f64) -> f64 {
@@ -36,6 +38,11 @@ pub(crate) struct Sizes {
     pub circle_r: f64,
     pub line: f64,
     pub number_h: f64,
+    /// Circumradius of the start triangle: where a leg leaves the start.
+    pub start_r: f64,
+    /// Radii of the two finish circles; a leg ends at the outer one.
+    pub finish_inner_r: f64,
+    pub finish_outer_r: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -129,12 +136,20 @@ fn special_shape(special: &SpecialObject) -> Option<(&'static str, Vec<MapPoint>
 }
 
 fn sizes_at(kind: MapKind, factor: f64) -> Sizes {
-    let print = overprint_sizes(kind);
+    let print = course_symbol_sizes(kind);
     Sizes {
         circle_r: r3(print.circle_diameter_mm * factor / 2.0),
         line: r3(print.line_width_mm * factor),
         number_h: r3(print.number_height_mm * factor),
+        start_r: r3(triangle_radius(print.start_side_mm * factor)),
+        finish_inner_r: r3(print.finish_inner_mm * factor / 2.0),
+        finish_outer_r: r3(print.finish_outer_mm * factor / 2.0),
     }
+}
+
+/// Circumradius of an equilateral triangle of side `side`, as the renderer draws the start.
+fn triangle_radius(side: f64) -> f64 {
+    side / 3f64.sqrt()
 }
 
 /// The overlay of the named course, or of all controls and special objects of the event without a name.
@@ -164,7 +179,23 @@ pub(crate) fn overlay(
     let CourseKind::Individual { controls: stops } = &course.kind else {
         unreachable!("course_legs refuses other kinds");
     };
-    let circle_r = overprint_sizes(kind).circle_diameter_mm * factor / 2.0;
+    let print = course_symbol_sizes(kind);
+    let circle_r = print.circle_diameter_mm * factor / 2.0;
+    // Where a leg leaves the symbol of stop `i` (0 is the start, the last is the finish): the start triangle's
+    // corner, the circle line, the outer finish circle, or the centre of a crossing point.
+    let radius_of = |i: usize| -> f64 {
+        if i == 0 {
+            return triangle_radius(print.start_side_mm * factor);
+        }
+        let Some(stop) = stops.get(i - 1) else {
+            return print.finish_outer_mm * factor / 2.0;
+        };
+        let crossing = event
+            .controls
+            .iter()
+            .any(|c| c.code == stop.code && c.kind == ControlKind::CrossingPoint);
+        if crossing { 0.0 } else { circle_r }
+    };
 
     let legs = geometry
         .iter()
@@ -172,7 +203,11 @@ pub(crate) fn overlay(
         .map(|(after, leg)| OverlayLeg {
             after,
             points: points(&leg.points),
-            drawn: points(&drawn_part(&leg.points, circle_r)),
+            drawn: points(&drawn_part_between(
+                &leg.points,
+                radius_of(after),
+                radius_of(after + 1),
+            )),
             bends: leg
                 .points
                 .iter()

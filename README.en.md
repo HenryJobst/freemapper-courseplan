@@ -37,7 +37,7 @@ Planned for the first version:
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
   special objects and control descriptions, findings of the check, export, import and sync with Purple Pen, with undo and
-  redo; on the real map),
+  redo and a print preview; on the real map),
   the command line or an AI assistant (MCP).
 
 After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
@@ -137,7 +137,7 @@ under the editor, it refuses your change and loads the new state. The findings o
 note. The Event menu exports IOF XML and Purple Pen files, imports a Purple Pen file and syncs with the linked one; close
 the event in Purple Pen before you sync. The map is the real one, drawn as SVG by the renderer that freemapper-print
 uses too (freemapper-render). A map larger than one A3 sheet at map scale is clipped to its middle part, and the
-status bar says so. The print preview is not built yet; it waits for freemapper-print to draw courses. The server listens on `127.0.0.1` only and needs an
+status bar says so. The "Print preview" button shows the selected course the way freemapper-print draws it, read-only and without the overlay (ADR 0057). The server listens on `127.0.0.1` only and needs an
 access token in the address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor) and ADR 0042,
 0043, 0047, 0048, 0049, 0051, 0052, 0053, 0054 and 0056.
 
