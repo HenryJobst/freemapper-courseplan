@@ -1,9 +1,12 @@
 //! Consistency checks on an [`Event`]. These reject files that cannot be a consistent event; they do not
 //! judge course quality (that is `check`).
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-use crate::{ControlCode, CourseKind, Event, FORMAT_VERSION, ModelError, RelayPart, SpecialObject};
+use crate::{
+    ControlCode, CourseKind, Event, FORMAT_VERSION, ModelError, RelayPart, ScoreControl, ScoreLink,
+    ScoreSettings, SpecialObject,
+};
 
 /// Longest control code or special object id, in characters (the limit of freemapper-course).
 pub const MAX_CODE_CHARS: usize = 64;
@@ -120,6 +123,10 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
         }
     }
 
+    if let Some(score) = &event.score {
+        check_score_settings(&mut errors, score);
+    }
+
     let mut course_names: HashSet<&str> = HashSet::new();
     for course in &event.courses {
         let name = &course.name;
@@ -180,7 +187,12 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
                     }
                 }
             }
-            CourseKind::Score { controls, .. } => used.extend(controls.iter().map(|c| &c.code)),
+            CourseKind::Score {
+                controls, links, ..
+            } => {
+                used.extend(controls.iter().map(|c| &c.code));
+                check_links(&mut errors, name, controls, links);
+            }
         }
 
         let mut unknown_reported: HashSet<&ControlCode> = HashSet::new();
@@ -240,5 +252,125 @@ fn shape(special: &SpecialObject) -> Option<(&'static str, usize, usize)> {
         }
         SpecialObject::DangerousArea { polygon, .. } => Some(("dangerous area", 3, polygon.len())),
         _ => None,
+    }
+}
+
+/// Links join two different controls of the course, none twice (either direction), and at most two meet at
+/// one control, so the links form chains a runner can follow.
+fn check_links(
+    errors: &mut Vec<ModelError>,
+    course: &str,
+    controls: &[ScoreControl],
+    links: &[ScoreLink],
+) {
+    let mut seen: HashSet<(&ControlCode, &ControlCode)> = HashSet::new();
+    let mut degree: HashMap<&ControlCode, usize> = HashMap::new();
+    let mut parent: HashMap<&ControlCode, &ControlCode> = HashMap::new();
+    for link in links {
+        let missing = [&link.a, &link.b]
+            .into_iter()
+            .find(|code| !controls.iter().any(|c| &c.code == *code));
+        let unknown = missing.is_some();
+        if let Some(code) = missing {
+            errors.push(ModelError::LinkToUnknownControl {
+                course: course.to_owned(),
+                a: link.a.clone(),
+                b: link.b.clone(),
+                code: code.clone(),
+            });
+        }
+        if link.a == link.b {
+            errors.push(ModelError::LinkToItself {
+                course: course.to_owned(),
+                code: link.a.clone(),
+            });
+            continue;
+        }
+        if unknown {
+            continue;
+        }
+        let key = if link.a.0 <= link.b.0 {
+            (&link.a, &link.b)
+        } else {
+            (&link.b, &link.a)
+        };
+        if !seen.insert(key) {
+            errors.push(ModelError::DuplicateLink {
+                course: course.to_owned(),
+                a: link.a.clone(),
+                b: link.b.clone(),
+            });
+            continue;
+        }
+        let (ra, rb) = (root(&mut parent, &link.a), root(&mut parent, &link.b));
+        if ra == rb {
+            errors.push(ModelError::LinkCycle {
+                course: course.to_owned(),
+                a: link.a.clone(),
+                b: link.b.clone(),
+            });
+            continue;
+        }
+        parent.insert(ra, rb);
+        for code in [&link.a, &link.b] {
+            *degree.entry(code).or_default() += 1;
+        }
+    }
+    let mut branching: Vec<&ControlCode> = degree
+        .into_iter()
+        .filter_map(|(code, n)| (n > 2).then_some(code))
+        .collect();
+    branching.sort_by(|x, y| x.0.cmp(&y.0));
+    for code in branching {
+        errors.push(ModelError::LinkBranches {
+            course: course.to_owned(),
+            code: code.clone(),
+        });
+    }
+}
+
+/// Union-find root of `code` among the controls joined so far.
+fn root<'a>(
+    parent: &mut HashMap<&'a ControlCode, &'a ControlCode>,
+    code: &'a ControlCode,
+) -> &'a ControlCode {
+    let mut at = code;
+    while let Some(next) = parent.get(at) {
+        at = next;
+    }
+    at
+}
+
+fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
+    let mut bad = |what: &'static str, reason: &'static str| {
+        errors.push(ModelError::ScoreSettingOutOfRange { what, reason });
+    };
+    if !(1..=9).contains(&s.value_max) {
+        bad("value_max", "must be 1 to 9");
+    }
+    if s.good_pace_s_per_km == 0 {
+        bad("good_pace_s_per_km", "must be more than 0");
+    }
+    if s.very_good_pace_s_per_km == 0 {
+        bad("very_good_pace_s_per_km", "must be more than 0");
+    }
+    if s.good_pace_s_per_km > 0
+        && s.very_good_pace_s_per_km > 0
+        && s.very_good_pace_s_per_km >= s.good_pace_s_per_km
+    {
+        bad("very_good_pace_s_per_km", "must be below the good pace");
+    }
+    for (what, (low, high)) in [
+        ("good_band_percent", s.good_band_percent),
+        ("very_good_band_percent", s.very_good_band_percent),
+    ] {
+        if low > high {
+            bad(what, "low is above high");
+        } else if high > 100 {
+            bad(what, "must not exceed 100");
+        }
+    }
+    if s.mix_hard_percent > 100 {
+        bad("mix_hard_percent", "must not exceed 100");
     }
 }

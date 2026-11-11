@@ -34,12 +34,14 @@ Geplant ist für die erste Version:
 - Abgleich mit Purple Pen (`.ppen`) in beide Richtungen, damit beide Programme parallel nutzbar sind (Import und
   Export und Abgleich sind schon nutzbar: `import`, `export --ppen` und `sync`; Purple Pen 4.0 öffnet den Export);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
+- Score-Bahnen mit Punktwerten, die der Postencode trägt, mit Zeitlimit, Abzug und Pflichtverbindungen, mit
+  vorgeschlagenen Postenstellen, einem Entwurf, der die Längenbänder trifft, Prüfungen und Export (`score`, schon nutzbar);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
   Sonderobjekte und Postenbeschreibungen, Befunde der Prüfung, Export, Import und Abgleich mit Purple Pen, mit
   Rückgängig und Wiederholen und einer Druckvorschau; auf der echten Karte), über die Kommandozeile oder über einen KI-Assistenten (MCP).
 
-Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Score-OL, Touren für die
+Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Touren für die
 Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge macht.
 
 Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
@@ -48,7 +50,7 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Skizze einer Sprintbahn in der Lübecker Altstadt"></a>
 
-Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Das Bild ist eine
+Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine Score-Bahn mit 28 Posten. Das Bild ist eine
 Skizze: Die Karte stammt aus freemapper-print, die Bahn ist darübergezeichnet. Befehle, Projektdatei und Ausgaben
 stehen unter [`examples/luebeck-sprint`](examples/luebeck-sprint/); alle Beispiele zeigt
 [`examples/README.md`](examples/README.md).
@@ -81,10 +83,25 @@ Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im P
 Bahn; `list` und `map` berichten über Einzelheiten und Karte, und `--json` gibt dieselbe Antwort wie die MCP-Werkzeuge. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten), und [`AGENTS.md`](AGENTS.md) sagt dem
 Assistenten, wie er das Programm selbst installiert und benutzt. Die Projektdatei ist
-TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
-bearbeiten oder messen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
+TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts- und Staffelbahnen kann das Programm
+noch nicht bearbeiten. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
 
-`freemapper-courseplan check <Projekt>` prüft die Einzelbahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
+Eine Score-Bahn hat Posten mit Punkten, ein Zeitlimit und einen Abzug je Minute darüber, dazu wahlweise
+Pflichtverbindungen, die man direkt nacheinander laufen muss. Der Code trägt den Wert: Posten 43 zählt 3 Punkte.
+`course add --kind score` legt die Bahn an, `score controls`, `score value`, `score link`, `score settings` und
+`score course set` bearbeiten sie. `score suggest` ordnet Postenstellen auf der Karte nach Routenwahl,
+`score draft` wählt Posten, Werte und Codes so, dass ein guter Läufer etwa 90 Prozent der Punkte holt und ein sehr
+guter Läufer gerade alle im Limit schafft, und `score length` misst eine Bahn nach, die du geändert hast. Der
+Entwurf schreibt erst mit `--apply`. Acht Regeln von `check` lesen Score-Bahnen (Wert und Code, ähnliche Codes,
+Ring und offensichtliche Reihenfolge, Längenbänder, Limit und Abzug, Verbindungen, Anteil schwerer Posten), der
+Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben die Postenliste und den
+Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferprofile sind eine
+erste Fassung; nimm die Längenbänder als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
+KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
+[Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das Lübecker Beispiel enthält eine fertige
+Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
+
+`freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
 `nor-bb-2021` (Bahnempfehlungen Berlin/Brandenburg), `freemapper-courseplan event profile <Projekt> wkb-2026
 --overlay nor-bb-2021` wählt sie. Eine gewollte Ausnahme trägt `finding accept <Projekt> <Prüfregel> --note TEXT` mit
@@ -93,16 +110,16 @@ Ausnahmen, zu denen kein Befund mehr passt, und die übersprungenen Prüfregeln.
 tragen Startfenster, Regelkategorien und erwartete Starter nach, die manche Prüfungen brauchen. Das Handbuch erklärt
 es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründen), und der KI-Assistent hat dafür die
 Werkzeuge `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`, `set_start_window` und
-`set_class`. Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht, und die Routenanalyse
+`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht, und die Routenanalyse
 fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
 
-`freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzelbahnen als IOF-XML 3.0 für die
+`freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzel- und Score-Bahnen als IOF-XML 3.0 für die
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
 geprüft und lässt sich mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder einlesen; ein
 fertiges Beispiel ist [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Ein Import in OE, Purple Pen
 oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Rückmeldungen von Leuten mit OE sind willkommen. Ist die Karte georeferenziert, tragen Start, Posten und Ziel
-auch Breite und Länge (ADR 0039). Abgeflaggte Strecken schreibt das Programm noch nicht, Mannschafts-, Staffel- und
-Score-Bahnen überspringt es. Kapitel 10 des
+auch Breite und Länge (ADR 0039). Abgeflaggte Strecken schreibt das Programm noch nicht, Mannschafts- und
+Staffelbahnen überspringt es. Eine Score-Bahn trägt Zeitlimit, Abzug und Verbindungen in einem eigenen Erweiterungselement. Kapitel 10 des
 [Handbuchs](docs/manual/de.md#10-weitergeben-iof-xml-für-oe) nennt die Einzelheiten.
 
 `freemapper-courseplan init <Karte> --ppen <Datei>` und `freemapper-courseplan import <Projekt> --ppen <Datei>`
@@ -111,7 +128,7 @@ Purple-Pen-Event, das für dieselbe Karte gezeichnet ist; der KI-Assistent hat d
 das Modell nicht fassen kann, etwa Varianten, Score-Bahnen oder Lücken, nennt das Programm als Hinweis. Ein Projekt
 mit Inhalt ersetzt `import` nur mit `--replace`; Kategorien und akzeptierte Befunde bleiben dabei. Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgleichen) erklärt es.
 
-`freemapper-courseplan export <Projekt> --ppen <Datei>` schreibt die Einzelbahnen als Purple-Pen-Event; der
+`freemapper-courseplan export <Projekt> --ppen <Datei>` schreibt die Einzelbahnen als Purple-Pen-Event (Score-Bahnen lässt es mit einem Hinweis aus); der
 KI-Assistent hat dafür das Werkzeug `export_ppen`. Eine vorhandene Datei ändert der Export an Ort und Stelle und
 lässt stehen, was das Projekt nicht kennt, etwa Lücken in Kreisen oder Kartenwechsel; mit `--new` schreibt er sie neu.
 Er löscht nie etwas und meldet, was in der Datei steht und im Projekt fehlt. Den Schreiber liefert `freemapper-course`

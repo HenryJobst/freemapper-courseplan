@@ -54,6 +54,44 @@ pub enum ModelError {
     /// An accepted finding needs a note; only an empty or blank one is refused.
     #[error("the note of accepted finding {rule} is empty")]
     BlankNote { rule: String },
+    #[error(
+        "course {course} has a link between {a} and {b}, but {code} is not one of its controls"
+    )]
+    LinkToUnknownControl {
+        course: String,
+        a: crate::ControlCode,
+        b: crate::ControlCode,
+        code: crate::ControlCode,
+    },
+    #[error("course {course} links control {code} to itself")]
+    LinkToItself {
+        course: String,
+        code: crate::ControlCode,
+    },
+    #[error("course {course} links {a} and {b} more than once")]
+    DuplicateLink {
+        course: String,
+        a: crate::ControlCode,
+        b: crate::ControlCode,
+    },
+    #[error(
+        "course {course} links control {code} to more than two controls; links must form chains"
+    )]
+    LinkBranches {
+        course: String,
+        code: crate::ControlCode,
+    },
+    #[error("course {course} links {a} and {b}, which closes a loop; links must form chains")]
+    LinkCycle {
+        course: String,
+        a: crate::ControlCode,
+        b: crate::ControlCode,
+    },
+    #[error("score setting {what} is out of range: {reason}")]
+    ScoreSettingOutOfRange {
+        what: &'static str,
+        reason: &'static str,
+    },
     /// Courses name their start and finish by id, so a control code must not look like one.
     #[error("control code {0} is also the id of a special object")]
     CodeClashesWithSpecial(crate::ControlCode),
@@ -404,6 +442,7 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
         "controls" | "legs" => element_of("accepted_findings"),
         "rule_overlays" => path == "event",
         "decisions" => path == "sync",
+        "links" => element_of("courses"),
         "bends" | "taped" => {
             path.starts_with("courses[") && path.contains('.') && path.ends_with(']')
         }

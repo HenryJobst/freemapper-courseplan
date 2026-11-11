@@ -153,6 +153,7 @@ impl From<ExportError> for SyncCmdError {
             ExportError::Overwrites(path) => SyncCmdError::Overwrites(path),
             // `open_inputs` returns none of these; each still maps to a clear error rather than a panic.
             ExportError::Course(_) => SyncCmdError::Internal("course"),
+            ExportError::Score(_) => SyncCmdError::Internal("score"),
             ExportError::Ppen(..) => SyncCmdError::Internal("ppen"),
             ExportError::ReadTarget(path, e) => SyncCmdError::Read(path, e),
             ExportError::IdsNotStored(_, e) => SyncCmdError::Project(e),

@@ -90,6 +90,16 @@ Schlüssel:
 | `length_table` | Bahnlänge in Prozent der HE-Bahn |
 | `difficulty_mix` | Leichte und schwere Kategorien auf einer Bahn |
 | `nor_lkm` | Leistungskilometer gegen die NOR-Empfehlung |
+| `score_value_matches_code` | Wert und Code der Score-Posten stimmen überein |
+| `score_code_ambiguity` | Verwechselbare Codes in einer Score-Bahn |
+| `score_ring` | Posten im Ring um Start und Ziel |
+| `score_obvious_order` | Offensichtliche Reihenfolge der Score-Posten |
+| `score_length_bands` | Länge der Score-Bahn für gute und sehr gute Läufer |
+| `score_limit_and_penalty` | Zeitlimit und Strafe der Score-Bahn |
+| `score_link_valid` | Pflichtverbindungen der Score-Bahn |
+| `score_mix` | Anteil schwerer Score-Posten |
+
+Die Schwellen der Score-Regeln (Ring, Reihenfolge, Mischung) sind Vorschläge dieses Programms, keine Werte einer Quelle.
 
 Eine Regel mit einem anderen Schlüssel wird abgelehnt. Ein neuer Schlüssel braucht Code in
 `src/check/` und einen Eintrag in `SCHEMA` in `src/rules.rs`.
@@ -117,8 +127,8 @@ Sprintkarten ISSprOM-Symbole haben.
 ## Werte und Einheiten
 
 `values` enthält, was die Prüfung liest. Eine Zahl trägt ihre Einheit im Namen: Der Name ist eine
-Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees`, `percent` und
-`factor`. Beispiele: `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`,
+Einheit oder endet auf `_<einheit>`. Die Einheiten sind `metres`, `mm`, `degrees`, `percent`, `factor` und
+`minutes`. Beispiele: `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`,
 `feature_search_mm = 1.0`. Ein Name wie `distance = 30` wird abgelehnt, weil niemand sieht, ob
 Meter im Gelände oder Millimeter auf der Karte gemeint sind. Eine Zahl unter einem Einheitennamen
 muss im Bereich ihrer Einheit liegen: `metres` und `mm` über 0, `factor` mindestens 0, `percent` von 0

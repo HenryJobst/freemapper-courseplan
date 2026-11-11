@@ -103,3 +103,14 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0057](0057-print-preview-and-overlay-parity.md) | Editor: print preview and overlay parity | Accepted | 2026-11-11 |
 | [0058](0058-course-factor-from-the-print-rules.md) | The course factor comes from the print rules | Accepted | 2026-11-11 |
 | [0059](0059-cli-and-mcp-share-ops.md) | The command line runs the MCP operations | Accepted | 2026-11-11 |
+| [0060](0060-score-settings-links-and-code-value.md) | Score settings, mandatory links and the value in the code | Accepted | 2026-11-11 |
+| [0061](0061-cost-surface-and-alternative-routes.md) | Cost surface: raster, speed classes and alternative routes | Accepted | 2026-11-11 |
+| [0062](0062-score-candidates-and-points.md) | Score courses: control candidates and points | Accepted | 2026-11-11 |
+| [0063](0063-score-points-and-codes.md) | Score courses: point values and codes | Accepted | 2026-11-11 |
+| [0064](0064-score-round-trips.md) | Score courses: round trips and length analysis | Accepted | 2026-11-11 |
+| [0065](0065-score-draft.md) | Score courses: the draft | Accepted | 2026-11-11 |
+| [0066](0066-score-checks.md) | Score courses: the checks | Accepted | 2026-11-11 |
+| [0067](0067-score-editing-ops.md) | Score courses: editing operations | Accepted | 2026-11-11 |
+| [0068](0068-score-suggest-draft-length-ops.md) | Score courses: suggest, draft and length operations | Accepted | 2026-11-11 |
+| [0069](0069-editor-score-panel.md) | Editor: the score panel, links on the map and long runs | Accepted | 2026-11-11 |
+| [0070](0070-score-export-and-sheets.md) | Score courses: export, CSV and evaluation sheet | Accepted | 2026-11-11 |

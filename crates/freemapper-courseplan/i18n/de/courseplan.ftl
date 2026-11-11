@@ -92,7 +92,7 @@ error-edit-id-taken = Sonderobjekt { $id } gibt es schon
 error-edit-name-taken = Bahn { $name } gibt es schon
 error-edit-outside-map = Der Punkt ({ $x }, { $y }) liegt außerhalb der Karte, die von ({ $min_x }, { $min_y }) bis ({ $max_x }, { $max_y }) reicht
 error-edit-in-use = { $id } wird noch von { $courses } verwendet. Ändere zuerst diese Bahnen
-error-edit-not-supported = Bahn { $course } ist keine Einzelbahn. Bisher lassen sich nur Einzelbahnen bearbeiten
+error-edit-not-supported = Bahn { $course } ist keine Einzelbahn. Bisher lassen sich nur Einzel- und Score-Bahnen bearbeiten
 error-edit-bad-index = Bahn { $course } hat keinen Posten an Position { $index }
 error-edit-special-would-cover-all-courses = { $count ->
     [one] Bahn { $course } ist die einzige Bahn von { $specials }; ohne sie gälte { $specials } für alle Bahnen. Ordne { $specials } zuerst einer anderen Bahn zu oder lösche es
@@ -156,7 +156,6 @@ check-skip-print-scale = Keine Prüfregel dieser Art für den Druckmaßstab 1:{ 
 check-skip-course-kind = { $kind ->
         [team] Mannschaftsbahnen
         [relay] Staffelbahnen
-        [score] Score-Bahnen
        *[other] Bahnen der Art { $kind }
     } werden noch nicht geprüft
 check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
@@ -164,6 +163,8 @@ check-skip-class-not-mapped = Kategorie { $name } ist keiner Regelkategorie zuge
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
+check-skip-score-no-map = Die Karte hat keine Objekte, daher lassen sich keine Laufzeiten berechnen
+check-skip-score-travel = Laufzeiten lassen sich nicht berechnen. Der Fehlertext ist englisch: { $error }
 check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster; event start-window setzt es
 check-skip-starters-missing = Kategorien ohne erwartete Starterzahl: { $classes }; class set --starters setzt sie
 check-skip-length-no-reference = Keine Bahn gehört zur Kategorie { $category }, daher fehlt der Längentabelle die Bezugsbahn
@@ -227,7 +228,27 @@ check-length-table-reference-twice = Die Bahnen { $courses } gehören alle zur K
 check-difficulty-mix = Die Bahn mischt leichte Kategorien ({ $easy }) mit schweren ({ $hard })
 check-nor-lkm = Die Bahn hat { $actual } Lkm ({ $length } km Länge, { $climb } m Anstieg) und liegt außerhalb der Empfehlung: { $rows }
 check-nor-lkm-row = { $categories }: Ziel-Lkm { $target }, erlaubt sind { $min } bis { $max } Lkm
+check-score-value-mismatch = Posten { $code } trägt im Code den Wert { $expected }, aber die Score-Bahn { $course } gibt ihm { $value } Punkte
+check-score-value-no-code = Der Code { $code } trägt keinen Wert, denn ein Score-Code hat mindestens zwei Ziffern und endet nicht auf 0. Die Score-Bahn { $course } gibt dem Posten aber { $value } Punkte
+check-score-code-alike = Die Codes { $first } und { $second } der Score-Bahn { $course } sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9
+check-score-ring = Die { $count } Posten der Score-Bahn { $course } stehen im Ring um Start und Ziel. Die größte Lücke beträgt { $gap } Grad, die Abstände streuen um { $variation } Prozent, die Reihenfolge ist also offensichtlich
+check-score-obvious-order = Die Posten der Score-Bahn { $course } haben eine offensichtliche Reihenfolge. { $hull } Prozent liegen auf der äußeren Hülle, und jedes Mal zum nächsten Posten zu laufen ist nur { $excess } Prozent länger als die kürzeste gefundene Reihenfolge
+check-score-length-good-below = Auf der Score-Bahn { $course } holt der gute Läufer { $percent } Prozent aller Punkte, unter dem Band von { $low } bis { $high } Prozent. Die Bahn ist zu lang
+check-score-length-good-above = Auf der Score-Bahn { $course } holt der gute Läufer { $percent } Prozent aller Punkte, über dem Band von { $low } bis { $high } Prozent. Die Bahn ist zu kurz
+check-score-length-very-good-misses = Auf der Score-Bahn { $course } schafft der sehr gute Läufer nicht alle Posten im Limit. { $missing } Punkte bleiben außer Reichweite
+check-score-length-very-good-over = Auf der Score-Bahn { $course } braucht der sehr gute Läufer { $percent } Prozent des Limits für alle Posten
+check-score-length-very-good-early = Auf der Score-Bahn { $course } holt der sehr gute Läufer alle Posten und ist nach { $percent } Prozent des Limits im Ziel, vor dem Band von { $low } bis { $high } Prozent
+check-score-limit-range = Die Score-Bahn { $course } hat ein Zeitlimit von { $limit } Minuten. Üblich sind { $min } bis { $max } Minuten
+check-score-penalty-pays = Die Score-Bahn { $course } zieht { $penalty } Punkte je Minute über dem Limit ab, weniger als ihr höchster Postenwert von { $highest }. Überziehen kann sich lohnen
+check-score-link-self = Die Score-Bahn { $course } verbindet Posten { $code } mit sich selbst
+check-score-link-not-in-course = Die Verbindung { $first }–{ $second } der Score-Bahn { $course } nennt Posten { $missing }, den die Bahn nicht hat
+check-score-link-duplicate = Die Verbindung { $first }–{ $second } kommt in der Score-Bahn { $course } mehrfach vor
+check-score-link-out-of-bounds = Die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert das Sperrgebiet { $id }
+check-score-link-forbidden-route = Die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert den verbotenen Weg { $id }
+check-score-link-no-choice = Die Verbindung { $first }–{ $second } in der Score-Bahn { $course } hat keine zweite Route ähnlicher Länge. Bei Absicht den Befund mit Notiz akzeptieren
+check-score-mix = In der Score-Bahn { $course } sind { $hard } von { $count } Posten schwer, also { $actual } Prozent. Die Einstellung verlangt { $wanted } Prozent bei { $tolerance } Punkten Toleranz
 check-source-claude = Vorschlag von freemapper-courseplan
+check-source-user = Entscheidung des Projektinhabers
 
 ## Kommandozeile
 
@@ -368,6 +389,10 @@ cli-arg-class-set-no-starters = Die erwartete Starterzahl entfernen
 ## Bahnbefehle
 
 cli-info-course = Bahn { $name }: { $controls } Posten, { $km } km, Anstieg { $climb } m
+cli-info-course-score = Score-Bahn { $name }: { $controls ->
+    [one] 1 Posten
+   *[other] { $controls } Posten
+}, { $points } Punkte, Zeitlimit { $limit } Minuten
 cli-info-course-unmeasured = Bahn { $name }: { $kind }, Länge noch nicht unterstützt
 word-decimal-point = ,
 word-taped = abgeflaggt
@@ -399,8 +424,8 @@ cli-edit-leg-cleared = Bahn { $name }: Knickpunkte und Abflaggung der Strecke na
 cli-edit-acceptance-dropped = Bahn { $name }: Akzeptierten Befund auf der Strecke { $from } nach { $to } entfernt, weil es sie nicht mehr gibt
 cli-edit-start-leg-cleared = Bahn { $name }: Knickpunkte und Abflaggung der Strecke vom Start entfernt, weil sie jetzt zu einem anderen Bahnpunkt führt
 
-cli-help-course = Einzelbahnen anlegen, ändern, nummerieren und entfernen
-cli-help-course-add = Eine Einzelbahn anlegen
+cli-help-course = Einzel- und Score-Bahnen anlegen, ändern, nummerieren und entfernen
+cli-help-course-add = Eine Einzel- oder Score-Bahn anlegen
 cli-help-course-controls = Die Posten einer Bahn ersetzen
 cli-help-course-remove = Eine Bahn samt ihrem Namen in den Sonderobjekten entfernen
 cli-help-course-rename = Eine Bahn umbenennen
@@ -504,14 +529,14 @@ cli-event-profile-set-overlays = Regelprofil { $value } mit { $count ->
 
 cli-help-export = Die Bahnen für andere Programme in eine Datei schreiben
 cli-arg-export-project = Die Projektdatei
-cli-arg-export-iof-xml = Die Einzelbahnen als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben; eine vorhandene Datei wird ersetzt
+cli-arg-export-iof-xml = Die Einzel- und Score-Bahnen als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben; eine vorhandene Datei wird ersetzt
 export-iof-xml-written = { $count ->
     [one] 1 Bahn nach { $path } geschrieben
    *[other] { $count } Bahnen nach { $path } geschrieben
 }
 export-iof-xml-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach IOF XML exportiert
 export-iof-xml-no-geo = die Karte hat keine nutzbare Georeferenzierung, die Posten tragen daher keine Breite und Länge, nur Kartenpositionen
-export-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI oder --ppen DATEI
+export-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI, --ppen DATEI oder --csv DATEI mit --course NAME
 error-export-iof-xml-character = Export nicht möglich: Ein Text des Ereignisses enthält das Zeichen { $point }, das XML nicht erlaubt
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
@@ -717,7 +742,12 @@ mcp-instructions =
     geschrieben. Ablauf: event_info, dann map_extent und map_features_near, um Positionen zu finden, dann
     add_special für Start und Ziel, add_control für jeden Posten, add_course, place_numbers und noch einmal
     event_info, um die Länge zu lesen. Jeder Aufruf speichert seine Änderung. Eine abgelehnte Änderung lässt die
-    Datei, wie sie war. Bisher lassen sich nur Einzelbahnen bearbeiten, messen und prüfen. check prüft die Bahnen
+    Datei, wie sie war. Einzel- und Score-Bahnen lassen sich bearbeiten und prüfen, eine gemessene Länge haben nur Einzelbahnen. Eine
+    Score-Bahn legt add_score_course an; ihre Posten setzen set_score_controls und set_control_value, ihre
+    Pflichtverbindungen add_score_link und remove_score_link, Zeitlimit und Abzug set_score_course_details und die
+    Punktespanne und Paces der Veranstaltung set_score_settings. score_suggest listet Postenplätze, score_draft entwirft
+    eine Score-Bahn und schreibt nur mit apply true, score_length analysiert eine vorhandene. Alle drei brauchen
+    Sekunden. Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten. check prüft die Bahnen
     gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
     (set_start_window) oder Regelkategorie und erwartete Starterzahl einer Kategorie (set_class); fehlen sie, führt
     check die Prüfregel als übersprungen. Einen Befund, den der Bahnleger so haben will, bekommt accept_finding mit
@@ -750,7 +780,7 @@ mcp-tool-list-specials = Die Sonderobjekte auflisten (Start, Ziel, Pflichtstreck
 mcp-tool-list-classes = Die Kategorien auflisten, mit Regelkategorie und erwarteten Startern.
 mcp-tool-add-control = Einen Posten an einer Position in Kartenmillimetern anlegen. Ohne code gilt der niedrigste freie Code ab 31. Die Position muss auf der Karte liegen. Gibt den Code zurück.
 mcp-tool-move-control = Einen Posten an eine neue Position in Kartenmillimetern setzen. Die Position muss auf der Karte liegen.
-mcp-tool-set-control-code = Den Code eines Postens ändern. Die Bahnen, die akzeptierten Befunde und jede andere Stelle, die den Posten nennt, ziehen mit. Der neue Code muss frei sein, darf nicht leer sein und höchstens 64 Zeichen lang sein.
+mcp-tool-set-control-code = Den Code eines Postens ändern. Die Bahnen, die akzeptierten Befunde und jede andere Stelle, die den Posten nennt, ziehen mit. In einer Score-Bahn übernimmt der Posten den Wert, den sein neuer Code trägt; ein Code ohne Wert lässt den alten Wert stehen. Der neue Code muss frei sein, darf nicht leer sein und höchstens 64 Zeichen lang sein.
 mcp-tool-remove-control = Einen Posten samt seinen Besuchen in Einzelbahnen entfernen. Das Ergebnis nennt die Bahnen, die er verlassen hat, und in cleared_legs die Strecken, die Knickpunkte und Abflaggung verloren haben, weil sie jetzt zu einem anderen Bahnpunkt führen.
 mcp-tool-describe-control = Die Beschreibungssymbole eines Postens setzen, Spalte C bis H, als IOF-Symbol-IDs. Spalten, die du weglässt, behalten ihr Symbol. clear leert zuerst alle Spalten.
 mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zwischen Kreislinie und Nummer in Druckmillimetern. clear stellt den Standardplatz wieder her.
@@ -771,12 +801,12 @@ mcp-tool-set-course-number = Die Nummernlage eines Postens in einer Einzelbahn s
 mcp-tool-map-features-near = Kartenobjekte im Umkreis radius_mm um eine Position, das nächste zuerst: Symbolnummer, Geometrieart (point, line, area), Abstand in mm und der Teil der Karte.
 mcp-tool-map-extent = Kleinste und größte Ecke der Kartenobjekte in Kartenmillimetern, der Kartenmaßstab und die Kartenart.
 mcp-tool-init-event = Eine Veranstaltung aus einer OOM-Karte (Sprint oder Schulhof) anlegen und ihre Projektdatei schreiben. Gibt den Pfad der Projektdatei zurück.
-mcp-tool-check = Die Einzelbahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc, section und title, rule_note und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; in unmatched die akzeptierten Befunde, zu denen kein Befund mehr passt, etwa weil ein Posten oder eine Bahn fehlt (remove_accepted_finding entfernt sie, wenn sie nicht mehr gebraucht werden; sie zählen nie als Fehler); und die übersprungenen Prüfregeln mit dem Grund, auch die von einem Aufsatz abgeschalteten. Eine Strecke in location hat course, after und die Kennungen ihrer Enden in from und to. Mannschafts-, Staffel- und Score-Bahnen werden noch nicht geprüft.
+mcp-tool-check = Die Einzel- und Score-Bahnen gegen das Regelprofil und die Aufsätze der Veranstaltung prüfen. Gibt in summary die Anzahlen zurück; die Befunde mit rule, profile, severity (error, warning oder hint), location als Objekt mit kind, message_id, args, source mit doc, section und title, rule_note und text; die akzeptierten Befunde mit der Begründung des Bahnlegers; in unmatched die akzeptierten Befunde, zu denen kein Befund mehr passt, etwa weil ein Posten oder eine Bahn fehlt (remove_accepted_finding entfernt sie, wenn sie nicht mehr gebraucht werden; sie zählen nie als Fehler); und die übersprungenen Prüfregeln mit dem Grund, auch die von einem Aufsatz abgeschalteten. Eine Strecke in location hat course, after und die Kennungen ihrer Enden in from und to. Mannschafts- und Staffelbahnen werden noch nicht geprüft.
 mcp-tool-accept-finding = Einen Befund mit Begründung als gewollte Ausnahme akzeptieren. Nenne ihn so, wie check ihn meldet: die Prüfregel und ihren Ort, als controls, Strecken in legs oder course. Auch die id eines Starts oder Ziels kann in controls stehen, so wie check sie meldet. Eine Strecke wird mit course und after angegeben; der Server speichert die Kennungen ihrer Enden aus der Bahn, wie sie jetzt ist, sodass der Befund wiederkommt, wenn die Strecke später zwischen anderen Punkten verläuft. Lass alle drei weg für einen Befund der ganzen Veranstaltung. Wer denselben Befund noch einmal akzeptiert, ersetzt die Begründung. check führt ihn dann unter accepted.
 mcp-tool-remove-accepted-finding = Einen akzeptierten Befund entfernen, damit check ihn wieder meldet. Nenne ihn mit der Prüfregel und demselben Ort wie beim Akzeptieren. Eine Strecke wird mit course und after angegeben. Entfernt wird zuerst der Eintrag für die Strecke, wie sie jetzt verläuft; gibt es keinen, alle Einträge an dieser Position, sodass sich ein Eintrag aus unmatched auch dann entfernen lässt, wenn sich seine Strecke oder Bahn geändert hat. Gibt die entfernten Einträge zurück.
 mcp-tool-set-rule-profile = Das Basis-Regelprofil der Veranstaltung und seine Aufsätze setzen. Beide werden vorher geladen; ein unbekanntes Profil oder ein Aufsatz als Basis wird mit der Liste der verfügbaren Profile abgelehnt. Ohne overlays hat die Veranstaltung keine Aufsätze.
 mcp-tool-set-start-window = Das Startfenster der Veranstaltung setzen, die Minuten vom ersten bis zum letzten Start, mindestens 1, oder mit no_start_window entfernen. Die Prüfung der Startkapazität teilt die erwarteten Starter dadurch.
-mcp-tool-export-iof-xml = Die Einzelbahnen der Veranstaltung als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben. Erwartet project und path, die zu schreibende Datei mit der Endung .xml; eine vorhandene Datei wird ersetzt. Gibt path, courses (die Zahl der geschriebenen Bahnen) und skipped zurück, die ausgelassenen Mannschafts-, Staffel- und Score-Bahnen mit name und kind. Hat die Karte eine Georeferenzierung, tragen Posten, Start und Ziel Breite und Länge; geo_positions sagt, ob das der Fall war.
+mcp-tool-export-iof-xml = Die Einzel- und Score-Bahnen der Veranstaltung als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben. Erwartet project und path, die zu schreibende Datei mit der Endung .xml; eine vorhandene Datei wird ersetzt. Gibt path, courses (die Zahl der geschriebenen Bahnen) und skipped zurück, die ausgelassenen Mannschafts- und Staffelbahnen mit name und kind. Hat die Karte eine Georeferenzierung, tragen Posten, Start und Ziel Breite und Länge; geo_positions sagt, ob das der Fall war.
 mcp-tool-export-ppen = Die Einzelbahnen der Veranstaltung in ein Purple-Pen-Event (.ppen) schreiben. Erwartet project, path (die .ppen-Datei) und new. Der Export ändert eine vorhandene Datei an Ort und Stelle und behält alles, was das Projekt nicht geändert hat. Eine fehlende Datei legt er an, und mit new schreibt er die Datei von Grund auf; in beiden Fällen wird ein Projekt ohne sources.ppen mit der Datei verknüpft. Der Export löscht nie; Objekte, die in der Datei stehen und im Projekt fehlen, bleiben und werden gemeldet. Die Purple-Pen-Kennungen des Projekts gelten nur für die Datei, die sources.ppen nennt, und nur für diese Datei speichert der Export die Kennungen, die er vergibt, im Projekt. Gibt path, courses (die Zahl der geschriebenen Bahnen), skipped (die ausgelassenen Mannschafts-, Staffel- und Score-Bahnen mit name und kind), notes (die Texte zu dem, was ausgelassen, geändert oder behalten wurde), patched (true, wenn eine vorhandene Datei geändert wurde) und ids_stored (wie viele Objekte des Projekts zum ersten Mal eine Purple-Pen-Kennung bekamen) zurück.
 
 mcp-param-project = Projektdatei der Veranstaltung, ein absoluter Pfad oder einer mit ~ am Anfang, zum Beispiel ~/karten/halle.courseplan.toml
@@ -956,7 +986,7 @@ editor-status-reloaded = Die Projektdatei hat sich geändert und wurde neu gelad
 editor-status-ppen-changed = Die Purple-Pen-Datei hat sich geändert. Abgleichen?
 editor-status-state-failed = Das Projekt lässt sich nicht anzeigen. Die Serverkonsole nennt den Grund.
 editor-status-overlay-failed = Die Bahnsymbole ließen sich nicht laden.
-editor-status-course-unsupported = Diese Art von Bahn (Score-, Team- oder Staffelbahn) lässt sich im Editor noch nicht anzeigen.
+editor-status-course-unsupported = Diese Art von Bahn (Team- oder Staffelbahn) lässt sich im Editor noch nicht anzeigen.
 editor-status-preview-on = Druckvorschau an. Die Bahn kommt vom Druck-Renderer, bearbeiten lässt sich nichts.
 editor-status-preview-off = Druckvorschau aus.
 editor-op-unknown = Diese Operation gibt es nicht.
@@ -1300,3 +1330,272 @@ cli-map-bad-radius = { $value } ist kein Radius. Gib eine Zahl in Kartenmillimet
 cli-query-io-failed = Die Projektdatei konnte nicht gelesen werden
 cli-arg-event-start-window-none = Das Startfenster entfernen, statt es zu setzen
 cli-event-start-window-removed = Startfenster entfernt
+error-model-link-to-unknown-control = Bahn { $course } hat eine Verbindung zwischen { $a } und { $b }, aber { $code } gehört nicht zu ihren Posten
+error-model-link-to-itself = Bahn { $course } verbindet Posten { $code } mit sich selbst
+error-model-duplicate-link = Bahn { $course } verbindet { $a } und { $b } mehr als einmal
+error-model-link-branches = Bahn { $course } verbindet Posten { $code } mit mehr als zwei Posten; Verbindungen müssen Ketten bilden
+error-model-score-setting-out-of-range = Score-Einstellung { $what } liegt außerhalb des Bereichs: { $reason }
+word-score-problem-must-be-1-to-9 = muss 1 bis 9 sein
+word-score-problem-must-be-more-than-0 = muss größer als 0 sein
+word-score-problem-low-is-above-high = der untere Wert liegt über dem oberen
+word-score-problem-must-not-exceed-100 = darf 100 nicht überschreiten
+error-model-link-cycle = Bahn { $course } verbindet { $a } und { $b } und schließt damit einen Kreis; Verbindungen müssen Ketten bilden
+word-score-problem-must-be-below-the-good-pace = muss unter der Pace des guten Läufers liegen
+
+## Score-Bahnen (ADR 0067)
+
+word-what-link = Verbindung
+error-edit-score-course = Bahn { $course } ist eine Score-Bahn. Diese Änderung gibt es nur für Einzelbahnen
+error-edit-not-score-course = Bahn { $course } ist keine Score-Bahn
+error-edit-value-disagrees = Der Code von Posten { $code } trägt den Wert { $expected }, nicht { $value }. Ändere stattdessen den Code, der Wert folgt ihm
+error-edit-code-carries-no-value = Der Code von Posten { $code } trägt keinen Wert. Gib einen an
+error-edit-duplicate-score-control = Posten { $code } steht zweimal in der Score-Bahn
+error-edit-bad-time-limit = Das Zeitlimit muss mindestens 1 Minute betragen
+error-edit-value-max-below-control = Der höchste Wert kann nicht { $value_max } sein: Posten { $code } ist { $value } Punkte wert. Gib diesem Posten zuerst einen anderen Code oder entferne ihn.
+error-score-unreachable = Auf dieser Karte gibt es keinen Weg von ({ $from_x }, { $from_y }) nach ({ $to_x }, { $to_y })
+error-score-start-unreachable = Der Start bei ({ $x }, { $y }) ist nicht erreichbar, er liegt in einem gesperrten Bereich
+error-score-finish-unreachable = Das Ziel bei ({ $x }, { $y }) ist nicht erreichbar, es liegt in einem gesperrten Bereich
+error-score-map-empty = Die Karte hat keine Objekte, daher gibt es nichts, worauf sich Wege suchen lassen
+error-score-bad-route-setting = Die Wegeeinstellung { $name } liegt außerhalb des Bereichs: { $value }
+error-score-grid-too-large = Die Karte bräuchte { $cells } Rasterzellen, mehr als die Grenze von { $limit }
+error-score-code-space-exhausted = Für die gewünschten Posten sind nur noch { $limit } freie Codes übrig
+error-score-value-space-exhausted = Nur { $limit } freie Codes tragen den Wert { $value }, gewünscht waren mehr Posten dieses Werts
+error-score-bad-value = Ein Postenwert muss von 1 bis { $value_max } reichen, nicht { $value }
+error-score-positions-mismatch = { $values } Werte, aber { $coords } Positionen angegeben
+error-score-link-does-not-fit = Die Verbindung zwischen Posten { $a } und { $b } passt nicht ins Zeitlimit
+error-score-bad-link = Die Verbindung zwischen Posten { $a } und { $b } nennt einen Posten, den es nicht gibt, oder zweimal denselben
+error-score-link-end-not-candidate = Ein Ende der gewünschten Verbindung { $link } liegt auf keinem Kandidaten
+error-score-links-not-a-chain = Die Verbindungen an Posten { $control } bilden keine Kette: Ein Posten hat höchstens zwei Verbindungen, und sie dürfen keinen Ring schließen
+error-score-link-tour-not-found = Es wurde keine Runde gefunden, die alle Verbindungen im Zeitlimit hält. Die Verbindung zwischen Posten { $a } und { $b } passt am schlechtesten. Bei größeren Bahnen sucht das Programm nicht erschöpfend, das ist also kein Beweis
+mcp-error-no-score-settings-change = nichts zu ändern; gib mindestens eines von value_max, good_pace_s_per_km, very_good_pace_s_per_km, mix_hard_percent und seed an
+mcp-error-no-score-course-change = nichts zu ändern; gib time_limit_min, penalty_per_min oder no_penalty an
+mcp-error-score-code-empty = Ein Posten einer Score-Bahn braucht einen Code
+mcp-tool-add-score-course = Eine Score-Bahn ohne Posten anlegen, aus Start, Ziel und einem Zeitlimit in Minuten. Ohne Abzug speichert die Bahn keinen und nimmt den Standard: den höchsten Postenwert der Bahn, mindestens value_max, damit sich eine Minute zu viel nie lohnt. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück. Die Posten kommen mit set_score_controls dazu.
+mcp-tool-set-score-controls = Die Posten einer Score-Bahn ersetzen, in beliebiger Reihenfolge. Jeder Eintrag hat einen Code und kann einen Wert haben. Ohne Wert gibt der Code ihn vor: die zweite Ziffer eines zweistelligen Codes, die letzte eines längeren. Ein Wert, der vom Code abweicht, wird abgelehnt, ebenso einer außerhalb von 1 bis value_max. Ein Posten braucht einen Code und darf nur einmal vorkommen, und ein Posten, den eine Verbindung nennt, lässt sich nicht weglassen. Ein Standardabzug folgt den Posten von selbst. Gibt name, controls mit code und value, penalty_per_min und penalty_is_default zurück.
+mcp-tool-set-control-value = Den Wert eines Postens einer Score-Bahn setzen. Der Code trägt den Wert, daher wird nur der Wert des Codes angenommen; um einem Posten einen anderen Wert zu geben, ändere seinen Code mit set_control_code, der Wert folgt. Der Aufruf repariert einen gespeicherten Wert, der nicht mehr zum Code passt. Gibt name, code und value zurück.
+mcp-tool-add-score-link = Verlangen, dass zwei Posten einer Score-Bahn direkt nacheinander gelaufen werden, in beliebiger Richtung. Wer es nicht tut, wird disqualifiziert. Beide Posten müssen zur Bahn gehören, ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen Ring schließen. Gibt name, a, b und links zurück, alle Verbindungen der Bahn.
+mcp-tool-remove-score-link = Die Verbindung zwischen zwei Posten einer Score-Bahn entfernen; die Reihenfolge der beiden ist gleich. Gibt name, a, b und links zurück, die verbleibenden Verbindungen.
+mcp-tool-set-score-settings = Die Score-Einstellungen ändern, die alle Score-Bahnen der Veranstaltung teilen: value_max (höchster Punktewert, 1 bis 9), good_pace_s_per_km und very_good_pace_s_per_km (Sekunden je Kilometer), mix_hard_percent (Anteil schwerer Posten) und seed (legt die Entwurfssuche fest). Nicht genannte Felder bleiben. Gibt alle Einstellungen zurück.
+mcp-tool-set-score-course-details = Das Zeitlimit in Minuten oder den Abzug je angefangene Minute einer Score-Bahn ändern. penalty_per_min speichert einen Abzug; no_penalty kehrt zum Standard zurück, dem höchsten Postenwert der Bahn, mindestens value_max. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück.
+mcp-param-time-limit-min = Zeitlimit in Minuten, mindestens 1
+mcp-param-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste Postenwert der Bahn, mindestens value_max]
+mcp-param-set-score-course-details-time-limit-min = Zeitlimit in Minuten, mindestens 1 [Standard: unverändert]
+mcp-param-set-score-course-details-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: unverändert]
+mcp-param-set-score-course-details-no-penalty = Zum Standardabzug zurückkehren, dem höchsten Postenwert der Bahn, mindestens value_max [Standard: false]
+mcp-param-set-score-controls-controls = Die Posten der Bahn, jeder ein Objekt mit code und optional value
+mcp-param-set-score-controls-value = Punkte des Postens [Standard: der Wert, den der Code trägt]
+mcp-param-value = Punkte des Postens, von 1 bis zum höchsten Wert der Veranstaltung
+mcp-param-a = Ein Posten der Verbindung, ein Code
+mcp-param-b = Der andere Posten der Verbindung, ein Code
+mcp-param-value-max = Höchster Punktewert, 1 bis 9
+mcp-param-good-pace-s-per-km = Pace eines guten Läufers in Sekunden je Kilometer
+mcp-param-very-good-pace-s-per-km = Pace eines sehr guten Läufers in Sekunden je Kilometer, unter der Pace eines guten Läufers
+mcp-param-mix-hard-percent = Anteil schwerer Posten in der Mischung, 0 bis 100 Prozent
+mcp-param-seed = Startwert der Entwurfssuche; derselbe Startwert gibt denselben Entwurf
+cli-help-score = Score-Bahnen bearbeiten: Posten mit Werten, Pflichtverbindungen, Einstellungen
+cli-help-score-controls = Die Posten einer Score-Bahn ersetzen. Jeder Posten ist ein Code, wahlweise gefolgt von = und seinem Wert; ohne Wert gibt der Code ihn vor
+cli-help-score-value = Den Wert eines Postens einer Score-Bahn setzen. Der Code trägt den Wert, daher wird nur dieser Wert angenommen; zum Ändern des Werts den Code ändern
+cli-help-score-link = Pflichtverbindungen einer Score-Bahn hinzufügen oder entfernen
+cli-help-score-link-add = Verlangen, dass zwei Posten direkt nacheinander gelaufen werden, in beliebiger Richtung
+cli-help-score-link-remove = Die Verbindung zwischen zwei Posten entfernen
+cli-help-score-settings = Die Score-Einstellungen der Veranstaltung ändern
+cli-help-score-course = Eine Score-Bahn ändern
+cli-help-score-course-set = Zeitlimit oder Abzug einer Score-Bahn ändern; --no-penalty kehrt zum Standardabzug zurück
+cli-arg-score-controls-codes = Posten, durch Kommas getrennt, zum Beispiel 31,42 oder 31=1,42=2
+cli-arg-score-value-value = Punkte des Postens
+cli-arg-score-json = Die Antwort als JSON ausgeben, dieselbe wie das MCP-Werkzeug
+cli-arg-score-link-a = Ein Posten der Verbindung
+cli-arg-score-link-b = Der andere Posten der Verbindung
+cli-arg-score-settings-value-max = Höchster Punktewert, 1 bis 9
+cli-arg-score-settings-good-pace = Pace eines guten Läufers, in Sekunden je Kilometer oder als m:ss
+cli-arg-score-settings-very-good-pace = Pace eines sehr guten Läufers, in Sekunden je Kilometer oder als m:ss
+cli-arg-score-settings-mix-hard = Anteil schwerer Posten in der Mischung, 0 bis 100 Prozent
+cli-arg-score-settings-seed = Startwert der Entwurfssuche
+cli-arg-score-course-set-time-limit = Zeitlimit in Minuten
+cli-arg-score-course-set-penalty = Abzug in Punkten je angefangene Minute über dem Limit
+cli-arg-score-course-set-no-penalty = Zum Standardabzug zurückkehren, dem höchsten Postenwert der Bahn, mindestens dem höchsten Wert der Veranstaltung
+cli-arg-course-add-kind = Art der Bahn, individual oder score
+cli-arg-course-add-time-limit = Zeitlimit in Minuten; für eine Score-Bahn nötig
+cli-arg-course-add-json = Die Antwort als JSON ausgeben, dieselbe wie das MCP-Werkzeug; nur mit --kind score
+cli-arg-course-add-penalty = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste Postenwert der Bahn, mindestens der höchste Wert der Veranstaltung]
+cli-score-course-added = Score-Bahn { $name } angelegt: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit{ $default ->
+    [yes] { " " }(der Standard)
+   *[no] { "" }
+}
+cli-score-controls = { $name }: { $count } Posten, { $total } Punkte ({ $list })
+cli-score-value = Posten { $code } von { $name } zählt { $value } Punkte
+cli-score-link-added = { $a } und { $b } in { $name } verbunden
+cli-score-link-removed = Verbindung zwischen { $a } und { $b } in { $name } entfernt
+cli-score-settings = Score-Einstellungen: höchster Wert { $value_max }, guter Läufer { $good } s/km, sehr guter Läufer { $very_good } s/km, { $mix_hard } Prozent schwere Posten, Startwert { $seed }
+cli-score-course-set = { $name }: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit{ $default ->
+    [yes] { " " }(der Standard)
+   *[no] { "" }
+}
+cli-score-bad-pace = { $value } ist keine Pace; gib Sekunden je Kilometer an, etwa 250, oder Minuten und Sekunden, etwa 4:10
+cli-score-bad-control = { $value } ist kein Posten mit Wert; schreibe den Code oder den Code, = und den Wert, etwa 31 oder 31=1
+cli-course-add-score-only = --time-limit, --penalty und --json gehören zu --kind score
+cli-course-add-needs-time-limit = eine Score-Bahn braucht --time-limit
+cli-course-add-individual-only = --controls, --classes, --climb und --print-scale gelten nicht für --kind score; die Posten kommen mit score controls, die Klassen mit course set
+editor-op-add-score-course = Score-Bahn hinzufügen
+editor-op-set-score-controls = Score-Posten ändern
+editor-op-set-control-value = Postenwert setzen
+editor-op-add-score-link = Verbindung hinzufügen
+editor-op-remove-score-link = Verbindung entfernen
+editor-op-set-score-settings = Score-Einstellungen ändern
+editor-op-set-score-course-details = Score-Bahn ändern
+score-miss-good-below = Der gute Läufer holt { $percent } Prozent aller Punkte, { $miss } Prozentpunkte unter dem Band von { $low } bis { $high } Prozent. Die Menge ist für das Limit zu lang.
+score-miss-good-above = Der gute Läufer holt { $percent } Prozent aller Punkte, { $miss } Prozentpunkte über dem Band von { $low } bis { $high } Prozent. Die Menge ist für das Limit zu kurz.
+score-miss-very-good-misses = Der sehr gute Läufer schafft nicht alle Posten im Limit. { $missing } Punkte, { $miss } Prozent aller Punkte, bleiben außer Reichweite.
+score-miss-very-good-over = Der sehr gute Läufer braucht { $percent } Prozent des Limits für alle Posten, { $miss } Prozentpunkte zu viel.
+score-miss-very-good-early = Der sehr gute Läufer holt alle Posten und ist nach { $percent } Prozent des Limits im Ziel, { $miss } Prozentpunkte vor dem Band von { $low } bis { $high } Prozent.
+score-draft-best = Der nächste Versuch hat { $count } Posten mit { $points } Punkten.
+score-draft-hint-limit-up = Ein längeres Zeitlimit würde helfen.
+score-draft-hint-limit-down = Ein kürzeres Zeitlimit würde helfen.
+score-draft-hint-more-candidates = Die Karte bietet für dieses Limit zu wenige geeignete Stellen. Mehr Kartenobjekte oder ein kürzeres Limit würden helfen.
+score-draft-hint-code-space = Die Karte hat genug Stellen, aber die freien Codes gehen vorher aus. Erhöhe den höchsten Wert in den Score-Einstellungen (höchstens 9) oder gib Codes auf der Karte frei.
+score-draft-hint-faster-profile = Der gute Läufer holt zu wenige Punkte. Ein schnelleres Tempo für den guten Läufer in den Score-Einstellungen würde helfen.
+score-draft-hint-impossible = Mit diesen Eingaben hilft weder ein anderes Limit noch ein anderes Tempo. Prüfe Start, Ziel und Verbindungen.
+mcp-error-score-no-start = das Event hat keinen Start; lege zuerst mit add_special einen an
+mcp-error-score-no-finish = das Event hat kein Ziel; lege zuerst mit add_special eines an
+mcp-error-score-bad-distance = { $value } ist keine Entfernung; gib Kartenmillimeter an, null oder mehr
+mcp-error-score-draft-ends = die Score-Bahn { $name } hat schon Start und Ziel; lass start und finish weg oder nenne die der Bahn
+mcp-tool-score-suggest = Schlägt Postenstellen für eine Score-Bahn aus der Karte vor, nach Routenwahl geordnet. Jeder Kandidat hat eine Position in Kartenmillimetern, den Symbolcode seines Objekts, route_choice und difficulty von 0 bis 1, effort_s (Sekunden vom Start für den guten Läufer) und den vorgeschlagenen Wert. Schreibt nichts. Braucht auf einer großen Karte Sekunden. Start und Ziel sind standardmäßig die der genannten Bahn, sonst der jeweils erste im Event; liegt ein Ende in einem gesperrten Gebiet, wird es abgelehnt.
+mcp-tool-score-draft = Entwirft eine Score-Bahn: Posten mit Werten und Codes, sodass der gute Läufer im Zeitlimit etwa 90 Prozent aller Punkte holt und der sehr gute Läufer alle Posten schafft und knapp unter dem Limit ins Ziel kommt. Schreibt nichts, solange apply nicht true ist; dann legt es die Score-Bahn an oder ersetzt die Posten einer vorhandenen Score-Bahn, eine Bahn anderer Art wird abgelehnt. links nennt Paare von Positionen, jede aus score_suggest, die direkt nacheinander gelaufen werden. Verfehlt ein Entwurf ein Band, kommt ein Fehler zurück, der jede Abweichung mit ihrer Größe nennt und was helfen würde. Braucht Sekunden.
+mcp-tool-score-length = Analysiert die Länge einer vorhandenen Score-Bahn: die besten Runden des guten und des sehr guten Läufers im Limit, den Anteil an Punkten und am Limit und jede Abweichung von den Bändern mit ihrer Größe. Meldet nur; ändert die Bahn nie.
+mcp-param-score-suggest-limit = Höchstzahl der Kandidaten [Standard: 60, höchstens 200]
+mcp-param-score-suggest-min-distance-mm = Kleinster Abstand in Kartenmillimetern zwischen Kandidaten, Posten, Start und Ziel [Standard: 15 m im Gelände bei 1:4000 und größeren Maßstäben, sonst 30 m]
+mcp-param-score-suggest-course = Name einer Score-Bahn. Ihr Start und ihr Ziel werden benutzt; eine zusätzlich angegebene Start- oder Ziel-Id hat Vorrang
+mcp-param-score-suggest-start = Id des Start-Sonderobjekts [Standard: der erste Start]
+mcp-param-score-suggest-finish = Id des Ziel-Sonderobjekts [Standard: das erste Ziel]
+mcp-param-score-draft-start = Id des Start-Sonderobjekts einer neuen Bahn [Standard: der erste Start]
+mcp-param-score-draft-finish = Id des Ziel-Sonderobjekts einer neuen Bahn [Standard: das erste Ziel]
+mcp-param-score-draft-links = Paare von Positionen, die direkt nacheinander gelaufen werden; jedes Ende ist die Position eines Kandidaten aus score_suggest
+mcp-param-score-draft-a = Ein Ende der Verbindung, eine Position in Kartenmillimetern
+mcp-param-score-draft-b = Das andere Ende der Verbindung, eine Position in Kartenmillimetern
+mcp-param-score-draft-apply = Den Entwurf als Score-Bahn schreiben [Standard: false, der Entwurf wird nur zurückgegeben]
+editor-op-score-draft = Score-Bahn entwerfen
+editor-op-score-apply-draft = Score-Entwurf übernehmen
+editor-score-heading = Score-Bahn
+editor-score-limit = Zeitlimit (Minuten)
+editor-score-penalty = Strafpunkte je Minute darüber
+editor-score-penalty-default = Standardstrafe
+editor-score-controls = Posten und Werte
+editor-score-col-code = Code
+editor-score-col-value = Wert
+editor-score-col-choice = Routenwahl
+editor-score-col-difficulty = Schwierigkeit
+editor-score-col-effort = Ab Start (s)
+editor-score-links = Pflichtverbindungen
+editor-score-links-none = Keine Verbindungen.
+editor-score-link-hint = Eine Verbindung ist als gestrichelte Linie zwischen ihren beiden Posten gezeichnet.
+editor-score-link-remove = Verbindung entfernen
+editor-score-settings = Läufer und Mischung (alle Score-Bahnen)
+editor-score-value-max = Höchster Wert
+editor-score-good-pace = Tempo guter Läufer (s je km)
+editor-score-very-good-pace = Tempo sehr guter Läufer (s je km)
+editor-score-mix-hard = Schwere Posten (Prozent)
+editor-score-seed = Startwert des Entwurfs
+editor-score-good-band = Spanne guter Läufer (Prozent aller Punkte)
+editor-score-very-good-band = Spanne sehr guter Läufer (Zieleinlauf, Prozent des Limits)
+editor-score-suggest = Posten vorschlagen
+editor-score-draft = Bahn entwerfen
+editor-score-length-run = Länge prüfen
+editor-score-apply = Entwurf übernehmen
+editor-score-discard = Verwerfen
+editor-score-accept = Übernehmen
+editor-score-working = Läuft. Das kann einige Sekunden dauern.
+editor-score-candidates = Kandidaten
+editor-score-candidates-hint = Kandidaten und Entwürfe sind als gestrichelte Kreise mit ihrem Wert gezeichnet. Sie sind nicht gespeichert, bis du sie übernimmst.
+editor-score-no-code-hint = Einige Kandidaten haben keinen freien Code, weil die Codes für ihren Wert aufgebraucht sind. Erhöhe den höchsten Wert oder entferne Posten.
+editor-score-no-code = Kein freier Code
+editor-score-draft-result = Entwurf
+editor-score-draft-hard = Schwere Posten (tatsächlich / gewünscht)
+editor-score-length-heading = Längenbericht
+editor-score-good = Guter Läufer, Punkte
+editor-score-good-share = Guter Läufer, Anteil aller Punkte
+editor-score-very-good = Sehr guter Läufer, Punkte
+editor-score-very-good-share = Sehr guter Läufer, Zieleinlauf (Prozent des Limits)
+editor-score-bands-ok = Beide Läufer liegen in ihren Spannen.
+editor-score-bands-missed = Eine Spanne wird verfehlt.
+editor-score-discarded = Das Projekt hat sich außerhalb des Editors geändert. Kandidaten und Entwurf sind verworfen.
+editor-score-status-suggested = Kandidaten gefunden.
+editor-score-status-drafted = Entwurf fertig. Die Bahn bleibt, wie sie ist, bis du den Entwurf übernimmst.
+editor-score-status-applied = Entwurf übernommen.
+editor-score-status-length = Länge geprüft.
+editor-score-status-accepted = Posten zur Bahn hinzugefügt.
+editor-score-no-course-mode = Der Bahnmodus bearbeitet Einzelbahnen. Für diese Bahn dient das Score-Fenster.
+editor-tree-new-score-course = Neue Score-Bahn...
+editor-status-score-created = Score-Bahn angelegt.
+cli-help-score-suggest = Schlägt Postenstellen für eine Score-Bahn vor, nach Routenwahl geordnet. Schreibt nichts. Braucht auf einer großen Karte Sekunden. Mit --json ist die Antwort die des MCP-Werkzeugs score_suggest
+cli-help-score-draft = Entwirft eine Score-Bahn, sodass beide Läuferprofile die Längenbänder treffen. Schreibt nur mit --apply. Ein Entwurf, der ein Band verfehlt, endet mit 1 und nennt jede Abweichung. Mit --json ist die Antwort die des MCP-Werkzeugs score_draft
+cli-help-score-length = Analysiert die Länge einer Score-Bahn und meldet jede Abweichung von den Bändern. Ändert nichts. Mit --json ist die Antwort die des MCP-Werkzeugs score_length
+cli-arg-score-suggest-limit = Höchstzahl der Kandidaten, höchstens 200 [Standard: 60]
+cli-arg-score-suggest-min-distance = Kleinster Abstand zwischen Kandidaten in Kartenmillimetern [Standard: aus dem Kartenmaßstab]
+cli-arg-score-suggest-course = Score-Bahn, deren Start und Ziel benutzt werden; --start und --finish haben Vorrang [Standard: erster Start und erstes Ziel]
+cli-arg-score-suggest-start = Id des Start-Sonderobjekts [Standard: der erste Start]
+cli-arg-score-suggest-finish = Id des Ziel-Sonderobjekts [Standard: das erste Ziel]
+cli-arg-score-draft-time-limit = Zeitlimit in Minuten
+cli-arg-score-draft-start = Id des Start-Sonderobjekts einer neuen Bahn [Standard: der erste Start]
+cli-arg-score-draft-finish = Id des Ziel-Sonderobjekts einer neuen Bahn [Standard: das erste Ziel]
+cli-arg-score-draft-link = Zwei Positionen von Kandidaten, X,Y;X,Y in Kartenmillimetern, die direkt nacheinander gelaufen werden; für mehr Verbindungen wiederholen
+cli-arg-score-draft-apply = Den Entwurf als Score-Bahn schreiben; eine Bahn dieses Namens wird ersetzt, wenn sie eine Score-Bahn ist
+cli-score-suggest = { $count ->
+    [one] 1 Kandidat
+   *[other] { $count } Kandidaten
+}, beste Routenwahl zuerst
+cli-score-suggest-line = { $at }  { $symbol }  Wert { $value }, Routenwahl { $choice }, Schwierigkeit { $difficulty }, { $effort } s vom Start
+cli-score-draft = Entwurf der Score-Bahn { $name }: { $count } Posten, { $points } Punkte; nichts geschrieben, mit --apply wird er geschrieben
+cli-score-draft-applied = Score-Bahn { $name } geschrieben: { $count } Posten, { $points } Punkte
+cli-score-draft-control = { $code }  Wert { $value }  bei { $at }
+cli-score-length = { $name }: { $count } Posten, Zeitlimit { $limit } Minuten
+cli-score-length-good = guter Läufer: { $points } von { $all } Punkten, { $percent } Prozent (Band { $low } bis { $high } Prozent)
+cli-score-length-very-good = sehr guter Läufer: { $points } Punkte, im Ziel nach { $percent } Prozent des Limits (Band { $low } bis { $high } Prozent)
+cli-score-length-ok = beide Läufer liegen in den Bändern
+cli-score-bad-link-ends = { $value } ist keine Verbindung; schreibe zwei Positionen als X,Y;X,Y
+cli-score-bad-distance = { $value } ist keine Entfernung; gib Kartenmillimeter an, null oder mehr
+mcp-error-interrupted = der Vorgang wurde vor dem Ende abgebrochen
+error-score-unknown-course = Die Bahn { $course } gibt es nicht
+error-score-not-a-score-course = Die Bahn { $course } ist keine Score-Bahn
+error-score-unknown-control = Die Bahn nennt Posten { $code }, den die Veranstaltung nicht hat
+cli-arg-export-csv = Die Posten einer Score-Bahn als CSV mit Code, Wert und Position in Kartenmillimetern schreiben; braucht --course. Eine vorhandene Datei wird ersetzt
+cli-arg-export-sheet = Den Auswertungsbogen einer Score-Bahn als Markdown schreiben; braucht --course. Eine vorhandene Datei wird ersetzt
+cli-arg-export-course = Die Score-Bahn für --csv und --sheet
+export-needs-course = --csv und --sheet brauchen --course NAME, die Score-Bahn, die geschrieben werden soll
+export-csv-written = Postenliste der Bahn { $course } nach { $path } geschrieben
+export-sheet-written = Auswertungsbogen der Bahn { $course } nach { $path } geschrieben
+mcp-tool-export-score-csv = Die Posten einer Score-Bahn als CSV schreiben. Erwartet project, course und path, die zu schreibende Datei mit der Endung .csv; eine vorhandene Datei wird ersetzt. Die erste Zeile ist die Kopfzeile code,value,x_mm,y_mm. Positionen sind Kartenmillimeter im Kartenmaßstab, y zeigt nach unten, mit Punkt geschrieben. Die Zeilen sind nach Code geordnet. Liefert path, course und controls, die Zahl der Zeilen. Eine Bahn, die keine Score-Bahn ist, wird abgelehnt.
+mcp-tool-export-score-sheet = Den Auswertungsbogen einer Score-Bahn als Markdown-Datei schreiben, die sich gut drucken lässt. Erwartet project, course und path, die zu schreibende Datei mit der Endung .md; eine vorhandene Datei wird ersetzt. Der Bogen nennt das Zeitlimit, den Abzug je angefangene Minute, die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, die Pflichtverbindungen mit der Regel, dass disqualifiziert wird, wer eine Verbindung nicht direkt läuft, und jeden Posten mit seinem Wert. Liefert path und course. Eine Bahn, die keine Score-Bahn ist, wird abgelehnt.
+mcp-param-export-score-csv-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .csv
+mcp-param-export-score-sheet-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .md
+mcp-param-export-score-csv-course = Name der Score-Bahn
+mcp-param-export-score-sheet-course = Name der Score-Bahn
+mcp-error-not-csv = { $path } endet nicht auf .csv; nenne eine .csv-Datei
+mcp-error-not-md = { $path } endet nicht auf .md; nenne eine .md-Datei
+score-sheet-title = Auswertungsbogen für { $course }
+score-sheet-event = Veranstaltung: { $title }
+score-sheet-time-limit = Zeitlimit: { $minutes ->
+    [one] 1 Minute
+   *[other] { $minutes } Minuten
+}
+score-sheet-penalty = Abzug: { $points ->
+    [one] 1 Punkt
+   *[other] { $points } Punkte
+} für jede angefangene Minute über dem Limit
+score-sheet-penalty-default = Abzug: { $points ->
+    [one] 1 Punkt
+   *[other] { $points } Punkte
+} für jede angefangene Minute über dem Limit. Die Bahn legt keinen Abzug fest, das ist der Standard.
+score-sheet-tie = Bei gleicher Punktzahl gewinnt, wer schneller ist.
+score-sheet-total = Punkte insgesamt: { $points } auf { $count ->
+    [one] 1 Posten
+   *[other] { $count } Posten
+}
+score-sheet-links-heading = Pflichtverbindungen
+score-sheet-no-links = Diese Bahn hat keine Pflichtverbindungen.
+score-sheet-links-rule = Eine Verbindung sind zwei Posten, die direkt nacheinander angelaufen werden müssen, in beliebiger Reihenfolge. Wer eine Verbindung nicht direkt läuft, wird disqualifiziert.
+score-sheet-col-first = Erster Posten
+score-sheet-col-second = Zweiter Posten
+score-sheet-controls-heading = Posten
+score-sheet-col-code = Code
+score-sheet-col-value = Wert
+export-course-unused = --course gilt nur mit --csv oder --sheet; für --iof-xml und --ppen gibt es keine Bahnauswahl

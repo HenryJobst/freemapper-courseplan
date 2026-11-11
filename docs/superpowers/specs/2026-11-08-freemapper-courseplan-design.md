@@ -28,7 +28,7 @@ about 30 minutes of manual work per course in OCAD and warns that codes get mixe
 
 **freemapper-courseplan** is a course-setting application for the suite. The author sets courses by hand in a
 browser editor on top of the OOM map *(user)*. Where it helps, and only after it has been tested, AI supports
-the work as a checker and as a source of proposals *(user)*. Later versions add relay, team and score formats,
+the work as a checker and as a source of proposals *(user)*. Score courses are built since 0.13 (see [score design](2026-11-11-score-courses-design.md)). Later versions add relay and team formats,
 pre-planned control-placer tours and a route analysis.
 
 Users: course setters across the German orienteering community, and internationally where it makes sense
@@ -79,7 +79,7 @@ after that is Claude's call)*
 3. **Relay and forking**: variants, combinatorics check (every team runs every part equally often), variant
    balance from the route analysis.
 4. **Score**: control values, time limit, penalties (BOF B12 as the main rule source; WKB has no score format
-   since 2025).
+   since 2025). *Built* (plan 2026-11-11, [score design](2026-11-11-score-courses-design.md)).
 5. **Control-placer tours** *(user)*: planned beforehand by the course setter or split on site by the number
    of helpers present *(user: both cases)*. A routing optimisation over real walking times. Tour sheets are
    printed by freemapper-print (§5.8 there) *(agreed with freemapper-print)*.
@@ -201,7 +201,7 @@ individual)*.
 | `individual` | ordered controls, start to finish | yes |
 | `team` | ordered mandatory controls (labelled A, B, C …) plus a set of free controls; free controls count only between the first and the last mandatory control; each free control by at least one member; team size per class (3 nationally, 2 in some states); team time is the last member's | model only |
 | `relay` | a course family: shared parts and forks with variants, assigned to legs and teams | model only |
-| `score` | a set of controls with values, a time limit and a penalty rule | model only |
+| `score` | a set of controls with values, a time limit, a penalty rule and optional mandatory links | built: editing, suggestions, draft, length, checks, IOF XML, CSV and evaluation sheet; see the [score design](2026-11-11-score-courses-design.md) and ADR 0060 to 0070 |
 
 Rules for `team` are in WKB 2026 B 3.3.2.3 and research §3.6. On the map and in the control description,
 mandatory controls show letter and code, free controls show the code only, sorted by code, without a
@@ -211,7 +211,7 @@ On relay and score maps the control code may follow the number, as "1-31" or "1 
 `number_label = "number" | "number_dash_code" | "number_paren_code"`, with an override per course. The default
 is `number` *(user, 2026-11-09)* *(agreed with freemapper-print)*. ISSkiOM 2019 symbol 704 puts a
 hyphen between number and code; ISOM and ISSprOM do not standardise a code after the number. The label text sets the width of the number box, for placement and for drawing. This is built with the
-team, relay and score milestone, not before.
+team and relay milestone, not before. A score course has no running order and needs no numbers.
 
 ## 5. Architecture
 
@@ -371,7 +371,7 @@ Claude's call.)*
   (freemapper-print ADR 0010); whether OE12 tolerates the standard's direction is unknown (ADR 0033, addendum).
 - **Built** (ADR 0033, `export PROJECT --iof-xml FILE` and the MCP tool `export_iof_xml`): individual courses
   with map positions in millimetres (y unmirrored, down as in the schema), control order, leg lengths, climb, `MapTextPosition` relative
-  to the circle centre, and class assignments. Team, relay and score courses are skipped and named. `createTime`
+  to the circle centre, and class assignments. Team and relay courses are skipped and named. Score courses are written as well (ADR 0070, [score design](2026-11-11-score-courses-design.md)). `createTime`
   is UTC with a `Z` marker. Geo positions follow in ADR 0039: a `Position` with six decimals from freemapper-core's `MapGrid`, written when
   the map is georeferenced with a supported coordinate system, otherwise left out with one message *(Claude's call)*.
   Not yet written: taped legs and the map extent (written as 0/0 mm) *(Claude's call)*. The output validates against `IOF.xsd`; the example is
@@ -550,7 +550,10 @@ Paths are relative to the project file. The editor keeps comments it did not cre
    Under way: stage 1 (read-only preview with a placeholder map), stage 2 (editing controls, save guard,
    undo), stage 3 (courses, bends, numbers, special objects), stage 4 (control descriptions), stage 5 (findings,
    export and import, sync) and stage 6 (the real map) are built; the print preview (stage 7, Task 20, ADR 0057) is built on the course layer of freemapper-core 0.15.0; see §5.8.
-6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
+6. **Score courses** (after M4, plan 2026-11-11) *(user)*: score course model, mandatory links, editing in CLI, MCP and
+   editor, route-based suggestions and drafts, checks, IOF XML, CSV and evaluation sheet. Built; see the
+   [score design](2026-11-11-score-courses-design.md).
+7. **Later** in the order of §2: route analysis, team, relay, control-placer tours, AI checker and
    proposals, shared data model crate.
 
 The builder may start the editor earlier if placing controls through the CLI turns out too awkward.

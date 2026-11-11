@@ -117,9 +117,96 @@ dort an.
   liegt, etwa bei einer von Hand gesetzten Nummer mit 6 mm.
 - Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
-- Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das
-  Programm das.
+- Einzel- und Score-Bahnen lassen sich bearbeiten (siehe Score-Bahnen unten). `info` nennt die Länge von
+  Einzelbahnen; bei einer Score-Bahn nennt es Posten, Punkte und Zeitlimit, und `score length` misst sie.
+  Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten; das Programm sagt das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat, und `list controls|courses|specials|classes <Projekt>` führt die Einzelheiten auf; `map extent <Projekt>` und `map near <Projekt> --at X,Y --radius MM` berichten über die Karte. Alle nehmen `--json`.
+
+### Score-Bahnen
+
+Auf einer Score-Bahn besuchen die Läufer die Posten in beliebiger Reihenfolge innerhalb eines Zeitlimits. Jeder
+Posten zählt Punkte, und jede angefangene Minute über dem Limit kostet Punkte. Diese Befehle bauen eine solche
+Bahn; `check` prüft sie (Abschnitt 8).
+
+```sh
+freemapper-courseplan course add halle.courseplan.toml Score45 --kind score --start S1 --finish F1 --time-limit 45
+freemapper-courseplan score controls halle.courseplan.toml Score45 31,32,43,54
+freemapper-courseplan score link add halle.courseplan.toml Score45 31 54
+freemapper-courseplan score settings halle.courseplan.toml --value-max 5 --good-pace 4:10
+freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
+```
+
+- Der Code trägt den Wert: die zweite Ziffer eines zweistelligen Codes, die letzte eines längeren. 43 zählt also
+  3 Punkte, 54 zählt 4. `score controls` liest den Wert aus dem Code. Ein Wert, den du nach `=` schreibst, etwa
+  `43=3`, muss dazu passen; weicht er ab, lehnt das Programm ab und rät, den Code zu ändern. `score value` folgt
+  derselben Regel und repariert deshalb nur einen Wert in der Datei, der nicht mehr zu seinem Code passt. Ein Code
+  ohne Wert, etwa `A1`, braucht einen: `A1=2`.
+- Die Werte reichen von 1 bis zum höchsten Wert der Veranstaltung, standardmäßig 5, höchstens 9
+  (`score settings --value-max`).
+- Ohne `--penalty` speichert die Bahn keinen Abzug und nimmt den Standard: den höchsten Postenwert der Bahn,
+  mindestens den höchsten Wert der Veranstaltung, damit sich eine Minute zu viel nie lohnt. Der Standard folgt den
+  Posten. `score course set --penalty N` speichert eine eigene Zahl, `--no-penalty` kehrt zum Standard zurück.
+- Wer den Code eines Postens ändert (`control code`), gibt ihm den Wert des neuen Codes. Ein Code ohne Wert lässt
+  den alten Wert stehen, und `check` meldet den Unterschied.
+- Eine Verbindung nennt zwei Posten, die der Läufer direkt nacheinander anlaufen muss, in beliebiger Richtung. Wer
+  das nicht tut, wird disqualifiziert. Ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen
+  Ring schließen. Ein Posten mit Verbindung bleibt in der Bahn, bis du die Verbindung entfernst
+  (`score link remove`).
+- `score settings` schreibt den Abschnitt `[score]` der Veranstaltung: Wertebereich, die Pace eines guten und eines
+  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), den Anteil schwerer Posten und den Startwert.
+- Jeder dieser Befehle nimmt `--json` und gibt aus, was das gleichnamige MCP-Werkzeug antwortet
+  (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
+  `set_score_settings`, `set_score_course_details`). Der Editor führt dieselben Operationen aus, und Rückgängig
+  nimmt jede zurück.
+- Knicke, Strecken, Postennummern und `course controls` gehören zu Einzelbahnen; eine Score-Bahn lehnt sie ab.
+  Kategorien, Druckmaßstab, `course rename` und `course remove` gelten für beide. Mannschafts- und Staffelbahnen
+  lassen sich noch nicht bearbeiten.
+- Der IOF-XML-Export schreibt auch Score-Bahnen (siehe Export unten). Der Purple-Pen-Export lässt sie weiter aus und sagt es. Der Editor zeichnet Score-Bahnen und hat ein
+  Score-Fenster (siehe „Das Score-Fenster“ im Editor-Kapitel).
+
+#### Listen und Auswertungsbogen
+
+```sh
+freemapper-courseplan export hall.courseplan.toml --course Score45 --csv score45.csv --sheet score45.md
+```
+
+`--csv` schreibt eine Zeile je Posten: `code,value,x_mm,y_mm`, nach Code geordnet, mit Positionen in Kartenmillimetern im Kartenmaßstab (y zeigt nach unten) und einem Punkt als Dezimaltrenner. `--sheet` schreibt den Auswertungsbogen als Markdown, ein Text, der sich so gut drucken lässt: das Zeitlimit, den Abzug je angefangene Minute (den gespeicherten oder den Standard), die Regel, dass bei gleicher Punktzahl gewinnt, wer schneller ist, die Pflichtverbindungen mit der Regel, dass disqualifiziert wird, wer eine Verbindung nicht direkt läuft, und eine Tabelle der Posten mit ihren Werten. Beide brauchen `--course` und lehnen eine Bahn ab, die keine Score-Bahn ist. Eine vorhandene Datei wird ersetzt. Die Werkzeuge heißen `export_score_csv` und `export_score_sheet`, mit `project`, `course` und `path` (Endung `.csv` oder `.md`). Die Entscheidungen stehen in ADR 0070.
+
+#### Vorschläge, Entwurf und Länge
+
+Diese drei Befehle lesen die Karte und suchen Wege auf einem Raster der Kartensymbole (ohne Höhen). Auf einer großen
+Karte brauchen sie deshalb einige Sekunden. Start und Ziel müssen außerhalb von Gebäuden und gesperrten Gebieten
+liegen; sonst meldet das Programm, dass Start oder Ziel nicht erreichbar ist.
+
+```sh
+freemapper-courseplan score suggest hall.courseplan.toml --limit 30
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45 --apply
+freemapper-courseplan score length hall.courseplan.toml Score45
+```
+
+- `score suggest` listet Postenplätze, die beste Routenwahl zuerst, jeweils mit Position, Symbolcode des
+  Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
+  der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
+  `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
+  sonst 30 m). `--course NAME` nimmt Start und Ziel dieser Score-Bahn (`--start` und `--finish` haben weiter
+  Vorrang); ohne die Option gelten der erste Start und das erste Ziel des Events. Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
+- `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
+  standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
+  95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
+  `--apply` legt er die Posten an und erstellt die Score-Bahn, oder er ersetzt die Posten einer vorhandenen
+  Score-Bahn und entfernt die Posten, die nur sie nutzte. Eine Bahn anderer Art wird abgelehnt. Im Editor lässt sich
+  die Änderung rückgängig machen.
+- `--link "X,Y;X,Y"` macht zwei Positionen zu einer Pflichtverbindung; jede muss die Position eines Kandidaten aus
+  `score suggest` sein, mit einem `--limit` von mindestens 60 aufgerufen, dem Pool des Entwurfs. Die Option lässt sich für weitere Verbindungen wiederholen.
+- Trifft kein Entwurf beide Bänder, endet der Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
+  Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, freie Codes (die Postenzahl ist
+  durch den Coderaum begrenzt: erhöhe den höchsten Wert mit `score settings --value-max`, höchstens 9, oder gib Codes
+  auf der Karte frei), ein schnellerer guter Läufer oder dass diese Eingaben nicht gehen.
+- `score length` analysiert eine vorhandene Bahn, zum Beispiel nachdem du einen Posten verschoben hast, und meldet
+  dieselben Bänder und Abweichungen. Es ändert die Bahn nie.
+- Dieselben Antworten liefern die Werkzeuge `score_suggest`, `score_draft` und `score_length`; `--json` gibt sie aus.
+  Der Entwurf ist bei gleichem Projekt bei jedem Lauf derselbe.
 
 ## 4. Der Editor
 
@@ -303,6 +390,28 @@ des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
 Die Liste kommt aus freemapper-core. Jedes Symbol, das du wählen kannst, lässt sich also auch in eine `.ppen`-Datei
 schreiben (ADR 0051).
 
+### Das Score-Fenster
+
+Eine Score-Bahn hat keine Reihenfolge. Der Editor zeichnet deshalb ihre Posten, Start und Ziel und jede
+Pflichtverbindung als gestrichelte Linie zwischen ihren beiden Posten. Wähle die Bahn im Baum, dann öffnet sich in den
+Eigenschaften das Score-Fenster.
+
+- **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
+  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten und der Startwert. Die beiden
+  Spannen werden angezeigt, nicht bearbeitet. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
+  Veranstaltung braucht dafür einen Start und ein Ziel.
+- **Posten vorschlagen.** Zeigt geordnete Kandidaten als gestrichelte Kreise mit ihrem Wert und als Tabelle.
+  „Übernehmen“ fügt einen der Bahn hinzu, als zwei Schritte für Rückgängig. Ein Kandidat ohne freien Code lässt sich
+  nicht übernehmen.
+- **Bahn entwerfen.** Rechnet einen Entwurf für das Zeitlimit und zeigt Posten, Verbindungen und den Längenbericht
+  mit beiden Läuferprofilen. Nichts ändert sich, bis du „Entwurf übernehmen“ wählst. Das schreibt genau den Entwurf auf
+  dem Bildschirm, ohne neue Suche, und ersetzt die Posten und die Verbindungen dieser Bahn, als ein Schritt für
+  Rückgängig. Ändert sich das Zeitlimit oder eine Einstellung, ist der Entwurf verworfen. „Länge prüfen“ meldet die Bahn, wie sie ist.
+- **Während es läuft.** Ein Vorschlag oder Entwurf braucht Sekunden. Die Schaltflächen bleiben gesperrt, das Fenster
+  sagt, dass es arbeitet, und der Editor bemerkt Änderungen an der Datei weiter. Kandidaten und Entwürfe werden nicht
+  gespeichert. Ändert ein anderes Programm das Projekt in der Zwischenzeit, sind sie verworfen und das Fenster sagt es.
+- Bahnmodus und Druckvorschau gibt es nur für Einzelbahnen.
+
 ### Sonderobjekte
 
 - **Zeichnen.** Wähle „Sonderobjekt“, dann eine Art (Start, Ziel, Erste-Hilfe-Posten, Wasserstelle, markierte
@@ -340,8 +449,8 @@ Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus 
 Das Menü „Veranstaltung“ hat vier Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
 verknüpfte Purple-Pen-Datei des Projekts.
 
-- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzelbahnen, benannt nach der
-  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team-, Staffel- und Score-Bahnen) und sagt es, wenn die Karte
+- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzel- und Score-Bahnen, benannt nach der
+  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team- und Staffelbahnen) und sagt es, wenn die Karte
   keine Georeferenz hat.
 - **Nach Purple Pen exportieren…** „In die verknüpfte Datei schreiben“ aktualisiert die Datei, die `sources.ppen`
   nennt, nach den Regeln von `export --ppen`: Sie ändert nur, was das Projekt geändert hat, und speichert neue
@@ -470,7 +579,7 @@ Die Entscheidungen dazu stehen in ADR 0042, 0045 und 0046.
 
 ## 8. Prüfen: Hinweise lesen, Ausnahmen begründen
 
-`check` legt jede Einzelbahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was
+`check` legt jede Einzel- und Score-Bahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was
 auffällt. Es ändert nichts an der Projektdatei. Du entscheidest, ob du die Bahn änderst oder den Befund als gewollte
 Ausnahme begründest.
 
@@ -484,8 +593,8 @@ Läuft die Bahn an einem Posten fast geradeaus, also mit einem Winkel über 170�
 einen Hinweis (`wkb2026.leg.straight_angle_hint`). Der Posten ändert die Laufrichtung dann kaum, und hinter dem
 Kreis ist kein Platz für die Nummer.
 
-Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
-geprüft wurde.
+Mannschafts- und Staffelbahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
+geprüft wurde. Für Score-Bahnen gibt es eigene Regeln (siehe Score-Bahnen unten).
 
 ### Eine Zeile lesen
 
@@ -545,6 +654,37 @@ Häufige Gründe:
 
 Eine übersprungene Prüfregel hat nicht geprüft. Ein leeres Ergebnis heißt deshalb nicht, dass alles besteht. Lies
 die Liste einmal durch, bevor du dich darauf verlässt.
+
+### Score-Bahnen
+
+`check` prüft auch Score-Bahnen. Die Regeln für Einzelbahnen (Winkel, Postenabstände entlang der Strecken) gelten für
+sie nicht; acht eigene Regeln lesen die Postenmenge, das Limit und die Verbindungen. Alle Kennungen beginnen mit
+`wkb2026.score.`:
+
+- `value_code` (Fehler): Der Wert eines Postens stimmt mit dem Wert überein, den sein Code trägt (Kapitel 3,
+  Score-Bahnen).
+- `code_ambiguity` (Warnung): Zwei Codes der Bahn sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch
+  6 und 9, etwa 61 und 91.
+- `ring` und `order` (Warnungen): Die Posten stehen nicht im Ring um Start und Ziel, und ihre Reihenfolge ist nicht
+  offensichtlich, zum Beispiel weil sie auf der äußeren Hülle liegen und die Tour zum jeweils nächsten Posten fast die
+  kürzeste ist. Beide Regeln gelten erst ab sechs Posten.
+- `length_bands` (Warnung): Auf der Kostenfläche der Karte holt der gute Läufer standardmäßig 87 bis 93 Prozent aller
+  Punkte, und der sehr gute Läufer läuft alle Posten an und ist nach 95 bis 100 Prozent des Limits im Ziel. Die
+  Bänder sind Einstellungen der Veranstaltung. Die Regel sucht Routen und braucht auf einer großen Karte einige
+  Sekunden. Ohne Kartenobjekte oder bei einer gescheiterten Suche wird sie mit Grund übersprungen.
+- `limit_penalty` (Warnung): Das Limit liegt zwischen 30 und 90 Minuten, und eine Minute darüber kostet mindestens
+  so viele Punkte wie der höchste Postenwert.
+- `link` (Fehler oder Warnung): Eine Verbindung braucht zwei verschiedene Posten der Bahn und darf nur einmal
+  vorkommen. Eine Luftlinie durch Sperrgebiet oder über einen verbotenen Weg ist eine Warnung, ebenso eine Verbindung
+  ohne zweite Route ähnlicher Länge. Für den zweiten Fall hat die Datei kein Merkmal; ist er gewollt, akzeptierst du
+  den Hinweis mit einer Begründung.
+- `mix` (Warnung): Der Anteil schwerer Posten passt auf 15 Punkte genau zur Einstellung `mix_hard_percent`. Die Regel
+  urteilt ab fünf Posten.
+
+Mehrere dieser Grenzen sind Vorschläge von freemapper-courseplan, keine Werte aus einer Quelle; die Quelle in der
+Zeile sagt, welche. Einen Befund an einem Postenpaar akzeptierst du mit `--controls`, einen an der ganzen Bahn mit
+`--course`, wie im Beispiel `examples/luebeck-sprint/score-check.de.txt`. Mannschafts- und Staffelbahnen bleiben
+ungeprüft.
 
 ### Eine Ausnahme begründen
 
@@ -794,15 +934,16 @@ Mit `export` gibst du die Bahnen an Auswertungsprogramme weiter, die IOF-XML 3.0
 freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
-Das Programm schreibt alle Einzelbahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
+Das Programm schreibt alle Einzel- und Score-Bahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
 Postenfolge jeder Bahn, Streckenlängen, Anstieg, die Lage der Postennummern und die Zuordnung der Bahnen zu
 Kategorien. Eine vorhandene Datei ersetzt es erst, wenn die neue vollständig geschrieben ist. Ohne `--iof-xml` tut
 `export` nichts und endet mit Fehlercode 2.
 
 Was du wissen solltest:
 
-- Mannschafts-, Staffel- und Score-Bahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
+- Mannschafts- und Staffelbahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
   ihrer Art.
+- Eine Score-Bahn steht mit dem Wert jedes Postens in `CourseControl/Score`. Für das Zeitlimit, den Abzug je angefangene Minute und die Pflichtverbindungen hat das Schema kein Element. Die Bahn trägt sie deshalb in einem `Extensions`-Element im Namensraum `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` mit `timeLimitMin`, `penaltyPerMin` und je Paar ein `Link`). Der Abzug ist der aufgelöste, der Standard eingeschlossen. Programme, die den Namensraum nicht kennen, übergehen ihn. Die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, steht nicht in der Datei, sondern auf dem Auswertungsbogen (siehe Score-Bahnen).
 - Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
   unberührt.
 - Ist die Karte georeferenziert, tragen Start, Posten und Ziel Breite und Länge mit sechs Nachkommastellen. Fehlt die

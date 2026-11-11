@@ -80,6 +80,7 @@ pub fn new_event(
         courses: Vec::new(),
         accepted_findings: Vec::new(),
         sync: None,
+        score: None,
     })
 }
 

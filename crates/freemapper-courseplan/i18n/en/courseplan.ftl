@@ -92,7 +92,7 @@ error-edit-id-taken = special object { $id } already exists
 error-edit-name-taken = course { $name } already exists
 error-edit-outside-map = point ({ $x }, { $y }) is outside the map, which spans ({ $min_x }, { $min_y }) to ({ $max_x }, { $max_y })
 error-edit-in-use = { $id } is still used by { $courses }; change those first
-error-edit-not-supported = course { $course } is not an individual course; only individual courses can be edited yet
+error-edit-not-supported = course { $course } is not an individual course; only individual and score courses can be edited yet
 error-edit-bad-index = course { $course } has no control at position { $index }
 error-edit-special-would-cover-all-courses = { $count ->
     [one] course { $course } is the only course of { $specials }; without it, { $specials } would apply to all courses. Assign { $specials } to another course first or remove it
@@ -156,7 +156,6 @@ check-skip-print-scale = no rule of this kind for print scale 1:{ $scale }
 check-skip-course-kind = { $kind ->
         [team] team courses
         [relay] relay courses
-        [score] score courses
        *[other] { $kind } courses
     } are not checked yet
 check-skip-course-unresolved = the course refers to { $id }, which the event does not define; it is not checked
@@ -164,6 +163,8 @@ check-skip-class-not-mapped = class { $name } has no rule category; class set --
 check-skip-climb-missing = the course has no climb
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
+check-skip-score-no-map = the map has no objects, so no route times can be computed
+check-skip-score-travel = route times cannot be computed. The error text is English: { $error }
 check-skip-start-window-missing = the event has no start window; event start-window sets it
 check-skip-starters-missing = classes without an expected number of starters: { $classes }; class set --starters sets it
 check-skip-length-no-reference = no course carries category { $category }, so the length table has no reference
@@ -227,7 +228,27 @@ check-length-table-reference-twice = courses { $courses } all carry category { $
 check-difficulty-mix = the course mixes easy categories ({ $easy }) with hard ones ({ $hard })
 check-nor-lkm = the course has { $actual } Lkm ({ $length } km length, { $climb } m climb), outside the recommendation: { $rows }
 check-nor-lkm-row = { $categories }: target { $target } Lkm, allowed { $min } to { $max } Lkm
+check-score-value-mismatch = control { $code } carries the value { $expected } in its code, but score course { $course } gives it { $value } points
+check-score-value-no-code = the code { $code } carries no value, because a score code has two or more digits and does not end in 0, but score course { $course } gives the control { $value } points
+check-score-code-alike = codes { $first } and { $second } in score course { $course } look alike when turned upside down or differ only by 6 and 9
+check-score-ring = the { $count } controls of score course { $course } stand in a ring round start and finish. The largest gap is { $gap } degrees and the distances vary by { $variation } percent, so the order is obvious
+check-score-obvious-order = the controls of score course { $course } have an obvious order. { $hull } percent lie on the outer hull, and running to the nearest control each time is only { $excess } percent longer than the shortest order found
+check-score-length-good-below = in score course { $course } the good runner scores { $percent } percent of all points, below the band of { $low } to { $high } percent. The course is too long
+check-score-length-good-above = in score course { $course } the good runner scores { $percent } percent of all points, above the band of { $low } to { $high } percent. The course is too short
+check-score-length-very-good-misses = in score course { $course } the very good runner cannot take every control within the limit. { $missing } points stay out of reach
+check-score-length-very-good-over = in score course { $course } the very good runner needs { $percent } percent of the limit for every control
+check-score-length-very-good-early = in score course { $course } the very good runner takes every control and finishes after { $percent } percent of the limit, before the band of { $low } to { $high } percent
+check-score-limit-range = score course { $course } has a time limit of { $limit } minutes. { $min } to { $max } minutes is usual
+check-score-penalty-pays = score course { $course } deducts { $penalty } points per minute over the limit, less than its highest control value of { $highest }. Running over can pay off
+check-score-link-self = score course { $course } links control { $code } to itself
+check-score-link-not-in-course = the link { $first }–{ $second } of score course { $course } names control { $missing }, which the course does not have
+check-score-link-duplicate = the link { $first }–{ $second } appears more than once in score course { $course }
+check-score-link-out-of-bounds = the straight line of the link { $first }–{ $second } in score course { $course } crosses the out-of-bounds area { $id }
+check-score-link-forbidden-route = the straight line of the link { $first }–{ $second } in score course { $course } crosses the forbidden route { $id }
+check-score-link-no-choice = the link { $first }–{ $second } in score course { $course } has no second route of similar length. Accept the finding with a note if that is intended
+check-score-mix = in score course { $course } { $hard } of { $count } controls are hard, { $actual } percent. The setting asks for { $wanted } percent, with a tolerance of { $tolerance } points
 check-source-claude = proposal of freemapper-courseplan
+check-source-user = decision of the project owner
 
 ## Command line
 
@@ -371,6 +392,10 @@ cli-info-course = course { $name }: { $controls ->
     [one] 1 control
    *[other] { $controls } controls
 }, { $km } km, climb { $climb } m
+cli-info-course-score = score course { $name }: { $controls ->
+    [one] 1 control
+   *[other] { $controls } controls
+}, { $points } points, time limit { $limit } minutes
 cli-info-course-unmeasured = course { $name }: { $kind }, length not supported yet
 word-decimal-point = .
 word-taped = taped
@@ -402,8 +427,8 @@ cli-edit-leg-cleared = course { $name }: cleared the bends and taped flag of the
 cli-edit-acceptance-dropped = course { $name }: dropped the accepted finding on the leg { $from } to { $to }, which no longer exists
 cli-edit-start-leg-cleared = course { $name }: cleared the bends and taped flag of the leg from the start, which now runs to another stop
 
-cli-help-course = Add, change, number and remove individual courses
-cli-help-course-add = Add an individual course
+cli-help-course = Add, change, number and remove individual and score courses
+cli-help-course-add = Add an individual or a score course
 cli-help-course-controls = Replace the controls of a course
 cli-help-course-remove = Remove a course and its name from the special objects
 cli-help-course-rename = Rename a course
@@ -510,14 +535,14 @@ cli-event-profile-set-overlays = set rule profile { $value } with { $count ->
 
 cli-help-export = Write the courses to a file for other programs
 cli-arg-export-project = The project file
-cli-arg-export-iof-xml = Write the individual courses as IOF XML 3.0 CourseData for result software such as OE; an existing file is replaced
+cli-arg-export-iof-xml = Write the individual and score courses as IOF XML 3.0 CourseData for result software such as OE; an existing file is replaced
 export-iof-xml-written = { $count ->
     [one] wrote 1 course to { $path }
    *[other] wrote { $count } courses to { $path }
 }
 export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
 export-iof-xml-no-geo = the map has no usable georeferencing, so the controls carry no latitude and longitude, only map positions
-export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE or --ppen FILE
+export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE, --ppen FILE or --csv FILE with --course NAME
 error-export-iof-xml-character = cannot export: a text of the event holds the character { $point }, which XML does not allow
 error-export-iof-xml-course = cannot export course { $course }: { $source }
 error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
@@ -722,7 +747,12 @@ mcp-instructions =
     with y pointing down, written as objects with the numbers x and y. Workflow: event_info, then map_extent and
     map_features_near to find positions, then add_special for the start and the finish, add_control for each
     control, add_course, place_numbers and event_info again to read the length. Each call saves its change. A
-    refused change leaves the file as it was. Only individual courses can be edited, measured and checked yet.
+    refused change leaves the file as it was. Individual and score courses can be edited and checked, but only
+    individual courses have a measured length. A score course is made by add_score_course; set_score_controls and
+    set_control_value set its controls, add_score_link and remove_score_link its mandatory links,
+    set_score_course_details the time limit and the penalty, and set_score_settings the point range and the paces
+    of the event. score_suggest lists control sites, score_draft drafts a score course and writes only with apply
+    true, score_length analyses an existing one. All three take seconds. Team and relay courses cannot be edited yet.
     check tests the courses against the rule profile of the event, which set_rule_profile changes. Some checks
     need the start window (set_start_window) or the rule category and expected starters of a class (set_class);
     without them check lists the rule as skipped. A finding the course setter wants as it is gets accept_finding
@@ -755,7 +785,7 @@ mcp-tool-list-specials = List the special objects (start, finish, marked routes,
 mcp-tool-list-classes = List the classes with rule category and expected starters.
 mcp-tool-add-control = Add a control at a position in map mm. Without code the lowest free code from 31 up is used. The position must lie on the map. Returns the code.
 mcp-tool-move-control = Move a control to a new position in map mm. The position must lie on the map.
-mcp-tool-set-control-code = Change the code of a control. The courses, the accepted findings and every other place that names the control follow. The new code must be free, not empty and at most 64 characters long.
+mcp-tool-set-control-code = Change the code of a control. The courses, the accepted findings and every other place that names the control follow. In a score course the control takes the value its new code carries; a code that carries none keeps the old value. The new code must be free, not empty and at most 64 characters long.
 mcp-tool-remove-control = Remove a control and its visits in individual courses. The result lists the courses it left, and in cleared_legs the legs that lost their bends and marked-route flag because they now run to another stop.
 mcp-tool-describe-control = Set the description symbols of a control, column C to H, as IOF symbol ids. Columns you leave out keep their symbol. clear empties all columns first.
 mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap between circle line and number in print mm. clear goes back to the default placement.
@@ -776,12 +806,12 @@ mcp-tool-set-course-number = Set or clear the number placement of one control in
 mcp-tool-map-features-near = Map objects within radius_mm of a position, nearest first: symbol code, geometry kind (point, line, area), distance in mm and the part of the map.
 mcp-tool-map-extent = Smallest and largest corner of the map objects in map mm, the map scale and the map kind.
 mcp-tool-init-event = Start an event from an OOM map (sprint or schoolyard) and write its project file. Returns the path of the project file.
-mcp-tool-check = Check the individual courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc, section and title, rule_note, and text; accepted findings with the note of the course setter; unmatched, the accepted findings that match no finding any more, for example because a control or course is gone (remove them with remove_accepted_finding if they are no longer needed; they never count as errors); and skipped rules with the reason, including rules an overlay switched off. A leg location carries course, after and the ids of its ends in from and to. Team, relay and score courses are not checked yet.
+mcp-tool-check = Check the individual and score courses against the rule profile and overlays of the event. Returns counts in summary; findings with rule, profile, severity (error, warning or hint), location as an object with kind, message_id, args, source with doc, section and title, rule_note, and text; accepted findings with the note of the course setter; unmatched, the accepted findings that match no finding any more, for example because a control or course is gone (remove them with remove_accepted_finding if they are no longer needed; they never count as errors); and skipped rules with the reason, including rules an overlay switched off. A leg location carries course, after and the ids of its ends in from and to. Team and relay courses are not checked yet.
 mcp-tool-accept-finding = Accept a finding as an intended exception, with a note. Name it as check reports it: the rule and its place, given as controls, legs or the course. A start or finish id may stand in controls, as check reports it. A leg is given by course and after; the server stores the ids of its ends from the course as it is now, so the finding comes back when the leg later runs between other stops. Leave out all three for a finding of the whole event. Accepting the same finding again replaces the note. check then lists it under accepted.
 mcp-tool-remove-accepted-finding = Remove an accepted finding, so check reports it again. Name it with the rule and the same place as when it was accepted. A leg is given by course and after. The entry for the leg as it runs now is removed first; if there is none, every entry at that position goes, so an entry from unmatched can be removed after its leg or course changed. Returns the removed entries.
 mcp-tool-set-rule-profile = Set the base rule profile of the event and its overlays. Both are loaded first; an unknown profile, or an overlay given as base, is refused with the list of available profiles. Without overlays the event has none.
 mcp-tool-set-start-window = Set the start window of the event, the minutes from the first to the last start, at least 1, or remove it with no_start_window. The start capacity check divides the expected starters by it.
-mcp-tool-export-iof-xml = Write the individual courses of the event as IOF XML 3.0 CourseData for result software such as OE. Takes project and path, the file to write, which ends in .xml; an existing file is replaced. Returns path, courses, the number of courses written, and skipped, the team, relay and score courses left out, each with name and kind. Controls, start and finish get latitude and longitude when the map is georeferenced; geo_positions says whether they did.
+mcp-tool-export-iof-xml = Write the individual and score courses of the event as IOF XML 3.0 CourseData for result software such as OE. Takes project and path, the file to write, which ends in .xml; an existing file is replaced. Returns path, courses, the number of courses written, and skipped, the team and relay courses left out, each with name and kind. Controls, start and finish get latitude and longitude when the map is georeferenced; geo_positions says whether they did.
 mcp-tool-export-ppen = Write the individual courses of the event into a Purple Pen event (.ppen). Takes project, path (the .ppen file) and new. The export changes an existing file in place and keeps everything the project did not change. It creates a missing file, and with new it writes the file from scratch; either way a project without sources.ppen is linked to the file. The export never deletes: objects in the file that the project lacks stay and are reported. The project's Purple Pen ids count only for the file that sources.ppen names, and only for that file does the export store the ids it assigns in the project. Returns path, courses (the number of courses written), skipped (the team, relay and score courses left out, each with name and kind), notes (the texts on what was left out, changed or kept), patched (true when an existing file was changed in place) and ids_stored (how many objects of the project got a Purple Pen id for the first time).
 
 mcp-param-project = Project file of the event, an absolute path or one starting with ~, for example ~/maps/hall.courseplan.toml
@@ -961,7 +991,7 @@ editor-status-reloaded = The project file changed and was loaded again.
 editor-status-ppen-changed = The Purple Pen file changed. Sync?
 editor-status-state-failed = The project cannot be shown. The server console tells why.
 editor-status-overlay-failed = The course symbols could not be loaded.
-editor-status-course-unsupported = This kind of course (score, team or relay) cannot be shown in the editor yet.
+editor-status-course-unsupported = This kind of course (team or relay) cannot be shown in the editor yet.
 editor-status-preview-on = Print preview on. The course comes from the print renderer, and nothing can be edited.
 editor-status-preview-off = Print preview off.
 editor-op-unknown = This operation does not exist.
@@ -1305,3 +1335,272 @@ cli-map-bad-radius = { $value } is not a radius; give a number of map millimetre
 cli-query-io-failed = the project file could not be read
 cli-arg-event-start-window-none = Remove the start window instead of setting it
 cli-event-start-window-removed = removed the start window
+error-model-link-to-unknown-control = course { $course } has a link between { $a } and { $b }, but { $code } is not one of its controls
+error-model-link-to-itself = course { $course } links control { $code } to itself
+error-model-duplicate-link = course { $course } links { $a } and { $b } more than once
+error-model-link-branches = course { $course } links control { $code } to more than two controls; links must form chains
+error-model-score-setting-out-of-range = score setting { $what } is out of range: { $reason }
+word-score-problem-must-be-1-to-9 = must be 1 to 9
+word-score-problem-must-be-more-than-0 = must be more than 0
+word-score-problem-low-is-above-high = low is above high
+word-score-problem-must-not-exceed-100 = must not exceed 100
+error-model-link-cycle = course { $course } links { $a } and { $b }, which closes a loop; links must form chains
+word-score-problem-must-be-below-the-good-pace = must be below the good pace
+
+## Score courses (ADR 0067)
+
+word-what-link = link
+error-edit-score-course = course { $course } is a score course; this change works on individual courses only
+error-edit-not-score-course = course { $course } is not a score course
+error-edit-value-disagrees = control { $code } carries the value { $expected } in its code, not { $value }; change the code instead, and the value follows
+error-edit-code-carries-no-value = the code of control { $code } carries no value; give one
+error-edit-duplicate-score-control = control { $code } appears twice in the score course
+error-edit-bad-time-limit = the time limit must be at least 1 minute
+error-edit-value-max-below-control = The highest value cannot be { $value_max }: control { $code } is worth { $value }. Recode or remove that control first.
+error-score-unreachable = no route from ({ $from_x }, { $from_y }) to ({ $to_x }, { $to_y }) on this map
+error-score-start-unreachable = the start at ({ $x }, { $y }) cannot be reached: it lies in a blocked area
+error-score-finish-unreachable = the finish at ({ $x }, { $y }) cannot be reached: it lies in a blocked area
+error-score-map-empty = the map has no objects, so there is nothing to search routes on
+error-score-bad-route-setting = route setting { $name } is out of range: { $value }
+error-score-grid-too-large = the map would need { $cells } raster cells, more than the limit of { $limit }
+error-score-code-space-exhausted = only { $limit } free codes are left for the controls asked for
+error-score-value-space-exhausted = only { $limit } free codes carry the value { $value }; more controls of that value were asked for
+error-score-bad-value = a point value must lie from 1 to { $value_max }, not { $value }
+error-score-positions-mismatch = { $values } values but { $coords } positions were given
+error-score-link-does-not-fit = the link between controls { $a } and { $b } does not fit the time limit
+error-score-bad-link = the link between controls { $a } and { $b } names a control that does not exist or the same control twice
+error-score-link-end-not-candidate = an end of the requested link { $link } lies on no candidate
+error-score-links-not-a-chain = the links at control { $control } do not form a chain: a control may have at most two links and they may not close a ring
+error-score-link-tour-not-found = no tour was found that holds every link within the time limit; the link between controls { $a } and { $b } fits worst. The search is not exhaustive for larger courses, so this is no proof
+mcp-error-no-score-settings-change = nothing to change; give at least one of value_max, good_pace_s_per_km, very_good_pace_s_per_km, mix_hard_percent and seed
+mcp-error-no-score-course-change = nothing to change; give time_limit_min, penalty_per_min or no_penalty
+mcp-error-score-code-empty = a control of a score course needs a code
+mcp-tool-add-score-course = Add a score course without controls, from a start, a finish and a time limit in minutes. Without a penalty the course has no stored penalty and uses the default: the highest control value of the course, at least value_max, so a minute over never pays off. Returns name, time_limit_min, penalty_per_min and penalty_is_default. Add the controls with set_score_controls.
+mcp-tool-set-score-controls = Replace the controls of a score course, in any order. Each entry has a code and may have a value. Without a value the code gives it: the second digit of a two-digit code, the last digit of a longer one. A value that differs from the code is refused, and so is a value outside 1 to value_max. A control needs a code and may appear once, and a control that a link names cannot be dropped. A default penalty follows the controls on its own. Returns name, controls with code and value, penalty_per_min and penalty_is_default.
+mcp-tool-set-control-value = Set the value of one control of a score course. The code carries the value, so only the value of the code is accepted; to give a control another value, change its code with set_control_code, and the value follows. The call repairs a stored value that no longer matches its code. Returns name, code and value.
+mcp-tool-add-score-link = Require two controls of a score course to be run directly one after the other, in either direction. A runner who does not is disqualified. Both controls must be in the course, a control takes at most two links, and links may not close a ring. Returns name, a, b and links, all links of the course.
+mcp-tool-remove-score-link = Remove the link between two controls of a score course; either order matches. Returns name, a, b and links, the links that remain.
+mcp-tool-set-score-settings = Change the score settings that all score courses of the event share: value_max (highest point value, 1 to 9), good_pace_s_per_km and very_good_pace_s_per_km (seconds per kilometre), mix_hard_percent (share of hard controls) and seed (fixes the draft search). Fields not given stay as they are. Returns all settings.
+mcp-tool-set-score-course-details = Change the time limit in minutes or the penalty per started minute of a score course. penalty_per_min stores a penalty; no_penalty goes back to the default, the highest control value of the course, at least value_max. Returns name, time_limit_min, penalty_per_min and penalty_is_default.
+mcp-param-time-limit-min = Time limit in minutes, at least 1
+mcp-param-penalty-per-min = Points deducted per started minute over the limit [default: the highest control value of the course, at least value_max]
+mcp-param-set-score-course-details-time-limit-min = Time limit in minutes, at least 1 [default: unchanged]
+mcp-param-set-score-course-details-penalty-per-min = Points deducted per started minute over the limit [default: unchanged]
+mcp-param-set-score-course-details-no-penalty = Go back to the default penalty, the highest control value of the course, at least value_max [default: false]
+mcp-param-set-score-controls-controls = The controls of the course, each an object with code and an optional value
+mcp-param-set-score-controls-value = Points of the control [default: the value the code carries]
+mcp-param-value = Points of the control, from 1 to the highest value of the event
+mcp-param-a = One control of the link, a code
+mcp-param-b = The other control of the link, a code
+mcp-param-value-max = Highest point value, 1 to 9
+mcp-param-good-pace-s-per-km = Pace of a good runner in seconds per kilometre
+mcp-param-very-good-pace-s-per-km = Pace of a very good runner in seconds per kilometre, below the pace of a good runner
+mcp-param-mix-hard-percent = Share of hard controls in the mix, 0 to 100 percent
+mcp-param-seed = Seed of the draft search; the same seed gives the same draft
+cli-help-score = Edit score courses: controls with values, mandatory links, settings
+cli-help-score-controls = Replace the controls of a score course. Each control is a code, optionally followed by = and its value; without a value the code gives it
+cli-help-score-value = Set the value of one control of a score course. The code carries the value, so only that value is accepted; change the code to change the value
+cli-help-score-link = Add or remove mandatory links of a score course
+cli-help-score-link-add = Require two controls to be run directly one after the other, in either direction
+cli-help-score-link-remove = Remove the link between two controls
+cli-help-score-settings = Change the score settings of the event
+cli-help-score-course = Change a score course
+cli-help-score-course-set = Change the time limit or the penalty of a score course; --no-penalty goes back to the default penalty
+cli-arg-score-controls-codes = Controls separated by commas, for example 31,42 or 31=1,42=2
+cli-arg-score-value-value = Points of the control
+cli-arg-score-json = Print the answer as JSON, the same as the MCP tool gives
+cli-arg-score-link-a = One control of the link
+cli-arg-score-link-b = The other control of the link
+cli-arg-score-settings-value-max = Highest point value, 1 to 9
+cli-arg-score-settings-good-pace = Pace of a good runner, in seconds per kilometre or as m:ss
+cli-arg-score-settings-very-good-pace = Pace of a very good runner, in seconds per kilometre or as m:ss
+cli-arg-score-settings-mix-hard = Share of hard controls in the mix, 0 to 100 percent
+cli-arg-score-settings-seed = Seed of the draft search
+cli-arg-score-course-set-time-limit = Time limit in minutes
+cli-arg-score-course-set-penalty = Points deducted per started minute over the limit
+cli-arg-score-course-set-no-penalty = Go back to the default penalty, the highest control value of the course, at least the highest value of the event
+cli-arg-course-add-kind = Kind of course, individual or score
+cli-arg-course-add-time-limit = Time limit in minutes; required for a score course
+cli-arg-course-add-json = Print the answer as JSON, the same as the MCP tool gives; only with --kind score
+cli-arg-course-add-penalty = Points deducted per started minute over the limit [default: the highest control value of the course, at least the highest value of the event]
+cli-score-course-added = added score course { $name }: { $limit } minutes, { $penalty } points per minute over the limit{ $default ->
+    [yes] { " " }(the default)
+   *[no] { "" }
+}
+cli-score-controls = { $name }: { $count } controls, { $total } points ({ $list })
+cli-score-value = control { $code } of { $name } is worth { $value } points
+cli-score-link-added = linked { $a } and { $b } in { $name }
+cli-score-link-removed = removed the link between { $a } and { $b } in { $name }
+cli-score-settings = score settings: highest value { $value_max }, good runner { $good } s/km, very good runner { $very_good } s/km, { $mix_hard } percent hard controls, seed { $seed }
+cli-score-course-set = { $name }: { $limit } minutes, { $penalty } points per minute over the limit{ $default ->
+    [yes] { " " }(the default)
+   *[no] { "" }
+}
+cli-score-bad-pace = { $value } is not a pace; give seconds per kilometre, such as 250, or minutes and seconds, such as 4:10
+cli-score-bad-control = { $value } is not a control with a value; write the code, or the code, = and the value, such as 31 or 31=1
+cli-course-add-score-only = --time-limit, --penalty and --json belong to --kind score
+cli-course-add-needs-time-limit = a score course needs --time-limit
+cli-course-add-individual-only = --controls, --classes, --climb and --print-scale do not apply to --kind score; set the controls with score controls and the classes with course set
+editor-op-add-score-course = Add score course
+editor-op-set-score-controls = Change score controls
+editor-op-set-control-value = Set control value
+editor-op-add-score-link = Add link
+editor-op-remove-score-link = Remove link
+editor-op-set-score-settings = Change score settings
+editor-op-set-score-course-details = Change score course details
+score-miss-good-below = The good runner scores { $percent } percent of all points, { $miss } percentage points below the band of { $low } to { $high } percent. The set is too long for the limit.
+score-miss-good-above = The good runner scores { $percent } percent of all points, { $miss } percentage points above the band of { $low } to { $high } percent. The set is too short for the limit.
+score-miss-very-good-misses = The very good runner cannot take every control within the limit. { $missing } points, { $miss } percent of all points, stay out of reach.
+score-miss-very-good-over = The very good runner needs { $percent } percent of the limit for every control, { $miss } percentage points too much.
+score-miss-very-good-early = The very good runner takes every control and finishes after { $percent } percent of the limit, { $miss } percentage points before the band of { $low } to { $high } percent.
+score-draft-best = The closest attempt has { $count } controls worth { $points } points.
+score-draft-hint-limit-up = A longer time limit would help.
+score-draft-hint-limit-down = A shorter time limit would help.
+score-draft-hint-more-candidates = The map offers too few suitable sites for this limit. More map features, or a shorter limit, would help.
+score-draft-hint-code-space = The map has enough sites, but the free codes run out first. Raise the highest value in the score settings (9 at most), or free codes on the map.
+score-draft-hint-faster-profile = The good runner scores too few points. A faster pace for the good runner in the score settings would help.
+score-draft-hint-impossible = No change of limit or pace helps with these inputs. Check the start, the finish and the links.
+mcp-error-score-no-start = the event has no start; add one with add_special first
+mcp-error-score-no-finish = the event has no finish; add one with add_special first
+mcp-error-score-bad-distance = { $value } is not a distance; give map millimetres, zero or more
+mcp-error-score-draft-ends = the score course { $name } has its own start and finish; leave start and finish out or name the ones it has
+mcp-tool-score-suggest = Suggest control sites for a score course from the map, ranked by route choice. Each candidate has a position in map millimetres, the symbol code of its feature, route_choice and difficulty from 0 to 1, effort_s (seconds from the start for the good runner) and the suggested value. Writes nothing. Takes seconds on a large map. Start and finish default to those of the named course, else to the first of each in the event; ends that lie in a blocked area are refused.
+mcp-tool-score-draft = Draft a score course: a set of controls with values and codes so that the good runner scores about 90 percent of all points within the time limit and the very good runner takes every control and finishes just under the limit. Writes nothing unless apply is true; then it creates the score course or replaces the controls of an existing score course, and a course of another kind is refused. links names pairs of positions, each taken from score_suggest, to be run one directly after the other. A draft that misses a band comes back as an error naming each miss with its size, and what would help. Takes seconds.
+mcp-tool-score-length = Analyse the length of an existing score course: the best round trips of the good and the very good runner within the limit, the share of points and of the limit, and each miss of the bands with its size. Reports only; never changes the course.
+mcp-param-score-suggest-limit = Most candidates to return [default: 60, at most 200]
+mcp-param-score-suggest-min-distance-mm = Smallest distance in map millimetres between candidates, controls, start and finish [default: 15 m on the ground at 1:4000 and larger scales, else 30 m]
+mcp-param-score-suggest-course = Name of a score course. Its start and finish are used; a start or finish id given as well wins
+mcp-param-score-suggest-start = Id of the start special object [default: the first start]
+mcp-param-score-suggest-finish = Id of the finish special object [default: the first finish]
+mcp-param-score-draft-start = Id of the start special object of a new course [default: the first start]
+mcp-param-score-draft-finish = Id of the finish special object of a new course [default: the first finish]
+mcp-param-score-draft-links = Pairs of positions to run one directly after the other, each end the position of a candidate from score_suggest
+mcp-param-score-draft-a = One end of the link, a position in map millimetres
+mcp-param-score-draft-b = The other end of the link, a position in map millimetres
+mcp-param-score-draft-apply = Write the draft as the score course [default: false, the draft is only returned]
+editor-op-score-draft = Draft score course
+editor-op-score-apply-draft = Apply score draft
+editor-score-heading = Score course
+editor-score-limit = Time limit (minutes)
+editor-score-penalty = Penalty per minute over
+editor-score-penalty-default = Default penalty
+editor-score-controls = Controls and values
+editor-score-col-code = Code
+editor-score-col-value = Value
+editor-score-col-choice = Route choice
+editor-score-col-difficulty = Difficulty
+editor-score-col-effort = From start (s)
+editor-score-links = Mandatory links
+editor-score-links-none = No links.
+editor-score-link-hint = A link is drawn as a dashed line between its two controls.
+editor-score-link-remove = Remove link
+editor-score-settings = Runners and mix (all score courses)
+editor-score-value-max = Highest value
+editor-score-good-pace = Good runner pace (s per km)
+editor-score-very-good-pace = Very good runner pace (s per km)
+editor-score-mix-hard = Hard controls (percent)
+editor-score-seed = Seed of the draft
+editor-score-good-band = Good runner band (percent of all points)
+editor-score-very-good-band = Very good runner band (finish, percent of the limit)
+editor-score-suggest = Suggest controls
+editor-score-draft = Draft course
+editor-score-length-run = Check length
+editor-score-apply = Apply draft
+editor-score-discard = Discard
+editor-score-accept = Accept
+editor-score-working = Working. This can take several seconds.
+editor-score-candidates = Candidates
+editor-score-candidates-hint = Candidates and drafts are drawn as dashed circles with their value. They are not saved until you accept or apply them.
+editor-score-no-code-hint = Some candidates have no free code, because the codes for their value are used up. Raise the highest value or remove controls.
+editor-score-no-code = No free code
+editor-score-draft-result = Draft
+editor-score-draft-hard = Hard controls (actual / wanted)
+editor-score-length-heading = Length report
+editor-score-good = Good runner, points
+editor-score-good-share = Good runner, share of all points
+editor-score-very-good = Very good runner, points
+editor-score-very-good-share = Very good runner, finish (percent of the limit)
+editor-score-bands-ok = Both runners are inside the bands.
+editor-score-bands-missed = A band is missed.
+editor-score-discarded = The project changed outside the editor. Candidates and the draft are discarded.
+editor-score-status-suggested = Candidates found.
+editor-score-status-drafted = Draft ready. The course stays as it is until you apply it.
+editor-score-status-applied = Draft applied.
+editor-score-status-length = Length checked.
+editor-score-status-accepted = Control added to the course.
+editor-score-no-course-mode = Course mode edits individual courses. Use the Score panel for this course.
+editor-tree-new-score-course = New score course...
+editor-status-score-created = Score course created.
+cli-help-score-suggest = Suggest control sites for a score course, ranked by route choice. Writes nothing. Takes seconds on a large map. With --json the answer is the one of the MCP tool score_suggest
+cli-help-score-draft = Draft a score course so that both runner profiles meet the length bands. Writes only with --apply. A draft that misses a band exits with 1 and names each miss. With --json the answer is the one of the MCP tool score_draft
+cli-help-score-length = Analyse the length of a score course and report each miss of the bands. Changes nothing. With --json the answer is the one of the MCP tool score_length
+cli-arg-score-suggest-limit = Most candidates, at most 200 [default: 60]
+cli-arg-score-suggest-min-distance = Smallest distance between candidates in map millimetres [default: from the map scale]
+cli-arg-score-suggest-course = Score course whose start and finish are used; --start and --finish win [default: the first start and finish]
+cli-arg-score-suggest-start = Id of the start special object [default: the first start]
+cli-arg-score-suggest-finish = Id of the finish special object [default: the first finish]
+cli-arg-score-draft-time-limit = Time limit in minutes
+cli-arg-score-draft-start = Id of the start special object of a new course [default: the first start]
+cli-arg-score-draft-finish = Id of the finish special object of a new course [default: the first finish]
+cli-arg-score-draft-link = Two positions of candidates, X,Y;X,Y in map millimetres, to run one directly after the other; repeat for more links
+cli-arg-score-draft-apply = Write the draft as the score course; a course of that name is replaced if it is a score course
+cli-score-suggest = { $count ->
+    [one] 1 candidate
+   *[other] { $count } candidates
+}, best route choice first
+cli-score-suggest-line = { $at }  { $symbol }  value { $value }, route choice { $choice }, difficulty { $difficulty }, { $effort } s from the start
+cli-score-draft = draft of score course { $name }: { $count } controls, { $points } points; nothing written, use --apply to write it
+cli-score-draft-applied = wrote score course { $name }: { $count } controls, { $points } points
+cli-score-draft-control = { $code }  value { $value }  at { $at }
+cli-score-length = { $name }: { $count } controls, time limit { $limit } minutes
+cli-score-length-good = good runner: { $points } of { $all } points, { $percent } percent (band { $low } to { $high } percent)
+cli-score-length-very-good = very good runner: { $points } points, finishes after { $percent } percent of the limit (band { $low } to { $high } percent)
+cli-score-length-ok = both runners are inside the bands
+cli-score-bad-link-ends = { $value } is not a link; write two positions as X,Y;X,Y
+cli-score-bad-distance = { $value } is not a distance; give map millimetres, zero or more
+mcp-error-interrupted = the operation was interrupted before it finished
+error-score-unknown-course = course { $course } does not exist
+error-score-not-a-score-course = course { $course } is not a score course
+error-score-unknown-control = the course names control { $code }, which the event does not have
+cli-arg-export-csv = Write the controls of a score course as CSV with code, value and position in map millimetres; needs --course. An existing file is replaced
+cli-arg-export-sheet = Write the evaluation sheet of a score course as Markdown; needs --course. An existing file is replaced
+cli-arg-export-course = The score course for --csv and --sheet
+export-needs-course = --csv and --sheet need --course NAME, the score course to write
+export-csv-written = wrote the control list of { $course } to { $path }
+export-sheet-written = wrote the evaluation sheet of { $course } to { $path }
+mcp-tool-export-score-csv = Write the controls of a score course as CSV. Takes project, course and path, the file to write, which ends in .csv; an existing file is replaced. The first row is the header code,value,x_mm,y_mm. Positions are map millimetres at map scale with y pointing down, written with a dot. Rows are ordered by code. Returns path, course and controls, the number of rows. A course that is not a score course is refused.
+mcp-tool-export-score-sheet = Write the evaluation sheet of a score course as a Markdown file that prints well. Takes project, course and path, the file to write, which ends in .md; an existing file is replaced. The sheet names the time limit, the penalty per started minute, the rule that the faster runner wins on equal points, the mandatory links with the rule that a runner who does not run a link directly is disqualified, and every control with its value. Returns path and course. A course that is not a score course is refused.
+mcp-param-export-score-csv-path = The file to write, an absolute path or one starting with ~, ending in .csv
+mcp-param-export-score-sheet-path = The file to write, an absolute path or one starting with ~, ending in .md
+mcp-param-export-score-csv-course = Name of the score course
+mcp-param-export-score-sheet-course = Name of the score course
+mcp-error-not-csv = { $path } does not end in .csv; name a .csv file
+mcp-error-not-md = { $path } does not end in .md; name a .md file
+score-sheet-title = Evaluation sheet for { $course }
+score-sheet-event = Event: { $title }
+score-sheet-time-limit = Time limit: { $minutes ->
+    [one] 1 minute
+   *[other] { $minutes } minutes
+}
+score-sheet-penalty = Penalty: { $points ->
+    [one] 1 point
+   *[other] { $points } points
+} for each started minute over the limit
+score-sheet-penalty-default = Penalty: { $points ->
+    [one] 1 point
+   *[other] { $points } points
+} for each started minute over the limit. The course sets no penalty, so this is the default.
+score-sheet-tie = Equal points: the faster runner wins.
+score-sheet-total = Points in all: { $points } on { $count ->
+    [one] 1 control
+   *[other] { $count } controls
+}
+score-sheet-links-heading = Mandatory links
+score-sheet-no-links = This course has no mandatory links.
+score-sheet-links-rule = A link is two controls that a runner visits directly one after the other, in either order. A runner who does not run a link directly is disqualified.
+score-sheet-col-first = First control
+score-sheet-col-second = Second control
+score-sheet-controls-heading = Controls
+score-sheet-col-code = Code
+score-sheet-col-value = Value
+export-course-unused = --course applies only with --csv or --sheet; --iof-xml and --ppen take no course

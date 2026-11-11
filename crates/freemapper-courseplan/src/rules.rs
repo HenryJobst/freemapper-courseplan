@@ -30,6 +30,10 @@ const EMBEDDED: &[(&str, &str)] = &[
 /// (`[sources.claude]` in a profile); output names it as a proposal of freemapper-courseplan.
 pub const PROPOSAL_DOC: &str = "claude";
 
+/// The document key of rules the project owner set (`[sources.user]` in a profile); output names
+/// it as a decision of the project owner.
+pub const USER_DOC: &str = "user";
+
 /// The filter field of the map kinds a rule applies to.
 pub const FIELD_MAP_KINDS: &str = "map_kinds";
 /// The filter field of the disciplines a rule applies to.
@@ -131,8 +135,48 @@ pub static SCHEMA: Schema = Schema {
             values: None,
             without_filters: &[],
         },
+        KeySchema {
+            key: "score_value_matches_code",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_code_ambiguity",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_ring",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_obvious_order",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_length_bands",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_limit_and_penalty",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_link_valid",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_mix",
+            values: None,
+            without_filters: &[],
+        },
     ],
-    units: &["metres", "mm", "degrees", "percent", "factor"],
+    units: &["metres", "mm", "degrees", "percent", "factor", "minutes"],
     tables: &[
         TableSchema {
             key: "code_range",

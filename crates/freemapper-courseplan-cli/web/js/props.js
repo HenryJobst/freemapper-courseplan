@@ -6,6 +6,7 @@ import { t } from "./texts.js";
 import { legLabel } from "./course.js";
 import * as numbers from "./numbers.js";
 import * as describe from "./describe.js";
+import * as score from "./score.js";
 import {
   MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
 } from "./course.js";
@@ -90,6 +91,12 @@ function courseRows(host, list, state, name, actions) {
   row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
   row(list, "editor-prop-start", course.start);
   row(list, "editor-prop-finish", course.finish);
+  if (course.kind === "score") {
+    // A score course has no running order: the Score panel takes the place of the stop list and the numbers.
+    score.panel(host, state, course);
+    courseRemoveButton(host, course, actions);
+    return;
+  }
   courseFields(list, state, course, actions);
   stopList(host, course, actions);
   numbers.panel(host, actions);

@@ -8,7 +8,8 @@ use freemapper_courseplan::course::{CourseError, control_numbers, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
 use freemapper_courseplan::numbers::{GapRange, auto_place, number_box_mm, number_centre};
 use freemapper_courseplan_model::{
-    ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
+    ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, ScoreControl, ScoreLink,
+    SpecialObject,
 };
 use serde::Serialize;
 
@@ -57,6 +58,9 @@ pub(crate) struct OverlayControl {
     /// on the paper). The print turns the symbol along the course.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub angle_deg: Option<f64>,
+    /// Score courses only: the point value of the control in the course.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub value: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -83,6 +87,16 @@ pub(crate) struct OverlayLeg {
     /// The leg's bends in running order, as `{x, y}` like the `bends` argument of `set_leg`.
     pub bends: Vec<OverlayBend>,
     pub taped: bool,
+}
+
+/// A mandatory link of a score course: the straight line between the two controls, as a marked leg is drawn
+/// (ADR 0069). It is no leg: nothing can be selected or bent on it.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub(crate) struct OverlayLink {
+    pub a: String,
+    pub b: String,
+    /// The line without the two circles.
+    pub drawn: Vec<MapPoint>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -118,6 +132,8 @@ pub(crate) struct CourseOverlay {
     pub starts: Vec<OverlayStart>,
     pub finishes: Vec<OverlayFinish>,
     pub legs: Vec<OverlayLeg>,
+    /// The mandatory links of a score course; empty for every other overlay.
+    pub links: Vec<OverlayLink>,
     pub numbers: Vec<OverlayNumber>,
     pub specials: Vec<OverlaySpecial>,
 }
@@ -203,6 +219,14 @@ pub(crate) fn overlay(
         .iter()
         .find(|c| c.name == name)
         .ok_or_else(|| CourseError::UnknownCourse(name.to_owned()))?;
+    if let CourseKind::Score {
+        controls, links, ..
+    } = &course.kind
+    {
+        return Ok(score_overlay(
+            event, course, controls, links, kind, factor, sizes,
+        ));
+    }
     let geometry = course_legs(event, course)?;
     let CourseKind::Individual { controls: stops } = &course.kind else {
         unreachable!("course_legs refuses other kinds");
@@ -264,6 +288,7 @@ pub(crate) fn overlay(
                 kind: control_kind(&control.kind),
                 at: point(&control.map_mm),
                 angle_deg,
+                value: None,
             });
         }
     }
@@ -272,7 +297,24 @@ pub(crate) fn overlay(
         .first()
         .and_then(|leg| Some((leg.points.first()?, leg.points.get(1)?)))
         .map_or(90.0, |(a, b)| (-(b.y - a.y)).atan2(b.x - a.x).to_degrees());
-    let starts = event
+    let starts = starts_of(event, course, angle_deg);
+    let finishes = finishes_of(event, course);
+    let specials = specials_of(event, course);
+
+    Ok(CourseOverlay {
+        sizes,
+        controls,
+        starts,
+        finishes,
+        legs,
+        links: Vec::new(),
+        numbers: numbers_of(event, course, index, map_scale, kind, gaps, factor)?,
+        specials,
+    })
+}
+
+fn starts_of(event: &Event, course: &Course, angle_deg: f64) -> Vec<OverlayStart> {
+    event
         .specials
         .iter()
         .filter_map(|s| match s {
@@ -283,8 +325,11 @@ pub(crate) fn overlay(
             }),
             _ => None,
         })
-        .collect();
-    let finishes = event
+        .collect()
+}
+
+fn finishes_of(event: &Event, course: &Course) -> Vec<OverlayFinish> {
+    event
         .specials
         .iter()
         .filter_map(|s| match s {
@@ -296,9 +341,12 @@ pub(crate) fn overlay(
             }
             _ => None,
         })
-        .collect();
+        .collect()
+}
 
-    let specials = event
+/// The special objects of the course: those that name it and those that belong to every course.
+fn specials_of(event: &Event, course: &Course) -> Vec<OverlaySpecial> {
+    event
         .specials
         .iter()
         .filter(|s| s.courses().is_empty() || s.courses().contains(&course.name))
@@ -309,17 +357,59 @@ pub(crate) fn overlay(
                 points: points(&shape),
             })
         })
-        .collect();
+        .collect()
+}
 
-    Ok(CourseOverlay {
+/// The overlay of a score course: its controls with their values, start and finish, and the mandatory links as
+/// straight lines between two controls. There are no legs and no numbers, because a score course has no order
+/// (ADR 0069). The start triangle points up.
+fn score_overlay(
+    event: &Event,
+    course: &Course,
+    scored: &[ScoreControl],
+    links: &[ScoreLink],
+    kind: MapKind,
+    factor: f64,
+    sizes: Sizes,
+) -> CourseOverlay {
+    let circle_r = course_symbol_sizes(kind).circle_diameter_mm * factor / 2.0;
+    let find = |code: &freemapper_courseplan_model::ControlCode| {
+        event.controls.iter().find(|c| c.code == *code)
+    };
+    let controls = scored
+        .iter()
+        .filter_map(|s| {
+            find(&s.code).map(|c| OverlayControl {
+                code: c.code.0.clone(),
+                kind: control_kind(&c.kind),
+                at: point(&c.map_mm),
+                angle_deg: None,
+                value: Some(s.value),
+            })
+        })
+        .collect();
+    let links = links
+        .iter()
+        .filter_map(|l| {
+            let (a, b) = (find(&l.a)?, find(&l.b)?);
+            let line = [a.map_mm.clone(), b.map_mm.clone()];
+            Some(OverlayLink {
+                a: a.code.0.clone(),
+                b: b.code.0.clone(),
+                drawn: points(&drawn_part_between(&line, circle_r, circle_r)),
+            })
+        })
+        .collect();
+    CourseOverlay {
         sizes,
         controls,
-        starts,
-        finishes,
-        legs,
-        numbers: numbers_of(event, course, index, map_scale, kind, gaps, factor)?,
-        specials,
-    })
+        starts: starts_of(event, course, 90.0),
+        finishes: finishes_of(event, course),
+        legs: Vec::new(),
+        links,
+        numbers: Vec::new(),
+        specials: specials_of(event, course),
+    }
 }
 
 /// The number boxes of the numbered controls of an individual course.
@@ -425,11 +515,13 @@ fn all_controls(event: &Event, sizes: Sizes) -> CourseOverlay {
                 kind: control_kind(&c.kind),
                 at: point(&c.map_mm),
                 angle_deg: None,
+                value: None,
             })
             .collect(),
         starts,
         finishes,
         legs: Vec::new(),
+        links: Vec::new(),
         numbers: Vec::new(),
         specials,
     }

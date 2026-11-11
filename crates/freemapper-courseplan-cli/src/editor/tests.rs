@@ -546,6 +546,7 @@ mod overlay {
             }],
             accepted_findings: vec![],
             sync: None,
+            score: None,
         }
     }
 
@@ -868,7 +869,7 @@ mod overlay {
         assert_eq!(
             keys,
             [
-                "controls", "finishes", "legs", "numbers", "sizes", "specials", "starts"
+                "controls", "finishes", "legs", "links", "numbers", "sizes", "specials", "starts"
             ]
         );
         assert_eq!(o["sizes"]["circle_r"], 3.0);
@@ -938,6 +939,7 @@ mod state {
             courses: vec![],
             accepted_findings: vec![],
             sync: None,
+            score: None,
         };
         change(&mut event);
         ProjectFile::create(&path, event).unwrap();
@@ -1557,6 +1559,9 @@ mod history {
     }
 }
 
+#[path = "../../tests/support/synthetic.rs"]
+mod synthetic;
+
 mod ops {
     use super::state::{numbered_project, project};
     use super::*;
@@ -1843,6 +1848,480 @@ mod ops {
         let (status, _) = history(&app, "redo", redone["revision"].as_str()).await;
         assert_eq!(status, StatusCode::CONFLICT);
         assert!(!dir_has_tmp(&path));
+    }
+
+    #[tokio::test]
+    async fn editor_dispatch_runs_draft_with_apply_and_undo_restores() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = super::synthetic::project(dir.path());
+        let app = router_for(&path);
+        let first = state(&app).await;
+        let revision = first["revision"].as_str().unwrap().to_owned();
+        let before = std::fs::read(&path).unwrap();
+        let body = json!({"name": "Sc", "time_limit_min": 6, "apply": true});
+        let (status, answer) = op(&app, "score_draft", &revision, body).await;
+        assert_eq!(status, StatusCode::OK, "{answer}");
+        assert_eq!(answer["result"]["applied"], true);
+        let after = std::fs::read(&path).unwrap();
+        assert_ne!(after, before);
+        assert!(
+            String::from_utf8(after)
+                .unwrap()
+                .contains("kind = \"score\"")
+        );
+        let revision = answer["revision"].as_str().unwrap().to_owned();
+        let (status, undone) = history(&app, "undo", Some(&revision)).await;
+        assert_eq!(status, StatusCode::OK, "{undone}");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    async fn get(app: &axum::Router, uri: &str) -> (StatusCode, Value) {
+        send(app, "GET", uri, None, json!({})).await
+    }
+
+    async fn score_call(
+        app: &axum::Router,
+        tool: &str,
+        revision: Option<&str>,
+        body: Value,
+    ) -> (StatusCode, Value) {
+        send(
+            app,
+            "POST",
+            &format!("/tok/api/score/{tool}"),
+            revision,
+            body,
+        )
+        .await
+    }
+
+    /// The synthetic map with a score course Sc (no controls yet) and the app on it.
+    async fn score_setup() -> (tempfile::TempDir, std::path::PathBuf, axum::Router, String) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = super::synthetic::project(dir.path());
+        let app = router_for(&path);
+        let first = state(&app).await;
+        let (status, added) = op(
+            &app,
+            "add_score_course",
+            first["revision"].as_str().unwrap(),
+            json!({"name": "Sc", "start": "S1", "finish": "F1", "time_limit_min": 30}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{added}");
+        let revision = added["revision"].as_str().unwrap().to_owned();
+        (dir, path, app, revision)
+    }
+
+    #[tokio::test]
+    async fn suggest_through_the_api_returns_markers() {
+        let (_dir, path, app, revision) = score_setup().await;
+        let before = std::fs::read(&path).unwrap();
+        let (status, answer) =
+            score_call(&app, "score_suggest", Some(&revision), json!({"limit": 8})).await;
+        assert_eq!(status, StatusCode::OK, "{answer}");
+        assert_eq!(answer["revision"], revision);
+        let list = answer["result"]["candidates"].as_array().unwrap();
+        assert!(!list.is_empty() && list.len() <= 8);
+        for c in list {
+            assert!(c["at"]["x"].is_f64() && c["at"]["y"].is_f64(), "{c}");
+            assert!((1..=5).contains(&c["value"].as_u64().unwrap()), "{c}");
+            assert!(c["code"].is_string(), "{c}");
+        }
+        // The codes are free and carry the value.
+        for c in list {
+            let code = c["code"].as_str().unwrap();
+            assert_eq!(
+                u64::from(code.chars().last().unwrap().to_digit(10).unwrap()),
+                c["value"].as_u64().unwrap()
+            );
+        }
+        // Reading writes nothing and records no step.
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        // Without a revision, with a stale one and for an unknown tool the call is refused.
+        assert_eq!(
+            score_call(&app, "score_suggest", None, json!({})).await.0,
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            score_call(&app, "score_suggest", Some("0000"), json!({}))
+                .await
+                .0,
+            StatusCode::CONFLICT
+        );
+        assert_eq!(
+            score_call(&app, "check", Some(&revision), json!({}))
+                .await
+                .0,
+            StatusCode::NOT_FOUND
+        );
+    }
+
+    #[tokio::test]
+    async fn accepting_a_candidate_adds_a_control_and_undo_removes_it() {
+        let (_dir, path, app, revision) = score_setup().await;
+        let original = std::fs::read(&path).unwrap();
+        let (_, answer) = score_call(&app, "score_suggest", Some(&revision), json!({})).await;
+        let c = &answer["result"]["candidates"][0];
+        let (code, value) = (c["code"].as_str().unwrap().to_owned(), c["value"].clone());
+        // The page does this in two operations, so that each is one undo step.
+        let (status, added) = op(
+            &app,
+            "add_control",
+            &revision,
+            json!({"at": c["at"], "code": code}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{added}");
+        let (status, set) = op(
+            &app,
+            "set_score_controls",
+            added["revision"].as_str().unwrap(),
+            json!({"name": "Sc", "controls": [{"code": code, "value": value}]}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{set}");
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains(&format!("code = {code}\n")), "{text}");
+        let mut revision = set["revision"].as_str().unwrap().to_owned();
+        for _ in 0..2 {
+            let (status, undone) = history(&app, "undo", Some(&revision)).await;
+            assert_eq!(status, StatusCode::OK, "{undone}");
+            revision = undone["revision"].as_str().unwrap().to_owned();
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+    }
+
+    /// Runs `tool` on the score route with the long-call hook sleeping `sleep_ms`, and shows that other
+    /// requests answer while it runs.
+    async fn others_answer_during(tool: &str, body: Value, sleep_ms: u64) {
+        // The hook makes the long call sleep after the revision check, where the tool computes: a slow tool
+        // through the same code path as a real one.
+        let (_dir, path, app, revision) = score_setup().await;
+        super::super::api::SLOW
+            .lock()
+            .unwrap()
+            .push((path.clone(), sleep_ms));
+        let long = {
+            let app = app.clone();
+            let revision = revision.clone();
+            let tool = tool.to_owned();
+            tokio::spawn(async move { score_call(&app, &tool, Some(&revision), body).await })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let started = std::time::Instant::now();
+        for uri in ["/tok/api/revision", "/tok/api/state"] {
+            let polled =
+                tokio::time::timeout(std::time::Duration::from_millis(800), get(&app, uri))
+                    .await
+                    .unwrap_or_else(|_| panic!("{uri} waited for the long call"));
+            assert_eq!(polled.0, StatusCode::OK);
+        }
+        assert!(started.elapsed() < std::time::Duration::from_millis(sleep_ms - 300));
+        assert!(!long.is_finished(), "the long call ended before the polls");
+        let (status, answer) = long.await.unwrap();
+        super::super::api::SLOW.lock().unwrap().clear();
+        assert_eq!(status, StatusCode::OK, "{answer}");
+    }
+
+    #[tokio::test]
+    async fn draft_progress_does_not_block_other_requests() {
+        // A real draft (it searches the synthetic map), slowed down by the hook.
+        others_answer_during(
+            "score_draft",
+            json!({"name": "Sc", "time_limit_min": 6}),
+            1500,
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    async fn suggest_does_not_block_other_requests() {
+        others_answer_during("score_suggest", json!({"limit": 3}), 1500).await;
+    }
+
+    #[tokio::test]
+    async fn a_write_during_a_long_read_is_a_conflict_and_no_result() {
+        let (_dir, path, app, revision) = score_setup().await;
+        super::super::api::SLOW
+            .lock()
+            .unwrap()
+            .push((path.clone(), 600));
+        let long = {
+            let app = app.clone();
+            let revision = revision.clone();
+            tokio::spawn(async move {
+                score_call(&app, "score_suggest", Some(&revision), json!({"limit": 3})).await
+            })
+        };
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        // Another program writes while the tool computes.
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, format!("{text}\n# outside\n")).unwrap();
+        let (status, answer) = long.await.unwrap();
+        super::super::api::SLOW.lock().unwrap().clear();
+        assert_eq!(status, StatusCode::CONFLICT, "{answer}");
+        assert_ne!(answer["revision"], revision);
+    }
+
+    #[tokio::test]
+    async fn the_score_route_refuses_apply() {
+        let (_dir, path, app, revision) = score_setup().await;
+        let before = std::fs::read(&path).unwrap();
+        let (status, _) = score_call(
+            &app,
+            "score_draft",
+            Some(&revision),
+            json!({"name": "Sc", "time_limit_min": 6, "apply": true}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn applying_the_shown_draft_after_a_settings_change_writes_exactly_that_draft() {
+        let (_dir, path, app, revision) = score_setup().await;
+        let body = json!({"name": "Sc", "time_limit_min": 6});
+        let (status, shown) = score_call(&app, "score_draft", Some(&revision), body).await;
+        assert_eq!(status, StatusCode::OK, "{shown}");
+        let draft = shown["result"].clone();
+        let controls: Vec<Value> = draft["controls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| json!({"code": c["code"], "value": c["value"], "at": c["at"]}))
+            .collect();
+        assert!(!controls.is_empty());
+        // The seed changes after the draft was computed: a new search could give another draft.
+        let (status, changed) =
+            op(&app, "set_score_settings", &revision, json!({"seed": 99})).await;
+        assert_eq!(status, StatusCode::OK, "{changed}");
+        let revision = changed["revision"].as_str().unwrap().to_owned();
+        let before = std::fs::read(&path).unwrap();
+        let (status, applied) = op(
+            &app,
+            "score_apply_draft",
+            &revision,
+            json!({"name": "Sc", "time_limit_min": 6, "controls": controls, "links": draft["links"]}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{applied}");
+        // The file holds the shown controls: same codes, values and positions.
+        let file = freemapper_courseplan_model::ProjectFile::load(&path).unwrap();
+        let course = file.event.courses.iter().find(|c| c.name == "Sc").unwrap();
+        let freemapper_courseplan_model::CourseKind::Score {
+            controls: written,
+            time_limit_min,
+            ..
+        } = &course.kind
+        else {
+            panic!("not a score course");
+        };
+        assert_eq!(*time_limit_min, 6);
+        assert_eq!(written.len(), controls.len());
+        for shown in &controls {
+            let code = shown["code"].as_str().unwrap();
+            let got = written.iter().find(|w| w.code.0 == code).unwrap();
+            assert_eq!(u64::from(got.value), shown["value"].as_u64().unwrap());
+            let at = &file
+                .event
+                .controls
+                .iter()
+                .find(|c| c.code.0 == code)
+                .unwrap()
+                .map_mm;
+            assert!((at.x - shown["at"]["x"].as_f64().unwrap()).abs() < 1e-6);
+            assert!((at.y - shown["at"]["y"].as_f64().unwrap()).abs() < 1e-6);
+        }
+        // One undo step takes it all back.
+        let revision = applied["revision"].as_str().unwrap().to_owned();
+        let (status, _) = history(&app, "undo", Some(&revision)).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn applying_a_draft_with_a_taken_code_or_a_stale_revision_is_refused() {
+        let (_dir, path, app, revision) = score_setup().await;
+        let (_, added) = op(
+            &app,
+            "add_control",
+            &revision,
+            json!({"at": {"x": -20.0, "y": 0.0}, "code": 31}),
+        )
+        .await;
+        let revision = added["revision"].as_str().unwrap().to_owned();
+        let before = std::fs::read(&path).unwrap();
+        let body = json!({
+            "name": "Sc", "time_limit_min": 6,
+            "controls": [{"code": 31, "value": 1, "at": {"x": 20.0, "y": 0.0}}],
+            "links": [],
+        });
+        let (status, answer) = op(&app, "score_apply_draft", &revision, body.clone()).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{answer}");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        let (status, _) = op(&app, "score_apply_draft", "0000", body).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        // Not an MCP tool: the editor-only operation is unknown on the other routes.
+        assert!(!crate::mcp::EDITOR_TOOLS.contains(&"score_apply_draft"));
+    }
+
+    #[tokio::test]
+    async fn score_course_overlay_has_controls_and_links_and_no_legs() {
+        let (_dir, _path, app, mut revision) = score_setup().await;
+        let steps = [
+            (
+                "add_control",
+                json!({"at": {"x": -20.0, "y": 0.0}, "code": 31}),
+            ),
+            (
+                "add_control",
+                json!({"at": {"x": 20.0, "y": 0.0}, "code": 42}),
+            ),
+            (
+                "set_score_controls",
+                json!({"name": "Sc", "controls": [{"code": 31}, {"code": 42}]}),
+            ),
+            ("add_score_link", json!({"name": "Sc", "a": 31, "b": 42})),
+        ];
+        for (tool, body) in steps {
+            let (status, answer) = op(&app, tool, &revision, body).await;
+            assert_eq!(status, StatusCode::OK, "{tool}: {answer}");
+            revision = answer["revision"].as_str().unwrap().to_owned();
+        }
+        let (status, overlay) = get(&app, "/tok/api/overlay?course=Sc").await;
+        assert_eq!(status, StatusCode::OK, "{overlay}");
+        assert_eq!(overlay["legs"].as_array().unwrap().len(), 0);
+        assert!(overlay["numbers"].as_array().unwrap().is_empty());
+        let controls = overlay["controls"].as_array().unwrap();
+        assert_eq!(controls.len(), 2);
+        assert_eq!(controls[0]["value"], 1);
+        assert_eq!(controls[1]["value"], 2);
+        assert_eq!(overlay["starts"].as_array().unwrap().len(), 1);
+        assert_eq!(overlay["finishes"].as_array().unwrap().len(), 1);
+        let links = overlay["links"].as_array().unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0]["a"], "31");
+        assert_eq!(links[0]["b"], "42");
+        // The line runs between the circles: shorter than the 40 mm between the controls.
+        let drawn = links[0]["drawn"].as_array().unwrap();
+        assert_eq!(drawn.len(), 2);
+        let (a, b) = (drawn[0][0].as_f64().unwrap(), drawn[1][0].as_f64().unwrap());
+        assert!(a > -20.0 && b < 20.0 && a < b, "{drawn:?}");
+        // Other overlays have no links.
+        let (_, all) = get(&app, "/tok/api/overlay").await;
+        assert!(all["links"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_panel_is_inert_in_print_preview() {
+        // The page's own scripts are checked as text (the repository has no browser harness): the preview
+        // switches off the properties pane, which holds the panel, hides the marker layer, and the panel
+        // reaches the server only through api.js, whose writes the preview refuses (status 423).
+        let files = embedded_texts();
+        let get = |name: &str| {
+            files
+                .iter()
+                .find(|(n, _)| n == name)
+                .unwrap_or_else(|| panic!("{name}"))
+                .1
+                .clone()
+        };
+        let main = get("js/main.js");
+        // The function that switches the preview on and off names the properties pane next to `inert`.
+        let start = main.find("function syncPreview").expect("syncPreview");
+        let body = &main[start..];
+        let body = &body[..body.find("\nfunction ").unwrap_or(body.len())];
+        assert!(
+            body.contains("\"pane-props\"") && body.contains(".inert"),
+            "{body}"
+        );
+        assert!(
+            body.contains("scoreLayer"),
+            "the marker layer stays hidden in the preview"
+        );
+        assert!(main.contains("if (state.closed || state.preview) return null;"));
+        let page = get("index.html");
+        let props = page.find("id=\"pane-props\"").unwrap();
+        assert!(page[props..].contains("id=\"props\""));
+        let score = get("js/score.js");
+        assert!(!score.contains("fetch(") && !score.contains("XMLHttpRequest"));
+        assert!(get("js/api.js").contains("if (readOnly) return REFUSED;"));
+    }
+
+    #[tokio::test]
+    async fn editor_dispatch_runs_the_new_ops_and_undo_restores() {
+        let (_dir, path, app, first) = setup().await;
+        let at = centre(&first);
+        let mut revision = first["revision"].as_str().unwrap().to_owned();
+        let mut states = vec![std::fs::read(&path).unwrap()];
+        let steps: Vec<(&str, Value)> = vec![
+            (
+                "add_special",
+                json!({"kind": "start", "id": "S1", "at": at}),
+            ),
+            (
+                "add_special",
+                json!({"kind": "finish", "id": "F1", "at": at}),
+            ),
+            ("add_control", json!({"at": at, "code": 31})),
+            ("add_control", json!({"at": at, "code": 32})),
+            (
+                "add_score_course",
+                json!({"name": "Sc", "start": "S1", "finish": "F1", "time_limit_min": 45}),
+            ),
+            (
+                "set_score_controls",
+                json!({"name": "Sc", "controls": [{"code": 31}, {"code": "32", "value": 2}]}),
+            ),
+            (
+                "set_control_value",
+                json!({"name": "Sc", "code": 31, "value": 1}),
+            ),
+            ("add_score_link", json!({"name": "Sc", "a": 31, "b": 32})),
+            ("remove_score_link", json!({"name": "Sc", "a": 32, "b": 31})),
+            ("set_score_settings", json!({"seed": 5})),
+            (
+                "set_score_course_details",
+                json!({"name": "Sc", "penalty_per_min": 3}),
+            ),
+        ];
+        for (tool, body) in steps {
+            let (status, answer) = op(&app, tool, &revision, body).await;
+            assert_eq!(status, StatusCode::OK, "{tool}: {answer}");
+            revision = answer["revision"].as_str().unwrap().to_owned();
+            // An op that changes nothing (the value its code already gives) records no step.
+            let now = std::fs::read(&path).unwrap();
+            if states.last() != Some(&now) {
+                states.push(now);
+            }
+        }
+        let text = String::from_utf8(states.last().unwrap().clone()).unwrap();
+        assert!(
+            text.contains("kind = \"score\"") && text.contains("penalty_per_min = 3"),
+            "{text}"
+        );
+        assert!(text.contains("seed = 5"), "{text}");
+        // A refused op leaves the file and the history alone.
+        let (status, refused) = op(
+            &app,
+            "set_control_value",
+            &revision,
+            json!({"name": "Sc", "code": 32, "value": 4}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+        assert_eq!(&std::fs::read(&path).unwrap(), states.last().unwrap());
+        // Undo walks back through every step to the bytes before the first one.
+        for want in states.iter().rev().skip(1) {
+            let (status, undone) = history(&app, "undo", Some(&revision)).await;
+            assert_eq!(status, StatusCode::OK, "{undone}");
+            revision = undone["revision"].as_str().unwrap().to_owned();
+            assert_eq!(&std::fs::read(&path).unwrap(), want);
+        }
+        let (status, _) = history(&app, "undo", Some(&revision)).await;
+        assert_eq!(status, StatusCode::CONFLICT);
     }
 
     fn dir_has_tmp(path: &std::path::Path) -> bool {
@@ -2154,7 +2633,10 @@ mod ops {
     #[test]
     fn every_editor_tool_has_an_undo_label_in_both_languages() {
         for lang in available() {
-            for tool in crate::mcp::EDITOR_TOOLS {
+            for tool in crate::mcp::EDITOR_TOOLS
+                .iter()
+                .chain(crate::mcp::EDITOR_ONLY)
+            {
                 let id = format!("editor-op-{}", tool.replace('_', "-"));
                 let label = freemapper_courseplan::text::text(&lang, &id, &[]);
                 assert!(!label.is_empty() && label != id, "{}: {id}", lang.code());
@@ -2428,6 +2910,60 @@ mod exchange {
         let served = String::from_utf8(got.body).unwrap();
         assert_eq!(created_blanked(&served), created_blanked(&cli));
         assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn iof_xml_download_with_a_score_course_has_the_values_and_validates() {
+        use freemapper_courseplan_model::{ControlCode, CourseKind, ScoreControl};
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let mut file = freemapper_courseplan_model::ProjectFile::load(&path).unwrap();
+        let mut score = file.event.courses[0].clone();
+        score.name = "Sc".to_owned();
+        score.kind = CourseKind::Score {
+            time_limit_min: 45,
+            penalty_per_min: Some(4),
+            controls: vec![ScoreControl {
+                code: ControlCode("31".to_owned()),
+                value: 1,
+            }],
+            links: vec![],
+        };
+        file.event.courses.push(score);
+        file.save().unwrap();
+        let app = router_for(&path);
+        let got = call(
+            &app,
+            "GET",
+            "/tok/api/export/iof-xml",
+            None,
+            "x/y",
+            Vec::new(),
+        )
+        .await;
+        assert_eq!(got.status, StatusCode::OK);
+        assert_eq!(got.headers["x-courseplan-courses"], "2");
+        let xml = String::from_utf8(got.body).unwrap();
+        assert!(xml.contains("<Score>1</Score>"), "{xml}");
+        assert!(xml.contains("penaltyPerMin=\"4\""), "{xml}");
+        let file = dir.path().join("score.xml");
+        std::fs::write(&file, &xml).unwrap();
+        let schema = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/fixtures/iof-xml/IOF.xsd"
+        );
+        match std::process::Command::new("xmllint")
+            .args(["--noout", "--schema", schema])
+            .arg(&file)
+            .output()
+        {
+            Ok(out) => assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            ),
+            Err(_) => eprintln!("note: xmllint not on PATH, schema validation skipped"),
+        }
     }
 
     #[tokio::test]

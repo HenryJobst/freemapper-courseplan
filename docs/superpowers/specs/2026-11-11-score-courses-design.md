@@ -61,8 +61,9 @@ numbers through unstated assumptions; a changed project file without the setter 
 
 ### 4.1 Travel time (first part of the route analysis) *(user: simple start; Claude's call: details)*
 
-A cost surface over the map: a speed per map symbol, impassable symbols blocked, special objects of the event
-(out of bounds, dangerous area, forbidden route) blocked. No elevation. The surface is a raster at a resolution
+A cost surface over the map: a speed per map symbol, impassable symbols blocked, out-of-bounds and dangerous
+areas of the event blocked. A forbidden route is a line, not an area: sites within about 4 m of it are rejected,
+but a route may cross it, as `check` treats it for legs and links (ADR 0068, *(Claude's call)*). No elevation. The surface is a raster at a resolution
 the builder chooses (a few metres on the ground). The builder decides how paths are searched.
 
 The surface returns for two points: the fastest route and up to a few clearly different alternatives, each with
@@ -213,8 +214,8 @@ format version step; translations of all texts through Fluent files, English and
 
 - Answered *(user, 2026-11-11)*: missing a mandatory link means disqualification. The user will look at the
   proposed candidates on the Lübeck map once step 2 exists and name those they would never use.
-- Is a link drawn on the map as a line between the two controls (as a leg), and does the control description
-  mention it?
+- Answered *(Claude's call, 2026-11-11, ADR 0069)*: the editor draws a link as a dashed line between the two
+  controls, in the marked-leg style, and it is no leg. The control description does not mention it. The user may overrule.
 - Acceptance of the candidates *(user: yes)*: the Lübeck sprint example (`examples/luebeck-sprint`); the proposals
   are shown once step 2 exists, the rejected ones become test cases.
 - Whether the value should be shown on the map in a later event setting (the field exists, the default is off).

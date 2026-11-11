@@ -112,9 +112,91 @@ there.
   set by hand at 6 mm.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
   flag. The assistant gets a list of these legs.
-- Only individual courses can be edited and measured so far. For team, relay and score courses the program
-  says so.
+- Individual and score courses can be edited (see Score courses below). `info` gives the length of individual
+  courses; for a score course it gives controls, points and time limit, and `score length` measures it. Team and
+  relay courses cannot be edited yet; the program says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did, and `list controls|courses|specials|classes <project>` lists the details; `map extent <project>` and `map near <project> --at X,Y --radius MM` report the map. All of them take `--json`.
+
+### Score courses
+
+On a score course the runners visit the controls in any order within a time limit. Each control is worth points,
+and every started minute over the limit costs points. These commands build such a course; `check` tests it
+(section 8).
+
+```sh
+freemapper-courseplan course add hall.courseplan.toml Score45 --kind score --start S1 --finish F1 --time-limit 45
+freemapper-courseplan score controls hall.courseplan.toml Score45 31,32,43,54
+freemapper-courseplan score link add hall.courseplan.toml Score45 31 54
+freemapper-courseplan score settings hall.courseplan.toml --value-max 5 --good-pace 4:10
+freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
+```
+
+- The code carries the value: the second digit of a two-digit code, the last digit of a longer one. So 43 is worth
+  3 points and 54 is worth 4. `score controls` reads the value from the code. A value you write after `=`, as in
+  `43=3`, has to match it; if it differs, the program refuses and says to change the code. `score value` follows the
+  same rule, so it only repairs a value in the file that no longer matches its code. A code that carries no value,
+  such as `A1`, needs one: `A1=2`.
+- Values run from 1 to the highest value of the event, 5 by default and at most 9 (`score settings --value-max`).
+- Without `--penalty` the course stores no penalty and uses the default: the highest control value of the course, at
+  least the highest value of the event, so a minute over never pays off. The default follows the controls.
+  `score course set --penalty N` stores your own number, and `--no-penalty` goes back to the default.
+- Changing a control's code (`control code`) gives it the value of the new code. A code that carries no value keeps
+  the old value, and `check` reports the difference.
+- A link names two controls that the runner has to visit directly one after the other, in either direction. A runner
+  who does not is disqualified. A control takes at most two links, and links may not close a ring. A control with a
+  link stays in the course until you remove the link (`score link remove`).
+- `score settings` writes the `[score]` table of the event: value range, the paces of a good and a very good runner
+  (seconds per kilometre, or `4:10`), the share of hard controls and the seed.
+- Each of these commands takes `--json` and prints what the MCP tool of the same name answers
+  (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
+  `set_score_settings`, `set_score_course_details`). The editor runs the same operations, and undo takes each back.
+- Bends, legs, control numbers and `course controls` belong to individual courses; a score course refuses them.
+  Classes, print scale, `course rename` and `course remove` work on both. Team and relay courses cannot be edited yet.
+- IOF XML export writes score courses too (see Export below). The Purple Pen export still skips them and says so. The editor draws score courses and has a Score
+  panel (see "The Score panel" in the editor chapter).
+
+#### Lists and evaluation sheet
+
+```sh
+freemapper-courseplan export hall.courseplan.toml --course Score45 --csv score45.csv --sheet score45.md
+```
+
+`--csv` writes one row per control: `code,value,x_mm,y_mm`, ordered by code, with positions in map millimetres at map scale (y points down) and a dot as decimal separator. `--sheet` writes the evaluation sheet as Markdown, a text that prints well as it is: the time limit, the penalty per started minute (the stored one or the default), the rule that the faster runner wins on equal points, the mandatory links with the rule that a runner who does not run a link directly is disqualified, and a table of the controls with their values. Both need `--course` and refuse a course that is not a score course. An existing file is replaced. The tools are `export_score_csv` and `export_score_sheet`, with `project`, `course` and `path` (ending in `.csv` or `.md`). The decisions are in ADR 0070.
+
+#### Suggestions, draft and length
+
+These three commands read the map and search routes on a raster of its symbols (no elevation), so each takes a few
+seconds on a large map. The start and the finish must lie outside buildings and blocked areas; if one does not, the
+program says the start or finish cannot be reached.
+
+```sh
+freemapper-courseplan score suggest hall.courseplan.toml --limit 30
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45 --apply
+freemapper-courseplan score length hall.courseplan.toml Score45
+```
+
+- `score suggest` lists control sites, best route choice first, each with its position, the symbol code of the map
+  feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
+  would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
+  smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m). `--course NAME` takes the start and
+  finish of that score course (`--start` and `--finish` still win); without it the first start and finish of the event count.
+  Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded. With `--json`
+  and over MCP each candidate also has a free `code` that carries its value. It is `null` when no free code is left:
+  only the best-ranked candidates get one.
+- `score draft` picks controls from these sites and gives them values and codes, so that the good runner scores
+  87 to 93 percent of all points by default within the limit and the very good runner takes every control and
+  finishes after 95 to 100 percent of it by default. Both bands are settings of the event. Without `--apply` it only prints the draft. With
+  `--apply` it adds the controls and creates the score course, or replaces the controls of an existing score course
+  and removes the controls that only it used. A course of another kind is refused. The editor can undo the change.
+- `--link "X,Y;X,Y"` makes two positions a mandatory link; each must be the position of a candidate from `score
+  suggest`, run with a `--limit` of at least 60, the pool the draft uses. Repeat the option for more links.
+- When no draft meets both bands, the command exits with 1. It names each missed band with the size of the miss, and
+  one hint: a longer or shorter limit, more suitable sites, free codes (the control count is capped by the code space: raise the highest value with `score settings --value-max`, 9 at most, or free codes on the map), a faster good runner, or that these inputs cannot work.
+- `score length` analyses a course that exists, for example after you moved a control, and reports the same bands and
+  misses. It never changes the course.
+- The same answers come from the tools `score_suggest`, `score_draft` and `score_length`; `--json` prints them.
+  The draft is the same on every run for the same project.
 
 ## 4. The editor
 
@@ -255,6 +337,25 @@ A leg is the line between two stops. Click it with the "Select" tool to choose i
 Each gesture is one step for undo, and the course length in the properties changes with it. A leg that a change to
 the stops sends to another stop loses its bends and tape.
 
+### The Score panel
+
+A score course has no running order, so the editor draws its controls, start and finish, and each mandatory link as a
+dashed line between its two controls. Select the course in the tree to open the Score panel in the properties.
+
+- **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
+  settings: highest value, the paces, the share of hard controls and the seed. The two bands are shown, not edited.
+  "New score course..." in the tree makes a course with a 45 minute limit; the event needs one start and one finish.
+- **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
+  one to the course, as two steps for undo. A candidate without a free code cannot be accepted.
+- **Draft course.** Computes a draft for the time limit and shows its controls, links and the length report with
+  both runner profiles. Nothing changes until you choose "Apply draft". It writes exactly the draft on the screen,
+  without a new search, and replaces the controls and the links of this course, as one step for undo. A change of
+  the time limit or of a setting discards the draft. "Check length" reports the course as it is.
+- **While it runs.** A suggestion or draft takes seconds. The buttons stay disabled, the panel says that it is
+  working, and the editor still notices changes to the file. Candidates and drafts are not saved. If another program
+  changes the project meanwhile, they are discarded and the panel says so.
+- Course mode and the print preview are for individual courses only.
+
 ### Control numbers
 
 The number box of a control sits beside its circle. A dashed outline means the program placed it automatically and
@@ -326,8 +427,8 @@ Half a second after each change the editor runs the same check as `check` and sh
 The Event menu has four entries. The browser never names a file; the editor writes only the project's own linked
 Purple Pen file.
 
-- **Export IOF XML (download).** The browser saves the IOF XML of the individual courses, named after the project
-  file. A dialog lists courses that were left out (team, relay and score courses) and says so when the map has no
+- **Export IOF XML (download).** The browser saves the IOF XML of the individual and score courses, named after the project
+  file. A dialog lists courses that were left out (team and relay courses) and says so when the map has no
   georeferencing.
 - **Export to Purple Pen...** "Write to the linked file" updates the file `sources.ppen` names, by the rules of
   `export --ppen`: it patches what the project changed and stores new Purple Pen ids in the project. Without a link
@@ -448,7 +549,7 @@ The decisions behind this are in ADR 0042, 0045 and 0046.
 
 ## 8. Checking: reading findings, giving reasons for exceptions
 
-`check` holds every individual course against the rules the event is meant to follow and tells you what stands
+`check` holds every individual and score course against the rules the event is meant to follow and tells you what stands
 out. It changes nothing in the project file. You decide whether to change the course or to give a reason for the
 finding as an intended exception.
 
@@ -462,8 +563,8 @@ freemapper-courseplan check hall.courseplan.toml --all
 (`wkb2026.leg.straight_angle_hint`). The control then hardly changes the running direction, and there is no room
 for the number behind the circle.
 
-The program does not check team, relay and score courses yet. For each of them it reports once that it was not
-checked.
+The program does not check team and relay courses yet. For each of them it reports once that it was not
+checked. Score courses have rules of their own (see Score courses below).
 
 ### Reading a line
 
@@ -520,6 +621,34 @@ analysis can say whether it does.
 
 A skipped rule has not checked anything. An empty result therefore does not mean that everything passes. Read the
 list once before you rely on it.
+
+### Score courses
+
+`check` also tests score courses. It does not apply the rules for individual courses to them (angles, control
+distances along legs); eight rules of its own read the control set, the limit and the links. All carry the id
+prefix `wkb2026.score.`:
+
+- `value_code` (error): the value of a control matches the value its code carries (chapter 3, Score courses).
+- `code_ambiguity` (warning): two codes of the course look alike upside down or differ only by 6 and 9, such as 61
+  and 91.
+- `ring` and `order` (warnings): the controls do not stand in a ring round start and finish, and their order is not
+  obvious, for example because they lie on the outer hull and the nearest-control tour is almost the shortest.
+  Both look at courses from six controls on.
+- `length_bands` (warning): on the cost surface of the map the good runner scores 87 to 93 percent of all points
+  by default, and the very good runner takes every control and finishes after 95 to 100 percent of the limit. The
+  bands are settings of the event. The rule searches routes and takes a few seconds on a large map. Without map
+  objects, or if the search fails, it is skipped with the reason.
+- `limit_penalty` (warning): the limit lies between 30 and 90 minutes, and a minute over costs at least as many
+  points as the highest control value.
+- `link` (error or warning): a link needs two different controls of the course and may appear once. A straight line
+  across an out-of-bounds area or a forbidden route is a warning, and so is a link with no second route of similar
+  length. The file has no flag for the second case; if it is intended, accept the hint with a note.
+- `mix` (warning): the share of hard controls matches the setting `mix_hard_percent` within 15 points. It judges
+  from five controls on.
+
+Several of these limits are proposals of freemapper-courseplan, not values from a source; the source in the line
+says which. A finding at a pair of controls is accepted with `--controls`, one about the whole course with
+`--course`, as in the example `examples/luebeck-sprint/score-check.en.txt`. Team and relay courses stay unchecked.
 
 ### Giving a reason for an exception
 
@@ -758,14 +887,15 @@ call) and returns `written`, `conflicts`, `changes` and `notes`. `resolve_sync_c
 freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
-The program writes all individual courses of the event to the file: controls with map position, the control
+The program writes all individual and score courses of the event to the file: controls with map position, the control
 order of each course, leg lengths, climb, the position of the control numbers and the assignment of courses to
 classes. It replaces an existing file only once the new one is completely written. Without `--iof-xml`, `export`
 does nothing and exits with code 2.
 
 Things to know:
 
-- Team, relay and score courses are not written. The program names each skipped course with its kind.
+- Team and relay courses are not written. The program names each skipped course with its kind.
+- A score course is written with the value of each control in `CourseControl/Score`. The schema has no element for the time limit, the penalty per started minute or the mandatory links, so the course carries them in an `Extensions` element in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` with `timeLimitMin`, `penaltyPerMin` and one `Link` per pair). The penalty is the resolved one, the default included. Programs that do not know the namespace ignore it. The rule that the faster runner wins on equal points is not part of the file; it stands on the evaluation sheet (see Score courses).
 - If the target is the project file or the map, `export` stops with an error and leaves both untouched.
 - If the map is georeferenced, start, controls and finish carry latitude and longitude with six decimals. Without
   georeferencing, or with a coordinate system the program does not support, the file has map positions only, and

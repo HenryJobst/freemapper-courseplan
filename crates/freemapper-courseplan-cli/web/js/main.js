@@ -14,6 +14,7 @@ import * as specials from "./specials.js";
 import * as findings from "./findings.js";
 import * as exchange from "./exchange.js";
 import * as sync from "./sync.js";
+import * as score from "./score.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -46,12 +47,14 @@ const svg = document.getElementById("map-svg");
 const propsHost = document.getElementById("props");
 overlay.attach(document.getElementById("layer-overlay"));
 const findingsLayer = document.getElementById("layer-findings");
+const scoreLayer = document.getElementById("layer-score");
 
 // The overlay and the finding markers are in map mm: both sit under the view's transform.
 function placeLayers() {
   const transform = state.view.transform();
   document.getElementById("layer-overlay").setAttribute("transform", transform);
   findingsLayer.setAttribute("transform", transform);
+  scoreLayer.setAttribute("transform", transform);
 }
 
 // The rings, signs and dashed legs of the open findings over the drawn overlay.
@@ -87,6 +90,7 @@ function treeGroups() {
       items: [
         ...event.courses.map((c) => ({ key: `course:${c.name}`, label: c.name })),
         { key: "action:new-course", label: t("editor-tree-new-course") },
+        { key: "action:new-score-course", label: t("editor-tree-new-score-course") },
       ],
     },
     {
@@ -126,6 +130,7 @@ function renderTree() {
 function redraw() {
   overlay.draw(state.overlay, state.selection, state.course, extras());
   drawMarkers();
+  score.drawMarkers(scoreLayer, state.overlay, state.course);
   findings.render();
   props.show(propsHost, state.data, state.selection, state.overlay, propActions);
   state.tree?.setCurrent(state.treeKey);
@@ -139,7 +144,12 @@ let draft = null;
 let pendingLeg = null;
 
 function extras() {
-  return { pool: tools.getTool() === "course" ? state.pool : [], pending: pendingLeg, draft };
+  return { pool: tools.getTool() === "course" && !isScore() ? state.pool : [], pending: pendingLeg, draft };
+}
+
+// The selected course is a score course: no legs, no stop list, no course mode.
+function isScore() {
+  return state.data?.event.courses.find((c) => c.name === state.course)?.kind === "score";
 }
 
 function controlOf(code) {
@@ -166,6 +176,8 @@ async function loadNear() {
 // page always shows the file. A refusal or a conflict shows in the status bar and in the banner above the map.
 
 let busy = false;
+// The text of the last refusal or conflict, for a caller that has to undo a step and show it again.
+let lastFailure = "";
 // An operation that arrived while another ran is dropped; the page is loaded again when the running one ends,
 // so a typed value or a moved circle does not stay although nothing was sent.
 let refreshAfter = false;
@@ -210,16 +222,61 @@ async function runOp(tool, body) {
   }
 }
 
+// Runs a long score call (suggest, draft, length; api/score/{tool}): the page is marked busy, the Score buttons are
+// disabled and the panel says it is working, while the server computes without holding its lock. The answer's data
+// ({ revision, result }) on success, or null (the banner says why). A draft with `apply` writes, so it settles like
+// an operation.
+async function runScore(tool, body) {
+  if (state.closed || state.preview) return null;
+  if (busy) {
+    dropped();
+    return null;
+  }
+  busy = true;
+  score.setWorking(true);
+  propsHost.parentElement.setAttribute("aria-busy", "true");
+  redraw();
+  status.say("editor-score-working");
+  try {
+    const answer = await post(`api/score/${tool}`, body, state.revision);
+    if (!answer.ok || body.apply) return await settle(answer);
+    status.clearBanner();
+    return answer.data;
+  } catch {
+    status.say("editor-status-lost");
+    return null;
+  } finally {
+    score.setWorking(false);
+    propsHost.parentElement.removeAttribute("aria-busy");
+    await idle();
+    redraw();
+  }
+}
+
+score.bind({
+  runOp,
+  runScore,
+  redraw: () => redraw(),
+  say: (id) => status.say(id),
+  state: () => state,
+  focusAfter: props.focusAfter,
+  lastFailure: () => lastFailure,
+  showBanner: status.showBanner,
+});
+
 async function settle(answer) {
   if (answer.ok) {
     state.revision = answer.data.revision;
     // Our own write is not an outside change: the poll must not announce it.
     if (state.seen) state.seen = { ...state.seen, project: answer.data.revision };
+    // Candidates and a draft survive a write of this page; one from outside discards them (loadState).
+    score.rebase(answer.data.revision);
     status.clearBanner();
     await loadState(false);
     return answer.data;
   }
   const message = failure(answer);
+  lastFailure = message;
   if (message) {
     // The banner is an alert region: a screen reader reads it, so the status bar does not repeat it.
     status.showBanner(message);
@@ -462,6 +519,28 @@ async function newCourse() {
   const done = await runOp("add_course", { name, start: starts[0].id, finish: finishes[0].id });
   if (!done) return;
   status.say("editor-status-course-created");
+  await selectKey(`course:${name}`);
+}
+
+// A score course gets the event's only start and finish and a time limit of 45 minutes, which the Score panel changes.
+async function newScoreCourse() {
+  const specials = state.data.event.specials;
+  const starts = specials.filter((s) => s.kind === "start");
+  const finishes = specials.filter((s) => s.kind === "finish");
+  if (starts.length !== 1 || finishes.length !== 1) {
+    status.say("editor-status-need-start-finish");
+    return;
+  }
+  const name = await course.askName({
+    titleId: "editor-new-course-title",
+    labelId: "editor-new-course-label",
+    errorId: "editor-error-course-name",
+    others: state.data.event.courses.map((c) => c.name),
+  });
+  if (name === null) return;
+  const done = await runOp("add_score_course", { name, start: starts[0].id, finish: finishes[0].id, time_limit_min: 45 });
+  if (!done) return;
+  status.say("editor-status-score-created");
   await selectKey(`course:${name}`);
 }
 
@@ -734,9 +813,10 @@ let previewShown = null;
 // Brings the print preview in line with the state: only a selected course can be previewed. `force` loads the map
 // image again even when the course is the same (the project changed).
 function syncPreview(force = false) {
-  if (state.preview && !state.course) state.preview = false;
+  // A score course has no print preview yet: the renderer draws individual courses only.
+  if (state.preview && (!state.course || isScore())) state.preview = false;
   const button = document.getElementById("preview-btn");
-  button.disabled = !state.course;
+  button.disabled = !state.course || isScore();
   button.setAttribute("aria-pressed", String(state.preview));
   svg.dataset.preview = String(state.preview);
   setReadOnly(state.preview);
@@ -745,7 +825,7 @@ function syncPreview(force = false) {
   for (const id of ["pane-tree", "pane-props", "tool-select", "tool-control", "tool-crossing", "tool-special", "tool-course", "undo-btn", "redo-btn", "special-options", "menu-import", "menu-sync"]) {
     document.getElementById(id).inert = state.preview;
   }
-  for (const layer of [document.getElementById("layer-overlay"), findingsLayer]) {
+  for (const layer of [document.getElementById("layer-overlay"), findingsLayer, scoreLayer]) {
     layer.style.display = state.preview ? "none" : "";
   }
   const want = state.preview ? state.course : null;
@@ -757,7 +837,7 @@ function syncPreview(force = false) {
 }
 
 function togglePreview() {
-  if (!state.preview && !state.course) return;
+  if (!state.preview && (!state.course || isScore())) return;
   state.preview = !state.preview;
   if (state.preview) {
     pendingLeg = null;
@@ -782,6 +862,7 @@ async function loadOverlay(course) {
     return false;
   }
   state.course = course;
+  score.forget(course);
   state.overlay = answer.data;
   state.pool = [];
   if (course) {
@@ -806,7 +887,7 @@ async function selectKey(key) {
     // A list entry that starts a dialog; the selection stays as it is.
     pendingLeg = null;
     state.tree?.setCurrent(state.treeKey);
-    await (id === "new-course" ? newCourse() : newClass());
+    await (id === "new-course" ? newCourse() : id === "new-score-course" ? newScoreCourse() : newClass());
     return;
   }
   pendingLeg = null;
@@ -916,6 +997,7 @@ async function loadState(announce) {
   // The server leaves empty lists out of the event; the page counts on them.
   for (const list of ["classes", "controls", "specials", "courses", "accepted_findings"]) answer.data.event[list] ??= [];
   state.data = answer.data;
+  if (score.checkRevision(state.revision)) status.say("editor-score-discarded");
   const m = answer.data.map;
   status.setMap(m.path, m.scale, m.kind);
   renderTree();
@@ -1114,6 +1196,10 @@ async function courseClick(at) {
     status.say("editor-status-pick-course");
     return;
   }
+  if (isScore()) {
+    status.say("editor-score-no-course-mode");
+    return;
+  }
   const code = hitControl(at, state.pool);
   if (code) {
     const stops = state.data.event.courses.find((c) => c.name === state.course).controls.map((c) => String(c.code));
@@ -1139,7 +1225,8 @@ tools.onChange((name) => {
     proposeId();
     status.say("editor-status-special-tool");
   }
-  if (name === "course") status.say(state.course ? "editor-status-course-mode" : "editor-status-pick-course");
+  if (name === "course" && isScore()) status.say("editor-score-no-course-mode");
+  else if (name === "course") status.say(state.course ? "editor-status-course-mode" : "editor-status-pick-course");
   showOverlay();
 });
 

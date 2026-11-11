@@ -97,6 +97,7 @@ fn event() -> Event {
         ],
         accepted_findings: vec![],
         sync: None,
+        score: None,
     }
 }
 
@@ -201,11 +202,12 @@ fn remove_control_used_by_score_course_is_refused() {
         "S",
         CourseKind::Score {
             time_limit_min: 60,
-            penalty_per_min: 1,
+            penalty_per_min: Some(1),
             controls: vec![ScoreControl {
                 code: code("32"),
                 value: 10,
             }],
+            links: vec![],
         },
     ));
     let before = e.clone();
@@ -1470,4 +1472,420 @@ fn set_leg_checks_the_extent_and_caps_the_bends() {
         false,
     )
     .unwrap();
+}
+
+// ---- score courses (ADR 0067) -------------------------------------------------------------
+
+fn input(c: &str, value: Option<u32>) -> ScoreControlInput {
+    ScoreControlInput {
+        code: code(c),
+        value,
+    }
+}
+
+/// The event with a score course "Sc" holding 31, 32 and 33.
+fn score_event() -> Event {
+    let mut e = event();
+    add_score_course(&mut e, "Sc", "S1", "F1", 45, None).unwrap();
+    set_score_controls(
+        &mut e,
+        "Sc",
+        &[input("31", None), input("32", None), input("33", None)],
+    )
+    .unwrap();
+    e
+}
+
+type ScoreView = (u32, Option<u32>, Vec<(String, u32)>, Vec<(String, String)>);
+
+fn score_of(e: &Event, name: &str) -> ScoreView {
+    match &e.courses.iter().find(|c| c.name == name).unwrap().kind {
+        CourseKind::Score {
+            time_limit_min,
+            penalty_per_min,
+            controls,
+            links,
+        } => (
+            *time_limit_min,
+            *penalty_per_min,
+            controls
+                .iter()
+                .map(|c| (c.code.0.clone(), c.value))
+                .collect(),
+            links
+                .iter()
+                .map(|l| (l.a.0.clone(), l.b.0.clone()))
+                .collect(),
+        ),
+        _ => panic!("not a score course"),
+    }
+}
+
+fn limits(time_limit_min: u32, penalty_per_min: u32, penalty_is_default: bool) -> ScoreLimits {
+    ScoreLimits {
+        time_limit_min,
+        penalty_per_min,
+        penalty_is_default,
+    }
+}
+
+#[test]
+fn default_penalty_is_the_highest_value() {
+    let mut e = event();
+    // Without a penalty nothing is stored; the default is the event's highest value (5) while the course is empty.
+    assert_eq!(
+        add_score_course(&mut e, "Sc", "S1", "F1", 45, None),
+        Ok(limits(45, 5, true))
+    );
+    assert_eq!(score_of(&e, "Sc").1, None);
+    // A given penalty is stored and stays, whatever the controls say.
+    assert_eq!(
+        add_score_course(&mut e, "Sd", "S1", "F1", 60, Some(2)),
+        Ok(limits(60, 2, false))
+    );
+    let stored = set_score_controls(&mut e, "Sd", &[input("33", None)]).unwrap();
+    assert_eq!(stored.limits, limits(60, 2, false));
+    // Controls change the default on read and store nothing: values 1 and 3 stay below value_max.
+    let stored = set_score_controls(&mut e, "Sc", &[input("31", None), input("33", None)]).unwrap();
+    assert_eq!(stored.limits, limits(45, 5, true));
+    assert_eq!(score_of(&e, "Sc").1, None);
+    // A value above value_max raises the default once value_max allows it.
+    set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            value_max: Some(9),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let stored = set_score_controls(&mut e, "Sc", &[input("39", None)]);
+    assert!(stored.is_err(), "no control 39 yet");
+    e.controls.push(control("39"));
+    let stored = set_score_controls(&mut e, "Sc", &[input("31", None), input("39", None)]).unwrap();
+    assert_eq!(stored.limits, limits(45, 9, true));
+    // The default follows value_max on read: a stored penalty would not.
+    assert_eq!(
+        add_score_course(&mut e, "Se", "S1", "F1", 45, None),
+        Ok(limits(45, 9, true))
+    );
+    assert_eq!(
+        freemapper_courseplan_model::default_penalty(&[], &e.score_settings()),
+        9
+    );
+    // Setting a penalty stores it; no penalty goes back to the default.
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Set(3)),
+        Ok(limits(45, 3, false))
+    );
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Default),
+        Ok(limits(45, 9, true))
+    );
+    assert_eq!(score_of(&e, "Sc").1, None);
+}
+
+#[test]
+fn score_course_without_time_limit_or_with_unknown_stop_is_refused() {
+    let mut e = event();
+    assert_eq!(
+        add_score_course(&mut e, "Sc", "S1", "F1", 0, None),
+        Err(EditError::BadTimeLimit)
+    );
+    assert!(matches!(
+        add_score_course(&mut e, "Sc", "nope", "F1", 30, None),
+        Err(EditError::Invalid(_))
+    ));
+    assert!(matches!(
+        add_score_course(&mut e, "A", "S1", "F1", 30, None),
+        Err(EditError::Invalid(_))
+    ));
+    assert_eq!(e.courses.len(), 2);
+}
+
+#[test]
+fn value_must_match_code_or_is_refused() {
+    let mut e = score_event();
+    let before = e.clone();
+    assert_eq!(
+        score_of(&e, "Sc").2,
+        [("31".into(), 1), ("32".into(), 2), ("33".into(), 3)]
+    );
+    // A value the code does not carry is refused, in both ops.
+    assert_eq!(
+        set_score_controls(&mut e, "Sc", &[input("33", Some(5))]),
+        Err(EditError::ValueDisagreesWithCode {
+            code: code("33"),
+            value: 5,
+            expected: 3
+        })
+    );
+    assert_eq!(
+        set_control_value(&mut e, "Sc", &code("33"), 4),
+        Err(EditError::ValueDisagreesWithCode {
+            code: code("33"),
+            value: 4,
+            expected: 3
+        })
+    );
+    // The value the code carries is accepted; a stored value that drifted is repaired.
+    set_control_value(&mut e, "Sc", &code("33"), 3).unwrap();
+    assert_eq!(e, before);
+    // A value above the event's highest value is refused. Code 39 carries 9; value_max is 5.
+    e.controls.push(control("39"));
+    assert!(matches!(
+        set_score_controls(&mut e, "Sc", &[input("39", None)]),
+        Err(EditError::Score(
+            freemapper_courseplan::score::ScoreError::BadValue {
+                value: 9,
+                value_max: 5
+            }
+        ))
+    ));
+    // Duplicates, unknown controls and codes without a value.
+    assert_eq!(
+        set_score_controls(&mut e, "Sc", &[input("31", None), input("31", None)]),
+        Err(EditError::DuplicateScoreControl(code("31")))
+    );
+    assert!(matches!(
+        set_score_controls(&mut e, "Sc", &[input("77", None)]),
+        Err(EditError::NotFound {
+            what: "control",
+            ..
+        })
+    ));
+    e.controls.push(control("A1"));
+    assert_eq!(
+        set_score_controls(&mut e, "Sc", &[input("A1", None)]),
+        Err(EditError::CodeCarriesNoValue(code("A1")))
+    );
+    set_score_controls(&mut e, "Sc", &[input("A1", Some(2))]).unwrap();
+    assert_eq!(score_of(&e, "Sc").2, [("A1".to_owned(), 2)]);
+    // Not a score course, not found.
+    assert_eq!(
+        set_control_value(&mut e, "A", &code("31"), 1),
+        Err(EditError::NotScoreCourse { course: "A".into() })
+    );
+    assert!(matches!(
+        set_control_value(&mut e, "Sc", &code("33"), 3),
+        Err(EditError::NotFound {
+            what: "control",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn link_ops_enforce_the_model_rules() {
+    let mut e = score_event();
+    add_score_link(&mut e, "Sc", &code("31"), &code("32")).unwrap();
+    // Either direction counts as the same link.
+    assert!(matches!(
+        add_score_link(&mut e, "Sc", &code("32"), &code("31")),
+        Err(EditError::Invalid(_))
+    ));
+    assert!(matches!(
+        add_score_link(&mut e, "Sc", &code("31"), &code("31")),
+        Err(EditError::Invalid(_))
+    ));
+    // A control the course does not have.
+    e.controls.push(control("34"));
+    assert!(matches!(
+        add_score_link(&mut e, "Sc", &code("31"), &code("34")),
+        Err(EditError::Invalid(_))
+    ));
+    // A chain 31-32-33 is fine, a ring is not.
+    add_score_link(&mut e, "Sc", &code("32"), &code("33")).unwrap();
+    assert!(matches!(
+        add_score_link(&mut e, "Sc", &code("33"), &code("31")),
+        Err(EditError::Invalid(_))
+    ));
+    assert_eq!(score_of(&e, "Sc").3.len(), 2);
+    // A linked control cannot be dropped from the course.
+    assert!(matches!(
+        set_score_controls(&mut e, "Sc", &[input("31", None)]),
+        Err(EditError::Invalid(_))
+    ));
+    // Removing matches either direction; a link that is not there is not found.
+    remove_score_link(&mut e, "Sc", &code("33"), &code("32")).unwrap();
+    assert_eq!(score_of(&e, "Sc").3, [("31".to_owned(), "32".to_owned())]);
+    assert!(matches!(
+        remove_score_link(&mut e, "Sc", &code("32"), &code("33")),
+        Err(EditError::NotFound { what: "link", .. })
+    ));
+    assert_eq!(
+        add_score_link(&mut e, "A", &code("31"), &code("32")),
+        Err(EditError::NotScoreCourse { course: "A".into() })
+    );
+    // A recoded control keeps its links.
+    rename_control(&mut e, &code("31"), &code("41"));
+    assert_eq!(score_of(&e, "Sc").3, [("41".to_owned(), "32".to_owned())]);
+}
+
+#[test]
+fn a_recoded_score_control_takes_the_value_of_its_new_code() {
+    let mut e = score_event();
+    add_score_link(&mut e, "Sc", &code("31"), &code("32")).unwrap();
+    assert_eq!(score_of(&e, "Sc").2[0], ("31".to_owned(), 1));
+    rename_control(&mut e, &code("31"), &code("35"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("35".to_owned(), 5));
+    assert_eq!(score_of(&e, "Sc").3, [("35".to_owned(), "32".to_owned())]);
+    // A code that carries no value keeps the old value; `check` reports the mismatch.
+    rename_control(&mut e, &code("35"), &code("A1"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("A1".to_owned(), 5));
+    rename_control(&mut e, &code("A1"), &code("ABC"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("ABC".to_owned(), 5));
+}
+
+#[test]
+fn score_settings_and_details_are_checked_and_stored() {
+    let mut e = score_event();
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            seed: Some(7),
+            good_pace_s_per_km: Some(260),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!((stored.seed, stored.good_pace_s_per_km), (7, 260));
+    assert_eq!(e.score.as_ref().unwrap().seed, 7);
+    let before = e.clone();
+    // Out of range: the model refuses, the event stays.
+    assert!(matches!(
+        set_score_settings(
+            &mut e,
+            &ScoreSettingsChange {
+                value_max: Some(12),
+                ..Default::default()
+            }
+        ),
+        Err(EditError::Invalid(_))
+    ));
+    assert_eq!(e, before);
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", Some(60), PenaltyChange::Set(4)),
+        Ok(limits(60, 4, false))
+    );
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Set(6)),
+        Ok(limits(60, 6, false))
+    );
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", Some(0), PenaltyChange::Keep),
+        Err(EditError::BadTimeLimit)
+    );
+    assert_eq!(
+        set_score_course_details(&mut e, "A", Some(30), PenaltyChange::Keep),
+        Err(EditError::NotScoreCourse { course: "A".into() })
+    );
+}
+
+#[test]
+fn individual_ops_still_refuse_team_and_relay() {
+    let mut e = score_event();
+    for (name, kind) in [
+        (
+            "T",
+            CourseKind::Team {
+                team_size: 2,
+                mandatory: vec![cc("31")],
+                free: vec![],
+            },
+        ),
+        (
+            "R",
+            CourseKind::Relay {
+                legs: 2,
+                parts: vec![],
+            },
+        ),
+    ] {
+        e.courses.push(course(name, kind));
+        let refused = EditError::NotSupported {
+            course: name.to_owned(),
+        };
+        assert_eq!(
+            set_course_controls(&mut e, name, &[code("31")]),
+            Err(refused.clone())
+        );
+        assert_eq!(
+            set_course_details(&mut e, name, Some(vec![]), None, None),
+            Err(refused.clone())
+        );
+        assert_eq!(
+            set_leg(&mut e, extent(), name, LegStart::Start, vec![], false),
+            Err(refused)
+        );
+        // The score operations do not take them either.
+        assert_eq!(
+            add_score_link(&mut e, name, &code("31"), &code("32")),
+            Err(EditError::NotScoreCourse {
+                course: name.to_owned()
+            })
+        );
+    }
+    // A score course refuses the individual-only ops with its own message, and takes details and removal.
+    let refused = EditError::ScoreCourse {
+        course: "Sc".into(),
+    };
+    assert_eq!(
+        set_course_controls(&mut e, "Sc", &[code("31")]),
+        Err(refused.clone())
+    );
+    assert_eq!(
+        set_course_number(&mut e, "Sc", 0, None),
+        Err(refused.clone())
+    );
+    assert_eq!(
+        set_leg(&mut e, extent(), "Sc", LegStart::Start, vec![], false),
+        Err(refused)
+    );
+    set_course_details(
+        &mut e,
+        "Sc",
+        Some(vec!["H21".to_owned()]),
+        None,
+        Some(Some(4000)),
+    )
+    .unwrap();
+    let sc = e.courses.iter().find(|c| c.name == "Sc").unwrap();
+    assert_eq!(
+        (sc.classes.clone(), sc.planned_print_scale),
+        (vec!["H21".to_owned()], Some(4000))
+    );
+    change_course_name(&mut e, "Sc", "Score").unwrap();
+    remove_course(&mut e, "Score").unwrap();
+    assert!(e.courses.iter().all(|c| c.name != "Score"));
+}
+
+#[test]
+fn value_max_below_a_control_value_is_refused() {
+    let mut e = score_event();
+    let before = e.clone();
+    // 33 is worth 3: a highest value of 2 would leave it out of range; 3 is fine.
+    assert_eq!(
+        set_score_settings(
+            &mut e,
+            &ScoreSettingsChange {
+                value_max: Some(2),
+                ..Default::default()
+            }
+        ),
+        Err(EditError::ValueMaxBelowControl {
+            value_max: 2,
+            code: code("33"),
+            value: 3,
+        })
+    );
+    assert_eq!(e, before);
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            value_max: Some(3),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(stored.value_max, 3);
 }

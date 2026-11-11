@@ -85,6 +85,16 @@ the findings that were accepted for it are reported again.
 | `length_table` | Course length in percent of the HE course |
 | `difficulty_mix` | Easy and hard categories on one course |
 | `nor_lkm` | Performance kilometres against the NOR recommendation |
+| `score_value_matches_code` | Value and code of score controls agree |
+| `score_code_ambiguity` | Codes of a score course that can be mixed up |
+| `score_ring` | Controls in a ring round start and finish |
+| `score_obvious_order` | Obvious order of the score controls |
+| `score_length_bands` | Length of the score course for good and very good runners |
+| `score_limit_and_penalty` | Time limit and penalty of the score course |
+| `score_link_valid` | Mandatory links of the score course |
+| `score_mix` | Share of hard score controls |
+
+The thresholds of the score rules (ring, order, mix) are proposals of this program, not values from a source.
 
 A rule with any other key is refused. A new key needs code in `src/check/` and an entry in
 `SCHEMA` in `src/rules.rs`.
@@ -111,7 +121,7 @@ by map kind, since forest maps use ISOM symbol codes and sprint maps ISSprOM cod
 ## Values and units
 
 `values` holds what the check reads. A number carries its unit in its name: the name is a unit or
-ends in `_<unit>`. The units are `metres`, `mm`, `degrees`, `percent` and `factor`. Examples:
+ends in `_<unit>`. The units are `metres`, `mm`, `degrees`, `percent`, `factor` and `minutes`. Examples:
 `metres = 30.0`, `min_length_metres = 30.0`, `tolerance_percent = 6`, `feature_search_mm = 1.0`.
 A name like `distance = 30` is refused, because nobody can tell whether it means metres on the
 ground or millimetres on the map. A number under a unit name must be in the range of its unit:

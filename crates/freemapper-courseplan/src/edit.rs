@@ -2,12 +2,19 @@
 //!
 //! Every operation works on a clone of the event and validates the clone. Only a consistent result
 //! is written back, so a failed operation leaves the event as it was. Only individual courses are
-//! edited in M2a. Terms follow `docs/glossary.md`.
+//! edited in M2a; score courses have their own operations (ADR 0067). Terms follow `docs/glossary.md`.
 
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
     CourseControl, CourseKind, Event, FindingKey, LegRef, MapPoint, ModelError, NumberPlacement,
     SpecialObject, validate,
+};
+
+mod score;
+pub use score::{
+    PenaltyChange, ScoreControlInput, ScoreControlsEdit, ScoreLimits, ScoreSettingsChange,
+    add_score_course, add_score_link, limits_of, remove_score_link, set_control_value,
+    set_score_controls, set_score_course_details, set_score_settings,
 };
 
 use crate::check::{Place, check_of};
@@ -46,9 +53,45 @@ pub enum EditError {
     InUse { id: String, courses: Vec<String> },
     /// The course kind cannot be edited yet.
     #[error(
-        "course {course} is not an individual course; only individual courses can be edited yet"
+        "course {course} is not an individual course; only individual and score courses can be edited yet"
     )]
     NotSupported { course: String },
+    /// A score course has no running order, legs or control numbers; this change is for individual courses.
+    #[error("course {course} is a score course; this change works on individual courses only")]
+    ScoreCourse { course: String },
+    /// A score operation named a course of another kind.
+    #[error("course {course} is not a score course")]
+    NotScoreCourse { course: String },
+    /// A score control carries a value its code does not carry (ADR 0060, ADR 0067).
+    #[error(
+        "control {code} carries the value {expected} in its code, not {value}; change the code instead, and the value follows"
+    )]
+    ValueDisagreesWithCode {
+        code: ControlCode,
+        value: u32,
+        expected: u8,
+    },
+    /// The code carries no value, so the call has to give one.
+    #[error("the code of control {0} carries no value; give one")]
+    CodeCarriesNoValue(ControlCode),
+    /// A control twice in the list of a score course.
+    #[error("control {0} appears twice in the score course")]
+    DuplicateScoreControl(ControlCode),
+    /// A time limit of 0 minutes leaves no time to score.
+    #[error("the time limit must be at least 1 minute")]
+    BadTimeLimit,
+    /// The new highest value is below the value of a control that a score course holds.
+    #[error(
+        "The highest value cannot be {value_max}: control {code} is worth {value}. Recode or remove that control first."
+    )]
+    ValueMaxBelowControl {
+        value_max: u8,
+        code: ControlCode,
+        value: u32,
+    },
+    /// A score value is out of range, or a score search failed.
+    #[error(transparent)]
+    Score(#[from] crate::score::ScoreError),
     /// The position is beyond the controls of the course. The library passes its 0-based index;
     /// the CLI and the MCP server pass the position counted from 1, as the user gave it.
     #[error("course {course} has no control at position {index}")]
@@ -347,6 +390,19 @@ pub(crate) fn course_mut<'a>(
 pub(crate) fn individual_mut(course: &mut Course) -> Result<&mut Vec<CourseControl>, EditError> {
     match &mut course.kind {
         CourseKind::Individual { controls } => Ok(controls),
+        CourseKind::Score { .. } => Err(EditError::ScoreCourse {
+            course: course.name.clone(),
+        }),
+        _ => Err(EditError::NotSupported {
+            course: course.name.clone(),
+        }),
+    }
+}
+
+/// Individual and score courses take the course details; team and relay courses do not.
+fn individual_or_score(course: &Course) -> Result<(), EditError> {
+    match course.kind {
+        CourseKind::Individual { .. } | CourseKind::Score { .. } => Ok(()),
         _ => Err(EditError::NotSupported {
             course: course.name.clone(),
         }),
@@ -793,7 +849,7 @@ pub fn set_course_details(
 ) -> Result<(), EditError> {
     apply(event, |e| {
         let course = course_mut(e, name)?;
-        individual_mut(course)?;
+        individual_or_score(course)?;
         if let Some(classes) = classes {
             course.classes = classes;
         }
@@ -1132,7 +1188,8 @@ fn rename_decision_keys(event: &mut Event, is_control: bool, from: &str, to: &st
     }
 }
 
-/// Renames a control everywhere the project names it: the control, the stops of courses of every kind,
+/// Renames a control everywhere the project names it: the control, the stops of courses of every kind (a score
+/// control also takes the value its new code carries),
 /// and the controls and legs of accepted findings, and the stored sync decisions. Used by the sync when Purple Pen recodes a control.
 /// It does not check that `to` is free.
 pub fn rename_control(event: &mut Event, from: &ControlCode, to: &ControlCode) {
@@ -1168,8 +1225,23 @@ pub fn rename_control(event: &mut Event, from: &ControlCode, to: &ControlCode) {
                     }
                 }
             }
-            CourseKind::Score { controls, .. } => {
-                controls.iter_mut().for_each(|c| fix(&mut c.code));
+            CourseKind::Score {
+                controls, links, ..
+            } => {
+                for c in controls.iter_mut() {
+                    // The code carries the value: a recoded control takes the value of its new code. A code
+                    // that carries none keeps the old value, and `check` reports it.
+                    if &c.code == from
+                        && let Some(value) = crate::score::code::value_of_code(&to.0)
+                    {
+                        c.value = u32::from(value);
+                    }
+                    fix(&mut c.code);
+                }
+                for link in links {
+                    fix(&mut link.a);
+                    fix(&mut link.b);
+                }
             }
         }
     }
@@ -1296,11 +1368,12 @@ map = "m.omap"
                 "Sc",
                 CourseKind::Score {
                     time_limit_min: 30,
-                    penalty_per_min: 1,
+                    penalty_per_min: Some(1),
                     controls: vec![ScoreControl {
                         code: code("36"),
                         value: 10,
                     }],
+                    links: vec![],
                 },
             ),
         ];

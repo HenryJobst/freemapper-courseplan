@@ -1,7 +1,9 @@
 //! IOF XML 3.0 `CourseData` export for result software such as OE.
 //!
-//! The writer turns an [`Event`] and the map scale into one XML string. Only individual courses are
-//! written; other kinds are skipped and named in the result. Positions are map mm at the map scale
+//! The writer turns an [`Event`] and the map scale into one XML string. Individual and score courses are
+//! written; team and relay courses are skipped and named in the result. A score course has its values in
+//! `CourseControl/Score`; the schema has no flag, time limit, penalty or link, so those go into an
+//! `Extensions` element of the course in the namespace [`SCORE_NAMESPACE`] (ADR 0070). Positions are map mm at the map scale
 //! with the y axis pointing down (the schema counts y in units below the centre), as the project stores them, so y is written unmirrored. Geographic
 //! positions (`Position`, latitude and longitude with six decimals) are written when the caller passes the
 //! [`MapGrid`] of a georeferenced map; the grid gives them in the same map frame, so nothing is flipped.
@@ -12,6 +14,7 @@ use std::io;
 pub use freemapper_course::MapGrid;
 use freemapper_courseplan_model::{
     Control, ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
+    score_penalty,
 };
 use quick_xml::Writer;
 use quick_xml::events::{BytesDecl, BytesText, Event as Xml};
@@ -24,6 +27,8 @@ use crate::numbers::number_centre;
 mod tests;
 
 const NAMESPACE: &str = "http://www.orienteering.org/datastandard/3.0";
+/// Namespace of the score data the schema has no element for (time limit, penalty, mandatory links).
+pub const SCORE_NAMESPACE: &str = "https://github.com/HenryJobst/freemapper-courseplan/ns/score/1";
 const CREATOR: &str = "freemapper-courseplan";
 
 /// The written file and the courses it leaves out.
@@ -39,7 +44,7 @@ pub struct IofXmlExport {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkippedCourse {
     pub name: String,
-    /// `team`, `relay` or `score`.
+    /// `team` or `relay`.
     pub kind: &'static str,
 }
 
@@ -166,6 +171,102 @@ fn plan_course<'a>(
     })
 }
 
+/// A score course as the XML lists it.
+struct ScoreOut<'a> {
+    course: &'a Course,
+    time_limit_min: u32,
+    penalty_per_min: u32,
+    /// Code and value of every score control, in course order.
+    controls: Vec<(&'a str, u32)>,
+    links: Vec<(&'a str, &'a str)>,
+}
+
+fn plan_score<'a>(event: &'a Event, course: &'a Course) -> Result<ScoreOut<'a>, CourseError> {
+    let CourseKind::Score {
+        time_limit_min,
+        penalty_per_min,
+        controls,
+        links,
+    } = &course.kind
+    else {
+        unreachable!("only score courses are planned here");
+    };
+    let unknown = |id: &str| CourseError::UnknownReference {
+        course: course.name.clone(),
+        id: id.to_owned(),
+    };
+    for id in [&course.start, &course.finish] {
+        if !event
+            .specials
+            .iter()
+            .any(|s| start_or_finish(s).is_some_and(|(_, i, _)| i == id))
+        {
+            return Err(unknown(id));
+        }
+    }
+    for c in controls {
+        if !event.controls.iter().any(|x| x.code == c.code) {
+            return Err(unknown(&c.code.0));
+        }
+    }
+    Ok(ScoreOut {
+        course,
+        time_limit_min: *time_limit_min,
+        penalty_per_min: score_penalty(*penalty_per_min, controls, &event.score_settings()),
+        controls: controls
+            .iter()
+            .map(|c| (c.code.0.as_str(), c.value))
+            .collect(),
+        links: links
+            .iter()
+            .map(|l| (l.a.0.as_str(), l.b.0.as_str()))
+            .collect(),
+    })
+}
+
+fn score_course_element(w: &mut Out, out: &ScoreOut<'_>) -> io::Result<()> {
+    w.create_element("Course").write_inner_content(|w| {
+        text_element(w, "Name", &out.course.name)?;
+        if let Some(climb) = out.course.climb_m {
+            text_element(w, "Climb", &climb.to_string())?;
+        }
+        let plain = |w: &mut Out, kind: &str, code: &str| {
+            w.create_element("CourseControl")
+                .with_attribute(("type", kind))
+                .write_inner_content(|w| text_element(w, "Control", code))
+                .map(|_| ())
+        };
+        plain(w, "Start", &out.course.start)?;
+        for (code, value) in &out.controls {
+            w.create_element("CourseControl")
+                .with_attribute(("type", "Control"))
+                .write_inner_content(|w| {
+                    text_element(w, "Control", code)?;
+                    text_element(w, "Score", &value.to_string())
+                })?;
+        }
+        plain(w, "Finish", &out.course.finish)?;
+        w.create_element("Extensions").write_inner_content(|w| {
+            w.create_element("fcp:ScoreCourse")
+                .with_attribute(("xmlns:fcp", SCORE_NAMESPACE))
+                .with_attribute(("timeLimitMin", out.time_limit_min.to_string().as_str()))
+                .with_attribute(("penaltyPerMin", out.penalty_per_min.to_string().as_str()))
+                .write_inner_content(|w| {
+                    for (a, b) in &out.links {
+                        w.create_element("fcp:Link")
+                            .with_attribute(("a", *a))
+                            .with_attribute(("b", *b))
+                            .write_empty()?;
+                    }
+                    Ok(())
+                })?;
+            Ok(())
+        })?;
+        Ok(())
+    })?;
+    Ok(())
+}
+
 type Out = Writer<Vec<u8>>;
 
 fn text_element(w: &mut Out, name: &str, text: &str) -> io::Result<()> {
@@ -245,6 +346,7 @@ fn write_document(
     geo: Option<&MapGrid>,
     created: &str,
     courses: &[CourseOut<'_>],
+    scores: &[ScoreOut<'_>],
 ) -> io::Result<Vec<u8>> {
     let mut w = Writer::new_with_indent(Vec::new(), b' ', 2);
     w.write_event(Xml::Decl(BytesDecl::new("1.0", Some("UTF-8"), None)))?;
@@ -278,12 +380,19 @@ fn write_document(
                     for out in courses {
                         course_element(w, out)?;
                     }
-                    for out in courses {
-                        for class in &out.course.classes {
+                    for out in scores {
+                        score_course_element(w, out)?;
+                    }
+                    let assigned = courses
+                        .iter()
+                        .map(|o| o.course)
+                        .chain(scores.iter().map(|o| o.course));
+                    for course in assigned {
+                        for class in &course.classes {
                             w.create_element("ClassCourseAssignment")
                                 .write_inner_content(|w| {
                                     text_element(w, "ClassName", class)?;
-                                    text_element(w, "CourseName", &out.course.name)
+                                    text_element(w, "CourseName", &course.name)
                                 })?;
                         }
                     }
@@ -299,12 +408,12 @@ fn is_xml_char(c: char) -> bool {
     matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')
 }
 
-/// Writes the individual courses of `event` as IOF XML 3.0 `CourseData`.
+/// Writes the individual and score courses of `event` as IOF XML 3.0 `CourseData`.
 ///
 /// `map_scale` is the scale denominator and `map_kind` the kind of the map (it sets the overprint sizes
 /// for the number positions), `geo` the grid of the georeferenced map, which adds a geographic `Position`
 /// to every control (none without it), `created` an ISO 8601 date and time such as
-/// `2026-11-09T12:00:00Z` for `createTime`. Team, relay and score courses are left out and named in
+/// `2026-11-09T12:00:00Z` for `createTime`. Team and relay courses are left out and named in
 /// [`IofXmlExport::skipped`].
 ///
 /// # Errors
@@ -318,9 +427,16 @@ pub fn export_iof_xml(
     created: &str,
 ) -> Result<IofXmlExport, IofXmlError> {
     let mut courses = Vec::new();
+    let mut scores = Vec::new();
     let mut skipped = Vec::new();
     for course in &event.courses {
-        if matches!(course.kind, CourseKind::Individual { .. }) {
+        if matches!(course.kind, CourseKind::Score { .. }) {
+            let out = plan_score(event, course).map_err(|source| IofXmlError::Course {
+                course: course.name.clone(),
+                source,
+            })?;
+            scores.push(out);
+        } else if matches!(course.kind, CourseKind::Individual { .. }) {
             let out = plan_course(event, course, map_scale, map_kind).map_err(|source| {
                 IofXmlError::Course {
                     course: course.name.clone(),
@@ -335,7 +451,7 @@ pub fn export_iof_xml(
             });
         }
     }
-    let bytes = write_document(event, map_scale, geo, created, &courses)
+    let bytes = write_document(event, map_scale, geo, created, &courses, &scores)
         .expect("writing to a Vec<u8> cannot fail");
     let xml = String::from_utf8(bytes).expect("quick-xml writes UTF-8 from UTF-8 input");
     if let Some(bad) = xml.chars().find(|c| !is_xml_char(*c)) {

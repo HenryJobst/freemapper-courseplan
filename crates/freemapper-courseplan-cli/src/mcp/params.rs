@@ -132,6 +132,14 @@ pub(super) struct ExportIofXml {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ExportScore {
+    pub(super) project: String,
+    pub(super) course: Name,
+    pub(super) path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ExportPpen {
     pub(super) project: String,
     pub(super) path: String,
@@ -464,4 +472,130 @@ pub(super) struct SetStartWindow {
     pub(super) project: String,
     pub(super) minutes: Option<u32>,
     pub(super) no_start_window: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AddScoreCourse {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) start: Name,
+    pub(super) finish: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) penalty_per_min: Option<u32>,
+}
+
+/// One control of a score course: its code and, if the code does not give it, its value.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreControlParam {
+    pub(super) code: Code,
+    pub(super) value: Option<u32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreControls {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) controls: Vec<ScoreControlParam>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetControlValue {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) code: Code,
+    pub(super) value: u32,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreLinkParams {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) a: Code,
+    pub(super) b: Code,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreSettings {
+    pub(super) project: String,
+    pub(super) value_max: Option<u8>,
+    pub(super) good_pace_s_per_km: Option<u32>,
+    pub(super) very_good_pace_s_per_km: Option<u32>,
+    pub(super) mix_hard_percent: Option<u8>,
+    pub(super) seed: Option<u32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreCourseDetails {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: Option<u32>,
+    pub(super) penalty_per_min: Option<u32>,
+    pub(super) no_penalty: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreSuggest {
+    pub(super) project: String,
+    /// A score course: its start and finish are used (`start` and `finish` still override).
+    pub(super) course: Option<Name>,
+    pub(super) limit: Option<u32>,
+    pub(super) min_distance_mm: Option<f64>,
+    pub(super) start: Option<Name>,
+    pub(super) finish: Option<Name>,
+}
+
+/// Two positions the draft must visit one directly after the other.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LinkEnds {
+    pub(super) a: Point,
+    pub(super) b: Point,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreDraft {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) start: Option<Name>,
+    pub(super) finish: Option<Name>,
+    pub(super) links: Option<Vec<LinkEnds>>,
+    pub(super) apply: Option<bool>,
+}
+
+/// One control of a draft the editor applies: its code, value and position.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct DraftControl {
+    pub(super) code: Code,
+    pub(super) value: u32,
+    pub(super) at: Point,
+}
+
+/// A mandatory link between two controls of the draft, by code.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct DraftLink {
+    pub(super) a: Code,
+    pub(super) b: Code,
+}
+
+/// A draft the editor shows, applied as it is (editor only, ADR 0069).
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreApplyDraft {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) controls: Vec<DraftControl>,
+    pub(super) links: Vec<DraftLink>,
 }

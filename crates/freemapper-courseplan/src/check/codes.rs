@@ -147,7 +147,7 @@ pub(super) fn code_pairs(
 
 /// The code turned by 180°: every digit rotated, in reverse order. Only 0, 1, 6, 8 and 9 can
 /// rotate.
-fn rotated(code: &str) -> Option<String> {
+pub(crate) fn rotated(code: &str) -> Option<String> {
     code.chars()
         .rev()
         .map(|c| match c {
@@ -160,7 +160,7 @@ fn rotated(code: &str) -> Option<String> {
 }
 
 /// Whether two codes of the same length differ only where one has 6 and the other 9.
-fn six_nine(a: &str, b: &str) -> bool {
+pub(crate) fn six_nine(a: &str, b: &str) -> bool {
     a.len() == b.len()
         && a.chars()
             .zip(b.chars())

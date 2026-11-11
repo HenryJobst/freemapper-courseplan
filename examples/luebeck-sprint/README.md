@@ -21,6 +21,10 @@ es Bahnen aus einer `.ppen` drucken kann; dann ersetzt das Druck-PDF diese Skizz
 - `course-data.xml`: die Bahn als IOF-XML 3.0, erzeugt mit `export` (siehe unten)
 - `luebeck-sprint.ppen`: die Bahn als Purple-Pen-Event, erzeugt mit `export --ppen` (siehe unten)
 - `preview.jpg`, `make-preview.py`: die Skizze und das Skript dazu
+- `luebeck-score.courseplan.toml`: eine Kopie des Projekts mit einer Score-Bahn (siehe unten)
+- `score-transcript.de.txt`, `score-transcript.en.txt`: die Befehle, die sie ergänzten, mit ihrer Ausgabe
+- `score-check.de.txt`, `score-check.en.txt`: die Prüfung der Score-Bahn, mit vier akzeptierten Warnungen
+- `score-course-data.xml`, `score-15.csv`, `score-15.sheet.md`, `score-15.sheet.de.md`: die Score-Bahn als IOF-XML, Postenliste und Auswertungsbogen
 
 ## So entstand die Bahn
 
@@ -116,6 +120,57 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --ppen luebeck-spr
 ```
 
 Die Datei gibt es noch nicht, deshalb schreibt `export` sie neu und trägt sie im Projekt als `sources.ppen` ein. Ein Test vergleicht die Datei mit einem frischen Export, ein zweiter liest sie wieder ein und exportiert sie ein zweites Mal auf sich selbst, mit denselben Bytes. **In Purple Pen 4.0 ist die Datei noch nicht geöffnet worden.** Wer Purple Pen 4.0 hat, soll sie öffnen und melden, ob sie sich lädt und ob Posten, Bahn und Nummern an der richtigen Stelle stehen. Die Texte der Beschreibung sind englisch, weil das Beispiel mit englischer Oberfläche erzeugt ist.
+
+## Score-Bahn
+
+`luebeck-score.courseplan.toml` ist eine Kopie des Projekts oben. Sie ergänzt einen Start `S-score`, ein Ziel
+`F-score` und eine Score-Bahn „Score 15“ mit 9 Posten, 25 Punkten und einem Zeitlimit von 15 Minuten. Das
+Sprint-Projekt, sein Purple-Pen-Event und sein IOF-XML bleiben, wie sie waren. Die Kopie gibt es, weil der Start `S1`
+der Sprintbahn in einem Gebäudeumriss liegt. Dort brechen `score suggest` und `score draft` mit der Meldung ab, dass der
+Start nicht erreichbar ist, und eine Score-Bahn braucht Start und Ziel außerhalb von Gebäuden. `S1` habe ich nicht
+verschoben; die beiden neuen Objekte stehen auf freier Karte bei `-60,-3.6` und `-30,10.2`, gefunden mit `map near`.
+
+```sh
+cp luebeck-sprint.courseplan.toml luebeck-score.courseplan.toml
+freemapper-courseplan special add luebeck-score.courseplan.toml --kind start --id S-score --at -60,-3.6
+freemapper-courseplan special add luebeck-score.courseplan.toml --kind finish --id F-score --at -30,10.2
+freemapper-courseplan score suggest luebeck-score.courseplan.toml --start S-score --finish F-score --limit 8
+freemapper-courseplan score draft luebeck-score.courseplan.toml "Score 15" --time-limit 15 --start S-score --finish F-score --apply
+freemapper-courseplan check luebeck-score.courseplan.toml
+freemapper-courseplan export luebeck-score.courseplan.toml --iof-xml score-course-data.xml
+freemapper-courseplan export luebeck-score.courseplan.toml --csv score-15.csv --course "Score 15"
+freemapper-courseplan export luebeck-score.courseplan.toml --sheet score-15.sheet.md --course "Score 15"
+```
+
+`score-transcript.de.txt` hat jeden Befehl mit seiner Ausgabe, auch `score draft`.
+
+**Der Entwurf scheitert bei 45 Minuten, und die Karte ist nicht der Grund.** Ich habe zuerst 45 versucht, das übliche
+Limit. Der gute Läufer holt alle Posten, also 100 Prozent der Punkte bei einem Band von 87 bis 93, und der sehr gute
+Läufer ist nach 55 Prozent des Limits zurück statt nach 95 bis 100. Der Entwurf hört bei 30 Posten auf, weil die freien
+Codes ausgehen. Ein zweistelliger Code trägt seinen Wert in der zweiten Ziffer, ein höchster Wert von 5 lässt also 35
+Codes, und die Paare, die auf dem Kopf gleich aussehen (6 und 9), nehmen einen Teil davon weg. Die letzte Zeile der
+Meldung sagt das. Mit einem auf 9 erhöhten höchsten Wert kommt der Entwurf auf 54 Posten und scheitert trotzdem: Der
+sehr gute Läufer ist nach 63 Prozent des Limits zurück. Auch andere Limits verfehlen die Bänder, meist knapp (probiert
+bei 14, 16 bis 26, 30 und 45; der gute Läufer liegt 0,5 bis 7 Prozentpunkte über dem Band, oder der sehr gute Läufer lässt einen Posten aus). Bei 15 Minuten gelingt der Entwurf in
+wenigen Sekunden: Der gute Läufer holt 23 von 25 Punkten (92,0 Prozent), der sehr gute Läufer läuft alle Posten an und
+ist nach 97,6 Prozent des Limits im Ziel. Das Beispiel nimmt 15 Minuten, und ein Test
+(`luebeck_score_example_meets_its_bands_and_check_is_quiet`) hält es dort. Das ist eine kurze Bahn mit 9 Posten; eine
+längere braucht mehr Codes, als der Standardbereich hergibt.
+
+`check` meldet für dieses Projekt keinen Fehler und eine Warnung, die die Projektdatei mit Begründung akzeptiert:
+
+- Das Limit von 15 Minuten liegt unter den 30 bis 90 Minuten, die `wkb2026.score.limit_penalty` für üblich hält. Die
+  Begründung sagt, dass der Entwurf die Bänder bei 15 Minuten trifft und bei 45 die freien Codes vorher ausgehen.
+
+`score-check.de.txt` zeigt den Lauf. `info` nennt für die Score-Bahn Posten, Punkte und Limit; eine Länge in
+Kilometern misst es nicht.
+
+Grenzen dieses Beispiels. Die Routen hinter dem Entwurf kommen aus einem Raster der Kartensymbole ohne Höhe, und die
+Läuferpaces (4:10 und 3:45 Minuten je Kilometer) sind eine erste Fassung. Die Stellen liegen dort, wo das Programm sie
+gefunden hat, und ich habe nicht jede auf der Karte angesehen; sieh dir vor dem Einsatz jede Position an. Das IOF-XML
+trägt Zeitlimit, Abzug und Verbindungen in einem Erweiterungselement, das in OE nicht ausprobiert ist. `createTime`
+in `score-course-data.xml` ist die Zeit des Laufs, der die Datei erzeugt hat; ein neuer Lauf ändert nur diese Zeile.
+Die Datei besteht die Prüfung gegen das IOF-Schema. Den Bogen gibt es auf Englisch und Deutsch (`--lang de`).
 
 ## Skizze neu erzeugen
 

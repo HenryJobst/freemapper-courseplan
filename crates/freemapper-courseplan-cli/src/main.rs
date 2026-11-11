@@ -8,6 +8,7 @@ mod export_cmd;
 mod import_cmd;
 mod mcp;
 mod query_cmd;
+mod score_cmd;
 mod sync_cmd;
 
 use std::ffi::OsString;
@@ -27,6 +28,7 @@ use freemapper_courseplan::text::{
 };
 use freemapper_courseplan_model::{ControlKind, CourseKind, ProjectFile};
 use query_cmd::{ListCmd, MapCmd};
+use score_cmd::ScoreCmd;
 
 // The help texts come from the Fluent catalog, not from doc comments: `localized_command` sets
 // `about` and `help` on the command that `Cli::command()` derives, once the language is known.
@@ -82,6 +84,15 @@ enum Command {
         /// Write the individual courses into a Purple Pen event
         #[arg(long, value_name = "FILE")]
         ppen: Option<PathBuf>,
+        /// Write the controls of a score course as CSV
+        #[arg(long, value_name = "FILE")]
+        csv: Option<PathBuf>,
+        /// Write the evaluation sheet of a score course as Markdown
+        #[arg(long, value_name = "FILE")]
+        sheet: Option<PathBuf>,
+        /// The score course for --csv and --sheet
+        #[arg(long, value_name = "NAME")]
+        course: Option<String>,
         /// With --ppen, write the file from scratch and replace an existing one
         #[arg(long, requires = "ppen")]
         new: bool,
@@ -119,6 +130,11 @@ enum Command {
     Course {
         #[command(subcommand)]
         action: CourseCmd,
+    },
+    /// Edit score courses: controls with values, mandatory links, settings
+    Score {
+        #[command(subcommand)]
+        action: ScoreCmd,
     },
     /// Check the courses against the rule profile
     Check {
@@ -273,6 +289,9 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .mut_arg("iof_xml", |a| with_help(a, "cli-arg-export-iof-xml"))
                 .mut_arg("ppen", |a| with_help(a, "cli-arg-export-ppen"))
                 .mut_arg("new", |a| with_help(a, "cli-arg-export-new"))
+                .mut_arg("csv", |a| with_help(a, "cli-arg-export-csv"))
+                .mut_arg("sheet", |a| with_help(a, "cli-arg-export-sheet"))
+                .mut_arg("course", |a| with_help(a, "cli-arg-export-course"))
         })
         .mut_subcommand("sync", |s| {
             s.about(t("cli-cmd-sync"))
@@ -471,12 +490,23 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
+        Command::Score { action } => score_cmd::score(&lang, action),
         Command::Export {
             project,
             iof_xml,
             ppen,
             new,
-        } => export_cmd::export(&lang, &project, iof_xml, ppen, new),
+            csv,
+            sheet,
+            course,
+        } => export_cmd::export(
+            &lang,
+            &project,
+            iof_xml,
+            ppen,
+            new,
+            export_cmd::ScoreTargets { csv, sheet, course },
+        ),
         Command::Sync {
             project,
             dry_run,
@@ -630,6 +660,24 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     let scale = doc.georef.scale_denominator;
     for course in &event.courses {
         let name = || FluentValue::from(course.name.clone());
+        if let CourseKind::Score {
+            time_limit_min,
+            controls,
+            ..
+        } = &course.kind
+        {
+            let points: u32 = controls.iter().map(|c| c.value).sum();
+            line(
+                "cli-info-course-score",
+                &[
+                    ("name", name()),
+                    ("controls", n(controls.len())),
+                    ("points", FluentValue::from(points)),
+                    ("limit", FluentValue::from(*time_limit_min)),
+                ],
+            );
+            continue;
+        }
         if !matches!(course.kind, CourseKind::Individual { .. }) {
             let kind = match course.kind {
                 CourseKind::Individual { .. } => "word-kind-individual",
@@ -710,6 +758,7 @@ mod tests {
         ("main.rs", include_str!("main.rs")),
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
         ("query_cmd.rs", include_str!("query_cmd.rs")),
+        ("score_cmd.rs", include_str!("score_cmd.rs")),
         ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("editor/map_view.rs", include_str!("editor/map_view.rs")),
         ("editor/render_map.rs", include_str!("editor/render_map.rs")),
@@ -729,6 +778,7 @@ mod tests {
         ("sync_cmd.rs", include_str!("sync_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
+        ("mcp/score.rs", include_str!("mcp/score.rs")),
     ];
 
     #[test]
