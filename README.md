@@ -68,7 +68,7 @@ Bahn A: 7 Posten, 1,3 km, Anstieg 5 m
 Fertige Programme für Windows, macOS und Linux gibt es auf der
 [Release-Seite](https://github.com/HenryJobst/freemapper-courseplan/releases). Archiv herunterladen, entpacken und
 `freemapper-courseplan` im Terminal starten oder beim KI-Assistenten eintragen (Handbuch, Kapitel 3). Ein Assistent,
-der Befehle ausführen kann (Claude Code, Codex), erledigt auch Download und Eintragen selbst; sag ihm „Lies AGENTS.md
+der Befehle ausführen kann (Claude Code, Codex), erledigt auch den Download selbst und ruft das Programm direkt auf; sag ihm „Lies AGENTS.md
 von github.com/HenryJobst/freemapper-courseplan und richte freemapper-courseplan ein.“ Die Datei
 [`AGENTS.md`](AGENTS.md) liegt in jedem Archiv.
 

@@ -69,7 +69,7 @@ course A: 7 controls, 1.3 km, climb 5 m
 Ready-made programs for Windows, macOS and Linux are on the
 [releases page](https://github.com/HenryJobst/freemapper-courseplan/releases). Download the archive, unpack it and
 start `freemapper-courseplan` in a terminal or register it with your AI assistant (user manual, chapter 3). An
-assistant that can run commands (Claude Code, Codex) can also do the download and the registration itself; tell it
+assistant that can run commands (Claude Code, Codex) can also do the download itself and call the program directly; tell it
 "Read AGENTS.md from github.com/HenryJobst/freemapper-courseplan and set up freemapper-courseplan." The file
 [`AGENTS.md`](AGENTS.md) is in every archive.
 
