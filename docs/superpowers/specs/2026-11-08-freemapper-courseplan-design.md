@@ -469,9 +469,16 @@ Paths are relative to the project file. The editor keeps comments it did not cre
     start, finish, legs, number boxes, special objects) computed by the server, read-only properties, a status
     bar and polling for outside changes every two seconds. The map is a placeholder (frame, 10 mm grid, note)
     behind the `MapView` trait. The toolbar and the menu items export, import and sync are inactive.
-  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 2 select,
-    place, move and delete controls, with save guard, revision guard and undo; stage 3 courses, bends, taped
-    legs, numbers and special objects; stage 4 control descriptions (columns C to H); stage 5 findings panel,
+  - **Built (stage 2 of the M4 plan, ADR 0043, 0044, 0047):** select, place, move and delete controls. Click with
+    the place tool, drag a circle, edit X and Y (comma or dot), nudge with the arrow keys (0.1 mm, Shift 1 mm),
+    Delete or Backspace (a dialog asks first when a course visits the control). Each gesture is one operation of an
+    MCP tool, run through `POST api/op/{tool}` with the revision the page saw; a stale revision answers 409 and the
+    page loads the current state. Undo and redo keep up to 100 file snapshots and work only while the file equals
+    the text the step started from. `ProjectFile::save` refuses a file that changed since it was read, for the CLI,
+    MCP and editor alike. A shortcut dialog (`?`), an alert banner for refusals and `GET api/map/near` for the
+    properties belong to this stage. The map is still the placeholder.
+  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 3 courses,
+    bends, taped legs, numbers and special objects; stage 4 control descriptions (columns C to H); stage 5 findings panel,
     export and import, sync panel with conflicts; stage 6 the real map from `freemapper-render`; stage 7 manual
     and release 0.10.0. The release waits for stage 6.
 
@@ -517,7 +524,8 @@ Paths are relative to the project file. The editor keeps comments it did not cre
 4. **M3** `.ppen` import, export and sync with three-way merge (§5.5a), IOF XML 3.0 export, tested with
    Purple Pen, freemapper-print and OE.
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
-   Under way: stage 1 (read-only preview with a placeholder map) is built; see §5.8.
+   Under way: stage 1 (read-only preview with a placeholder map) and stage 2 (editing controls, save guard,
+   undo) are built; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 

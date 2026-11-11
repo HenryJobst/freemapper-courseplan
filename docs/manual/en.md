@@ -82,6 +82,9 @@ there.
   working folder of the program.
 - Every change is saved at once. If the program refuses a change, for example a point outside the map or a
   code that is taken, the file stays as it was and the assistant gets the reason.
+- If the project file changed after the assistant read it, for example because you moved a control in the editor,
+  the program writes nothing. The assistant gets "<file> changed on disk after it was read, so nothing was
+  written. Read the project again and repeat the change" and repeats the change with the new state.
 - Positions are in map millimetres at map scale, with y pointing down. Look at every control position yourself
   on the map. `check` tests distances, angles and codes against the rules (chapter 8), but not whether the
   control stands at the right feature.
@@ -103,9 +106,9 @@ there.
 
 ## 4. The editor (preview)
 
-The editor shows the event in the browser. In this preview it is read-only: you can look at courses, controls and
-special objects, but not change them. Changes still go through the command line or the AI assistant. The toolbar
-buttons and the menu items for export, import and sync are greyed out.
+The editor shows the event in the browser. You can place, move and delete controls and take each step back. Courses,
+bends, numbers, special objects and control descriptions still go through the command line or the AI assistant,
+and the editor shows them. The menu items for export, import and sync are greyed out.
 
 ### Starting it
 
@@ -135,7 +138,8 @@ One editor belongs to one project. To open a second project, start a second edit
   control numbers on top. A number box with a dashed outline was placed automatically; the project stores no position
   for it yet.
 - On the right are the properties of the selection, for example name, length and climb of a course, or code, kind,
-  position and description of a control. The area for findings is still empty.
+  position and description of a control. For a control the list also names the map objects within 3 mm. The area for
+  findings is still empty.
 - The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
   Messages appear there too.
 
@@ -143,19 +147,96 @@ In this preview the map is a placeholder: a frame around the map extent, a 10 mm
 numbers sit at the right place on the map, but no map content is visible beneath them. freemapper-render will supply
 that later.
 
-### Keyboard and mouse
+### Placing, moving and deleting controls
+
+The toolbar has the tools "Select" and "Place control". Every change is saved at once, through the same operations
+as the command line and the AI assistant, so the same checks apply. If the program refuses a change, for example
+a position outside the map, the file stays as it was and a message says why.
+
+- **Select.** With the "Select" tool, click a control in the map or in the tree. A click selects the control whose
+  centre is nearest to the pointer, as long as the pointer is within the circle's radius plus the line width. The
+  properties on the right show it.
+- **Place.** Choose "Place control" and click on the map. The editor adds a control at that point. The code of a
+  control is read-only in the editor for now.
+- **Move.** Drag a circle, or type a new value into the fields X (mm) and Y (mm) in the properties. You may write
+  a decimal comma or a decimal point, `12,5` or `12.5`. Anything else marks the field and shows a hint. While you
+  drag, only the circle moves. Legs and numbers follow when you let go. Esc cancels the drag, and the control
+  stays where it was.
+- **Nudge.** With a control selected, the arrow keys move it by 0.1 mm, with Shift by 1 mm. The editor saves once
+  when you release the key, so holding a key makes a single undo step. Without a selection, the arrow keys move the
+  view.
+- **Delete.** Press Delete or Backspace, or use "Delete control" in the properties. A control that no course
+  visits is deleted at once; undo takes it back. If courses visit the control, a dialog lists them and asks. The
+  focus is on "Cancel". "Delete" removes the control and takes it out of those courses. A stray Backspace
+  on a selected, unused control therefore deletes it without a question; undo brings it back.
+
+### Undo and redo
+
+The toolbar buttons "Undo" and "Redo" and the keys Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y) walk through the
+steps of this editor session. One placing, one drop, one field change, one delete and one series of nudges is a
+step each. The status bar reports "Undone" or "Redone".
+
+- The editor keeps the last 100 steps. They are lost when you close the editor.
+- Undo restores the file as it was before the step, comments and layout included. That also takes back whatever
+  else the step changed in the file, for example the removal of a control from a course.
+- If another program changed the file after your last step, undo and redo refuse. The status bar says "The project
+  file changed outside the editor, so undo and redo are no longer possible. Nothing was changed." and the history
+  is empty from then on.
+
+### Shortcuts
+
+Press `?` or the "Keyboard shortcuts" button for this list in the page. A key typed into a field is never taken as
+a shortcut.
+
+| Keys | Effect |
+| --- | --- |
+| Ctrl/Cmd+Z | Undo |
+| Ctrl/Cmd+Shift+Z, Ctrl+Y | Redo |
+| Delete, Backspace | Delete the selected control |
+| Esc | Cancel the drag, or go back to the select tool |
+| V | Select tool |
+| C | Place-control tool |
+| Arrow keys | Move the selected control by 0.1 mm (without a selection: move the view) |
+| Shift+arrow keys | Move the selected control by 1 mm |
+| `+`, `-` | Zoom in, zoom out (Ctrl or Cmd with these keys still zooms the browser) |
+| `0` | Fit the map to the window |
+| `?` | Show the list |
+
+### Mouse and tree
 
 - In the tree, the arrow keys, Home and End move between entries and Enter selects.
-- When the map has focus, the arrow keys move the view. `+` and `-` zoom, and `0` fits the map to the window. With
-  the mouse you move the view by dragging on empty space and zoom with the wheel.
+- With the mouse you move the view by dragging on empty space and zoom with the wheel.
 - Tab moves from the tree to the map, to the properties and to the menu.
 
-### Changes from outside
+### Changed outside the editor
 
 If another program changes the project file, for example `freemapper-courseplan control move` in a terminal or the AI
 assistant, the page reloads it after about two seconds and says so in the status bar. A tab in the background does
 not ask again until you open it. If the map changes, the page reloads it. If the linked `.ppen` changes, the status
 bar shows a note.
+
+If you make a change in the page while the file is out of date, say between two polls, the editor refuses it. It
+loads the current state, shows the banner "The project file changed outside the editor. The editor loaded the
+current state; nothing was changed." at the bottom of the map and writes the same text in the status bar. Look at
+what the other program did and make your change again if you still want it. "Dismiss" closes the banner.
+
+If the project file does not load, for example because someone left it half edited, every change in the editor is
+refused with the load error until the file is readable again.
+
+### Commands that find the file changed
+
+The editor is not the only program that saves the project file. Every command that changes it checks, right before
+it saves, whether the file is still the one it read. If it is not, for example because the editor saved a move
+while the command ran, the command writes nothing, prints
+
+```
+luebeck-sprint.courseplan.toml changed since it was read; nothing was written
+```
+
+and exits with code 1. Run the command again; it then reads the new state. The check counts any change in the file,
+also a save from a text editor that changed nothing in the event. The AI assistant gets the same refusal in words
+of its own (chapter 3). `sync` writes the `.ppen` before the project file. If the project file changes in between,
+`sync` reports a partial write, and running it again finishes the job (chapter 9).
 
 ### Privacy and security
 
@@ -168,7 +249,8 @@ bar shows a note.
 - The page loads nothing from the network. The server reads only the project file, the map and the linked `.ppen`.
   It accepts no file names from the browser.
 - The server also checks the origin and content type of requests that write, so a foreign web page in the same
-  browser cannot trigger anything. The preview does not change the project file.
+  browser cannot trigger anything. The editor changes only the project file, and only through the operations of the
+MCP tools. The address of an operation names no file.
 
 The decisions behind this are in ADR 0042, 0045 and 0046.
 

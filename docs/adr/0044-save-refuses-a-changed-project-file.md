@@ -6,8 +6,8 @@ Status: Accepted
 ## Context
 Every command loads the project file, changes the event and saves it. If another program wrote the file in
 between (the editor, an MCP client, Purple Pen's sync, a text editor), the save replaced that work without a word.
-ADR 0040 listed this as a known limit. With the browser editor and the MCP server running side by side it stops
-being theoretical.
+ADR 0040 listed this as a known limit. With the browser editor and the MCP server running side by side it happens
+in practice.
 
 ## Decision
 - `ProjectFile` keeps the text it was loaded from, or wrote last (`create`, `save`). `save()` reads the file again

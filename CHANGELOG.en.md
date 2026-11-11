@@ -8,10 +8,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
-- Editor preview: `freemapper-courseplan edit <project>` shows the event in the browser (ADR 0042, 0045, 0046). On the left is the tree of courses, categories, controls and special objects. In the centre the view shows the selected course with circles, legs and numbers over a placeholder map; on the right are the properties (read-only). The status bar is at the bottom. Nothing can be edited yet. The real map follows with freemapper-render.
+- Editor preview: `freemapper-courseplan edit <project>` shows the event in the browser (ADR 0042, 0045, 0046). On the left is the tree of courses, categories, controls and special objects. In the centre the view shows the selected course with circles, legs and numbers over a placeholder map; on the right are the properties. The status bar is at the bottom. The real map follows with freemapper-render.
+
+- The editor can place, move and delete controls, and undo and redo each step (ADR 0043, 0047). Click with the "Place control" tool to place one, drag a circle or change X and Y in the properties (a comma or a dot works) to move it, press Delete or Backspace to remove it. Arrow keys move the selected control by 0.1 mm, with Shift by 1 mm. Every change is saved at once through the same operations as the CLI and the MCP tools, so the checks and messages are the same. If the project file changed outside the editor, the editor refuses the change, shows a message and loads the current state. When a course visits the control, deleting it asks first. Ctrl/Cmd+Z undoes, Ctrl/Cmd+Shift+Z or Ctrl+Y redoes, and `?` lists all shortcuts. The undo history holds up to 100 steps and is cleared when another program writes the file.
+- The editor lists the map objects near a selected control in the properties.
 
 ### Changed
 
+- Saving a project file now refuses when the file changed since the command read it (CLI, MCP tools and editor alike). Nothing is written, and the CLI exits with code 1 and prints `<file> changed since it was read; nothing was written`. Run the command again. This closes the lost-update limit of the sync (ADR 0044, 0040).
 - The shared building blocks come from freemapper-core v0.10.0. The program itself does not change.
 - Tests: every test run now reads four maps from freemapper (schoolyard 1:1000, sprint 1:4000, a map from freemapper 0.9.0 and one with an unknown map kind) and compares map kind, title, sheet objects, base area and map extent with the expected values from `freemapper-contract` (ADR 0041). If freemapper changes a tag or a key of `freemapper.toml`, these tests fail.
 

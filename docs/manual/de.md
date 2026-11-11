@@ -84,6 +84,10 @@ dort an.
   Arbeitsordner des Programms nicht kennt.
 - Jede Änderung wird sofort gespeichert. Lehnt das Programm eine Änderung ab, etwa einen Punkt außerhalb der Karte
   oder einen vergebenen Code, bleibt die Datei, wie sie war, und der Assistent bekommt den Grund.
+- Hat sich die Projektdatei geändert, nachdem der Assistent sie gelesen hat, etwa weil du im Editor einen Posten
+  verschoben hast, schreibt das Programm nichts. Der Assistent bekommt „<Datei> hat sich auf der Platte geändert,
+  nachdem es gelesen wurde. Es wurde nichts geschrieben. Lies das Projekt neu und wiederhole die Änderung“ und
+  wiederholt die Änderung mit dem neuen Stand.
 - Positionen stehen in Kartenmillimetern im Kartenmaßstab, y zeigt nach unten. Sieh dir jede Postenposition
   selbst auf der Karte an. `check` prüft Abstände, Winkel und Codes gegen die Regeln (Kapitel 8), aber nicht, ob
   der Posten am richtigen Objekt steht.
@@ -106,9 +110,10 @@ dort an.
 
 ## 4. Der Editor (Vorschau)
 
-Der Editor zeigt die Veranstaltung im Browser. In dieser Vorschau ist er nur lesend: Du kannst Bahnen, Posten und
-Sonderobjekte ansehen, aber nichts ändern. Geändert wird weiter mit der Kommandozeile oder dem KI-Assistenten. Die
-Werkzeugleiste und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch ausgegraut.
+Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen und jeden Schritt
+zurücknehmen. Bahnen, Knicke, Nummern, Sonderobjekte und Postenbeschreibungen änderst du weiter mit der
+Kommandozeile oder dem KI-Assistenten; der Editor zeigt sie an. Die Menüpunkte zum Exportieren, Importieren und
+Abgleichen sind noch ausgegraut.
 
 ### Starten
 
@@ -138,7 +143,8 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
   Postennummern darüber. Nummernfelder mit gestrichelter Linie hat das Programm automatisch platziert; für sie ist
   noch keine Lage im Projekt gespeichert.
 - Rechts stehen die Eigenschaften der Auswahl, etwa Name, Länge und Anstieg einer Bahn oder Code, Art, Position und
-  Beschreibung eines Postens. Der Bereich für Befunde ist noch leer.
+  Beschreibung eines Postens. Bei einem Posten nennt die Liste auch die Kartenobjekte im Umkreis von 3 mm. Der
+  Bereich für Befunde ist noch leer.
 - Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
   Meldungen erscheinen dort ebenfalls.
 
@@ -146,20 +152,101 @@ Die Karte ist in dieser Vorschau ein Platzhalter: ein Rahmen um die Kartenausdeh
 und ein Hinweistext. Kreise, Strecken und Nummern liegen an der richtigen Stelle der Karte, aber darunter ist noch
 kein Karteninhalt zu sehen. Den liefert später freemapper-render.
 
-### Tastatur und Maus
+### Posten setzen, verschieben und löschen
+
+Die Werkzeugleiste hat die Werkzeuge „Auswählen“ und „Posten setzen“. Jede Änderung wird sofort gespeichert, über
+dieselben Operationen wie in der Kommandozeile und beim KI-Assistenten; es gelten also dieselben Prüfungen. Lehnt das
+Programm eine Änderung ab, etwa eine Position außerhalb der Karte, bleibt die Datei, wie sie war, und eine Meldung
+nennt den Grund.
+
+- **Auswählen.** Mit dem Werkzeug „Auswählen“ klickst du einen Posten in der Karte oder im Baum an. Ein Klick wählt
+  den Posten, dessen Mittelpunkt dem Mauszeiger am nächsten liegt, solange der Zeiger höchstens den Kreisradius plus
+  die Linienbreite entfernt ist. Rechts zeigen die Eigenschaften ihn an.
+- **Setzen.** Wähle „Posten setzen“ und klicke auf die Karte. Der Editor legt an dieser Stelle einen Posten an. Den
+  Code eines Postens kannst du im Editor vorerst nicht ändern.
+- **Verschieben.** Ziehe einen Kreis, oder trage in den Eigenschaften neue Werte in die Felder X (mm) und Y (mm) ein.
+  Du kannst Dezimalkomma oder Dezimalpunkt schreiben, `12,5` oder `12.5`. Alles andere markiert das Feld und zeigt
+  einen Hinweis. Beim Ziehen bewegt sich nur der Kreis. Strecken und Nummern folgen, wenn du loslässt. Esc bricht das
+  Ziehen ab, und der Posten bleibt, wo er war.
+- **Schieben.** Bei gewähltem Posten verschieben ihn die Pfeiltasten um 0,1 mm, mit Umschalt um 1 mm. Der Editor
+  speichert einmal, wenn du die Taste loslässt; eine gehaltene Taste ergibt also nur einen Schritt zum
+  Rückgängigmachen. Ohne Auswahl verschieben die Pfeiltasten die Ansicht.
+- **Löschen.** Drücke Entf oder Rücktaste, oder nimm „Posten löschen“ in den Eigenschaften. Einen Posten, den keine
+  Bahn besucht, löscht der Editor sofort; mit Rückgängig holst du ihn zurück. Besuchen Bahnen den Posten, listet ein
+  Dialog sie auf und fragt nach. Der Fokus liegt auf „Abbrechen“. „Löschen“ entfernt den Posten und nimmt ihn aus
+  diesen Bahnen. Eine versehentliche Rücktaste löscht deshalb einen gewählten, unbenutzten Posten ohne Rückfrage;
+  Rückgängig bringt ihn zurück.
+
+### Rückgängig und Wiederholen
+
+Die Schaltflächen „Rückgängig“ und „Wiederholen“ und die Tasten Strg/Cmd+Z und Strg/Cmd+Umschalt+Z (oder Strg+Y) gehen
+die Schritte dieser Editor-Sitzung durch. Ein Setzen, ein Loslassen nach dem Ziehen, eine Feldänderung, ein Löschen
+und eine Reihe von Pfeiltasten-Schritten sind je ein Schritt. Die Statusleiste meldet „Rückgängig gemacht“ oder
+„Wiederholt“.
+
+- Der Editor behält die letzten 100 Schritte. Schließt du den Editor, sind sie weg.
+- Rückgängig stellt die Datei so wieder her, wie sie vor dem Schritt war, samt Kommentaren und Aufbau. Das nimmt auch
+  alles andere zurück, was der Schritt in der Datei geändert hat, etwa das Entfernen eines Postens aus einer Bahn.
+- Hat ein anderes Programm die Datei nach deinem letzten Schritt geändert, lehnen Rückgängig und Wiederholen ab. Die
+  Statusleiste meldet dann, dass die Projektdatei außerhalb des Editors geändert wurde und beides nicht mehr möglich
+  ist; es wurde nichts geändert. Der Verlauf ist danach leer.
+
+### Tastenkürzel
+
+Mit `?` oder der Schaltfläche „Tastenkürzel“ siehst du diese Liste in der Seite. Eine Taste, die du in ein Feld
+tippst, gilt nie als Kürzel.
+
+| Tasten | Wirkung |
+| --- | --- |
+| Strg/Cmd+Z | Rückgängig |
+| Strg/Cmd+Umschalt+Z, Strg+Y | Wiederholen |
+| Entf, Rücktaste | Gewählten Posten löschen |
+| Esc | Ziehen abbrechen oder zum Auswahlwerkzeug zurückgehen |
+| V | Auswahlwerkzeug |
+| C | Werkzeug „Posten setzen“ |
+| Pfeiltasten | Gewählten Posten um 0,1 mm verschieben (ohne Auswahl: Ansicht verschieben) |
+| Umschalt+Pfeiltasten | Gewählten Posten um 1 mm verschieben |
+| `+`, `-` | Vergrößern, verkleinern (Strg oder Cmd mit diesen Tasten zoomt weiter den Browser) |
+| `0` | Karte in das Fenster einpassen |
+| `?` | Liste anzeigen |
+
+### Maus und Baum
 
 - Im Baum wählst du mit den Pfeiltasten, Pos1 und Ende einen Eintrag und bestätigst mit Eingabe.
-- Hat die Karte den Fokus, verschieben die Pfeiltasten die Ansicht. `+` und `-` zoomen, `0` passt die Karte in das
-  Fenster ein. Mit der Maus verschiebst du die Ansicht, indem du auf leerer Fläche ziehst, und zoomst mit dem
-  Mausrad.
+- Mit der Maus verschiebst du die Ansicht, indem du auf leerer Fläche ziehst, und zoomst mit dem Mausrad.
 - Mit der Tabulatortaste springst du vom Baum zur Karte, zu den Eigenschaften und zum Menü.
 
-### Änderungen von außen
+### Änderungen von außerhalb des Editors
 
 Ändert ein anderes Programm die Projektdatei, zum Beispiel `freemapper-courseplan control move` im Terminal oder der
 KI-Assistent, lädt die Seite sie nach etwa zwei Sekunden neu und meldet das in der Statusleiste. Ein Tab im
 Hintergrund fragt nicht nach, bis du ihn wieder öffnest. Ändert sich die Karte, lädt die Seite sie neu. Ändert sich
 die verknüpfte `.ppen`, steht in der Statusleiste ein Hinweis.
+
+Machst du in der Seite eine Änderung, während die Datei veraltet ist, etwa zwischen zwei Abfragen, lehnt der Editor sie
+ab. Er lädt den aktuellen Stand, zeigt unten in der Karte die Meldung „Die Projektdatei wurde außerhalb des Editors
+geändert. Der Editor hat den aktuellen Stand geladen; es wurde nichts geändert.“ und schreibt denselben Text in die
+Statusleiste. Sieh nach, was das andere Programm getan hat, und mache deine Änderung noch einmal, wenn du sie weiter
+willst. „Schließen“ blendet die Meldung aus.
+
+Lässt sich die Projektdatei nicht laden, etwa weil jemand sie halb bearbeitet hat, lehnt der Editor jede Änderung mit
+dem Ladefehler ab, bis die Datei wieder lesbar ist.
+
+### Befehle, die die Datei verändert vorfinden
+
+Der Editor ist nicht das einzige Programm, das die Projektdatei speichert. Jeder Befehl, der sie ändert, prüft
+unmittelbar vor dem Speichern, ob die Datei noch die ist, die er gelesen hat. Ist sie es nicht, etwa weil der Editor
+eine Verschiebung gespeichert hat, während der Befehl lief, schreibt der Befehl nichts, gibt
+
+```
+luebeck-sprint.courseplan.toml hat sich geändert, seit es gelesen wurde. Es wurde nichts geschrieben
+```
+
+aus und endet mit Exit-Code 1. Führe den Befehl noch einmal aus; er liest dann den neuen Stand. Die Prüfung zählt jede
+Änderung an der Datei, auch ein Speichern im Texteditor, das am Ereignis nichts geändert hat. Der KI-Assistent bekommt
+dieselbe Ablehnung in eigenen Worten (Kapitel 3). `sync` schreibt die `.ppen` vor der Projektdatei. Ändert sich die
+Projektdatei dazwischen, meldet `sync` einen teilweisen Schreibvorgang, und ein zweiter Lauf macht ihn fertig
+(Kapitel 9).
 
 ### Datenschutz und Sicherheit
 
@@ -172,7 +259,8 @@ die verknüpfte `.ppen`, steht in der Statusleiste ein Hinweis.
 - Die Seite lädt nichts aus dem Netz. Der Server liest nur die Projektdatei, die Karte und die verknüpfte `.ppen`.
   Dateinamen nimmt er vom Browser nicht an.
 - Schreibende Anfragen prüft der Server zusätzlich auf Herkunft und Inhaltstyp, damit eine fremde Webseite im selben
-  Browser nichts auslösen kann. Die Vorschau ändert die Projektdatei nicht.
+  Browser nichts auslösen kann. Der Editor ändert nur die Projektdatei, und nur über die Operationen der MCP-Werkzeuge.
+Die Adresse einer Operation nennt keine Datei.
 
 Die Entscheidungen dazu stehen in ADR 0042, 0045 und 0046.
 

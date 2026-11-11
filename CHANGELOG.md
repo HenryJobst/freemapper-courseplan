@@ -8,10 +8,14 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
-- Editor-Vorschau: `freemapper-courseplan edit <Projekt>` zeigt die Veranstaltung im Browser (ADR 0042, 0045, 0046). Links steht der Baum aus Bahnen, Kategorien, Posten und Sonderobjekten. In der Mitte zeigt die Ansicht die gewählte Bahn mit Kreisen, Strecken und Nummern über einer Platzhalterkarte, rechts stehen die Eigenschaften (nur lesen). Die Statusleiste steht unten. Bearbeiten lässt sich noch nichts. Die echte Karte folgt mit freemapper-render.
+- Editor-Vorschau: `freemapper-courseplan edit <Projekt>` zeigt die Veranstaltung im Browser (ADR 0042, 0045, 0046). Links steht der Baum aus Bahnen, Kategorien, Posten und Sonderobjekten. In der Mitte zeigt die Ansicht die gewählte Bahn mit Kreisen, Strecken und Nummern über einer Platzhalterkarte, rechts stehen die Eigenschaften. Die Statusleiste steht unten. Die echte Karte folgt mit freemapper-render.
+
+- Der Editor kann Posten setzen, verschieben und löschen und jeden Schritt rückgängig machen und wiederholen (ADR 0043, 0047). Mit dem Werkzeug „Posten setzen“ klickst du einen Posten auf die Karte, ziehst einen Kreis oder änderst X und Y in den Eigenschaften (Komma oder Punkt geht), um ihn zu verschieben, und löschst ihn mit Entf oder Rücktaste. Die Pfeiltasten verschieben den gewählten Posten um 0,1 mm, mit Umschalt um 1 mm. Jede Änderung wird sofort gespeichert, über dieselben Operationen wie in der Kommandozeile und bei den MCP-Werkzeugen; Prüfungen und Meldungen sind also dieselben. Hat sich die Projektdatei außerhalb des Editors geändert, lehnt der Editor die Änderung ab, zeigt eine Meldung und lädt den aktuellen Stand. Besucht eine Bahn den Posten, fragt das Löschen vorher nach. Strg/Cmd+Z macht rückgängig, Strg/Cmd+Umschalt+Z oder Strg+Y wiederholt, und `?` listet alle Tastenkürzel. Der Verlauf hält bis zu 100 Schritte und wird geleert, wenn ein anderes Programm die Datei schreibt.
+- Der Editor listet in den Eigenschaften die Kartenobjekte in der Nähe eines gewählten Postens auf.
 
 ### Geändert
 
+- Das Speichern einer Projektdatei lehnt jetzt ab, wenn sich die Datei geändert hat, seit der Befehl sie gelesen hat (Kommandozeile, MCP-Werkzeuge und Editor gleichermaßen). Es wird nichts geschrieben; die Kommandozeile endet mit Exit-Code 1 und meldet `<Datei> hat sich geändert, seit es gelesen wurde. Es wurde nichts geschrieben`. Führe den Befehl noch einmal aus. Das schließt die Lücke des verlorenen Updates beim Abgleich (ADR 0044, 0040).
 - Die gemeinsamen Bausteine kommen aus freemapper-core v0.10.0. Am Programm ändert sich dadurch nichts.
 - Tests: Jeder Testlauf liest jetzt vier Karten von freemapper (Schulhof 1:1000, Sprint 1:4000, eine Karte von freemapper 0.9.0 und eine mit unbekannter Kartenart) und vergleicht Kartenart, Titel, Randobjekte, Grundfläche und Kartenausdehnung mit den Erwartungswerten aus `freemapper-contract` (ADR 0041). Ändert freemapper ein Tag oder einen Schlüssel der `freemapper.toml`, schlagen diese Tests fehl.
 

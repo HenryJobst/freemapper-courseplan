@@ -36,8 +36,8 @@ Planned for the first version:
   export and sync are usable now: `import`, `export --ppen` and `sync`; Purple Pen 4.0 opens the export);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
-- use through the editor in the browser (`edit`, usable as a preview now: it shows the event, and nothing can be
-  edited in it yet), the command line or an AI assistant (MCP).
+- use through the editor in the browser (`edit`, usable now: it shows the event and places, moves and deletes
+  controls, with undo and redo), the command line or an AI assistant (MCP).
 
 After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
 tours for the people who put out the controls, and AI support that judges courses and makes proposals.
@@ -122,12 +122,15 @@ project now, field by field. A change on one side goes to the other. If both sid
 project. The AI assistant has the tools `sync_ppen` and `resolve_sync_conflict`. The editor's conflict panel comes
 with the editor. See chapter 9 of the [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) and ADR 0040.
 
-`freemapper-courseplan edit <project>` starts the editor preview and shows the event in the browser: on the left the
-tree of courses, categories, controls and special objects, in the centre the selected course with circles, legs and
-numbers, on the right the properties. The editor is read-only; you keep making changes with the command line or the
-AI assistant and see them in the browser after about two seconds. The map is still a placeholder (grid and frame);
-the real map follows with freemapper-render. The server listens on `127.0.0.1` only and needs an access token in the
-address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042.
+`freemapper-courseplan edit <project>` starts the editor and shows the event in the browser: on the left the tree of
+courses, categories, controls and special objects, in the centre the selected course with circles, legs and numbers,
+on the right the properties. You place, move and delete controls with the mouse or the keyboard; Ctrl+Z and
+Ctrl+Shift+Z undo and redo steps. Every change is saved at once through the same operations as the command line and
+the AI assistant. You see outside changes in the browser after about two seconds; if the file changed under the
+editor, it refuses your change and loads the new state. Courses, bends and descriptions you still edit with the
+command line or the assistant. The map is a placeholder (grid and frame); the real map follows with freemapper-render.
+The server listens on `127.0.0.1` only and needs an access token in the address. See chapter 4 of the
+[user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042, 0043 and 0047.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a
