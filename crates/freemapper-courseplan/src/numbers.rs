@@ -123,21 +123,7 @@ pub fn overprint_sizes(kind: MapKind) -> OverprintSizes {
 
 /// Scale denominator at which the print sizes of [`overprint_sizes`] apply.
 pub fn base_scale(kind: MapKind) -> u32 {
-    match kind {
-        MapKind::Sprint => 4000,
-        MapKind::Schoolyard => 1000,
-        MapKind::Forest => 15000,
-    }
-}
-
-/// The print-rules map kind that belongs to `kind`.
-fn print_kind(kind: MapKind) -> freemapper_printrules::scale::MapKind {
-    use freemapper_printrules::scale::MapKind as P;
-    match kind {
-        MapKind::Sprint => P::Sprint,
-        MapKind::Schoolyard => P::Schoolyard,
-        MapKind::Forest => P::Forest,
-    }
+    kind.base_scale()
 }
 
 /// How much bigger the course symbols are in map mm on a map at `map_scale` than their print sizes of
@@ -149,13 +135,13 @@ pub fn course_factor(kind: MapKind, map_scale: u32) -> f64 {
     if map_scale == 0 {
         return 1.0;
     }
-    freemapper_printrules::scale::course_symbols(print_kind(kind), map_scale).1
+    freemapper_printrules::scale::course_symbols(kind, map_scale).1
 }
 
 /// Whether the standard foresees a map of `kind` at `map_scale`; outside it the course symbols keep their
 /// base size and the course is only fit for training (ADR 0058).
 pub fn is_standard_scale(kind: MapKind, map_scale: u32) -> bool {
-    freemapper_printrules::scale::is_standard(print_kind(kind), map_scale)
+    freemapper_printrules::scale::is_standard(kind, map_scale)
 }
 
 /// Largest gap between circle and number that the CLI and the MCP server accept, in print mm.

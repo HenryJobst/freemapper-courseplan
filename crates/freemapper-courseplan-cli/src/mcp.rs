@@ -1013,7 +1013,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "title": event.event.title,
                 "map": event.sources.map.display().to_string(),
-                "map_kind": map_kind_for_file(&doc, &file.map_path()).as_str(),
+                "map_kind": map_kind_for_file(&doc, &file.map_path()).name(),
                 "scale": scale,
                 "rule_profile": event.event.rule_profile,
                 "rule_overlays": event.event.rule_overlays,
@@ -1546,7 +1546,7 @@ impl CoursePlanServer {
             Ok(json!({
                 "extent": extent_json(MapIndex::from_document(&doc).extent()),
                 "scale": doc.georef.scale_denominator,
-                "map_kind": map_kind_for_file(&doc, &file.map_path()).as_str(),
+                "map_kind": map_kind_for_file(&doc, &file.map_path()).name(),
             }))
         }
     }

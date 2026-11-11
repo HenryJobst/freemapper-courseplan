@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
+use freemapper_contract::{ObjectClass, Sidecar};
 use freemapper_courseplan_model::MapPoint;
 
 mod geometry;
@@ -14,27 +15,9 @@ use crate::omap::{MapDocument, MapObjectKind, SymbolSet};
 pub(crate) use geometry::{distance_to_polyline, inside_area};
 use geometry::{feature_distance, push_area, push_lines, sub_paths, to_point};
 
-/// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MapKind {
-    Sprint,
-    Schoolyard,
-    Forest,
-}
-
-impl MapKind {
-    /// Every map kind, in declaration order.
-    pub const ALL: [MapKind; 3] = [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest];
-
-    /// The name used in profile files and MCP results.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            MapKind::Sprint => "sprint",
-            MapKind::Schoolyard => "schoolyard",
-            MapKind::Forest => "forest",
-        }
-    }
-}
+/// Kind of map, which decides the symbol norm and the check rules (glossary: Kartenart). The one
+/// definition of the suite, from freemapper-core (ADR 0038).
+pub use freemapper_contract::MapKind;
 
 /// Geometry of one map feature in millimetres.
 #[derive(Debug, Clone, PartialEq)]
@@ -71,20 +54,14 @@ pub fn map_kind(doc: &MapDocument) -> MapKind {
     }
 }
 
-/// Name of the sidecar file next to a map (written by freemapper, read by freemapper-print).
-const SIDECAR_FILE: &str = "freemapper.toml";
-
-/// The kind from `map_kind` in `freemapper.toml` next to `map_path`. A missing or malformed file,
-/// a missing key and an unknown value (a kind this version does not know) all give `None`.
+/// The kind from `map_kind` in `freemapper.toml` next to `map_path`, read by the shared sidecar reader.
+/// A missing or malformed file, a missing or mistyped key and an unknown value (a kind this version
+/// does not know) all give `None`.
 fn sidecar_kind(map_path: &Path) -> Option<MapKind> {
-    let text = std::fs::read_to_string(map_path.parent()?.join(SIDECAR_FILE)).ok()?;
-    let table: toml::Table = text.parse().ok()?;
-    match table.get("map_kind")?.as_str()? {
-        "sprint" => Some(MapKind::Sprint),
-        "schoolyard" => Some(MapKind::Schoolyard),
-        "forest" => Some(MapKind::Forest),
-        _ => None,
-    }
+    Sidecar::next_to(map_path)
+        .ok()
+        .flatten()
+        .and_then(|s| s.map_kind.known())
 }
 
 /// The kind from the symbol set name (case-insensitive) and the scale, as freemapper-print decides it.
@@ -116,9 +93,7 @@ pub fn map_kind_for_file(doc: &MapDocument, map_path: &Path) -> MapKind {
 /// Objects freemapper adds around the terrain: the sheet frame, the scale bar and the base area.
 /// They are no map features and do not count for the map extent.
 pub fn is_sheet_furniture(tags: &[(String, String)]) -> bool {
-    tags.iter().any(|(k, v)| {
-        k == "freemapper:source" && matches!(v.as_str(), "sheet" | "scale-bar" | "base")
-    })
+    !ObjectClass::of(tags).is_map_content()
 }
 
 /// What `from_document` needs to know about a symbol, looked up once per symbol id.
@@ -525,6 +500,31 @@ mod tests {
             let (_d, map) = with_sidecar(text);
             assert_eq!(map_kind_for_file(&doc, &map), MapKind::Sprint, "{text:?}");
         }
+    }
+
+    #[test]
+    fn kind_names_and_order_are_pinned() {
+        // Project files, MCP and CLI JSON and the Fluent texts spell the kinds like this.
+        let names: Vec<&str> = MapKind::ALL.iter().map(|k| k.name()).collect();
+        assert_eq!(names, ["sprint", "schoolyard", "forest"]);
+        for kind in MapKind::ALL {
+            #[derive(serde::Serialize)]
+            struct Wrap {
+                k: MapKind,
+            }
+            assert_eq!(
+                toml::to_string(&Wrap { k: kind }).unwrap(),
+                format!("k = \"{}\"\n", kind.name())
+            );
+            assert_eq!(MapKind::from_name(kind.name()), Some(kind));
+        }
+    }
+
+    #[test]
+    fn mistyped_sidecar_kind_counts_as_absent() {
+        let doc = document(4000, "ISSprOM 2019", vec![]);
+        let (_d, map) = with_sidecar(Some("map_kind = 3\n"));
+        assert_eq!(map_kind_for_file(&doc, &map), MapKind::Sprint);
     }
 
     #[test]

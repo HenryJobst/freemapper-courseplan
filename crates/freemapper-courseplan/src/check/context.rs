@@ -93,7 +93,7 @@ impl<'a> CheckContext<'a> {
                     location: Location::Course(course.name.clone()),
                     reason_id: NOTE_NON_STANDARD_SCALE,
                     args: vec![
-                        ("kind", ArgValue::Text(kind.as_str().to_owned())),
+                        ("kind", ArgValue::Text(kind.name().to_owned())),
                         ("scale", ArgValue::Int(i64::from(map_scale))),
                         ("base_scale", ArgValue::Int(i64::from(base_scale(kind)))),
                     ],

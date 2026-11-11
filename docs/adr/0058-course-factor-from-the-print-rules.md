@@ -30,3 +30,6 @@ such as a sprint map at 1:5000 or a reduction, the symbols keep their base size,
 ## Consequences
 - Scales off the table (sprint 1:2000, 1:5000) no longer shrink or grow the symbols; the factor there is 1.0.
 - Positions of numbers stored in a project do not change; only sizes at non-standard scales do.
+
+**Update 2026-11-11 (core v0.19.0):** `course_symbols` and `is_standard` take courseplan's `MapKind` directly, because
+it is the print rules' type (core ADR 0027).

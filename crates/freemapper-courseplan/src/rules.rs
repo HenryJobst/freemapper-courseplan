@@ -204,7 +204,7 @@ pub static SCHEMA: Schema = Schema {
 /// Whether the rule's filters select a course with this map kind, discipline and print scale.
 pub fn applies(rule: &Rule, map_kind: MapKind, discipline: Discipline, print_scale: u32) -> bool {
     rule.applies(&[
-        (FIELD_MAP_KINDS, FilterArg::Text(map_kind.as_str())),
+        (FIELD_MAP_KINDS, FilterArg::Text(map_kind.name())),
         (FIELD_DISCIPLINES, FilterArg::Text(discipline.as_str())),
         (FIELD_PRINT_SCALES, FilterArg::Int(i64::from(print_scale))),
     ])
@@ -220,7 +220,7 @@ pub fn print_scale_of(course: &Course, map_scale: u32) -> u32 {
 pub(crate) fn set_map_kinds(rule: &mut Rule, kinds: &[MapKind]) {
     let items = kinds
         .iter()
-        .map(|k| FilterItem::Text(k.as_str().to_owned()))
+        .map(|k| FilterItem::Text(k.name().to_owned()))
         .collect();
     rule.set_filter(FIELD_MAP_KINDS, items);
 }
@@ -602,7 +602,7 @@ source = { doc = "DOC", section = "1.2" }
             }) => names.to_vec(),
             other => panic!("{field}: {other:?}"),
         };
-        let kinds: Vec<&str> = MapKind::ALL.iter().map(|k| k.as_str()).collect();
+        let kinds: Vec<&str> = MapKind::ALL.iter().map(|k| k.name()).collect();
         assert_eq!(list(FIELD_MAP_KINDS), kinds);
         let disciplines: Vec<&str> = Discipline::ALL.iter().map(|d| d.as_str()).collect();
         assert_eq!(list(FIELD_DISCIPLINES), disciplines);

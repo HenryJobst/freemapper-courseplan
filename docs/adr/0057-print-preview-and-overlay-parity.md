@@ -68,3 +68,6 @@ promised a test that compares the editor's overlay with that drawing, and a read
 **Update 2026-11-11 (core v0.16.1):** the parity test covers sprint 1:5000 against the sheet's 6.0 mm circles (ADR 0058).
 
 Source: browser editor plan M4, Task 20.
+
+**Update 2026-11-11 (core v0.19.0):** courseplan and the print rules share one `MapKind` from `freemapper-contract`;
+the conversion between the two types is gone.

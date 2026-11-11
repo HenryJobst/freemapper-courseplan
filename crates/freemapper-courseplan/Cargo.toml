@@ -15,12 +15,13 @@ freemapper-omap.workspace = true
 freemapper-course.workspace = true
 freemapper-render.workspace = true
 freemapper-printrules.workspace = true
+freemapper-contract.workspace = true
 quick-xml = "0.42.0"
 thiserror.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-freemapper-contract.workspace = true
+freemapper-contract = { workspace = true, features = ["fixtures"] }
 tempfile.workspace = true
 serde.workspace = true
 

@@ -23,3 +23,7 @@ first, so the two tools could disagree about one map.
   placement, and the exports and the import. The library functions that only get a document keep `map_kind`
   and gain `*_as` variants that take the kind (`check_event_as`, `export_ppen_as`, `import_ppen_as`).
 - The `title` fallback of `init` stays as it is.
+
+**Update 2026-11-11 (core v0.19.0):** `MapKind`, the sidecar reader (`Sidecar::next_to`) and the test for sheet
+furniture (`ObjectClass::of`) now come from `freemapper-contract` (core ADR 0027 and 0028). The rules above stay.
+A `map_kind` of the wrong type now counts as absent, like an unknown name.
