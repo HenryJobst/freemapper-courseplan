@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-11
+
 ### Added
 
 - `AGENTS.md`, instructions for AI agents: what the program can and cannot do, installing it from the release archives, registering it over MCP (every tool with its parameters), the command line, troubleshooting. It is part of every release archive. The READMEs and chapter 3 of the manual explain how an assistant that can run commands installs and registers the program.

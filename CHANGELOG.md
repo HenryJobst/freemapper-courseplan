@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.10.0] - 2026-11-11
+
 ### Hinzugefügt
 
 - `AGENTS.md`, eine Anleitung für KI-Agenten: was das Programm kann und was nicht, Installation aus den Release-Archiven, Eintragen über MCP (jedes Werkzeug mit seinen Parametern), Kommandozeile, Fehlerbehebung. Die Datei liegt in jedem Release-Archiv. Die READMEs und Kapitel 3 des Handbuchs erklären, wie ein Assistent, der Befehle ausführen kann, das Programm installiert und einträgt.
