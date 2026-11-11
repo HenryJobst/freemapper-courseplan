@@ -12,6 +12,7 @@ export const SHORTCUTS = [
   { keys: "V", text: "editor-key-select-tool" },
   { keys: "C", text: "editor-key-control-tool" },
   { keys: "S", text: "editor-key-special-tool" },
+  { keys: "P", text: "editor-key-preview" },
   { keys: "Enter", text: "editor-key-finish" },
   { keys: "← ↑ → ↓", text: "editor-key-nudge" },
   { keys: "Shift+← ↑ → ↓", text: "editor-key-nudge-big" },
@@ -54,7 +55,7 @@ export function fillHelp(table) {
 }
 
 // actions: undo, redo, remove, cancel, tool(name), nudge(dx, dy), commitNudge, zoom(factor), fit, pan(dx, dy),
-// help, canNudge() (a control is selected), drafting() (a line or an area is being drawn), finish(), dialogOpen().
+// preview, help, canNudge() (a control is selected), drafting() (a line or an area is being drawn), finish(), dialogOpen().
 export function bind(actions) {
   document.addEventListener("keydown", (evt) => {
     if (evt.defaultPrevented || actions.dialogOpen() || typing(evt.target, evt.ctrlKey || evt.metaKey)) return;
@@ -96,6 +97,8 @@ export function bind(actions) {
       actions.tool("control");
     } else if (key === "s" || key === "S") {
       actions.tool("special");
+    } else if (key === "p" || key === "P") {
+      actions.preview();
     } else if (key === "?") {
       actions.help();
     } else if (key in ARROWS && !inTree && actions.canNudge()) {

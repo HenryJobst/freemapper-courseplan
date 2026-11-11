@@ -130,6 +130,11 @@ fn pt(x: f64, y: f64) -> MapPoint {
     MapPoint { x, y }
 }
 
+/// Half the width of the box of a one-digit number on a sprint map.
+fn half_box() -> f64 {
+    crate::numbers::number_box_mm(crate::map::MapKind::Sprint, 1).0 / 2.0
+}
+
 fn close(a: f64, b: f64) -> bool {
     (a - b).abs() <= 0.01
 }
@@ -218,7 +223,8 @@ fn course_stops_follow_the_chain_with_bends_and_taped_legs() {
 #[test]
 fn number_location_becomes_direction_and_gap() {
     // Sprint map: circle 6 mm, line 0.35 mm, so the outer radius is 3.175 mm; the box of a one-digit
-    // number is 2.4 by 4 mm. Ratio 1 (print scale = map scale).
+    // number is as wide as the renderer draws it (3.23 mm, `half_box`) and 4 mm high. Ratio 1 (print scale =
+    // map scale).
     let right = r#"<number-location x="6" y="0" />"#;
     let up = r#"<number-location x="0" y="7" />"#;
     let into = r#"<number-location x="2" y="0" />"#;
@@ -246,7 +252,10 @@ fn number_location_becomes_direction_and_gap() {
     // Both courses put 31 to the east: one central placement.
     let central = control(&got, "31").number.clone().expect("central number");
     assert!(close(central.direction, 0.0), "{central:?}");
-    assert!(close(central.gap_mm, 4.8 - 3.175), "{central:?}");
+    assert!(
+        close(central.gap_mm, 6.0 - 3.175 - half_box()),
+        "{central:?}"
+    );
     for name in ["A", "B"] {
         assert_eq!(course_controls(course_named(&got, name))[0].number, None);
     }
@@ -256,7 +265,10 @@ fn number_location_becomes_direction_and_gap() {
         .number
         .clone()
         .unwrap();
-    assert!(close(a.direction, 0.0) && close(a.gap_mm, 1.625), "{a:?}");
+    assert!(
+        close(a.direction, 0.0) && close(a.gap_mm, 6.0 - 3.175 - half_box()),
+        "{a:?}"
+    );
     let b = course_controls(course_named(&got, "B"))[1]
         .number
         .clone()
@@ -281,7 +293,7 @@ fn number_location_becomes_direction_and_gap() {
         )
     ));
     let n = control(&inside, "31").number.clone().unwrap();
-    assert!(close(n.gap_mm, 0.8 - 3.175), "{n:?}");
+    assert!(close(n.gap_mm, 2.0 - half_box() - 3.175), "{n:?}");
     assert_eq!(
         inside.notes,
         vec![ImportNote::NumberIntoCircle {
@@ -694,7 +706,7 @@ fn a_number_left_to_purple_pen_in_one_course_keeps_the_others_per_course() {
         a,
         Some(NumberPlacement {
             direction: 0.0,
-            gap_mm: 1.63,
+            gap_mm: 1.21,
         })
     );
     assert_eq!(course_controls(course_named(&got, "B"))[0].number, None);

@@ -78,6 +78,16 @@ pub(crate) trait MapView: Send + Sync {
     fn svg_for(&self, rect: PageRect, zoom: f64) -> Result<String, MapViewError>;
     fn hit_at(&self, page: (f64, f64), tolerance_mm: f64) -> Vec<MapHit>;
     fn is_placeholder(&self) -> bool;
+    /// The SVG as `svg_for`, with the renderer's course layer (`overprint`) painted over the map. The placeholder
+    /// has no renderer and ignores it.
+    fn svg_with_course(
+        &self,
+        rect: PageRect,
+        zoom: f64,
+        _overprint: freemapper_render::page::Overprint,
+    ) -> Result<String, MapViewError> {
+        self.svg_for(rect, zoom)
+    }
     /// The map is larger than the page the renderer builds, so it is cut off.
     fn is_clipped(&self) -> bool {
         false

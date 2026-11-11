@@ -3,16 +3,16 @@
 //! boxes come from the same placement code the checks use, and numbers without a stored placement sit where
 //! `auto_place` would put them.
 
-use freemapper_courseplan::check::drawn_part;
+use freemapper_courseplan::check::drawn_part_between;
 use freemapper_courseplan::course::{CourseError, control_numbers, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
-use freemapper_courseplan::numbers::{
-    GapRange, auto_place, base_scale, number_box_mm, number_centre, overprint_sizes,
-};
+use freemapper_courseplan::numbers::{GapRange, auto_place, number_box_mm, number_centre};
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
 };
 use serde::Serialize;
+
+use super::print_layer::course_symbol_sizes;
 
 /// Rounds a JSON number to 0.001 mm.
 pub(crate) fn r3(value: f64) -> f64 {
@@ -36,6 +36,16 @@ pub(crate) struct Sizes {
     pub circle_r: f64,
     pub line: f64,
     pub number_h: f64,
+    /// Circumradius of the start triangle: where a leg leaves the start.
+    pub start_r: f64,
+    /// Radii of the two finish circles; a leg ends at the outer one.
+    pub finish_inner_r: f64,
+    pub finish_outer_r: f64,
+    /// Length of a crossing point, as the print draws it.
+    pub crossing: f64,
+    /// Dash and gap of a marked (taped) leg.
+    pub dash: f64,
+    pub dash_gap: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -43,6 +53,10 @@ pub(crate) struct OverlayControl {
     pub code: String,
     pub kind: &'static str,
     pub at: MapPoint,
+    /// Crossing points only: the direction of the way through, degrees as for a start (0 east, counter-clockwise
+    /// on the paper). The print turns the symbol along the course.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub angle_deg: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -129,12 +143,41 @@ fn special_shape(special: &SpecialObject) -> Option<(&'static str, Vec<MapPoint>
 }
 
 fn sizes_at(kind: MapKind, factor: f64) -> Sizes {
-    let print = overprint_sizes(kind);
+    let print = course_symbol_sizes(kind);
     Sizes {
         circle_r: r3(print.circle_diameter_mm * factor / 2.0),
         line: r3(print.line_width_mm * factor),
         number_h: r3(print.number_height_mm * factor),
+        start_r: r3(triangle_radius(print.start_side_mm * factor)),
+        finish_inner_r: r3(print.finish_inner_mm * factor / 2.0),
+        finish_outer_r: r3(print.finish_outer_mm * factor / 2.0),
+        crossing: r3(print.crossing_point_mm * factor),
+        dash: r3(print.marked_route_dash_mm * factor),
+        dash_gap: r3(print.marked_route_gap_mm * factor),
     }
+}
+
+/// The direction the way through the crossing point at stop `stop` of the course runs, as the print turns the
+/// symbol: from the point before it to the point after it, else along the one leg it has. Degrees, 0 east,
+/// counter-clockwise on the paper.
+fn crossing_angle(legs: &[freemapper_courseplan::course::LegGeometry], stop: usize) -> Option<f64> {
+    let before = stop
+        .checked_sub(1)
+        .and_then(|i| legs.get(i))
+        .and_then(|l| l.points.get(l.points.len().checked_sub(2)?));
+    let after = legs.get(stop).and_then(|l| l.points.get(1));
+    let (from, to) = match (before, after) {
+        (Some(b), Some(a)) => (b, a),
+        (Some(b), None) => (b, &legs.get(stop - 1)?.points.last()?.clone()),
+        (None, Some(a)) => (&legs.get(stop)?.points.first()?.clone(), a),
+        (None, None) => return None,
+    };
+    Some(r3((-(to.y - from.y)).atan2(to.x - from.x).to_degrees()))
+}
+
+/// Circumradius of an equilateral triangle of side `side`, as the renderer draws the start.
+fn triangle_radius(side: f64) -> f64 {
+    side / 3f64.sqrt()
 }
 
 /// The overlay of the named course, or of all controls and special objects of the event without a name.
@@ -150,7 +193,7 @@ pub(crate) fn overlay(
     kind: MapKind,
     gaps: GapRange,
 ) -> Result<CourseOverlay, CourseError> {
-    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let factor = super::print_layer::course_factor(kind, map_scale);
     let sizes = sizes_at(kind, factor);
     let Some(name) = course else {
         return Ok(all_controls(event, sizes));
@@ -164,7 +207,23 @@ pub(crate) fn overlay(
     let CourseKind::Individual { controls: stops } = &course.kind else {
         unreachable!("course_legs refuses other kinds");
     };
-    let circle_r = overprint_sizes(kind).circle_diameter_mm * factor / 2.0;
+    let print = course_symbol_sizes(kind);
+    let circle_r = print.circle_diameter_mm * factor / 2.0;
+    // Where a leg leaves the symbol of stop `i` (0 is the start, the last is the finish): the start triangle's
+    // corner, the circle line, the outer finish circle, or the centre of a crossing point.
+    let radius_of = |i: usize| -> f64 {
+        if i == 0 {
+            return triangle_radius(print.start_side_mm * factor);
+        }
+        let Some(stop) = stops.get(i - 1) else {
+            return print.finish_outer_mm * factor / 2.0;
+        };
+        let crossing = event
+            .controls
+            .iter()
+            .any(|c| c.code == stop.code && c.kind == ControlKind::CrossingPoint);
+        if crossing { 0.0 } else { circle_r }
+    };
 
     let legs = geometry
         .iter()
@@ -172,7 +231,11 @@ pub(crate) fn overlay(
         .map(|(after, leg)| OverlayLeg {
             after,
             points: points(&leg.points),
-            drawn: points(&drawn_part(&leg.points, circle_r)),
+            drawn: points(&drawn_part_between(
+                &leg.points,
+                radius_of(after),
+                radius_of(after + 1),
+            )),
             bends: leg
                 .points
                 .iter()
@@ -188,14 +251,19 @@ pub(crate) fn overlay(
         .collect();
 
     let mut controls: Vec<OverlayControl> = Vec::new();
-    for stop in stops {
+    for (k, stop) in stops.iter().enumerate() {
         let known = controls.iter().any(|c| c.code == stop.code.0);
         if let (false, Some(control)) = (known, event.controls.iter().find(|c| c.code == stop.code))
         {
+            // The stop is number k + 1 of the course: the leg k arrives, the leg k + 1 leaves.
+            let angle_deg = (control.kind == ControlKind::CrossingPoint)
+                .then(|| crossing_angle(&geometry, k + 1))
+                .flatten();
             controls.push(OverlayControl {
                 code: control.code.0.clone(),
                 kind: control_kind(&control.kind),
                 at: point(&control.map_mm),
+                angle_deg,
             });
         }
     }
@@ -356,6 +424,7 @@ fn all_controls(event: &Event, sizes: Sizes) -> CourseOverlay {
                 code: c.code.0.clone(),
                 kind: control_kind(&c.kind),
                 at: point(&c.map_mm),
+                angle_deg: None,
             })
             .collect(),
         starts,

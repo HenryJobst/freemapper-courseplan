@@ -6,6 +6,16 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Der Editor hat eine Druckvorschau (ADR 0057). Die Schaltfläche „Druckvorschau“ oder die Taste P zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet: Der Server gibt die Bahn an den Renderer (freemapper-core 0.16.0), der Start, Posten, Ziel, Strecken, Sonderobjekte und Nummern als Purpurebenen ins Kartenbild malt. Das Overlay ist dabei ausgeblendet, und es lässt sich nichts bearbeiten: Baum, Eigenschaften, Rückgängig und Wiederholen und die Tasten sind abgeschaltet. Ein Test vergleicht Kreise, Strecken, Bandstrecken, Querungsstellen und Nummernfelder des Overlays mit denen des Renderers, für Sprint-, Schulhof- und Waldgrößen.
+
+### Behoben
+
+- Das Nummernfeld ist so breit, wie freemapper-print es zeichnet (3,23 mm statt 2,4 mm für eine Ziffer, ADR 0030). Gespeicherte Nummernpositionen (Richtung und Abstand) werden um etwa 0,4 mm anders gezeichnet, und die automatische Platzierung, die Prüfungen und die Positionen in den Exporten für Purple Pen und IOF XML nutzen die neue Breite. Die Purple-Pen-Datei und das IOF XML des Beispiels sind neu erzeugt.
+- Die Querungsstelle im Overlay ist das 3 mm große Zeichen, entlang der Bahn gedreht, und eine Bandstrecke hat die Striche des Drucks. Eine Karte ohne Maßstab ergibt keine unendlichen Zeichengrößen mehr.
+- Das Overlay zeichnet Start und Ziel in den IOF-Größen und lässt Strecken dort enden, wo der Renderer sie enden lässt: am Eck des Starts, am äußeren Zielkreis, am Postenkreis, an der Querungsstelle selbst. Vorher schnitt es jede Strecke an beiden Enden mit dem Radius des Postenkreises ab.
+
 ## [0.10.0] - 2026-11-11
 
 ### Hinzugefügt

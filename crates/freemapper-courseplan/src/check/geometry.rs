@@ -21,8 +21,14 @@ fn between(a: &MapPoint, b: &MapPoint, t: f64) -> MapPoint {
 /// The part of a polyline that is drawn when its ends start and stop at circles: `cut` map mm
 /// along the line are left out at either end. Empty when nothing is left.
 pub fn drawn_part(points: &[MapPoint], cut: f64) -> Vec<MapPoint> {
+    drawn_part_between(points, cut, cut)
+}
+
+/// Like [`drawn_part`], with `cut_from` map mm left out at the start and `cut_to` at the end: the legs of a
+/// course leave a start triangle, a control circle, a finish or a crossing point at different distances.
+pub fn drawn_part_between(points: &[MapPoint], cut_from: f64, cut_to: f64) -> Vec<MapPoint> {
     let length: f64 = points.windows(2).map(|w| distance(&w[0], &w[1])).sum();
-    let (from, to) = (cut, length - cut);
+    let (from, to) = (cut_from, length - cut_to);
     if points.len() < 2 || to <= from {
         return Vec::new();
     }

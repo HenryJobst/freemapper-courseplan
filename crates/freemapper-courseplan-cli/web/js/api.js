@@ -14,11 +14,19 @@ async function answer(response) {
   return { ok: response.ok, status: response.status, data };
 }
 
+// While the print preview is on, nothing may change the project: a write is refused here, whatever asked for it.
+let readOnly = false;
+export function setReadOnly(value) {
+  readOnly = value;
+}
+const REFUSED = { ok: false, status: 423, data: "read-only" };
+
 export async function get(path) {
   return answer(await fetch(path, { cache: "no-store" }));
 }
 
 export async function post(path, body = {}, revision = null) {
+  if (readOnly) return REFUSED;
   const headers = { "Content-Type": "application/json" };
   if (revision) headers["X-Courseplan-Revision"] = revision;
   return answer(await fetch(path, { method: "POST", headers, body: JSON.stringify(body) }));
@@ -27,6 +35,7 @@ export async function post(path, body = {}, revision = null) {
 // A body that is not JSON: the answer is parsed like the others. `type` is the content type of the body; the server
 // accepts only application/json and application/octet-stream.
 export async function postBytes(path, bytes, revision = null) {
+  if (readOnly) return REFUSED;
   const headers = { "Content-Type": "application/octet-stream" };
   if (revision) headers["X-Courseplan-Revision"] = revision;
   return answer(await fetch(path, { method: "POST", headers, body: bytes }));

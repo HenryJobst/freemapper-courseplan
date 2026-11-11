@@ -100,3 +100,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0054](0054-editor-sync-panel.md) | Editor: sync panel with conflict choices | Accepted | 2026-11-11 |
 | [0055](0055-editor-sync-base-copy-and-history.md) | Editor: the sync can write the base copy alone | Accepted | 2026-11-11 |
 | [0056](0056-render-map-page-and-limits.md) | RenderMap: one A3 page at map scale, refusals as 413 | Accepted | 2026-11-11 |
+| [0057](0057-print-preview-and-overlay-parity.md) | Editor: print preview and overlay parity | Accepted | 2026-11-11 |

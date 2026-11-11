@@ -184,10 +184,11 @@ Drei Grenzen können in der Statusleiste erscheinen:
   einen kleineren Ausschnitt. Die Seite selbst begrenzt das Bild auf 6 000 px Kantenlänge; die Meldung siehst du
   deshalb nur nach einer von Hand gebauten Anfrage.
 
-Die Druckvorschau ist nicht gebaut. Sie würde die Karte mit der Bahn zeigen, wie freemapper-print sie zeichnet, und
-ein Test würde das Overlay des Editors mit dieser Zeichnung vergleichen. Beides wartet, bis freemapper-print Bahnen
-auf die Seite zeichnen kann. Bis dahin sind die Kreise im Editor seine eigenen, berechnet aus denselben Daten und
-nach denselben Regeln. Die Entscheidungen stehen in ADR 0046 und 0056.
+Die Schaltfläche „Druckvorschau“ (Taste P) zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet. Der Server
+gibt die Bahn an den gemeinsamen Renderer, der die Purpurebenen in das Kartenbild malt; das Overlay des Editors ist
+dabei ausgeblendet. Solange die Vorschau an ist, lässt sich nichts bearbeiten (Baum, Eigenschaften, Rückgängig und Tasten sind abgeschaltet), und ein Druck auf die Karte verschiebt
+nur den Ausschnitt. Die Schaltfläche geht erst, wenn du eine Bahn gewählt hast. Ein Test vergleicht Kreise, Strecken,
+Bandstrecken, Querungsstellen und Nummernfelder des Editors mit denen des Renderers auf 0,01 mm. Die Entscheidungen stehen in ADR 0046, 0056 und 0057.
 
 ### Posten
 

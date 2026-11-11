@@ -179,10 +179,11 @@ Three limits can show up in the status bar:
   The page itself limits the image to 6 000 px on a side, so you will meet this message only after a hand-made
   request.
 
-The print preview is not built. It would show the map with the course as freemapper-print draws it, and a test would
-compare the editor's overlay with that drawing. Both wait until freemapper-print can draw courses on the page. Until
-then, the circles you see in the editor are the editor's own, computed from the same data and the same rules.
-The decisions are in ADR 0046 and 0056.
+The "Print preview" button (key P) shows the selected course the way freemapper-print draws it. The server hands the
+course to the shared renderer, which paints the purple layers into the map image; the editor's own overlay is hidden.
+Editing is off while the preview is on (the tree, the properties, undo and the keys are switched off), and a press on the map only pans. The button works once you have selected a
+course. A test compares the editor's circles, legs, marked legs, crossing points and number boxes with the renderer's to 0.01 mm. The decisions are
+in ADR 0046, 0056 and 0057.
 
 ### Controls
 

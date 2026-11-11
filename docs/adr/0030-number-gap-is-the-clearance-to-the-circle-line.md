@@ -27,8 +27,15 @@ point of the box is on its near vertical edge, on its near horizontal edge or at
 (`box_distance` in `numbers.rs`). The inverse, needed when reading positions from other programs such as
 Purple Pen, is `gap = distance(circle centre, box) − r_outer`.
 
-The box size comes from freemapper-print's `number_box`, which uses the real font metrics. This project
-keeps its stand-in of 0.6 × number height per digit until it takes over the shared placement module.
+The box size comes from freemapper-print's `number_box`, which uses the real font metrics. Until
+2026-11-11 this project kept its stand-in of 0.6 × number height per digit.
+
+**Update 2026-11-11 (agreed with freemapper-print):** the renderer's box is authoritative. `numbers.rs` takes
+the size from `freemapper_render::overprint::number_size(text, height)`, the advance width of the digits in
+Arimo (3.233 × 4 mm for one digit at 4 mm height instead of 2.4 × 4 mm), in one place (`box_size`). The
+placement, the checks, the overlay, the preview and the Purple Pen exchange all use it. Stored number
+positions are drawn about 0.4 mm differently (0.42 mm closer to or farther from the circle on each side, as the
+box is 0.83 mm wider); the stored direction and gap stay as they are.
 
 ## Consequences
 - A user who types `--gap 1` gets 1 mm of white between circle and number in every direction, and the box

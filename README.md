@@ -37,7 +37,7 @@ Geplant ist für die erste Version:
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
   Sonderobjekte und Postenbeschreibungen, Befunde der Prüfung, Export, Import und Abgleich mit Purple Pen, mit
-  Rückgängig und Wiederholen; auf der echten Karte), über die Kommandozeile oder über einen KI-Assistenten (MCP).
+  Rückgängig und Wiederholen und einer Druckvorschau; auf der echten Karte), über die Kommandozeile oder über einen KI-Assistenten (MCP).
 
 Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Score-OL, Touren für die
 Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge macht.
@@ -140,7 +140,7 @@ mit einer Begründung akzeptieren. Das Menü „Veranstaltung“ exportiert IOF-
 Purple-Pen-Datei und gleicht mit der verknüpften ab; schließe die Veranstaltung vorher in Purple Pen. Die Karte ist
 die echte, als SVG gezeichnet vom Kartenzeichner, den auch freemapper-print benutzt (freemapper-render). Eine Karte, die
 im Kartenmaßstab größer ist als ein A3-Blatt, wird auf ihren mittleren Teil beschnitten, und die Statusleiste sagt das.
-Die Druckvorschau ist noch nicht gebaut; sie wartet darauf, dass freemapper-print Bahnen zeichnet. Der Server hört nur auf `127.0.0.1` und verlangt ein Zugriffszeichen in der
+Die Schaltfläche „Druckvorschau“ zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet, schreibgeschützt und ohne Overlay (ADR 0057). Der Server hört nur auf `127.0.0.1` und verlangt ein Zugriffszeichen in der
 Adresse. Siehe Kapitel 4 des [Handbuchs](docs/manual/de.md#4-der-editor) sowie ADR 0042, 0043, 0047, 0048,
 0049, 0051, 0052, 0053, 0054 und 0056.
 
