@@ -23,15 +23,21 @@ const EPS: f64 = 1e-9;
 /// A control with its point value and position in map millimetres.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScoredControl {
+    /// Position in map millimetres.
     pub at: MapPoint,
+    /// Point value of the control.
     pub value: u8,
 }
 
 /// A round trip: control indices in running order, total time including start and finish legs.
+/// With an empty order, `time_s` is the direct start-finish time, which can exceed the limit.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Tour {
+    /// Indices into the control list, in running order.
     pub order: Vec<usize>,
+    /// Time of the whole trip in seconds.
     pub time_s: f64,
+    /// Sum of the point values of the controls in `order`.
     pub points: u32,
 }
 
@@ -125,12 +131,8 @@ impl Problem {
     fn unit_points(&self, u: usize) -> u32 {
         self.units[u].path.iter().map(|&c| self.values[c]).sum()
     }
-    fn mandatory_mask(&self) -> u64 {
-        self.units
-            .iter()
-            .enumerate()
-            .filter(|(_, u)| u.mandatory)
-            .fold(0, |m, (k, _)| m | 1 << k)
+    fn has_mandatory(&self) -> bool {
+        self.units.iter().any(|u| u.mandatory)
     }
     fn direct(&self) -> f64 {
         self.dist(self.start(), self.finish())
@@ -168,8 +170,9 @@ impl Problem {
         }
     }
 
-    /// No tour holds every link within the limit: name the link that fits worst.
-    fn link_error(&self) -> ScoreError {
+    /// No tour holds every link within the limit: name the link that fits worst. `proven` says the
+    /// search was exact; otherwise a tour may exist that the heuristic did not find.
+    fn link_error(&self, proven: bool) -> ScoreError {
         let solo = |k: usize| {
             [false, true]
                 .into_iter()
@@ -183,7 +186,11 @@ impl Problem {
         };
         let detour = |c: usize| self.dist(self.start(), c) + self.dist(c, self.finish());
         let (a, b) = links::least_fitting_link(&self.units, &self.links, solo, detour);
-        ScoreError::LinkDoesNotFit { a, b }
+        if proven {
+            ScoreError::LinkDoesNotFit { a, b }
+        } else {
+            ScoreError::LinkTourNotFound { a, b }
+        }
     }
 }
 
@@ -223,8 +230,9 @@ pub fn best_tour(
 }
 
 /// The round trip with the most points within `limit_s`, start and finish legs included; ties go to
-/// the shorter time, then to the lower index order. Every link is in the tour or the call fails
-/// with `LinkDoesNotFit`. Exact up to [`EXACT_MAX`] controls, else a heuristic driven by `seed`.
+/// the shorter time. Equal ends of the exact table are then ordered by the lower index order, which
+/// does not make the result unique among all tours. Every link is in the tour or the call fails
+/// with `LinkDoesNotFit` (proven, exact solver) or `LinkTourNotFound` (heuristic, not proven). Exact up to [`EXACT_MAX`] controls, else a heuristic driven by `seed`.
 pub fn best_tour_seeded(
     controls: &[ScoredControl],
     links: &[(usize, usize)],
@@ -239,15 +247,18 @@ pub fn best_tour_seeded(
 }
 
 fn solve(p: &Problem, seed: u32) -> Result<Tour, ScoreError> {
+    // Err holds whether the miss is proven: the exact solver proves it, the heuristic only
+    // sometimes.
     let found = if p.n <= EXACT_MAX {
-        exact::solve(p)
+        exact::solve(p).ok_or(true)
     } else {
         heuristic::solve(p, seed)
     };
     match found {
-        Some(seq) => Ok(p.tour(&seq)),
-        None if p.mandatory_mask() != 0 => Err(p.link_error()),
-        None => Ok(Tour {
+        Ok(seq) => Ok(p.tour(&seq)),
+        Err(true) if p.has_mandatory() => Err(p.link_error(true)),
+        Err(false) if p.has_mandatory() => Err(p.link_error(false)),
+        Err(_) => Ok(Tour {
             order: Vec::new(),
             time_s: p.direct(),
             points: 0,

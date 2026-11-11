@@ -54,4 +54,8 @@ pub enum ScoreError {
         "the links at control {control} do not form a chain: a control may have at most two links and they may not close a ring"
     )]
     LinksNotAChain { control: usize },
+    #[error(
+        "no tour was found that holds every link within the time limit; the link between controls {a} and {b} fits worst, but the search above the exact size is not a proof"
+    )]
+    LinkTourNotFound { a: usize, b: usize },
 }

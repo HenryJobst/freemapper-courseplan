@@ -8,20 +8,31 @@ use crate::score::travel::TravelTime;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LengthReport {
+    /// Best round trip of the good runner within the limit.
     pub good: Tour,
+    /// Best round trip of the very good runner within the limit.
     pub very_good: Tour,
+    /// Points of `good` as a share of all points, in percent; 0 for a set without points.
     pub good_percent: f64,
+    /// Time of `very_good` as a share of the limit, in percent; 0 for a limit of zero or less.
     pub very_good_finish_percent: f64,
+    /// Sum of the point values of all controls.
     pub all_points: u32,
+    /// What lies outside the bands, empty when the length fits.
     pub issues: Vec<LengthIssue>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LengthIssue {
+    /// The good runner scores a smaller share of all points than the band allows.
     GoodBelow { percent: f64, band: (u8, u8) },
+    /// The good runner scores a larger share than the band allows.
     GoodAbove { percent: f64, band: (u8, u8) },
+    /// The very good runner cannot take every control within the limit; `missing` points are left.
     VeryGoodMissesControls { missing: u32 },
+    /// Every control would take the very good runner this share of the limit, over 100 percent.
     VeryGoodOverLimit { percent: f64 },
+    /// The very good runner takes every control but finishes below the band, as a share of the limit.
     VeryGoodTooEarly { percent: f64, band: (u8, u8) },
 }
 
@@ -58,11 +69,17 @@ pub fn analyse_length(
     } else {
         f64::from(good.points) / f64::from(all_points) * 100.0
     };
-    let very_good_finish_percent = very_good.time_s / limit_s * 100.0;
+    let very_good_finish_percent = if limit_s > 0.0 {
+        very_good.time_s / limit_s * 100.0
+    } else {
+        0.0
+    };
 
     let mut issues = Vec::new();
     let band = settings.good_band_percent;
-    if good_percent < f64::from(band.0) {
+    if all_points == 0 {
+        // An empty set has no length to judge.
+    } else if good_percent < f64::from(band.0) {
         issues.push(LengthIssue::GoodBelow {
             percent: good_percent,
             band,
@@ -79,12 +96,12 @@ pub fn analyse_length(
         });
         // How long the very good runner needs for every control, if there is a way at all.
         let all = solve(travel_very_good, f64::INFINITY)?;
-        if all.points == all_points {
+        if all.points == all_points && limit_s > 0.0 {
             issues.push(LengthIssue::VeryGoodOverLimit {
                 percent: all.time_s / limit_s * 100.0,
             });
         }
-    } else {
+    } else if all_points > 0 {
         let band = settings.very_good_band_percent;
         if very_good_finish_percent < f64::from(band.0) {
             issues.push(LengthIssue::VeryGoodTooEarly {

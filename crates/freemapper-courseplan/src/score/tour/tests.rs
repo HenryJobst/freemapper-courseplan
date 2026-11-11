@@ -292,40 +292,214 @@ fn same_seed_same_tour() {
     assert_eq!(run(1), run(1));
 }
 
+/// Every link as two consecutive controls of the order, in either direction.
+fn holds_links(order: &[usize], links: &[(usize, usize)]) -> bool {
+    links
+        .iter()
+        .all(|&(a, b)| order.contains(&a) && order.contains(&b) && adjacent(order, a, b))
+}
+
 #[test]
 fn heuristic_matches_exact_on_small_sets() {
-    for (seed, links) in [
-        (21, vec![]),
-        (22, vec![]),
-        (23, vec![(0, 3)]),
-        (24, vec![]),
-        (25, vec![(1, 2), (2, 5)]),
-    ] {
+    let link_sets: [Vec<(usize, usize)>; 4] = [
+        vec![],
+        vec![(0, 3)],
+        vec![(1, 2), (2, 5)],
+        vec![(4, 7), (6, 1), (2, 3)],
+    ];
+    let mut compared = 0;
+    for seed in 21..31 {
         let cs = scatter(10, seed);
-        for limit in [600.0, 900.0, 1400.0] {
-            let p = Problem::new(
-                &cs,
-                &links,
-                &FAKE,
-                &pt(200.0, 200.0),
-                &pt(200.0, 200.0),
-                limit,
-            )
-            .unwrap();
-            let (exact, heur) = (exact::solve(&p), heuristic::solve(&p, 1));
-            let (Some(e), Some(h)) = (exact, heur) else {
-                // Both agree that no tour holds the links within this limit.
-                assert!(exact::solve(&p).is_none() && heuristic::solve(&p, 1).is_none());
-                continue;
-            };
-            assert_eq!(
-                p.tour(&h).points,
-                p.tour(&e).points,
-                "seed {seed}, limit {limit}"
-            );
-            assert!(p.tour(&h).time_s <= limit + 1e-6);
+        for links in &link_sets {
+            for limit in [600.0, 900.0, 1400.0] {
+                let p = Problem::new(
+                    &cs,
+                    links,
+                    &FAKE,
+                    &pt(200.0, 200.0),
+                    &pt(200.0, 200.0),
+                    limit,
+                )
+                .unwrap();
+                let (exact, heur) = (
+                    exact::solve(&p),
+                    heuristic::solve(&p, u32::from(seed as u8)),
+                );
+                let (Some(e), Ok(h)) = (exact, heur) else {
+                    // Both agree that no tour holds the links within this limit.
+                    assert!(exact::solve(&p).is_none() && heuristic::solve(&p, 1).is_err());
+                    continue;
+                };
+                let (et, ht) = (p.tour(&e), p.tour(&h));
+                assert_eq!(
+                    ht.points, et.points,
+                    "seed {seed}, {links:?}, limit {limit}"
+                );
+                assert!(ht.time_s <= limit + 1e-6);
+                assert!(holds_links(&ht.order, links), "{:?}", ht.order);
+                compared += 1;
+            }
         }
     }
+    assert!(compared > 60, "{compared}");
+}
+
+/// Best (points, time) over every ordered subset that holds the links.
+fn brute_force(
+    cs: &[ScoredControl],
+    links: &[(usize, usize)],
+    start: (f64, f64),
+    limit: f64,
+) -> Option<(u32, f64)> {
+    fn go(
+        cs: &[ScoredControl],
+        links: &[(usize, usize)],
+        limit: f64,
+        order: &mut Vec<usize>,
+        best: &mut Option<(u32, f64)>,
+        start: (f64, f64),
+    ) {
+        let dist = |a: (f64, f64), b: (f64, f64)| (a.0 - b.0).hypot(a.1 - b.1);
+        if holds_links(order, links) {
+            let mut at = start;
+            let mut t = 0.0;
+            for &c in order.iter() {
+                let q = (cs[c].at.x, cs[c].at.y);
+                t += dist(at, q);
+                at = q;
+            }
+            t += dist(at, start);
+            let pts: u32 = order.iter().map(|&c| u32::from(cs[c].value)).sum();
+            let ok = t <= limit + 1e-9;
+            let improves = best.is_none_or(|(bp, bt)| pts > bp || (pts == bp && t < bt - 1e-9));
+            if ok && improves {
+                *best = Some((pts, t));
+            }
+        }
+        for c in 0..cs.len() {
+            if !order.contains(&c) {
+                order.push(c);
+                go(cs, links, limit, order, best, start);
+                order.pop();
+            }
+        }
+    }
+    let mut best = None;
+    go(cs, links, limit, &mut Vec::new(), &mut best, start);
+    best
+}
+
+#[test]
+fn exact_solver_matches_brute_force_with_chain_and_pair_links() {
+    let sets: [Vec<(usize, usize)>; 5] = [
+        vec![(0, 1), (1, 2), (4, 5)],
+        vec![(2, 1), (1, 0), (5, 4)],
+        vec![(1, 0), (2, 1), (4, 5)],
+        vec![(3, 6)],
+        vec![],
+    ];
+    for seed in 1..=6u32 {
+        let cs = scatter(7, seed);
+        for links in &sets {
+            for limit in [500.0, 900.0, 1500.0] {
+                let want = brute_force(&cs, links, (200.0, 200.0), limit);
+                let got = tour(&cs, links, (200.0, 200.0), (200.0, 200.0), limit);
+                match (want, got) {
+                    (Some((wp, wt)), Ok(t)) if !t.order.is_empty() || wp == 0 => {
+                        assert_eq!(t.points, wp, "seed {seed}, {links:?}, limit {limit}");
+                        assert!((t.time_s - wt).abs() < 1e-6);
+                        assert!(holds_links(&t.order, links));
+                    }
+                    (None, Err(ScoreError::LinkDoesNotFit { .. })) => {}
+                    (None, Ok(t)) => assert!(links.is_empty() && t.order.is_empty()),
+                    (w, g) => panic!("seed {seed}, {links:?}, limit {limit}: {w:?} against {g:?}"),
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn heuristic_holds_every_link_above_the_exact_size() {
+    let cs = scatter(40, 8);
+    let links = [(0, 1), (1, 2), (5, 6), (9, 8), (20, 30)];
+    let t = tour(&cs, &links, (200.0, 200.0), (200.0, 200.0), 1800.0).unwrap();
+    assert!(t.time_s <= 1800.0 + 1e-6);
+    assert!(holds_links(&t.order, &links), "{:?}", t.order);
+    assert_eq!(t.time_s, {
+        let p = Problem::new(
+            &cs,
+            &links,
+            &FAKE,
+            &pt(200.0, 200.0),
+            &pt(200.0, 200.0),
+            1800.0,
+        )
+        .unwrap();
+        let seq = heuristic::solve(&p, ScoreSettings::default().seed).unwrap();
+        p.eval(&seq)
+    });
+}
+
+#[test]
+fn seventy_controls_with_links_do_not_overflow_the_unit_count() {
+    let cs = scatter(70, 17);
+    let links = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11), (12, 13)];
+    let t = tour(&cs, &links, (200.0, 200.0), (200.0, 200.0), 1500.0).unwrap();
+    assert!(t.time_s <= 1500.0 + 1e-6);
+    assert!(holds_links(&t.order, &links), "{:?}", t.order);
+}
+
+#[test]
+fn a_heuristic_miss_is_not_called_a_proven_misfit() {
+    // Sixteen separate links and a limit that no tour holds: above 12 linked units the search
+    // cannot prove it, so the error says only that nothing was found.
+    let cs = scatter(40, 6);
+    let links: Vec<(usize, usize)> = (0..16).map(|i| (2 * i, 2 * i + 1)).collect();
+    let err = tour(&cs, &links, (200.0, 200.0), (200.0, 200.0), 150.0).unwrap_err();
+    assert!(
+        matches!(err, ScoreError::LinkTourNotFound { .. }),
+        "{err:?}"
+    );
+}
+
+#[test]
+fn several_chains_are_repaired_when_the_greedy_order_fails() {
+    // The limit is the exact optimum for the linked units alone, so the cheapest-insertion order
+    // has to match it or a better start is needed.
+    let mut greedy_failed = 0;
+    for seed in 30..60u32 {
+        let cs = scatter(24, seed);
+        let links = [(0, 1), (2, 3), (4, 5), (6, 7), (8, 9), (10, 11)];
+        let p0 = Problem::new(
+            &cs,
+            &links,
+            &FAKE,
+            &pt(200.0, 200.0),
+            &pt(200.0, 200.0),
+            f64::INFINITY,
+        )
+        .unwrap();
+        let linked: Vec<usize> = (0..p0.units.len())
+            .filter(|&k| p0.units[k].mandatory)
+            .collect();
+        let opt = p0.eval(&exact::solve_units(&p0, &linked).unwrap());
+        let tight = Problem::new(
+            &cs,
+            &links,
+            &FAKE,
+            &pt(200.0, 200.0),
+            &pt(200.0, 200.0),
+            opt + 1e-6,
+        )
+        .unwrap();
+        greedy_failed += usize::from(heuristic::greedy_linked(&tight).is_none());
+        let t = tour(&cs, &links, (200.0, 200.0), (200.0, 200.0), opt + 1e-6)
+            .unwrap_or_else(|e| panic!("seed {seed}: {e}"));
+        assert!(holds_links(&t.order, &links));
+        assert!(t.time_s <= opt + 1e-6 + 1e-9);
+    }
+    assert!(greedy_failed > 0, "no instance made the greedy order fail");
 }
 
 #[test]

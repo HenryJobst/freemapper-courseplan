@@ -4,7 +4,7 @@
 use super::{EPS, Problem, Seq};
 
 /// Restarts after the plain run.
-const RESTARTS: usize = 12;
+const RESTARTS: usize = 16;
 /// Passes of remove-and-refill per run.
 const IMPROVE_PASSES: usize = 3;
 
@@ -32,11 +32,29 @@ impl Rng {
     }
 }
 
-pub(super) fn solve(p: &Problem, seed: u32) -> Option<Seq> {
+/// A tour, or `Err(proven)` when none was found. With at most `EXACT_MAX` linked units the
+/// linked units alone are solved exactly first, so a miss there is a proof; otherwise it only
+/// means that none of the seeded restarts found a tour.
+pub(super) fn solve(p: &Problem, seed: u32) -> Result<Seq, bool> {
     let mut rng = Rng::new(seed);
+    let linked: Vec<usize> = (0..p.units.len())
+        .filter(|&k| p.units[k].mandatory)
+        .collect();
+    let exact_base = if linked.len() <= super::EXACT_MAX && !linked.is_empty() {
+        match super::exact::solve_units(p, &linked) {
+            Some(seq) => Some(seq),
+            None => return Err(true),
+        }
+    } else {
+        None
+    };
     let mut best: Option<(u32, f64, Seq)> = None;
     for run in 0..=RESTARTS {
-        let Some(seq) = build(p, &mut rng, run > 0) else {
+        let base = match (&exact_base, run) {
+            (Some(seq), 0) => Some(seq.clone()),
+            _ => linked_tour(p, &mut rng, run > 0),
+        };
+        let Some(seq) = base.map(|b| build(p, b, &mut rng, run > 0)) else {
             continue;
         };
         let (pts, time) = (points(p, &seq), p.eval(&seq));
@@ -47,9 +65,35 @@ pub(super) fn solve(p: &Problem, seed: u32) -> Option<Seq> {
             best = Some((pts, time, seq));
         }
     }
-    let (_, _, mut seq) = best?;
+    let Some((_, _, mut seq)) = best else {
+        return Err(false);
+    };
     polish(p, &mut seq, &mut rng);
-    Some(seq)
+    Ok(seq)
+}
+
+/// The plain cheapest-insertion tour of the linked units, for the tests.
+#[cfg(test)]
+pub(super) fn greedy_linked(p: &Problem) -> Option<Seq> {
+    linked_tour(p, &mut Rng::new(1), false)
+}
+
+/// The linked units alone, inserted cheapest first in index order or, when `noisy`, shuffled,
+/// then shortened. `None` when that tour already exceeds the limit.
+fn linked_tour(p: &Problem, rng: &mut Rng, noisy: bool) -> Option<Seq> {
+    let mut seq: Seq = Vec::new();
+    let mut must: Vec<usize> = (0..p.units.len())
+        .filter(|&k| p.units[k].mandatory)
+        .collect();
+    if noisy {
+        rng.shuffle(&mut must);
+    }
+    for k in must {
+        let (pos, rev, _) = best_insertion(p, &seq, k);
+        seq.insert(pos, (k, rev));
+    }
+    two_opt(p, &mut seq);
+    (p.eval(&seq) <= p.limit + EPS).then_some(seq)
 }
 
 /// Takes one or two optional units out, puts another in, refills, and keeps what scores more,
@@ -118,22 +162,8 @@ fn better(pts: u32, time: f64, bp: u32, bt: f64) -> bool {
     pts > bp || (pts == bp && time < bt - EPS)
 }
 
-fn build(p: &Problem, rng: &mut Rng, noisy: bool) -> Option<Seq> {
-    let mut seq: Seq = Vec::new();
-    let mut must: Vec<usize> = (0..p.units.len())
-        .filter(|&k| p.units[k].mandatory)
-        .collect();
-    if noisy {
-        rng.shuffle(&mut must);
-    }
-    for k in must {
-        let (pos, rev, _) = best_insertion(p, &seq, k);
-        seq.insert(pos, (k, rev));
-    }
-    two_opt(p, &mut seq);
-    if p.eval(&seq) > p.limit + EPS {
-        return None;
-    }
+/// Grows a tour from the linked units in `seq` by points per added second, then swaps units.
+fn build(p: &Problem, mut seq: Seq, rng: &mut Rng, noisy: bool) -> Seq {
     fill(p, &mut seq, rng, noisy);
     for _ in 0..IMPROVE_PASSES {
         let mut improved = false;
@@ -163,7 +193,7 @@ fn build(p: &Problem, rng: &mut Rng, noisy: bool) -> Option<Seq> {
             break;
         }
     }
-    Some(seq)
+    seq
 }
 
 /// Where unit `k` costs the least time: position, direction, added seconds.
@@ -222,8 +252,8 @@ fn fill(p: &Problem, seq: &mut Seq, rng: &mut Rng, noisy: bool) {
     }
 }
 
-/// Reverses stretches of the tour and moves single units while that saves time. The matrix is symmetric, so only the two
-/// edges at the ends of a stretch change.
+/// Reverses stretches of the tour and moves single units while that saves time. The matrix is
+/// symmetric, so a reversal changes only the two edges at the ends of a stretch.
 fn two_opt(p: &Problem, seq: &mut Seq) {
     loop {
         let mut improved = false;
