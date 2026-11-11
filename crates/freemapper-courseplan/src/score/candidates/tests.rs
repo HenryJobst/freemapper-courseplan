@@ -152,7 +152,9 @@ fn only_clear_features_are_candidates() {
             (60.0, 40.0),
             (60.0, 60.0),
             (40.0, 60.0),
+            (10.0, 70.0),
             (10.0, 90.0),
+            (30.0, 90.0),
             (20.0, 20.0)
         ])
     );
@@ -730,4 +732,149 @@ fn no_candidate_lies_farther_from_the_start_than_the_reach() {
     assert!(found.iter().all(|f| dist(&f.at, &c.start) <= 40.0));
     let all = suggest(&grid(), &Fake::plain(), &ctx(&[], &[])).unwrap();
     assert!(all.iter().any(|f| dist(&f.at, &c.start) > 40.0));
+}
+
+fn line(code: &str, pts: &[(f64, f64)]) -> MapFeature {
+    feature(
+        code,
+        FeatureGeometry::Line(pts.iter().map(|&(x, y)| p(x, y)).collect()),
+    )
+}
+
+fn found_at(features: Vec<MapFeature>) -> Vec<(f64, f64)> {
+    let index = MapIndex::from_features(features);
+    sorted(positions(
+        &suggest(&index, &Fake::plain(), &ctx(&[], &[])).unwrap(),
+    ))
+}
+
+#[test]
+fn the_ends_of_a_wall_a_fence_and_a_stairway_are_sites_and_the_bend_stays() {
+    let wall = line("515", &[(10.0, 10.0), (10.0, 30.0), (30.0, 30.0)]);
+    let fence = line("516", &[(50.0, 10.0), (70.0, 10.0)]);
+    let stairs = line("532.6", &[(50.0, 40.0), (50.0, 50.0)]);
+    assert_eq!(
+        found_at(vec![wall, fence, stairs]),
+        sorted(vec![
+            (10.0, 10.0),
+            (10.0, 30.0),
+            (30.0, 30.0),
+            (50.0, 10.0),
+            (70.0, 10.0),
+            (50.0, 40.0),
+            (50.0, 50.0)
+        ])
+    );
+}
+
+#[test]
+fn a_closed_line_has_no_ends() {
+    // A ring of fence: only its corners count, no end.
+    let ring = line(
+        "518",
+        &[
+            (40.0, 40.0),
+            (60.0, 40.0),
+            (60.0, 60.0),
+            (40.0, 60.0),
+            (40.0, 40.0),
+        ],
+    );
+    assert_eq!(
+        found_at(vec![ring]),
+        sorted(vec![(40.0, 40.0), (60.0, 40.0), (60.0, 60.0), (40.0, 60.0)])
+    );
+}
+
+#[test]
+fn path_ends_and_t_junctions_are_sites_but_a_split_path_is_not_a_junction() {
+    // A long path along y = 50 with a branch that ends on it at (30, 50) and runs on to (30, 80).
+    let main = line("505.1", &[(10.0, 50.0), (90.0, 50.0)]);
+    let branch = line("506", &[(30.0, 50.0), (30.0, 80.0)]);
+    // One path cut in two at (60, 20): the cut is no junction.
+    let first = line("501.6", &[(40.0, 20.0), (60.0, 20.0)]);
+    let second = line("501.6", &[(60.0, 20.0), (80.0, 20.0)]);
+    let got = found_at(vec![main, branch, first, second]);
+    assert!(got.contains(&(30.0, 50.0)), "the T junction");
+    assert!(got.contains(&(30.0, 80.0)), "the free end of the branch");
+    assert!(got.contains(&(10.0, 50.0)) && got.contains(&(90.0, 50.0)));
+    assert!(got.contains(&(40.0, 20.0)) && got.contains(&(80.0, 20.0)));
+    assert!(!got.contains(&(60.0, 20.0)), "a split path is no junction");
+}
+
+#[test]
+fn a_fork_where_three_path_ends_meet_is_a_junction() {
+    let a = line("506", &[(10.0, 10.0), (30.0, 30.0)]);
+    let b = line("506", &[(30.0, 30.0), (50.0, 10.0)]);
+    let c = line("506", &[(30.0, 30.0), (30.0, 60.0)]);
+    assert!(found_at(vec![a, b, c]).contains(&(30.0, 30.0)));
+}
+
+#[test]
+fn small_buildings_trees_canopies_and_paved_corners_are_sites() {
+    let small_building = feature("521.1", FeatureGeometry::Point(p(20.0, 20.0)));
+    let tree = feature("417", FeatureGeometry::Point(p(60.0, 20.0)));
+    let canopy = feature(
+        "522",
+        FeatureGeometry::Area(vec![vec![
+            p(40.0, 60.0),
+            p(60.0, 60.0),
+            p(60.0, 80.0),
+            p(40.0, 80.0),
+        ]]),
+    );
+    let paved = feature(
+        "501.5",
+        FeatureGeometry::Area(vec![vec![
+            p(80.0, 60.0),
+            p(95.0, 60.0),
+            p(95.0, 75.0),
+            p(80.0, 75.0),
+        ]]),
+    );
+    let got = found_at(vec![small_building, tree, canopy, paved]);
+    for site in [
+        (20.0, 20.0),
+        (60.0, 20.0),
+        (40.0, 60.0),
+        (60.0, 80.0),
+        (80.0, 60.0),
+        (95.0, 75.0),
+    ] {
+        assert!(got.contains(&site), "{site:?} in {got:?}");
+    }
+}
+
+#[test]
+fn every_class_has_a_clarity_and_movable_or_vague_things_are_less_clear() {
+    let classes = Classes::embedded();
+    let end = |code: &str| classes.lookup(code, Kind::End).unwrap();
+    let corner = |code: &str| classes.lookup(code, Kind::Corner).unwrap();
+    let junction = |code: &str| classes.lookup(code, Kind::Junction).unwrap();
+    // A wall is firmer than a hedge, a hedge than the edge of a paved area, a junction is less clear
+    // than a building corner.
+    assert!(end("515") > end("410.1"));
+    assert!(corner("521") > corner("410.1"));
+    assert!(corner("521") > corner("501.5"));
+    assert!(corner("521") > junction("506"));
+    assert!(junction("505.1") <= 0.7);
+    assert!(classes.lookup("521.1", Kind::Point).unwrap() >= 0.9);
+    // Forest area and roads that are not in the list stay out.
+    assert!(classes.lookup("405", Kind::Corner).is_none());
+    assert!(classes.lookup("509.1", Kind::End).is_none());
+}
+
+#[test]
+fn a_lost_site_pushes_only_its_close_neighbours_away() {
+    // The lost site comes first (lower spacing); a neighbour 10 mm away is 10 mm from it, below the
+    // minimum gap of 20 mm, but must still be tried and picked.
+    let index = MapIndex::from_features(vec![boulder(50.0, 50.0), boulder(60.0, 50.0)]);
+    let travel = Fake {
+        lost: vec![p(50.0, 50.0)],
+        ..Fake::plain()
+    };
+    let mut c = ctx(&[], &[]);
+    c.min_distance_mm = 20.0;
+    let found = suggest(&index, &travel, &c).unwrap();
+    assert_eq!(positions(&found), vec![(60.0, 50.0)]);
 }

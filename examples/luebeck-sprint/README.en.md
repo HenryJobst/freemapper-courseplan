@@ -156,12 +156,14 @@ percentage points above the band, or the very good runner misses a control). At 
 15 minutes, and a test (`luebeck_score_example_meets_its_bands_and_check_is_quiet`) keeps it there. That is a short
 course with 9 controls; a longer one needs more codes than the default range gives.
 
-**Since ADR 0072 a rerun of the draft misses the bands.** The settings now keep controls 100 m apart (150 m from start
-and finish, 200 m between high-valued ones). On this map, about 1 km by 0.8 km, that leaves 25 sites. A rerun at 15
-minutes gives the good runner 94.7 percent of the points (band 87 to 93). At 30 and at 45 minutes the pool is too
-small: the good runner takes every point and the very good runner is back after 69 and 46 percent of the limit. The
-nearest limit that meets both bands is 13 minutes with 4 controls. The score course in the project file is the
-earlier draft. It keeps all the new gaps, and `check` stays quiet.
+**Since ADR 0072 a rerun of the draft misses the bands at 15 minutes.** The settings now keep controls 100 m apart (150 m
+from start and finish, 200 m between high-valued ones). With the wider candidate pool of ADR 0073 this map, about 1 km
+by 0.8 km, gives 31 sites (19 before; most of it is buildings, and about half of the tries fail inside courtyards). A
+rerun at 15 minutes gives the good runner 93.5 percent of the points, half a point above the band of 87 to 93. The
+limits 11 and 14 minutes meet both bands (6 controls with 16 points, 9 with 25). At 30 and 45 minutes the pool is still
+too small: the draft stops at 20 to 22 controls, the good runner takes every point and the very good runner is back
+after 78 and 52 percent of the limit. The score course in the project file is the earlier 15-minute draft. It keeps all
+the new gaps, and `check` stays quiet.
 
 `check` on this project gives no error and one warning, which the project file accepts with a reason:
 

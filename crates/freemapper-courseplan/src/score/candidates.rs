@@ -77,13 +77,28 @@ const SPACING_GROWTH: f64 = 2.0;
 /// linearly, to a floor of `RIM_FLOOR` at the rim itself.
 const RIM_MARGIN_DISTANCES: f64 = 3.0;
 const RIM_FLOOR: f64 = 0.3;
+/// Share of the minimum distance within which a site that could not be routed pushes other sites away.
+const LOST_PUSH_SHARE: f64 = 0.3;
 /// A corner may lie in the blocked cell of its wall; it needs a free place at one of these distances (map mm).
 const CORNER_PROBE_MM: [f64; 3] = [0.5, 1.0, 1.5];
 
-struct Classes(Vec<(String, bool, f64)>);
+/// Where on a feature a site lies (ADR 0062, ADR 0073).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    /// A point symbol, at its position.
+    Point,
+    /// A vertex of a line or area outline with a turn of `CORNER_DEGREES` or more.
+    Corner,
+    /// A free end of an open line: no other line of the ends and junctions family touches it.
+    End,
+    /// A line end that meets another line of that family: a fork, or a branch onto a path.
+    Junction,
+}
+
+struct Classes(Vec<(String, Kind, f64)>);
 
 impl Classes {
-    /// Symbol code, corner (else point), clarity; read once from `candidates.toml`.
+    /// Symbol code, kind, clarity; read once from `candidates.toml`.
     fn embedded() -> Classes {
         let doc: toml::Table = include_str!("candidates.toml")
             .parse()
@@ -93,12 +108,18 @@ impl Classes {
             .as_array()
             .expect("candidates.toml has classes")
         {
-            let corner = class["kind"].as_str() == Some("corner");
+            let kind = match class["kind"].as_str().expect("class has a kind") {
+                "point" => Kind::Point,
+                "corner" => Kind::Corner,
+                "end" => Kind::End,
+                "junction" => Kind::Junction,
+                other => panic!("candidates.toml: unknown kind {other}"),
+            };
             let clarity = class["clarity"].as_float().expect("class has a clarity");
             for code in class["codes"].as_array().expect("class has codes") {
                 rows.push((
                     code.as_str().expect("code is text").to_owned(),
-                    corner,
+                    kind,
                     clarity,
                 ));
             }
@@ -106,10 +127,10 @@ impl Classes {
         Classes(rows)
     }
 
-    fn lookup(&self, symbol: &str, corner: bool) -> Option<f64> {
+    fn lookup(&self, symbol: &str, kind: Kind) -> Option<f64> {
         self.0
             .iter()
-            .filter(|(code, c, _)| *c == corner && symbol_matches(symbol, code))
+            .filter(|(code, k, _)| *k == kind && symbol_matches(symbol, code))
             .max_by_key(|(code, _, _)| code.len())
             .map(|(_, _, clarity)| *clarity)
     }
@@ -120,7 +141,8 @@ struct Site {
     at: MapPoint,
     symbol: String,
     clarity: f64,
-    corner: bool,
+    /// Lies on a line or outline, so the cell may be blocked and a free place nearby is probed.
+    on_outline: bool,
 }
 
 fn dist(a: &MapPoint, b: &MapPoint) -> f64 {
@@ -159,37 +181,111 @@ fn corners(points: &[MapPoint], closed: bool) -> Vec<MapPoint> {
     out
 }
 
+/// Distance in map millimetres within which a line end counts as touching another line.
+const TOUCH_MM: f64 = 0.3;
+
+/// The open lines that have ends or junctions in `candidates.toml`, to tell free ends from forks.
+struct LineFamily<'a> {
+    lines: Vec<&'a [MapPoint]>,
+}
+
+/// How a line end stands to the other lines of the family.
+enum EndKind {
+    Free,
+    /// Meets the end of one other line only: one path cut in two.
+    Continuation,
+    /// Meets the inside of another line, or two or more others.
+    Fork,
+}
+
+impl LineFamily<'_> {
+    fn classify(&self, own: usize, at: &MapPoint) -> EndKind {
+        let (mut ends, mut inside) = (0, 0);
+        for (i, line) in self.lines.iter().enumerate() {
+            if i == own
+                || !line
+                    .windows(2)
+                    .any(|w| segment_distance(at, &w[0], &w[1]) <= TOUCH_MM)
+            {
+                continue;
+            }
+            let at_its_end = [line.first(), line.last()]
+                .into_iter()
+                .flatten()
+                .any(|e| dist(at, e) <= TOUCH_MM);
+            if at_its_end {
+                ends += 1;
+            } else {
+                inside += 1;
+            }
+        }
+        match (ends, inside) {
+            (0, 0) => EndKind::Free,
+            (1, 0) => EndKind::Continuation,
+            _ => EndKind::Fork,
+        }
+    }
+}
+
 /// Every site the map offers, with duplicate positions (0.01 mm) reduced to the clearest.
 fn raw_sites(index: &MapIndex) -> Vec<Site> {
     let classes = Classes::embedded();
-    let mut sites: Vec<Site> = Vec::new();
+    let in_family = |code: &str| {
+        classes.lookup(code, Kind::End).is_some() || classes.lookup(code, Kind::Junction).is_some()
+    };
+    let mut family = LineFamily { lines: Vec::new() };
+    let mut family_of: Vec<Option<usize>> = Vec::new();
     for f in index.features() {
+        match (&f.geometry, f.symbol_code.as_deref()) {
+            (FeatureGeometry::Line(points), Some(code))
+                if points.len() >= 2 && points.first() != points.last() && in_family(code) =>
+            {
+                family_of.push(Some(family.lines.len()));
+                family.lines.push(points);
+            }
+            _ => family_of.push(None),
+        }
+    }
+    let mut sites: Vec<Site> = Vec::new();
+    for (n, f) in index.features().iter().enumerate() {
         let Some(code) = f.symbol_code.as_deref() else {
             continue;
         };
-        let mut push = |at: MapPoint, clarity: f64, corner: bool| {
+        let mut push = |at: MapPoint, clarity: f64, on_outline: bool| {
             sites.push(Site {
                 at,
                 symbol: code.to_owned(),
                 clarity,
-                corner,
+                on_outline,
             });
         };
         match &f.geometry {
             FeatureGeometry::Point(at) => {
-                if let Some(c) = classes.lookup(code, false) {
+                if let Some(c) = classes.lookup(code, Kind::Point) {
                     push(at.clone(), c, false);
                 }
             }
             FeatureGeometry::Line(points) => {
-                if let Some(c) = classes.lookup(code, true) {
-                    corners(points, false)
+                if let Some(c) = classes.lookup(code, Kind::Corner) {
+                    corners(points, points.len() > 2 && points.first() == points.last())
                         .into_iter()
                         .for_each(|at| push(at, c, true));
                 }
+                if let Some(own) = family_of[n] {
+                    for at in [&points[0], &points[points.len() - 1]] {
+                        let kind = match family.classify(own, at) {
+                            EndKind::Free => Kind::End,
+                            EndKind::Fork => Kind::Junction,
+                            EndKind::Continuation => continue,
+                        };
+                        if let Some(c) = classes.lookup(code, kind) {
+                            push(at.clone(), c, true);
+                        }
+                    }
+                }
             }
             FeatureGeometry::Area(rings) => {
-                if let Some(c) = classes.lookup(code, true) {
+                if let Some(c) = classes.lookup(code, Kind::Corner) {
                     for ring in rings {
                         corners(ring, true)
                             .into_iter()
@@ -276,7 +372,7 @@ fn route_end(travel: &dyn TravelTime, site: &Site) -> Option<MapPoint> {
     if travel.passable(site.at.clone()) {
         return Some(site.at.clone());
     }
-    if !site.corner {
+    if !site.on_outline {
         return None;
     }
     CORNER_PROBE_MM.iter().find_map(|r| {
@@ -460,9 +556,19 @@ pub fn suggest_with(
             Err(ScoreError::Unreachable { .. }) => None,
             Err(e) => return Err(e),
         };
-        // A failed site still pushes the next picks away, so a walled-in yard is not tried corner by corner.
+        // A picked site pushes the next picks the full minimum distance away. A lost one only pushes its
+        // close neighbours (`LOST_PUSH_SHARE` of the distance), so a walled-in yard is not tried corner by
+        // corner but the free ground around it stays in the pool (ADR 0073).
+        let push = if reachable.is_some() {
+            f64::INFINITY
+        } else {
+            LOST_PUSH_SHARE * ctx.min_distance_mm
+        };
         for (j, (other, _)) in pool.iter().enumerate() {
-            near[j] = near[j].min(dist(&other.at, &site.at));
+            let d = dist(&other.at, &site.at);
+            if d <= push {
+                near[j] = near[j].min(d);
+            }
         }
         if let Some((effort, choice)) = reachable {
             kept.push((site, effort, choice));

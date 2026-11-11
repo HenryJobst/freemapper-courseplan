@@ -116,3 +116,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0070](0070-score-export-and-sheets.md) | Score courses: export, CSV and evaluation sheet | Accepted | 2026-11-11 |
 | [0071](0071-score-candidates-graded-spacing.md) | Score candidates: graded spacing and rim weight | Accepted | 2026-11-11 |
 | [0072](0072-score-distance-settings.md) | Score courses: distance settings | Accepted | 2026-11-11 |
+| [0073](0073-score-candidates-wider-pool.md) | Score candidates: a wider pool | Accepted | 2026-11-11 |
