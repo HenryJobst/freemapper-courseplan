@@ -2506,7 +2506,6 @@ mod exchange {
         assert_eq!(stale.status, StatusCode::CONFLICT);
         assert!(!dir.path().join("linked.ppen").exists());
         // A link that does not end in .ppen is refused, and so is a symbolic link.
-        let other = tempfile::tempdir().unwrap();
         let text = std::fs::read_to_string(&path).unwrap();
         std::fs::write(&path, text.replace("linked.ppen", "linked.txt")).unwrap();
         let rev2 = revision(&app).await;
@@ -2516,6 +2515,7 @@ mod exchange {
         assert!(!dir.path().join("linked.txt").exists());
         #[cfg(unix)]
         {
+            let other = tempfile::tempdir().unwrap();
             std::fs::write(&path, text).unwrap();
             let victim = other.path().join("victim.ppen");
             std::fs::write(&victim, "keep").unwrap();
