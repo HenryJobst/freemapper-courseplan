@@ -28,6 +28,14 @@ pub enum ScoreError {
     BadRouteSetting { name: &'static str, value: f64 },
     #[error("the map would need {cells} raster cells, more than the limit of {limit}")]
     GridTooLarge { cells: u64, limit: u64 },
-    #[error("the codes give room for {limit} controls; more were asked for")]
+    #[error("only {limit} free codes are left for the controls asked for")]
     CodeSpaceExhausted { limit: usize },
+    #[error(
+        "only {limit} free codes carry the value {value}; more controls of that value were asked for"
+    )]
+    ValueSpaceExhausted { value: u8, limit: usize },
+    #[error("a point value must lie from 1 to {value_max}, not {value}")]
+    BadValue { value: u8, value_max: u8 },
+    #[error("{values} values but {coords} positions were given")]
+    PositionsMismatch { values: usize, coords: usize },
 }

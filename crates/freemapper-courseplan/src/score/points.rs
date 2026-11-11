@@ -4,11 +4,12 @@ use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings};
 
 use crate::score::ScoreError;
 use crate::score::candidates::Candidate;
-use crate::score::code::{code_for, code_space, reads_alike_turned};
+use crate::score::code::{code_for, reads_alike_turned};
 
 /// Largest share of the score that difficulty can make up. The rest is travel time from the start.
 /// With 0.3 a hard control at the start's doorstep still ranks below an easy one at the far end,
-/// so only distance can lift a control into the top values by itself.
+/// and difficulty alone can lift a control past another only when their travel times differ by
+/// less than three tenths of the farthest one.
 pub const DIFFICULTY_SHARE_MAX: f64 = 0.3;
 
 /// What the code assignment may use.
@@ -32,21 +33,20 @@ impl CodeRules {
         }
     }
 
-    fn limit(&self) -> usize {
-        if self.tens_max < self.tens_min {
-            return 0;
-        }
-        if self.tens_min == 3 && self.tens_max == 9 {
-            return code_space(self.value_max);
-        }
-        usize::from(self.tens_max - self.tens_min + 1) * usize::from(self.value_max)
+    fn tens(&self) -> std::ops::RangeInclusive<u8> {
+        self.tens_min..=self.tens_max
     }
 }
 
 /// A value from 1 to `value_max` for every candidate. The score is the travel time from the start,
 /// relative to the farthest candidate, plus the difficulty, which makes up at most
 /// [`DIFFICULTY_SHARE_MAX`] of it. The values are quantiles: every step gets the same number of
-/// candidates (give or take one), and equal scores are ordered by index.
+/// candidates (give or take one), and equal scores are ordered by index (so all-equal scores
+/// spread over the values by index). A set smaller than `value_max` uses the lower steps spread
+/// over the range (3 candidates at `value_max` 5 give 1, 2 and 4).
+///
+/// An infinite or NaN `effort_s` counts as travel 0; candidates without a route from the start
+/// must be left out by the caller.
 pub fn assign_values(candidates: &[Candidate], settings: &ScoreSettings) -> Vec<u8> {
     let n = candidates.len();
     let value_max = usize::from(settings.value_max.max(1));
@@ -83,39 +83,65 @@ pub fn assign_values(candidates: &[Candidate], settings: &ScoreSettings) -> Vec<
 /// `taken` and against each other. Low tens digits come first; controls are served in reading
 /// order of `coords` (top to bottom, then left to right) and the result keeps the input order.
 ///
-/// If the set is so full that two clashing codes cannot be avoided (63 controls at value 9 use
-/// every code), the clash goes to the pair of controls that lie farthest apart. A clash with a
-/// taken code is never accepted.
+/// Clash-free sets are smaller than the code space: 6 and 9 count as alike in the same place, so
+/// the tens digits 6 and 9 exclude each other for one value (30 clash-free controls at
+/// `value_max` 5). If a set needs a clash, it goes to the pair of controls that lie farthest apart
+/// (63 controls at value 9 use every code). A clash with a taken code is never accepted.
+///
+/// Errors: `PositionsMismatch` when `coords` and `values` differ in length, `BadValue` for a value
+/// outside 1 to `value_max`, `ValueSpaceExhausted` when one value has fewer free codes than
+/// controls, `CodeSpaceExhausted` when all free codes together are fewer than the controls.
 pub fn assign_codes(
     values: &[u8],
     taken: &[ControlCode],
     coords: &[MapPoint],
     rules: &CodeRules,
 ) -> Result<Vec<ControlCode>, ScoreError> {
-    let limit = rules.limit();
-    if values.len() > limit {
-        return Err(ScoreError::CodeSpaceExhausted { limit });
+    if values.len() != coords.len() {
+        return Err(ScoreError::PositionsMismatch {
+            values: values.len(),
+            coords: coords.len(),
+        });
+    }
+    if let Some(&value) = values.iter().find(|&&v| v == 0 || v > rules.value_max) {
+        return Err(ScoreError::BadValue {
+            value,
+            value_max: rules.value_max,
+        });
+    }
+    let usable = |tens: u8, value: u8| {
+        let code = code_for(tens, value);
+        !taken
+            .iter()
+            .any(|t| t.0 == code || reads_alike_turned(&t.0, &code))
+    };
+    let free_for = |value: u8| rules.tens().filter(|&t| usable(t, value)).count();
+    let free_total: usize = (1..=rules.value_max).map(free_for).sum();
+    if values.len() > free_total {
+        return Err(ScoreError::CodeSpaceExhausted { limit: free_total });
+    }
+    for value in 1..=rules.value_max {
+        let asked = values.iter().filter(|&&v| v == value).count();
+        let limit = free_for(value);
+        if asked > limit {
+            return Err(ScoreError::ValueSpaceExhausted { value, limit });
+        }
     }
     let mut order: Vec<usize> = (0..values.len()).collect();
-    let pos = |i: usize| coords.get(i).map_or((0.0, 0.0), |p| (p.y, p.x));
     order.sort_by(|&a, &b| {
-        let (ay, ax) = pos(a);
-        let (by, bx) = pos(b);
-        ay.total_cmp(&by).then(ax.total_cmp(&bx)).then(a.cmp(&b))
+        coords[a]
+            .y
+            .total_cmp(&coords[b].y)
+            .then(coords[a].x.total_cmp(&coords[b].x))
+            .then(a.cmp(&b))
     });
     let mut chosen: Vec<Option<String>> = vec![None; values.len()];
     for &i in &order {
         let value = values[i];
-        if value == 0 || value > rules.value_max {
-            return Err(ScoreError::CodeSpaceExhausted { limit });
-        }
         let mut best: Option<(String, f64)> = None;
-        for tens in rules.tens_min..=rules.tens_max {
+        for tens in rules.tens() {
             let code = code_for(tens, value);
-            if taken.iter().any(|t| t.0 == code)
-                || chosen.iter().flatten().any(|c| *c == code)
-                || taken.iter().any(|t| reads_alike_turned(&t.0, &code))
-            {
+            if !usable(tens, value) || chosen.iter().flatten().any(|c| *c == code) {
                 continue;
             }
             // Distance to the nearest control whose code clashes with this one.
@@ -123,7 +149,7 @@ pub fn assign_codes(
                 .iter()
                 .enumerate()
                 .filter(|(_, c)| c.as_deref().is_some_and(|c| reads_alike_turned(c, &code)))
-                .map(|(j, _)| distance(coords.get(i), coords.get(j)))
+                .map(|(j, _)| distance(&coords[i], &coords[j]))
                 .fold(f64::INFINITY, f64::min);
             if near.is_infinite() {
                 best = Some((code, near));
@@ -135,17 +161,19 @@ pub fn assign_codes(
         }
         match best {
             Some((code, _)) => chosen[i] = Some(code),
-            None => return Err(ScoreError::CodeSpaceExhausted { limit }),
+            None => {
+                return Err(ScoreError::ValueSpaceExhausted {
+                    value,
+                    limit: free_for(value),
+                });
+            }
         }
     }
     Ok(chosen.into_iter().flatten().map(ControlCode).collect())
 }
 
-fn distance(a: Option<&MapPoint>, b: Option<&MapPoint>) -> f64 {
-    match (a, b) {
-        (Some(a), Some(b)) => (a.x - b.x).hypot(a.y - b.y),
-        _ => 0.0,
-    }
+fn distance(a: &MapPoint, b: &MapPoint) -> f64 {
+    (a.x - b.x).hypot(a.y - b.y)
 }
 
 #[cfg(test)]
@@ -191,10 +219,19 @@ mod tests {
     }
 
     #[test]
-    fn difficulty_alone_does_not_beat_distance() {
-        let set = [cand(100.0, 1.0), cand(600.0, 0.0), cand(300.0, 0.5)];
-        let v = assign_values(&set, &settings(5));
-        assert!(v[1] > v[0], "{v:?}");
+    fn difficulty_share_is_capped_at_the_boundary() {
+        // Hard at travel 0 scores 0.30, easy at travel 0.5 scores 0.35, the farthest 0.70.
+        let set = [cand(0.0, 1.0), cand(500.0, 0.0), cand(1000.0, 0.0)];
+        assert_eq!(assign_values(&set, &settings(5)), [1, 2, 4]);
+    }
+
+    #[test]
+    fn values_follow_the_candidate_not_the_position() {
+        let set: Vec<_> = [300.0, 100.0, 500.0, 200.0, 400.0]
+            .iter()
+            .map(|&e| cand(e, 0.0))
+            .collect();
+        assert_eq!(assign_values(&set, &settings(5)), [3, 1, 5, 2, 4]);
     }
 
     #[test]
@@ -217,11 +254,17 @@ mod tests {
         for step in 1..=5u8 {
             assert_eq!(v.iter().filter(|&&x| x == step).count(), 10, "{v:?}");
         }
-        // Equal scores: ties by index, so the result is stable.
+    }
+
+    #[test]
+    fn small_sets_and_equal_scores_have_exact_values() {
+        assert_eq!(assign_values(&[cand(10.0, 0.5)], &settings(5)), [1]);
+        let three: Vec<_> = (1..=3).map(|i| cand(f64::from(i), 0.0)).collect();
+        assert_eq!(assign_values(&three, &settings(5)), [1, 2, 4]);
         let same: Vec<_> = (0..10).map(|_| cand(100.0, 0.5)).collect();
         assert_eq!(
             assign_values(&same, &settings(5)),
-            assign_values(&same, &settings(5))
+            [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]
         );
     }
 
@@ -261,19 +304,117 @@ mod tests {
         assert!(!reads_alike_turned("69", &c[0].0));
     }
 
+    fn clashes(c: &[ControlCode]) -> Vec<(usize, usize)> {
+        let mut out = Vec::new();
+        for i in 0..c.len() {
+            for j in i + 1..c.len() {
+                if reads_alike_turned(&c[i].0, &c[j].0) {
+                    out.push((i, j));
+                }
+            }
+        }
+        out
+    }
+
     #[test]
-    fn code_space_exhausted_names_the_limit() {
+    fn clash_free_sets_up_to_30_at_value_five() {
+        let rules = CodeRules::from_settings(&settings(5));
+        for n in [20usize, 30] {
+            let values: Vec<u8> = (0..n).map(|i| (i % 5 + 1) as u8).collect();
+            let c = assign_codes(&values, &[], &pts(n), &rules).unwrap();
+            assert!(clashes(&c).is_empty(), "{n}: {:?}", codes(&c));
+        }
+    }
+
+    #[test]
+    fn clash_free_sets_of_28_at_value_nine() {
+        let rules = CodeRules::from_settings(&settings(9));
+        let values: Vec<u8> = (0..28).map(|i| (i % 9 + 1) as u8).collect();
+        let c = assign_codes(&values, &[], &pts(28), &rules).unwrap();
+        assert!(clashes(&c).is_empty(), "{:?}", codes(&c));
+    }
+
+    #[test]
+    fn code_space_exhausted_names_the_free_codes() {
         let rules = CodeRules::from_settings(&settings(5));
         let values: Vec<u8> = (0..36).map(|i| (i % 5 + 1) as u8).collect();
         let err = assign_codes(&values, &[], &pts(36), &rules).unwrap_err();
         assert_eq!(err, ScoreError::CodeSpaceExhausted { limit: 35 });
-        // Seven controls of one value fit, an eighth does not.
-        let err = assign_codes(&[1; 8], &[], &pts(8), &rules).unwrap_err();
-        assert_eq!(err, ScoreError::CodeSpaceExhausted { limit: 35 });
+        // Taken codes shrink the space.
+        let taken: Vec<_> = ["31", "32"].map(|c| ControlCode(c.into())).to_vec();
+        let err = assign_codes(&values[..34], &taken, &pts(34), &rules).unwrap_err();
+        assert_eq!(err, ScoreError::CodeSpaceExhausted { limit: 33 });
     }
 
     #[test]
-    fn sixty_three_controls_fit_at_value_nine() {
+    fn value_space_exhausted_names_the_value_and_its_limit() {
+        let rules = CodeRules::from_settings(&settings(5));
+        let err = assign_codes(&[1; 8], &[], &pts(8), &rules).unwrap_err();
+        assert_eq!(err, ScoreError::ValueSpaceExhausted { value: 1, limit: 7 });
+        let taken = [ControlCode("31".into())];
+        let err = assign_codes(&[1; 7], &taken, &pts(7), &rules).unwrap_err();
+        assert_eq!(err, ScoreError::ValueSpaceExhausted { value: 1, limit: 6 });
+    }
+
+    #[test]
+    fn bad_input_is_named() {
+        let rules = CodeRules::from_settings(&settings(5));
+        assert_eq!(
+            assign_codes(&[6], &[], &pts(1), &rules).unwrap_err(),
+            ScoreError::BadValue {
+                value: 6,
+                value_max: 5
+            }
+        );
+        assert_eq!(
+            assign_codes(&[0], &[], &pts(1), &rules).unwrap_err(),
+            ScoreError::BadValue {
+                value: 0,
+                value_max: 5
+            }
+        );
+        assert_eq!(
+            assign_codes(&[1, 2], &[], &pts(1), &rules).unwrap_err(),
+            ScoreError::PositionsMismatch {
+                values: 2,
+                coords: 1
+            }
+        );
+    }
+
+    #[test]
+    fn codes_follow_the_input_order_not_the_reading_order() {
+        let rules = CodeRules::from_settings(&settings(5));
+        let values = [3u8, 1, 2, 1];
+        let at = |x: f64, y: f64| MapPoint { x, y };
+        let coords = [at(50.0, 0.0), at(10.0, 40.0), at(30.0, 0.0), at(0.0, 0.0)];
+        let c = assign_codes(&values, &[], &coords, &rules).unwrap();
+        for (code, v) in c.iter().zip(values) {
+            assert_eq!(value_of_code(&code.0), Some(v), "{:?}", codes(&c));
+        }
+        // Reading order: index 3, 2, 0, 1; the two value-1 controls get 31 and 41 in that order.
+        assert_eq!(codes(&c), ["33", "41", "32", "31"]);
+    }
+
+    #[test]
+    fn full_code_space_puts_unavoidable_clashes_far_apart() {
+        // Tens 6 and 7 only: 66 and 69, 76 and 79 clash, and all four codes are needed.
+        let rules = CodeRules {
+            tens_min: 6,
+            tens_max: 7,
+            value_max: 9,
+        };
+        let at = |x: f64| MapPoint { x, y: 0.0 };
+        let coords = [at(0.0), at(100.0), at(1.0), at(101.0)];
+        let c = assign_codes(&[6, 6, 9, 9], &[], &coords, &rules).unwrap();
+        assert_eq!(clashes(&c).len(), 2, "{:?}", codes(&c));
+        for (i, j) in clashes(&c) {
+            assert!(distance(&coords[i], &coords[j]) > 50.0, "{:?}", codes(&c));
+        }
+    }
+
+    #[test]
+    fn sixty_three_controls_use_every_code_once() {
         let rules = CodeRules::from_settings(&settings(9));
         let values: Vec<u8> = (0..63).map(|i| (i % 9 + 1) as u8).collect();
         let c = assign_codes(&values, &[], &pts(63), &rules).unwrap();
