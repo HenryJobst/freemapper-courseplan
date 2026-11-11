@@ -182,7 +182,7 @@ fn info_names_controls_points_and_limit_of_a_score_course() {
 fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     let project = repo_root().join("examples/luebeck-sprint/luebeck-score.courseplan.toml");
     let p = project.to_str().unwrap();
-    let o = run("en", &["score", "length", p, "Score 22"]);
+    let o = run("en", &["score", "length", p, "Score 15"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     assert!(
         out(&o).contains("both runners are inside the bands"),
@@ -192,7 +192,7 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     let o = run("en", &["check", p]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     assert!(
-        out(&o).contains("0 errors, 0 warnings, 0 hints; 5 accepted"),
+        out(&o).contains("0 errors, 0 warnings, 0 hints; 2 accepted"),
         "{}",
         out(&o)
     );

@@ -574,3 +574,19 @@ fn an_unreachable_control_never_gives_an_infinite_over_limit_percent() {
     }
     assert!(r.good.time_s.is_finite() && r.very_good.time_s.is_finite());
 }
+
+#[test]
+fn an_over_limit_percent_is_always_above_100() {
+    // Limits right around the length of the whole set: whatever the heuristic finds, a reported excess is real.
+    for seed in 1..40 {
+        let cs = scatter(14, seed);
+        let all = report(&cs, f64::INFINITY, 1.0, 1.0).very_good.time_s;
+        for factor in [0.9, 0.97, 1.0, 1.01] {
+            for issue in report(&cs, all * factor, 1.0, 1.0).issues {
+                if let LengthIssue::VeryGoodOverLimit { percent } = issue {
+                    assert!(percent > 100.0, "seed {seed}, factor {factor}: {percent}");
+                }
+            }
+        }
+    }
+}

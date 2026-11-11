@@ -96,7 +96,8 @@ pub fn analyse_length(
         });
         // How long the very good runner needs for every control, if there is a way at all.
         let all = solve(travel_very_good, f64::INFINITY)?;
-        if all.points == all_points && limit_s > 0.0 && all.time_s.is_finite() {
+        // Only a real excess: a heuristic that missed a control the limit allows is no excess.
+        if all.points == all_points && all.time_s.is_finite() && all.time_s > limit_s {
             issues.push(LengthIssue::VeryGoodOverLimit {
                 percent: all.time_s / limit_s * 100.0,
             });
