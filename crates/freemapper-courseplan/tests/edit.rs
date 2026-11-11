@@ -1163,7 +1163,7 @@ fn change_code_follows_into_courses_and_accepted_findings() {
 }
 
 #[test]
-fn change_code_to_a_taken_code_is_refused_byte_identical() {
+fn change_code_to_a_taken_code_is_refused_and_leaves_the_event_equal() {
     let mut e = event();
     let before = e.clone();
     assert_eq!(

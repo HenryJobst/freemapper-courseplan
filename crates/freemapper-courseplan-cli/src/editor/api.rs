@@ -316,6 +316,9 @@ fn finite(value: &str) -> Option<f64> {
     value.parse::<f64>().ok().filter(|v| v.is_finite())
 }
 
+/// Smallest gap the page may store: the 0.01 mm the answer rounds to.
+const MIN_GAP_MM: f64 = 0.01;
+
 /// Rounds to 0.01 without float noise; no negative zero.
 fn r2(v: f64) -> f64 {
     ((v * 100.0).round() / 100.0) + 0.0
@@ -352,7 +355,12 @@ pub(crate) fn number_at(
     let direction = found.direction.rem_euclid(360.0);
     let direction = r2(direction);
     let direction = if direction >= 360.0 { 0.0 } else { direction };
-    Some(json!({ "direction": direction, "gap_mm": r2(found.gap_mm) }))
+    // A box over the circle has a negative gap and a far drop a huge one; the operations store a gap of more
+    // than 0 and at most MAX_GAP_MM only, and 0.004 rounds to 0. The answer is kept inside that range and
+    // says so, so the page can tell the user instead of showing a refusal.
+    let gap = r2(found.gap_mm);
+    let kept = gap.clamp(MIN_GAP_MM, freemapper_courseplan::numbers::MAX_GAP_MM);
+    Some(json!({ "direction": direction, "gap_mm": kept, "clamped": kept != gap }))
 }
 
 /// Status and JSON body of an operation or history answer.

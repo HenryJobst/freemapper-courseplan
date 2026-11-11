@@ -1047,7 +1047,7 @@ mod state {
     }
 
     /// A project with an individual course "A" through control 31 at (100, 100) on the sample map.
-    fn numbered_project(dir: &std::path::Path) -> std::path::PathBuf {
+    pub(super) fn numbered_project(dir: &std::path::Path) -> std::path::PathBuf {
         use freemapper_courseplan_model::{
             Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
             CourseKind, MapPoint, SpecialObject,
@@ -1168,10 +1168,67 @@ mod state {
             ),
         )
         .await;
+        // Hand computation: the box edge is 1 map mm beyond the circle edge. The project's map is a forest
+        // map at 1:10000, the overprint sizes apply at 1:15000, so a print mm is 1.5 map mm: 1 / 1.5 = 0.67.
         assert_eq!(east["direction"], 0.0);
         assert_eq!(west["direction"], 180.0);
-        assert!(east["gap_mm"].as_f64().unwrap() > 0.1, "{east}");
-        assert_eq!(east["gap_mm"], west["gap_mm"]);
+        assert_eq!(east["gap_mm"], 0.67, "{east}");
+        assert_eq!(west["gap_mm"], 0.67, "{west}");
+        assert_eq!(east["clamped"], false);
+        // Directions run counter-clockwise from east on the printed map; a larger map y lies to the south.
+        let q = |x: f64, y: f64| format!("/tok/api/number-at?course=A&index=1&x={x}&y={y}");
+        let h = number["h"].as_f64().unwrap();
+        let (_, south) = get(&app, &q(100.0, 100.0 + outer + 2.0 + h / 2.0)).await;
+        assert_eq!(south["direction"], 270.0, "{south}");
+        assert_eq!(south["gap_mm"], 1.33, "{south}");
+        // The 0 and 360 wrap: 0.004 degrees counter-clockwise (rounds to 0.0) and clockwise (359.996 rounds
+        // to 360, which is 0).
+        let dy = reach * 0.004_f64.to_radians().tan();
+        let (_, above) = get(&app, &q(100.0 + reach, 100.0 - dy)).await;
+        let (_, below) = get(&app, &q(100.0 + reach, 100.0 + dy)).await;
+        assert_eq!(above["direction"], 0.0, "{above}");
+        assert_eq!(below["direction"], 0.0, "{below}");
+    }
+
+    #[tokio::test]
+    async fn number_at_keeps_the_gap_inside_the_stored_range() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let q = |x: f64| format!("/tok/api/number-at?course=A&index=1&x={x}&y=100");
+        // A box over the circle has a negative gap: the answer is the smallest storable gap, flagged.
+        let (status, over) = get(&app, &q(100.5)).await;
+        assert_eq!(status, StatusCode::OK, "{over}");
+        assert_eq!(over["gap_mm"], 0.01, "{over}");
+        assert_eq!(over["clamped"], true, "{over}");
+        // Far away: the largest storable gap.
+        let (_, far) = get(&app, &q(100.0 + 5000.0)).await;
+        assert_eq!(far["gap_mm"], 10.0, "{far}");
+        assert_eq!(far["clamped"], true, "{far}");
+        // A positive gap that rounds to 0.00 (0.004 mm beyond the circle edge) is raised to 0.01.
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let sizes = &overlay["sizes"];
+        let outer = sizes["circle_r"].as_f64().unwrap() + sizes["line"].as_f64().unwrap() / 2.0;
+        let w = overlay["numbers"][0]["w"].as_f64().unwrap();
+        let (_, tiny) = get(&app, &q(100.0 + outer + 0.004 + w / 2.0)).await;
+        assert_eq!(tiny["gap_mm"], 0.01, "{tiny}");
+        assert_eq!(tiny["clamped"], true, "{tiny}");
+    }
+
+    #[tokio::test]
+    async fn rules_route_lists_profiles_overlays_and_categories_without_file_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let (status, rules) = get(&app, "/tok/api/rules").await;
+        assert_eq!(status, StatusCode::OK, "{rules}");
+        assert_eq!(rules["profiles"], serde_json::json!([{ "id": "wkb-2026" }]));
+        assert_eq!(
+            rules["overlays"],
+            serde_json::json!([{ "id": "nor-bb-2021", "base": "wkb-2026" }])
+        );
+        let categories = rules["categories"]["wkb-2026"].as_array().unwrap();
+        assert!(categories.iter().any(|c| c == "HE"), "{rules}");
+        let text = rules.to_string();
+        assert!(!text.contains(".toml") && !text.contains('/'), "{text}");
     }
 
     #[tokio::test]
@@ -1457,7 +1514,7 @@ mod history {
 }
 
 mod ops {
-    use super::state::project;
+    use super::state::{numbered_project, project};
     use super::*;
     use serde_json::{Value, json};
 
@@ -1625,6 +1682,44 @@ mod ops {
         assert_eq!(status, StatusCode::OK);
         let (status, _) = op(&app, "add_control", "0000000000000000", json!({"at": at})).await;
         assert_eq!(status, StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn a_bend_outside_the_map_or_too_many_bends_snap_back_as_422() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        let first = state(&app).await;
+        let revision = first["revision"].as_str().unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        for bends in [
+            json!([{"x": 1.0e9, "y": 0.0}]),
+            json!([{"x": -1000.0, "y": 100.0}]),
+            Value::Array(vec![json!({"x": 90.0, "y": 60.0}); 201]),
+        ] {
+            let (status, body) = op(
+                &app,
+                "set_leg",
+                revision,
+                json!({"name": "A", "after": 1, "bends": bends}),
+            )
+            .await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+            assert!(!body["error"].as_str().unwrap().is_empty());
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            if bends.as_array().is_some_and(|b| b.len() == 201) {
+                assert!(body["error"].as_str().unwrap().contains("200"), "{body}");
+            }
+        }
+        // Inside the map and within the cap, the same operation is stored.
+        let (status, body) = op(
+            &app,
+            "set_leg",
+            revision,
+            json!({"name": "A", "after": 1, "bends": [{"x": 90.0, "y": 60.0}]}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
     }
 
     #[tokio::test]

@@ -250,6 +250,32 @@ pub fn available() -> Vec<&'static str> {
     freemapper_rules::available(EMBEDDED)
 }
 
+/// The rule categories a profile names, in its length tables (`categories` of each row) and its difficulty
+/// levels (the keys of `levels`), sorted.
+pub fn categories(profile: &RuleProfile) -> Vec<String> {
+    let mut found = std::collections::BTreeSet::new();
+    for rule in &profile.rules {
+        for value in rule.values.values() {
+            match value {
+                toml::Value::Array(rows) => {
+                    for row in rows.iter().filter_map(toml::Value::as_table) {
+                        let list = row.get("categories").and_then(toml::Value::as_array);
+                        found.extend(
+                            list.into_iter()
+                                .flatten()
+                                .filter_map(toml::Value::as_str)
+                                .map(str::to_owned),
+                        );
+                    }
+                }
+                toml::Value::Table(levels) => found.extend(levels.keys().cloned()),
+                _ => {}
+            }
+        }
+    }
+    found.into_iter().collect()
+}
+
 /// The embedded profile `id`.
 pub fn profile(id: &str) -> Result<RuleProfile, RulesError> {
     freemapper_rules::profile(&SCHEMA, EMBEDDED, id)

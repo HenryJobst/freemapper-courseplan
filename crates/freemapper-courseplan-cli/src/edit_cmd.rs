@@ -535,11 +535,12 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
             )
             .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            say(
-                lang,
-                "cli-edit-control-code-changed",
-                &[("from", v(from)), ("to", v(to))],
-            );
+            let id = if from == to {
+                "cli-edit-control-code-unchanged"
+            } else {
+                "cli-edit-control-code-changed"
+            };
+            say(lang, id, &[("from", v(from)), ("to", v(to))]);
         }
         ControlCmd::Remove { project, code } => {
             let mut file = load(lang, &project)?;
@@ -949,11 +950,12 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             let mut file = load(lang, &project)?;
             edit::change_course_name(&mut file.event, &from, &to).map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
-            say(
-                lang,
-                "cli-edit-course-renamed",
-                &[("from", v(from)), ("to", v(to))],
-            );
+            let id = if from == to {
+                "cli-edit-course-unchanged"
+            } else {
+                "cli-edit-course-renamed"
+            };
+            say(lang, id, &[("from", v(from)), ("to", v(to))]);
         }
         CourseCmd::Remove { project, name } => {
             let mut file = load(lang, &project)?;

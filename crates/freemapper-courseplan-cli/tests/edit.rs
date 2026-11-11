@@ -1398,6 +1398,17 @@ fn control_code_cli() {
     assert_eq!(missing.status.code(), Some(1));
     assert_eq!(std::fs::read(&project).unwrap(), before);
 
+    assert_eq!(
+        ok(d, &["control", "code", p, "K7", "K7"]),
+        "the code of control K7 stays K7; nothing changed"
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+    // A control or invisible character in a code is refused, and the file stays as it is.
+    let bad = run(d, &["control", "code", p, "K7", "a\u{202e}b"]);
+    assert_eq!(bad.status.code(), Some(1));
+    assert!(stderr(&bad).contains("U+202E"), "{}", stderr(&bad));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+
     let german = run_lang(d, "de", &["control", "code", p, "K7", "31"]);
     assert!(german.status.success(), "{}", stderr(&german));
     assert_eq!(

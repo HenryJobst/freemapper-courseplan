@@ -89,6 +89,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/"), get(index))
         .route(&format!("{prefix}/assets/{{*path}}"), get(asset))
         .route(&format!("{prefix}/api/texts"), get(texts))
+        .route(&format!("{prefix}/api/rules"), get(api_rules))
         .route(&format!("{prefix}/api/state"), get(api_state))
         .route(&format!("{prefix}/api/revision"), get(api_revision))
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
@@ -124,6 +125,31 @@ async fn texts(State(state): State<Shared>) -> Response {
         })
         .collect();
     axum::Json(serde_json::json!({ "lang": lang.code(), "texts": texts })).into_response()
+}
+
+/// The rule profiles, overlays and rule categories the program knows, for the page's pickers. Read-only; it
+/// names ids, never files.
+async fn api_rules() -> Response {
+    use freemapper_courseplan::rules::{ProfileKind, available, categories, profile};
+    let mut profiles = Vec::new();
+    let mut overlays = Vec::new();
+    let mut by_profile = serde_json::Map::new();
+    for id in available() {
+        let Ok(found) = profile(id) else { continue };
+        by_profile.insert(id.to_owned(), serde_json::json!(categories(&found)));
+        match found.kind {
+            ProfileKind::Base => profiles.push(serde_json::json!({ "id": id })),
+            ProfileKind::Overlay => {
+                overlays.push(serde_json::json!({ "id": id, "base": found.base }));
+            }
+        }
+    }
+    axum::Json(serde_json::json!({
+        "profiles": profiles,
+        "overlays": overlays,
+        "categories": by_profile,
+    }))
+    .into_response()
 }
 
 fn plain(status: StatusCode, message: String) -> Response {
