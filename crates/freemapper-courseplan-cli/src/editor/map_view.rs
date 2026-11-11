@@ -18,6 +18,7 @@ use tokio::sync::OnceCell;
 
 use super::Shared;
 use super::api::{file_name, tidy};
+use super::render_map::RenderMap;
 
 /// Margin around the extent in the placeholder's page box, in mm.
 const MARGIN_MM: f64 = 10.0;
@@ -77,6 +78,14 @@ pub(crate) trait MapView: Send + Sync {
     fn svg_for(&self, rect: PageRect, zoom: f64) -> Result<String, MapViewError>;
     fn hit_at(&self, page: (f64, f64), tolerance_mm: f64) -> Vec<MapHit>;
     fn is_placeholder(&self) -> bool;
+    /// The map is larger than the page the renderer builds, so it is cut off.
+    fn is_clipped(&self) -> bool {
+        false
+    }
+    /// A renderer limit cut objects short or left them out.
+    fn is_incomplete(&self) -> bool {
+        false
+    }
 }
 
 /// Frame, grid and a note; no map content.
@@ -207,11 +216,37 @@ impl MapView for PlaceholderMap {
     }
 }
 
-/// Length and modification time of a file: when either changes, the cached map is stale.
+/// What tells two states of a map file apart: length and modification time, plus, where the system has them, the
+/// inode and the change time, and a hash of the first and last 4 KiB. A tool that rewrites the map with the same
+/// length inside one mtime tick still changes one of them. The read is two small chunks, not the file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct FileStamp {
     pub len: u64,
     pub modified: SystemTime,
+    /// Inode and change time (seconds, nanoseconds); 0 where the system has none.
+    pub identity: (u64, i64, i64),
+    pub edges: u64,
+}
+
+const EDGE_BYTES: u64 = 4096;
+
+fn edge_hash(path: &Path, len: u64) -> std::io::Result<u64> {
+    use std::hash::{Hash, Hasher};
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut chunk = Vec::new();
+    file.by_ref().take(EDGE_BYTES).read_to_end(&mut chunk)?;
+    chunk.hash(&mut hasher);
+    if len > EDGE_BYTES {
+        chunk.clear();
+        file.seek(SeekFrom::Start(
+            len.saturating_sub(EDGE_BYTES).max(EDGE_BYTES),
+        ))?;
+        file.take(EDGE_BYTES).read_to_end(&mut chunk)?;
+        chunk.hash(&mut hasher);
+    }
+    Ok(hasher.finish())
 }
 
 impl FileStamp {
@@ -222,18 +257,31 @@ impl FileStamp {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default();
         format!(
-            "{}-{}.{:09}",
+            "{}-{}.{:09}-{:x}.{}.{}-{:x}",
             self.len,
             since.as_secs(),
-            since.subsec_nanos()
+            since.subsec_nanos(),
+            self.identity.0,
+            self.identity.1,
+            self.identity.2,
+            self.edges
         )
     }
 
     pub(crate) fn of(path: &Path) -> std::io::Result<Self> {
         let meta = std::fs::metadata(path)?;
+        #[cfg(unix)]
+        let identity = {
+            use std::os::unix::fs::MetadataExt;
+            (meta.ino(), meta.ctime(), meta.ctime_nsec())
+        };
+        #[cfg(not(unix))]
+        let identity = (0, 0, 0);
         Ok(Self {
             len: meta.len(),
             modified: meta.modified()?,
+            identity,
+            edges: edge_hash(path, meta.len())?,
         })
     }
 }
@@ -261,15 +309,13 @@ struct Slot {
 /// The server's map cache: one slot, keyed by the map file's path and stamp. Parsing happens outside the
 /// state lock (see [`load_map`]); concurrent requests for the same key wait on one parse.
 pub(crate) struct MapCache {
-    note: String,
     slot: Option<Slot>,
     pub parse_hook: Option<ParseHook>,
 }
 
 impl MapCache {
-    pub(crate) fn new(note: String) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            note,
             slot: None,
             parse_hook: None,
         }
@@ -294,7 +340,7 @@ impl MapCache {
 }
 
 /// Reads and indexes the map file. Errors are localized, without the absolute path.
-fn build(path: &Path, stamp: FileStamp, note: String, lang: &Lang) -> MapResult {
+fn build(path: &Path, stamp: FileStamp, lang: &Lang) -> MapResult {
     let doc = read_map_file(path).map_err(|e| {
         let reason = e.localize(lang);
         tidy(
@@ -310,7 +356,23 @@ fn build(path: &Path, stamp: FileStamp, note: String, lang: &Lang) -> MapResult 
         )
     })?;
     let index = MapIndex::from_document(&doc);
-    let view = PlaceholderMap::new(&index, note);
+    let view = RenderMap::new(&doc, &index).map_err(|e| {
+        let reason = match e {
+            MapViewError::TooLarge => text(lang, "editor-map-too-large", &[]),
+            MapViewError::Render(reason) => reason,
+        };
+        tidy(
+            &text(
+                lang,
+                "error-editor-map",
+                &[
+                    ("file", FluentValue::from(file_name(path))),
+                    ("reason", FluentValue::from(reason)),
+                ],
+            ),
+            &[path],
+        )
+    })?;
     Ok(Arc::new(MapEntry {
         stamp,
         view: Arc::new(view),
@@ -336,18 +398,18 @@ pub(crate) async fn load_map(state: &Shared, map_path: PathBuf) -> MapResult {
             &[&map_path],
         )
     })?;
-    let (cell, note, hook) = {
+    let (cell, hook) = {
         let mut guard = state.lock().await;
         let cell = guard.map.cell(&map_path, stamp);
         let hook = guard.map.parse_hook.clone();
-        (cell, guard.map.note.clone(), hook)
+        (cell, hook)
     };
     cell.get_or_init(|| async move {
         tokio::task::spawn_blocking(move || {
             if let Some(hook) = hook {
                 hook();
             }
-            build(&map_path, stamp, note, &lang)
+            build(&map_path, stamp, &lang)
         })
         .await
         .unwrap_or_else(|e| Err(e.to_string()))

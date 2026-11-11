@@ -19,7 +19,7 @@ Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Biblioth
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
 `freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte, `freemapper-course` für das
 Lesen von Purple-Pen-Dateien und `freemapper-web` für den lokalen Server des Editors. Die Programme binden sie in
-einer festen Version ein (courseplan: 0.14.0), statt den Code zu kopieren. Die Lage der Postennummern und die
+einer festen Version ein (courseplan: 0.14.1), statt den Code zu kopieren. Die Lage der Postennummern und die
 Tabellen der Beschreibungssymbole kommen von dort, daher platzieren courseplan und freemapper-print die Nummern
 gleich.
 
@@ -37,7 +37,7 @@ Geplant ist für die erste Version:
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
   Sonderobjekte und Postenbeschreibungen, Befunde der Prüfung, Export, Import und Abgleich mit Purple Pen, mit
-  Rückgängig und Wiederholen; die echte Karte folgt), über die Kommandozeile oder über einen KI-Assistenten (MCP).
+  Rückgängig und Wiederholen; auf der echten Karte), über die Kommandozeile oder über einen KI-Assistenten (MCP).
 
 Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Score-OL, Touren für die
 Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge macht.
@@ -133,10 +133,12 @@ wird sofort gespeichert und läuft über dieselben Operationen wie Kommandozeile
 siehst du nach etwa zwei Sekunden im Browser; hat sich die Datei unter dem Editor geändert, lehnt er die Änderung ab
 und lädt den neuen Stand. Die Befunde der Prüfung erscheinen im Feld rechts, in der Karte und in der Statusleiste, und du kannst einen Befund
 mit einer Begründung akzeptieren. Das Menü „Veranstaltung“ exportiert IOF-XML und Purple-Pen-Dateien, importiert eine
-Purple-Pen-Datei und gleicht mit der verknüpften ab; schließe die Veranstaltung vorher in Purple Pen. Es fehlt noch
-die echte Karte: Sie ist ein Platzhalter (Gitter und Rahmen), bis freemapper-render sie liefert. Der Server hört nur auf `127.0.0.1` und verlangt ein Zugriffszeichen in der
-Adresse. Siehe Kapitel 4 des [Handbuchs](docs/manual/de.md#4-der-editor-vorschau) sowie ADR 0042, 0043, 0047, 0048,
-0049, 0051, 0052, 0053 und 0054.
+Purple-Pen-Datei und gleicht mit der verknüpften ab; schließe die Veranstaltung vorher in Purple Pen. Die Karte ist
+die echte, als SVG gezeichnet vom Kartenzeichner, den auch freemapper-print benutzt (freemapper-render). Eine Karte, die
+im Kartenmaßstab größer ist als ein A3-Blatt, wird auf ihren mittleren Teil beschnitten, und die Statusleiste sagt das.
+Die Druckvorschau ist noch nicht gebaut; sie wartet darauf, dass freemapper-print Bahnen zeichnet. Der Server hört nur auf `127.0.0.1` und verlangt ein Zugriffszeichen in der
+Adresse. Siehe Kapitel 4 des [Handbuchs](docs/manual/de.md#4-der-editor) sowie ADR 0042, 0043, 0047, 0048,
+0049, 0051, 0052, 0053, 0054 und 0056.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

@@ -468,7 +468,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
     (courses, categories, controls, special objects), the map area with pan and zoom, the course overlay (circles,
     start, finish, legs, number boxes, special objects) computed by the server, read-only properties, a status
     bar and polling for outside changes every two seconds. The map is a placeholder (frame, 10 mm grid, note)
-    behind the `MapView` trait. The toolbar and the menu items export, import and sync are inactive.
+    behind the `MapView` trait; stage 6 replaces it with the real map. The toolbar and the menu items export, import and sync are inactive.
   - **Built (stage 2 of the M4 plan, ADR 0043, 0044, 0047):** select, place, move and delete controls. Click with
     the place tool, drag a circle, edit X and Y (comma or dot), nudge with the arrow keys (0.1 mm, Shift 1 mm),
     Delete or Backspace (a dialog asks first when a course visits the control). Each gesture is one operation of an
@@ -476,7 +476,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
     page loads the current state. Undo and redo keep up to 100 file snapshots and work only while the file equals
     the text the step started from. `ProjectFile::save` refuses a file that changed since it was read, for the CLI,
     MCP and editor alike. A shortcut dialog (`?`), an alert banner for refusals and `GET api/map/near` for the
-    properties belong to this stage. The map is still the placeholder.
+    properties belong to this stage. The map is still the placeholder (until stage 6).
   - **Built (stage 3 of the M4 plan, ADR 0048, 0049):** new course, course mode, stop list, categories and event
     settings, rename of controls and courses, bends and taped legs, number drag with `GET api/number-at` and
     "Place numbers", and special objects (draw, assign to courses, delete; no move).
@@ -492,8 +492,15 @@ Paths are relative to the project file. The editor keeps comments it did not cre
     written *(user, ADR 0005)*. `POST api/sync` runs the CLI sync; the panel lists changes and conflicts, stores
     each choice through `resolve_sync_conflict`, and warns to close the event in Purple Pen first *(user)*. Writing
     files clears the undo history.
-  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 6 the real map
-    from `freemapper-render`; stage 7 manual and release 0.10.0. The release waits for stage 6.
+  - **Built (stage 6 of the M4 plan, ADR 0056, 0046):** the real map. `RenderMap` implements `MapView` on
+    `freemapper-render` (core v0.14.1): one page at map scale, A3, no frame margin; SVG per view, cached per file
+    stamp. A map larger than A3 at map scale is clipped and the status bar says so; a renderer that leaves out or
+    shortens objects sets an "incomplete" notice; a section too large to draw answers 413 with a message and the
+    overlay stays *(user)*. `PlaceholderMap` remains for unit tests.
+  - **Not built yet:** the print preview toggle and the parity test between the overlay and the print overprint
+    (plan Task 20). Both wait until freemapper-print's course layer lands in `RenderedPage`; they do not block the
+    release (plan, Task 20). Stage 7 is this documentation (manual chapter 4, READMEs, changelogs);
+    release 0.10.0 follows the final review.
 
 ## 6. AI support
 
@@ -538,8 +545,8 @@ Paths are relative to the project file. The editor keeps comments it did not cre
    Purple Pen, freemapper-print and OE.
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
    Under way: stage 1 (read-only preview with a placeholder map), stage 2 (editing controls, save guard,
-   undo), stage 3 (courses, bends, numbers, special objects), stage 4 (control descriptions) and stage 5 (findings,
-   export and import, sync) are built; see §5.8.
+   undo), stage 3 (courses, bends, numbers, special objects), stage 4 (control descriptions), stage 5 (findings,
+   export and import, sync) and stage 6 (the real map) are built; the print preview waits for freemapper-print; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 

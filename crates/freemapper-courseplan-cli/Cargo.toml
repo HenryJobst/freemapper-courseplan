@@ -18,6 +18,7 @@ freemapper-courseplan-model.workspace = true
 dirs.workspace = true
 axum.workspace = true
 freemapper-course.workspace = true
+freemapper-render.workspace = true
 freemapper-web.workspace = true
 rust-embed.workspace = true
 rmcp.workspace = true

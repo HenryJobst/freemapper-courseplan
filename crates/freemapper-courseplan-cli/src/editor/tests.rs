@@ -396,17 +396,9 @@ mod map {
     async fn the_cache_key_includes_the_path() {
         let dir = tempfile::tempdir().unwrap();
         let (a, b) = (dir.path().join("a.omap"), dir.path().join("b.omap"));
-        let source = forest_sample();
-        let time = std::time::SystemTime::now();
-        for path in [&a, &b] {
-            std::fs::write(path, &source).unwrap();
-            std::fs::File::options()
-                .write(true)
-                .open(path)
-                .unwrap()
-                .set_modified(time)
-                .unwrap();
-        }
+        std::fs::write(&a, forest_sample()).unwrap();
+        // A hard link has the same inode, times and bytes: only the path tells the two apart.
+        std::fs::hard_link(&a, &b).unwrap();
         let (state, parses) = counted(Duration::ZERO);
         let first = load_map(&state, a).await.unwrap();
         let second = load_map(&state, b).await.unwrap();
@@ -1034,7 +1026,7 @@ mod state {
         std::fs::remove_file(&path).unwrap();
         let (status, body) = get(&app, "/tok/api/map/view").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body["placeholder"], true);
+        assert_eq!(body["placeholder"], false);
     }
 
     #[tokio::test]
@@ -1433,12 +1425,12 @@ mod state {
     }
 
     #[tokio::test]
-    async fn an_unchanged_stamp_means_the_file_is_not_read_again() {
+    async fn a_same_length_same_mtime_rewrite_is_noticed() {
         let dir = tempfile::tempdir().unwrap();
         let path = project(dir.path());
         let app = router_for(&path);
         let (_, first) = get(&app, "/tok/api/revision").await;
-        // Same length, same mtime, other bytes: only a re-read would notice.
+        // Same length, same mtime, other bytes: the change time and the edge hash still give it away.
         let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
         let mut bytes = std::fs::read(&path).unwrap();
         let last = bytes.len() - 1;
@@ -1451,7 +1443,7 @@ mod state {
             .set_modified(modified)
             .unwrap();
         let (_, same) = get(&app, "/tok/api/revision").await;
-        assert_eq!(same["project"], first["project"]);
+        assert_ne!(same["project"], first["project"]);
     }
 }
 
@@ -3209,5 +3201,344 @@ mod sync_panel {
         let want =
             freemapper_courseplan::text::text(&Lang::english(), "editor-export-link-refused", &[]);
         assert_eq!(got["error"], want);
+    }
+}
+
+mod render {
+    use super::*;
+    use crate::editor::map_view::{FileStamp, MapView, PageRect};
+    use crate::editor::render_map::RenderMap;
+    use freemapper_courseplan::map::{FeatureGeometry, MapIndex};
+    use freemapper_courseplan::omap::read::read_map_file;
+
+    fn luebeck_path() -> String {
+        format!(
+            "{}/../../tests/fixtures/maps/luebeck.omap",
+            env!("CARGO_MANIFEST_DIR")
+        )
+    }
+
+    fn luebeck() -> (freemapper_courseplan::omap::MapDocument, RenderMap) {
+        let doc = read_map_file(std::path::Path::new(&luebeck_path())).unwrap();
+        let map = RenderMap::new(&doc, &MapIndex::from_document(&doc)).unwrap();
+        (doc, map)
+    }
+
+    fn rect_of(map: &RenderMap) -> PageRect {
+        map.page_box()
+    }
+
+    #[test]
+    fn render_mapping_round_trips() {
+        let (_, map) = luebeck();
+        let m = map.mapping();
+        assert_eq!(m.k, 1.0);
+        for (x, y) in [(0.0, 0.0), (-12.25, 33.5), (234.5, -87.25)] {
+            let (px, py) = m.to_page(freemapper_courseplan_model::MapPoint { x, y });
+            let back = m.to_map(px, py);
+            assert!((back.x - x).abs() < 1e-9 && (back.y - y).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn render_overlay_aligns_with_map() {
+        let (doc, map) = luebeck();
+        let index = MapIndex::from_document(&doc);
+        let mut checked = 0;
+        for feature in index.features() {
+            let (FeatureGeometry::Line(points), Some(code)) =
+                (&feature.geometry, &feature.symbol_code)
+            else {
+                continue;
+            };
+            let p = &points[points.len() / 2];
+            let at = map.mapping().to_page(p.clone());
+            let hits = map.hit_at(at, 0.1);
+            assert!(
+                hits.iter().any(|h| &h.symbol_code == code),
+                "line symbol {code} at {p:?} is not under its own page position {at:?}: {hits:?}"
+            );
+            checked += 1;
+            if checked == 300 {
+                break;
+            }
+        }
+        assert!(checked >= 10, "only {checked} line objects");
+    }
+
+    /// The Lübeck map with every object coordinate multiplied by `factor`: a map that does not fit on A3.
+    pub(super) fn scaled_luebeck_text(factor: i64) -> String {
+        let text = std::fs::read_to_string(luebeck_path()).unwrap();
+        let mut out = String::with_capacity(text.len());
+        let mut rest = text.as_str();
+        while let Some(at) = rest.find("<coords") {
+            let open_end = at + rest[at..].find('>').unwrap() + 1;
+            let close = open_end + rest[open_end..].find("</coords>").unwrap();
+            out.push_str(&rest[..open_end]);
+            for entry in rest[open_end..close].split_inclusive(';') {
+                let mut parts = entry.split(' ');
+                let (x, y) = (parts.next().unwrap(), parts.next());
+                match (x.parse::<i64>(), y.map(|y| y.trim_end_matches(';'))) {
+                    (Ok(x), Some(y)) if y.parse::<i64>().is_ok() => {
+                        let y: i64 = y.parse().unwrap();
+                        let tail: Vec<&str> = parts.collect();
+                        out.push_str(&format!("{} {}", x * factor, y * factor));
+                        if !tail.is_empty() {
+                            out.push(' ');
+                            out.push_str(&tail.join(" "));
+                        }
+                        if entry.ends_with(';') && !tail.last().is_some_and(|t| t.ends_with(';')) {
+                            out.push(';');
+                        }
+                    }
+                    _ => out.push_str(entry),
+                }
+            }
+            rest = &rest[close..];
+        }
+        out.push_str(rest);
+        out
+    }
+
+    #[test]
+    fn a_map_larger_than_a3_is_reported_as_clipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("big.omap");
+        std::fs::write(&path, scaled_luebeck_text(6)).unwrap();
+        let doc = read_map_file(&path).unwrap();
+        let map = RenderMap::new(&doc, &MapIndex::from_document(&doc)).unwrap();
+        assert!(map.is_clipped());
+        assert!(MapView::is_clipped(&map));
+        let (_, plain) = luebeck();
+        assert!(!MapView::is_clipped(&plain));
+    }
+
+    #[test]
+    fn renderer_limits_set_the_incomplete_flag() {
+        use freemapper_render::build::BuildReport;
+        let report = |f: fn(&mut BuildReport)| {
+            let mut r = BuildReport {
+                page_mm: (420.0, 297.0),
+                geometry_factor: 1.0,
+                symbol_factor: 1.0,
+                overflow_mm: None,
+                skipped_objects: 7,
+                unknown_type_objects: 0,
+                truncated_objects: 0,
+                objects_not_drawn_page_limit: 0,
+                dropped_pattern_objects: 0,
+                substituted_fonts: Vec::new(),
+                missing_glyphs: Vec::new(),
+            };
+            f(&mut r);
+            super::super::render_map::limits_of(&r)
+        };
+        // Hidden symbols are silent on purpose.
+        assert_eq!(report(|_| {}), (false, false));
+        assert_eq!(report(|r| r.truncated_objects = 1), (false, true));
+        assert_eq!(
+            report(|r| r.objects_not_drawn_page_limit = 3),
+            (false, true)
+        );
+        assert_eq!(report(|r| r.dropped_pattern_objects = 1), (false, true));
+        assert_eq!(report(|r| r.overflow_mm = Some((1.0, 0.0))), (true, false));
+    }
+
+    #[test]
+    fn page_box_is_centred_on_the_page() {
+        let (_, map) = luebeck();
+        let (b, m) = (map.page_box(), map.mapping());
+        let _ = m;
+        assert!(
+            (((b.x0 + b.x1) / 2.0) - 210.0).abs() < 1e-6
+                || (((b.x0 + b.x1) / 2.0) - 148.5).abs() < 1e-6
+        );
+    }
+
+    #[test]
+    fn the_map_fits_the_page() {
+        let (_, map) = luebeck();
+        assert!(!map.is_clipped());
+    }
+
+    #[test]
+    fn page_box_holds_the_extent_with_a_margin() {
+        let (doc, map) = luebeck();
+        let (min, max) = MapIndex::from_document(&doc).extent().unwrap();
+        let (a, b) = (map.mapping().to_page(min), map.mapping().to_page(max));
+        let r = map.page_box();
+        // The box is symmetric around the page centre, so one side has exactly the margin, the other at least.
+        assert!(a.0 - r.x0 >= 10.0 - 1e-6 && a.1 - r.y0 >= 10.0 - 1e-6);
+        assert!(r.x1 - b.0 >= 10.0 - 1e-6 && r.y1 - b.1 >= 10.0 - 1e-6);
+        assert!(r.x1 - r.x0 < 420.0 - 1.0, "the box is not the whole page");
+    }
+
+    #[test]
+    fn same_view_same_svg() {
+        let (_, map) = luebeck();
+        let view = PageRect {
+            x0: 100.0,
+            y0: 160.0,
+            x1: 200.0,
+            y1: 240.0,
+        };
+        let a = map.svg_for(view, 4.0).unwrap();
+        let (_, other) = luebeck();
+        assert_eq!(a, other.svg_for(view, 4.0).unwrap());
+        assert!(a.contains("<path"), "no map content");
+        assert!(a.len() > 1000);
+    }
+
+    #[test]
+    fn map_svg_is_cached_per_view() {
+        let (_, map) = luebeck();
+        let view = rect_of(&map);
+        let first = map.svg_for(view, 1.0).unwrap();
+        assert_eq!(map.render_count(), 1);
+        assert_eq!(map.svg_for(view, 1.0).unwrap(), first);
+        assert_eq!(map.render_count(), 1);
+        map.svg_for(view, 2.0).unwrap();
+        assert_eq!(map.render_count(), 2);
+    }
+
+    #[test]
+    fn invalid_views_are_refused() {
+        let (_, map) = luebeck();
+        let bad = PageRect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: f64::NAN,
+            y1: 10.0,
+        };
+        assert!(map.svg_for(bad, 1.0).is_err());
+        assert!(map.svg_for(rect_of(&map), 0.0).is_err());
+    }
+
+    /// Timing on a big map, for the ADR 0046 addendum (not run by default; use `--release`):
+    /// `MEASURE_MAP=/path/to/map.omap cargo test --release -p freemapper-courseplan-cli measure_render -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn measure_render() {
+        use std::time::Instant;
+        let path = std::env::var("MEASURE_MAP").expect("MEASURE_MAP");
+        let t = Instant::now();
+        let doc = read_map_file(std::path::Path::new(&path)).unwrap();
+        let parse = t.elapsed();
+        let t = Instant::now();
+        let map = RenderMap::new(&doc, &MapIndex::from_document(&doc)).unwrap();
+        let build = t.elapsed();
+        let b = map.page_box();
+        let t = Instant::now();
+        let whole = map.svg_for(b, 2.0);
+        let first = t.elapsed();
+        let (cx, cy) = ((b.x0 + b.x1) / 2.0, (b.y0 + b.y1) / 2.0);
+        let zoomed = PageRect {
+            x0: cx - 30.0,
+            y0: cy - 30.0,
+            x1: cx + 30.0,
+            y1: cy + 30.0,
+        };
+        let t = Instant::now();
+        let z = map.svg_for(zoomed, 20.0);
+        let zoom_time = t.elapsed();
+        eprintln!(
+            "MEASURE parse {parse:?} build_page {build:?} whole-page svg {first:?} ({:?} bytes) zoomed 60x60 mm at 20 px/mm {zoom_time:?} ({:?} bytes) clipped={}",
+            whole.as_ref().map(String::len),
+            z.as_ref().map(String::len),
+            map.is_clipped()
+        );
+    }
+
+    fn router_for(path: &std::path::Path) -> axum::Router {
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
+    }
+
+    async fn get(app: &axum::Router, uri: &str) -> (StatusCode, String) {
+        let response = app
+            .clone()
+            .oneshot(Request::get(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    #[tokio::test]
+    async fn oversized_view_is_413_with_message() {
+        // The page caps its own requests at 6 000 px a side, so this answer is for hand-made requests (ADR 0056).
+        let dir = tempfile::tempdir().unwrap();
+        let path = state::project_on(dir.path(), "luebeck.omap", |_| {});
+        let app = router_for(&path);
+        let (status, body) = get(&app, "/tok/api/map.svg?x0=0&y0=0&x1=300&y1=300&zoom=900").await;
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+        let want = freemapper_courseplan::text::text(&Lang::english(), "editor-map-too-large", &[]);
+        assert_eq!(body, want);
+        let de = freemapper_courseplan::text::text(
+            &freemapper_courseplan::text::parse_lang_arg("de").unwrap(),
+            "editor-map-too-large",
+            &[],
+        );
+        assert_ne!(de, want);
+        // The map info still answers: the page keeps the overlay.
+        let (status, info) = get(&app, "/tok/api/map/view").await;
+        assert_eq!(status, StatusCode::OK, "{info}");
+        assert!(info.contains("\"placeholder\":false"), "{info}");
+        assert!(info.contains("\"clipped\":false"), "{info}");
+        assert!(info.contains("\"incomplete\":false"), "{info}");
+    }
+
+    #[tokio::test]
+    async fn map_info_says_when_the_map_is_clipped() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state::project_on(dir.path(), "luebeck.omap", |_| {});
+        std::fs::write(dir.path().join("map.omap"), scaled_luebeck_text(6)).unwrap();
+        let app = router_for(&path);
+        let (status, info) = get(&app, "/tok/api/map/view").await;
+        assert_eq!(status, StatusCode::OK, "{info}");
+        assert!(info.contains("\"clipped\":true"), "{info}");
+        let en = freemapper_courseplan::text::text(&Lang::english(), "editor-map-clipped", &[]);
+        let de = freemapper_courseplan::text::text(
+            &freemapper_courseplan::text::parse_lang_arg("de").unwrap(),
+            "editor-map-clipped",
+            &[],
+        );
+        assert!(en.contains("A3") && de.contains("A3") && en != de);
+        for key in ["editor-map-clipped", "editor-map-incomplete"] {
+            let t = freemapper_courseplan::text::text(&Lang::english(), key, &[]);
+            assert!(!t.is_empty() && !t.contains(key), "{key}: {t}");
+        }
+    }
+
+    #[test]
+    fn file_stamp_sees_a_same_length_rewrite() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("m.omap");
+        let mut a = vec![b'a'; 20_000];
+        std::fs::write(&path, &a).unwrap();
+        let before = FileStamp::of(&path).unwrap();
+        a[10] = b'b';
+        a[19_990] = b'b';
+        std::fs::write(&path, &a).unwrap();
+        let mut after = FileStamp::of(&path).unwrap();
+        // Same length and, as on a coarse clock, the same mtime.
+        assert_eq!(before.len, after.len);
+        after.modified = before.modified;
+        assert_ne!(before, after);
+        assert_ne!(before.token(), after.token());
+    }
+
+    #[tokio::test]
+    async fn a_view_inside_the_budget_is_an_svg() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state::project_on(dir.path(), "luebeck.omap", |_| {});
+        let app = router_for(&path);
+        let (status, body) = get(&app, "/tok/api/map.svg?x0=50&y0=50&x1=150&y1=150&zoom=8").await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.starts_with("<svg"));
+        let _ = FileStamp::of(&path);
     }
 }

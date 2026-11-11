@@ -104,11 +104,12 @@ there.
   says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did.
 
-## 4. The editor (preview)
+## 4. The editor
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
 bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
-It runs the check as you work and shows its findings. Export, import and sync with Purple Pen are in the Event menu.
+The map under the courses is the real one. The editor runs the check as you work and shows its findings. Export,
+import and sync with Purple Pen are in the Event menu.
 
 ### Starting it
 
@@ -143,9 +144,34 @@ One editor belongs to one project. To open a second project, start a second edit
 - The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
   Messages appear there too.
 
-In this preview the map is a placeholder: a frame around the map extent, a 10 mm grid and a note. Circles, legs and
-numbers sit at the right place on the map, but no map content is visible beneath them. freemapper-render will supply
-that later.
+### The map
+
+The map is drawn by the renderer that freemapper-print uses too (freemapper-render in freemapper-core v0.14.1). The
+editor shows it as SVG, so lines and text stay sharp at any zoom. Circles, legs and numbers lie on top and sit at
+the map position they belong to. The status bar and the properties give positions in map millimetres, not page
+millimetres.
+
+The page asks for the part of the map you see, plus a margin, 150 ms after the view stops moving. While you drag the
+view, nothing is requested; the new section appears when you let go. When the map file changes, the editor draws it
+again.
+
+Three limits can show up in the status bar:
+
+- **The map is larger than one A3 sheet at map scale.** The renderer can only draw a page of A4 or A3. The editor
+  draws the middle part and says so. Courses and controls outside that part stay visible on the overlay, but you
+  see no map beneath them. Core would need a free page size to lift this limit.
+- **The map is very detailed.** The renderer leaves out objects once its budget for the page is spent, shortens
+  some and drops some area patterns. The editor says the map area is incomplete. Courses are not affected. Hidden
+  symbols stay silent.
+- **The zoom is too high.** If the section you look at would need an image of more than 100 000 px on a side, the
+  server refuses to draw it, the status bar says so and the overlay stays. Zoom out or move to a smaller section.
+  The page itself limits the image to 6 000 px on a side, so you will meet this message only after a hand-made
+  request.
+
+The print preview is not built. It would show the map with the course as freemapper-print draws it, and a test would
+compare the editor's overlay with that drawing. Both wait until freemapper-print can draw courses on the page. Until
+then, the circles you see in the editor are the editor's own, computed from the same data and the same rules.
+The decisions are in ADR 0046 and 0056.
 
 ### Controls
 

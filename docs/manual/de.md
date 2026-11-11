@@ -108,11 +108,11 @@ dort an.
   Programm das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat.
 
-## 4. Der Editor (Vorschau)
+## 4. Der Editor
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Exportieren und Importieren findest du im
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Unter den Bahnen liegt die echte Karte. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Exportieren und Importieren findest du im
 Menü „Veranstaltung“, ebenso das Abgleichen mit Purple Pen.
 
 ### Starten
@@ -148,9 +148,34 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
 - Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
   Meldungen erscheinen dort ebenfalls.
 
-Die Karte ist in dieser Vorschau ein Platzhalter: ein Rahmen um die Kartenausdehnung, ein Gitter im Abstand von 10 mm
-und ein Hinweistext. Kreise, Strecken und Nummern liegen an der richtigen Stelle der Karte, aber darunter ist noch
-kein Karteninhalt zu sehen. Den liefert später freemapper-render.
+### Die Karte
+
+Die Karte zeichnet derselbe Kartenzeichner, den auch freemapper-print benutzt (freemapper-render in
+freemapper-core v0.14.1). Der Editor zeigt sie als SVG, deshalb bleiben Linien und Schrift bei jeder Vergrößerung
+scharf. Kreise, Strecken und Nummern liegen darüber, an der Stelle der Karte, zu der sie gehören. Statusleiste und
+Eigenschaften nennen Positionen in Kartenmillimetern, nicht in Seitenmillimetern.
+
+Die Seite fragt den sichtbaren Teil der Karte samt Rand an, 150 ms nachdem sich die Ansicht nicht mehr bewegt. Solange
+du die Ansicht ziehst, geht keine Anfrage hinaus; der neue Ausschnitt erscheint, wenn du loslässt. Ändert sich die
+Kartendatei, zeichnet der Editor sie neu.
+
+Drei Grenzen können in der Statusleiste erscheinen:
+
+- **Die Karte ist im Kartenmaßstab größer als ein A3-Blatt.** Der Kartenzeichner kennt nur Seiten in A4 und A3. Der
+  Editor zeichnet den mittleren Teil und sagt das. Bahnen und Posten außerhalb bleiben im Overlay sichtbar, aber
+  darunter siehst du keine Karte. Um die Grenze zu heben, bräuchte der Kern eine freie Seitengröße.
+- **Die Karte ist sehr detailreich.** Ist das Budget des Kartenzeichners für die Seite aufgebraucht, lässt er Objekte
+  weg, kürzt einige und verwirft einige Flächenmuster. Der Editor sagt, dass die Kartenfläche unvollständig ist. Die
+  Bahnen sind nicht betroffen. Ausgeblendete Symbole bleiben unerwähnt.
+- **Die Vergrößerung ist zu hoch.** Bräuchte der Ausschnitt ein Bild von mehr als 100 000 px Kantenlänge, weigert sich
+  der Server, ihn zu zeichnen, die Statusleiste sagt es und das Overlay bleibt. Verkleinere die Ansicht oder wähle
+  einen kleineren Ausschnitt. Die Seite selbst begrenzt das Bild auf 6 000 px Kantenlänge; die Meldung siehst du
+  deshalb nur nach einer von Hand gebauten Anfrage.
+
+Die Druckvorschau ist nicht gebaut. Sie würde die Karte mit der Bahn zeigen, wie freemapper-print sie zeichnet, und
+ein Test würde das Overlay des Editors mit dieser Zeichnung vergleichen. Beides wartet, bis freemapper-print Bahnen
+auf die Seite zeichnen kann. Bis dahin sind die Kreise im Editor seine eigenen, berechnet aus denselben Daten und
+nach denselben Regeln. Die Entscheidungen stehen in ADR 0046 und 0056.
 
 ### Posten
 

@@ -19,7 +19,7 @@ Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
 `freemapper-text` for the program texts, `freemapper-omap` for reading the map, `freemapper-course` for reading
 Purple Pen files and `freemapper-web` for the editor's local server. The programs use them in a fixed version
-(courseplan: 0.14.0) instead of copying the code. The number placement and the description symbol tables come from
+(courseplan: 0.14.1) instead of copying the code. The number placement and the description symbol tables come from
 there, so courseplan and freemapper-print place numbers the same way.
 
 Planned for the first version:
@@ -37,7 +37,7 @@ Planned for the first version:
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
   special objects and control descriptions, findings of the check, export, import and sync with Purple Pen, with undo and
-  redo; the real map follows),
+  redo; on the real map),
   the command line or an AI assistant (MCP).
 
 After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
@@ -131,10 +131,11 @@ keyboard; Ctrl+Z and Ctrl+Shift+Z undo and redo steps. Every change is saved at 
 command line and the AI assistant. You see outside changes in the browser after about two seconds; if the file changed
 under the editor, it refuses your change and loads the new state. The findings of the check appear in the panel, on the map and in the status bar, and you can accept a finding with a
 note. The Event menu exports IOF XML and Purple Pen files, imports a Purple Pen file and syncs with the linked one; close
-the event in Purple Pen before you sync. The real map is still missing: the map is a placeholder (grid and frame) until
-freemapper-render supplies it. The server listens on `127.0.0.1` only and needs an
-access token in the address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042,
-0043, 0047, 0048, 0049, 0051, 0052, 0053 and 0054.
+the event in Purple Pen before you sync. The map is the real one, drawn as SVG by the renderer that freemapper-print
+uses too (freemapper-render). A map larger than one A3 sheet at map scale is clipped to its middle part, and the
+status bar says so. The print preview is not built yet; it waits for freemapper-print to draw courses. The server listens on `127.0.0.1` only and needs an
+access token in the address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor) and ADR 0042,
+0043, 0047, 0048, 0049, 0051, 0052, 0053, 0054 and 0056.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

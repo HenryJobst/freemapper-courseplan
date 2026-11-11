@@ -83,8 +83,10 @@ export function createView(svgRoot, mapping) {
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 // The map layer: one <image> of api/map.svg for the visible part plus 50 % margin on every side, requested
-// 150 ms after the view stops moving. The old image stays until the new one has loaded.
-export function bindMapLayer(group, view) {
+// 150 ms after the view stops moving, never while it moves. The old image stays until the new one has loaded.
+// The image is an <image> element, never inline SVG: the clip ids of one SVG would clash with the page's own.
+// When the server refuses the section (413), `onError` gets its localized text; a later success gets null.
+export function bindMapLayer(group, view, onError = () => {}) {
   let timer = null;
   let ticket = 0;
 
@@ -98,14 +100,24 @@ export function bindMapLayer(group, view) {
     const zoom = Math.min(view.scale * (window.devicePixelRatio || 1), MAX_IMAGE_SIDE_PX / side);
     const q = [rect.x0, rect.y0, rect.x1, rect.y1, zoom].map((n) => Number(n.toFixed(4)));
     const url = `api/map.svg?x0=${q[0]}&y0=${q[1]}&x1=${q[2]}&y1=${q[3]}&zoom=${q[4]}`;
-    if (force) {
-      try {
-        await fetch(url, { cache: "reload" });
-      } catch {
+    // One request: the body is the SVG (shown through a blob URL) or the server's reason for refusing.
+    let blobUrl;
+    try {
+      const answer = await fetch(url, force ? { cache: "reload" } : {});
+      if (mine !== ticket) return;
+      if (!answer.ok) {
+        onError(await answer.text());
         return;
       }
+      blobUrl = URL.createObjectURL(await answer.blob());
+    } catch {
+      // The server is gone; the poll reports that.
+      return;
     }
-    if (mine !== ticket) return;
+    if (mine !== ticket) {
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
     const image = document.createElementNS(SVG_NS, "image");
     image.setAttribute("x", rect.x0);
     image.setAttribute("y", rect.y0);
@@ -113,13 +125,19 @@ export function bindMapLayer(group, view) {
     image.setAttribute("height", rect.y1 - rect.y0);
     image.setAttribute("preserveAspectRatio", "none");
     image.addEventListener("load", () => {
+      URL.revokeObjectURL(blobUrl);
       if (mine !== ticket) {
         image.remove();
         return;
       }
       for (const old of [...group.children]) if (old !== image) old.remove();
+      onError(null);
     });
-    image.setAttribute("href", url);
+    image.addEventListener("error", () => {
+      URL.revokeObjectURL(blobUrl);
+      image.remove();
+    });
+    image.setAttribute("href", blobUrl);
     group.append(image);
   }
 

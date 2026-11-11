@@ -46,3 +46,16 @@ read the project file again, so the server needs to hold the parsed state.
 - `check::drawn_part` and `numbers::number_centre` became public; they are now API of the library crate.
 
 Source: browser editor plan M4, D12 and D13 (2026-11-11).
+
+## Addendum 2026-11-11: RenderMap and measurements
+`RenderMap` (Task 19, ADR 0056) replaces `PlaceholderMap` in the cache. `MapView` did not change. Timings on
+freemapper's two largest example maps, release build, Apple silicon, one run each, no CI assertion. Reproduce with
+`MEASURE_MAP=<file> cargo test --release -p freemapper-courseplan-cli measure_render -- --ignored --nocapture`.
+
+| Map | Parse | `build_page` | Whole page as SVG at 2 px/mm | 60 x 60 mm at 20 px/mm |
+|---|---|---|---|---|
+| berlin-viktoriapark `templates/candidates.omap` (1.4 MB) | 12 ms | 7 ms | 56 ms, 3.1 MB | 11 ms, 0.6 MB |
+| mecklenburg-vorpommern-wismar (1.2 MB) | 10 ms | 6 ms | 15 ms, 1.0 MB | 2 ms, 0.1 MB |
+
+The page works on the settled view only: the front end asks for the visible part plus a margin 150 ms after the
+view stops moving, so a drag sends no request.
