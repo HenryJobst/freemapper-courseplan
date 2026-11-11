@@ -52,7 +52,7 @@
   </course-control>
   <course-control id="2" control="3">
     <next course-control="3" />
-    <number-location x="4.875" y="0" />
+    <number-location x="5.2917495" y="0" />
   </course-control>
   <course-control id="3" control="4">
     <next course-control="4" />
@@ -60,23 +60,23 @@
   </course-control>
   <course-control id="4" control="5">
     <next course-control="5" />
-    <number-location x="4.875" y="0.26402056" />
+    <number-location x="5.2917495" y="0.2865909" />
   </course-control>
   <course-control id="5" control="6">
     <next course-control="6" />
-    <number-location x="2.0308948" y="-5.579838" />
+    <number-location x="2.0559447" y="-5.6486616" />
   </course-control>
   <course-control id="6" control="7">
     <next course-control="7" />
-    <number-location x="-4.3672853" y="3.8638477" />
+    <number-location x="-4.63324" y="4.0991445" />
   </course-control>
   <course-control id="7" control="8">
     <next course-control="8" />
-    <number-location x="-3.2618735" y="-5.0420885" />
+    <number-location x="-3.3798504" y="-5.2244534" />
   </course-control>
   <course-control id="8" control="9">
     <next course-control="9" />
-    <number-location x="-4.875" y="1.9993832" />
+    <number-location x="-5.2878747" y="2.1687155" />
   </course-control>
   <course-control id="9" control="2" />
 </course-scribe-event>

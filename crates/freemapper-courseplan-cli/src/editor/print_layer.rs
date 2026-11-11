@@ -10,49 +10,38 @@ use freemapper_course::{
 };
 use freemapper_courseplan::course::{CourseError, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
-use freemapper_courseplan::numbers::{GapRange, base_scale, overprint_sizes};
+use freemapper_courseplan::numbers::{GapRange, base_scale};
 use freemapper_courseplan::omap::MapCoord;
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, SpecialObject,
 };
+use freemapper_printrules::scale::{MapKind as PrintKind, course_symbols};
 use freemapper_render::overprint::{CourseSymbolSizes, overprint};
 use freemapper_render::page::Overprint;
 
 use super::map_view::Affine;
 use super::overlay::overlay;
 
-/// The sizes of the course symbols in print mm at the base scale of `kind`. Circle, line and number height come
-/// from `numbers.rs` (`overprint_sizes`), the values the checks and the overlay use, so the three cannot drift
-/// apart. The rest are the IOF values of freemapper-print's `iof-print` profile (ISSprOM 2019-2 section 4.7 for
-/// sprint and schoolyard maps, ISOM 2017-2 section 3.7 for forest maps).
+/// The sizes of the course symbols in print mm at the base scale of `kind`: the `iof-print` values of
+/// freemapper-printrules (ISSprOM 2019-2 section 4.7 for sprint and schoolyard maps, ISOM 2017-2 section 3.7 for
+/// forest maps), the ones freemapper-print draws with. The checks and the overlay take circle, line and number
+/// height from `numbers::overprint_sizes`; a test keeps the two equal.
 pub(super) fn course_symbol_sizes(kind: MapKind) -> CourseSymbolSizes {
-    let base = overprint_sizes(kind);
-    let forest = kind == MapKind::Forest;
-    CourseSymbolSizes {
-        circle_diameter_mm: base.circle_diameter_mm,
-        line_width_mm: base.line_width_mm,
-        start_side_mm: if forest { 6.0 } else { 7.0 },
-        finish_inner_mm: if forest { 4.0 } else { 5.0 },
-        finish_outer_mm: if forest { 6.0 } else { 7.0 },
-        number_height_mm: base.number_height_mm,
-        marked_route_dash_mm: 2.0,
-        marked_route_gap_mm: 0.5,
-        out_of_bounds_line_mm: if forest { 0.7 } else { 1.0 },
-        crossing_point_mm: 3.0,
-        out_of_bounds_hatch_angle_degrees: 45.0,
-        out_of_bounds_hatch_second_angle_degrees: Some(135.0),
-        out_of_bounds_hatch_spacing_mm: 1.2,
-        out_of_bounds_hatch_line_mm: 0.2,
-        first_aid_mm: 4.0,
-        first_aid_bar_mm: 1.33,
-        refreshment_mm: 3.5,
-        refreshment_line_mm: 0.4,
-    }
+    let kind = match kind {
+        MapKind::Sprint => PrintKind::Sprint,
+        MapKind::Schoolyard => PrintKind::Schoolyard,
+        MapKind::Forest => PrintKind::Forest,
+    };
+    course_symbols(kind, kind.base_scale()).0
 }
 
 /// How much bigger the course symbols are on a map at `map_scale` than at the base scale of `kind`: the editor
 /// shows the map at its own scale, so the symbols grow by `base_scale / map_scale`.
 pub(super) fn course_factor(kind: MapKind, map_scale: u32) -> f64 {
+    if map_scale == 0 {
+        // A map without a scale: draw the symbols at their base size, not at an infinite one.
+        return 1.0;
+    }
     f64::from(base_scale(kind)) / f64::from(map_scale)
 }
 
@@ -424,6 +413,43 @@ mod tests {
         p
     }
 
+    fn path_length(path: &[Pt]) -> f64 {
+        path.windows(2).map(|w| dist(w[0], w[1])).sum()
+    }
+
+    /// The point `along` mm from the start of `path`.
+    fn point_at(path: &[Pt], along: f64) -> Pt {
+        let mut left = along;
+        for w in path.windows(2) {
+            let seg = dist(w[0], w[1]);
+            if left <= seg {
+                let t = if seg == 0.0 { 0.0 } else { left / seg };
+                return (
+                    w[0].0 + t * (w[1].0 - w[0].0),
+                    w[0].1 + t * (w[1].1 - w[0].1),
+                );
+            }
+            left -= seg;
+        }
+        *path.last().unwrap()
+    }
+
+    fn on_path(p: Pt, path: &[Pt]) -> bool {
+        path.windows(2).any(|w| {
+            let (d, f) = (
+                (w[1].0 - w[0].0, w[1].1 - w[0].1),
+                (p.0 - w[0].0, p.1 - w[0].1),
+            );
+            let len2 = d.0 * d.0 + d.1 * d.1;
+            let t = if len2 == 0.0 {
+                0.0
+            } else {
+                ((f.0 * d.0 + f.1 * d.1) / len2).clamp(0.0, 1.0)
+            };
+            dist(p, (w[0].0 + t * d.0, w[0].1 + t * d.1)) <= TOLERANCE_MM
+        })
+    }
+
     fn near(a: Pt, b: Pt) -> bool {
         dist(a, b) <= TOLERANCE_MM
     }
@@ -519,13 +545,49 @@ mod tests {
                 ));
             }
         }
-        // Legs: the drawn part. A leg is one open stroke whose ends are the drawn part's ends.
+        // Legs: the drawn part. An unmarked leg is one open stroke whose points are the drawn part's; a marked leg is
+        // dashes, the first of each period starting where the overlay's dashes start. Every leg is compared.
         for leg in &overlay.legs {
-            if leg.taped {
-                continue;
-            }
             let want: Vec<Pt> = leg.drawn.iter().map(page).collect();
             if want.len() < 2 {
+                miss(format!(
+                    "leg after {}: the overlay draws {want:?}",
+                    leg.after
+                ));
+                continue;
+            }
+            if leg.taped {
+                let (dash, gap) = (overlay.sizes.dash, overlay.sizes.dash_gap);
+                let total = path_length(&want);
+                let mut expected = 0;
+                let mut start = 0.0;
+                while start < total - 1e-9 {
+                    expected += 1;
+                    let at = point_at(&want, start);
+                    let length = dash.min(total - start);
+                    let found = got
+                        .lines
+                        .iter()
+                        .any(|l| near(l[0], at) && (path_length(l) - length).abs() <= TOLERANCE_MM);
+                    if !found {
+                        miss(format!(
+                            "taped leg after {}: no dash of {length:.3} at {at:?}",
+                            leg.after
+                        ));
+                    }
+                    start += dash + gap;
+                }
+                let dashes = got
+                    .lines
+                    .iter()
+                    .filter(|l| path_length(l) <= dash + TOLERANCE_MM && on_path(l[0], &want))
+                    .count();
+                if dashes != expected {
+                    miss(format!(
+                        "taped leg after {}: {dashes} dashes, overlay {expected}",
+                        leg.after
+                    ));
+                }
                 continue;
             }
             let found = got
@@ -540,7 +602,41 @@ mod tests {
                 ));
             }
         }
-        // Numbers: the centre of the box.
+        // Crossing points: the way through, the length of the symbol.
+        for c in overlay
+            .controls
+            .iter()
+            .filter(|c| c.kind == "crossing_point")
+        {
+            let at = page(&c.at);
+            let strokes: Vec<&Vec<Pt>> = got
+                .lines
+                .iter()
+                .filter(|l| l.len() > 3 && dist(mean(l), at) <= overlay.sizes.crossing / 2.0)
+                .collect();
+            if strokes.len() != 2 {
+                miss(format!(
+                    "crossing point {}: {} strokes",
+                    c.code,
+                    strokes.len()
+                ));
+                continue;
+            }
+            let angle = c.angle_deg.unwrap_or(f64::NAN);
+            for l in strokes {
+                let (first, last) = (l[0], l[l.len() - 1]);
+                let chord = dist(first, last);
+                let turned = (last.1 - first.1).atan2(last.0 - first.0).to_degrees();
+                let off = ((turned + angle + 180.0).rem_euclid(360.0) - 180.0).abs();
+                if (chord - overlay.sizes.crossing).abs() > TOLERANCE_MM || off > 0.1 {
+                    miss(format!(
+                        "crossing point {}: length {chord:.3} turned {turned:.2}, overlay {:.3} turned {:.2}",
+                        c.code, overlay.sizes.crossing, -angle
+                    ));
+                }
+            }
+        }
+        // Numbers: the centre and the size of the box. The renderer's size is the one the placement uses.
         for n in &overlay.numbers {
             let at = page(&MapPoint {
                 x: n.centre.x,
@@ -556,13 +652,25 @@ mod tests {
                     n.index, n.text
                 ));
             }
+            let (w, h) = number_size(&n.text, overlay.sizes.number_h);
+            if (w - n.w).abs() > TOLERANCE_MM || (h - n.h).abs() > TOLERANCE_MM {
+                miss(format!(
+                    "number {} ({}): overlay box {:.3} x {:.3}, renderer {w:.3} x {h:.3}",
+                    n.index, n.text, n.w, n.h
+                ));
+            }
         }
         let _ = course;
         overlay
     }
 
-    fn all_mismatches(change: impl FnOnce(&mut Event)) -> Vec<String> {
-        let s = setup(change);
+    /// The mismatches of every course of the example, as a map of `kind` at 1:`scale`. The map file is the
+    /// sprint map of the example; only the kind and the scale the symbols are sized for change, which is what
+    /// a forest or schoolyard project differs by in the overlay and the print layer.
+    fn all_mismatches(change: impl FnOnce(&mut Event), kind: MapKind, scale: u32) -> Vec<String> {
+        let mut s = setup(change);
+        s.kind = kind;
+        s.scale = scale;
         let mut out = Vec::new();
         let names: Vec<String> = s.event.courses.iter().map(|c| c.name.clone()).collect();
         for name in names {
@@ -571,23 +679,59 @@ mod tests {
         out
     }
 
+    const CASES: [(MapKind, u32); 5] = [
+        (MapKind::Sprint, 4000),
+        (MapKind::Sprint, 3000),
+        (MapKind::Sprint, 5000),
+        (MapKind::Schoolyard, 1000),
+        (MapKind::Forest, 10000),
+    ];
+
     #[test]
     fn overlay_matches_renderer_overprint() {
-        let out = all_mismatches(|_| {});
-        assert!(out.is_empty(), "{}", out.join("\n"));
+        for (kind, scale) in CASES {
+            let out = all_mismatches(|_| {}, kind, scale);
+            assert!(out.is_empty(), "{kind:?} 1:{scale}\n{}", out.join("\n"));
+        }
     }
 
     #[test]
     fn overlay_matches_renderer_overprint_with_bends_crossing_points_and_specials() {
-        let out = all_mismatches(rich);
-        assert!(out.is_empty(), "{}", out.join("\n"));
+        for (kind, scale) in CASES {
+            let out = all_mismatches(rich, kind, scale);
+            assert!(out.is_empty(), "{kind:?} 1:{scale}\n{}", out.join("\n"));
+        }
     }
 
-    /// The size of a number box: the editor's (and the checks') box is 0.6 of the digit height per digit, the
-    /// renderer's is the width of the digits in Arimo.
+    /// The test would pass trivially if the rich event lost its marked leg or its crossing point.
     #[test]
-    #[ignore = "finding for freemapper-print: the renderer's number box is 3.233 mm wide for one digit at 4 mm height (advance width in Arimo), the placement code's box 0.6 x 4 = 2.4 mm"]
-    fn number_boxes_have_the_renderers_size() {
+    fn the_rich_event_has_what_the_comparison_needs() {
+        let s = setup(rich);
+        let o = overlay(
+            &s.event,
+            Some("A"),
+            &s.index,
+            s.scale,
+            s.kind,
+            GapRange::DEFAULT,
+        )
+        .unwrap();
+        assert!(o.legs.iter().any(|l| l.taped));
+        assert!(o.controls.iter().any(|c| c.kind == "crossing_point"));
+        assert!(
+            o.controls
+                .iter()
+                .filter(|c| c.kind == "crossing_point")
+                .all(|c| c.angle_deg.is_some())
+        );
+        assert!(o.legs.iter().all(|l| l.drawn.len() >= 2));
+    }
+
+    /// ADR 0057: the overlay cuts a leg at the start triangle's corner and the outer finish circle, the checks
+    /// (ADR 0030) cut both ends at the circle radius. The two differ on purpose; this keeps the checks' cut where
+    /// it is, so a later alignment of the overlay cannot move findings unnoticed.
+    #[test]
+    fn the_checks_cut_legs_at_the_circle_radius_the_overlay_does_not() {
         let s = setup(|_| {});
         let o = overlay(
             &s.event,
@@ -598,17 +742,32 @@ mod tests {
             GapRange::DEFAULT,
         )
         .unwrap();
-        let mut off = Vec::new();
-        for n in &o.numbers {
-            let (w, h) = number_size(&n.text, o.sizes.number_h);
-            if (w - n.w).abs() > TOLERANCE_MM || (h - n.h).abs() > TOLERANCE_MM {
-                off.push(format!(
-                    "{}: overlay {:.3} x {:.3}, renderer {w:.3} x {h:.3}",
-                    n.text, n.w, n.h
-                ));
-            }
+        let first = &o.legs[0];
+        let start = first.points[0].clone();
+        let by_checks = freemapper_courseplan::check::drawn_part(&first.points, o.sizes.circle_r);
+        let at = |p: &MapPoint| (p.x - start.x).hypot(p.y - start.y);
+        assert!((at(&by_checks[0]) - o.sizes.circle_r).abs() < 1e-6);
+        assert!((at(&first.drawn[0]) - o.sizes.start_r).abs() < 2e-3);
+        assert!(o.sizes.start_r > o.sizes.circle_r);
+    }
+
+    #[test]
+    fn symbol_sizes_agree_with_the_numbers_module() {
+        for kind in [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest] {
+            let (sizes, base) = (
+                course_symbol_sizes(kind),
+                freemapper_courseplan::numbers::overprint_sizes(kind),
+            );
+            assert_eq!(sizes.circle_diameter_mm, base.circle_diameter_mm);
+            assert_eq!(sizes.line_width_mm, base.line_width_mm);
+            assert_eq!(sizes.number_height_mm, base.number_height_mm);
         }
-        assert!(off.is_empty(), "{}", off.join("\n"));
+    }
+
+    #[test]
+    fn a_map_without_scale_draws_at_base_size() {
+        assert_eq!(course_factor(MapKind::Sprint, 0), 1.0);
+        assert_eq!(course_factor(MapKind::Sprint, 2000), 2.0);
     }
 
     #[test]

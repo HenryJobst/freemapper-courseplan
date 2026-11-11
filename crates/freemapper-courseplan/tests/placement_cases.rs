@@ -26,7 +26,16 @@ const TOLERANCE: f64 = 1e-9;
 /// Cases whose expected values the code is known not to reproduce, each with the reason. The harness
 /// still runs them and requires that they differ. Empty since the switch to freemapper-course (ADR 0036):
 /// the four cases of core ADR 0016 (D2, D4) pass.
-const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[];
+const KNOWN_DISAGREEMENTS: &[(&str, &str)] = &[
+    (
+        "numbers_avoid_each_other",
+        "the renderer's number box is authoritative (agreed with freemapper-print, 2026-11-11, ADR 0030); core's expected values still use the 0.6 x height placeholder",
+    ),
+    (
+        "mixed_course_4",
+        "the renderer's number box is authoritative (agreed with freemapper-print, 2026-11-11, ADR 0030); core's expected values still use the 0.6 x height placeholder",
+    ),
+];
 
 type Pt = (f64, f64);
 

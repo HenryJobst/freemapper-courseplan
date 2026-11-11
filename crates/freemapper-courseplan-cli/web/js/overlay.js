@@ -47,12 +47,15 @@ function drawControl(c, o, selection, parent, halos) {
   const r = o.sizes.circle_r;
   const group = el("g", { class: "sym" }, parent);
   if (c.kind === "crossing_point") {
-    // Two arcs, ")(": the crossing point has no circle.
-    const a = 0.9 * r;
-    const b = 0.3 * r;
+    // As the print draws it (ISSprOM 710.1): two lines curving outwards on either side of the way through,
+    // which runs along the course (angle_deg, 0 east, counter-clockwise on the paper). Without a course there
+    // is no way through, so the symbol lies along east.
+    const l = o.sizes.crossing;
+    const [x, y1, y2] = [l / 2, (l * 950) / 3000, (l * 675) / 3000];
+    const arc = (side) => `M${-x},${side * y1} C${-x / 3},${side * y2} ${x / 3},${side * y2} ${x},${side * y1}`;
     el("path", {
-      d: `M${c.at[0] - a},${c.at[1] - r} Q${c.at[0] - b},${c.at[1]} ${c.at[0] - a},${c.at[1] + r} ` +
-        `M${c.at[0] + a},${c.at[1] - r} Q${c.at[0] + b},${c.at[1]} ${c.at[0] + a},${c.at[1] + r}`,
+      d: `${arc(1)} ${arc(-1)}`,
+      transform: `translate(${c.at[0]} ${c.at[1]}) rotate(${-(c.angle_deg ?? 0)})`,
       "stroke-width": o.sizes.line,
       fill: "none",
     }, group);
@@ -236,7 +239,7 @@ export function draw(overlay, selection, course = null, extras = {}) {
       class: `${leg.taped ? "leg taped" : "leg"}${leg.after === extras.pending ? " pending" : ""}`,
       "stroke-width": overlay.sizes.line,
     }, body);
-    if (leg.taped) line.setAttribute("stroke-dasharray", `${overlay.sizes.line * 4} ${overlay.sizes.line * 3}`);
+    if (leg.taped) line.setAttribute("stroke-dasharray", `${overlay.sizes.dash} ${overlay.sizes.dash_gap}`);
     line.dataset.kind = "leg";
     line.dataset.id = `${course ?? ""}:${leg.after}`;
     if (selection && (selection.kind === "leg" || selection.kind === "bend") && selection.after === leg.after) {

@@ -186,9 +186,9 @@ Drei Grenzen können in der Statusleiste erscheinen:
 
 Die Schaltfläche „Druckvorschau“ (Taste P) zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet. Der Server
 gibt die Bahn an den gemeinsamen Renderer, der die Purpurebenen in das Kartenbild malt; das Overlay des Editors ist
-dabei ausgeblendet. Solange die Vorschau an ist, lässt sich nichts bearbeiten, und ein Druck auf die Karte verschiebt
-nur den Ausschnitt. Die Schaltfläche geht erst, wenn du eine Bahn gewählt hast. Ein Test vergleicht Kreise, Strecken
-und Nummernfelder des Editors mit denen des Renderers auf 0,01 mm. Die Entscheidungen stehen in ADR 0046, 0056 und 0057.
+dabei ausgeblendet. Solange die Vorschau an ist, lässt sich nichts bearbeiten (Baum, Eigenschaften, Rückgängig und Tasten sind abgeschaltet), und ein Druck auf die Karte verschiebt
+nur den Ausschnitt. Die Schaltfläche geht erst, wenn du eine Bahn gewählt hast. Ein Test vergleicht Kreise, Strecken,
+Bandstrecken, Querungsstellen und Nummernfelder des Editors mit denen des Renderers auf 0,01 mm. Die Entscheidungen stehen in ADR 0046, 0056 und 0057.
 
 ### Posten
 

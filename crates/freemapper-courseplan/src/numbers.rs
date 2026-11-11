@@ -21,6 +21,7 @@ use freemapper_course::placement::{
     number_box, place_course_numbers,
 };
 use freemapper_courseplan_model::{CourseKind, Discipline, Event, MapPoint, NumberPlacement};
+use freemapper_render::overprint::number_size;
 
 use crate::check::{symbol_matches, value_number};
 use crate::course::{CourseError, control_numbers, course_legs};
@@ -85,8 +86,6 @@ pub(crate) fn rule_sides(rule: &crate::rules::Rule) -> (Option<f64>, Option<f64>
     )
 }
 
-/// Width of one digit relative to the number height.
-const DIGIT_WIDTH_FACTOR: f64 = 0.6;
 /// Symbol code of magnetic north lines, which never count as covered (ruling R5).
 const NORTH_LINE_SYMBOL: &str = "601";
 /// A point symbol is covered when the number box comes within this distance of its position
@@ -139,20 +138,16 @@ pub fn gap_in_range(gap_mm: f64) -> bool {
     gap_mm > 0.0 && gap_mm <= MAX_GAP_MM
 }
 
-fn digits(n: u32) -> usize {
-    n.to_string().len()
-}
-
 /// Radius of the control circle plus half its line width, in the unit of `sizes`.
 fn outer_radius(sizes: &OverprintSizes) -> f64 {
     (sizes.circle_diameter_mm + sizes.line_width_mm) / 2.0
 }
 
-/// Width and height of the box of control number `number`, in the unit of `sizes`: `0.6 * height`
-/// per digit wide and the number height high.
+/// Width and height of the box of control number `number`, in the unit of `sizes`: the size the print
+/// layer draws it with (`freemapper_render::overprint::number_size`, the advance width of the digits in
+/// Arimo), agreed with freemapper-print on 2026-11-11 (ADR 0030). The one place that decides a box size.
 fn box_size(sizes: &OverprintSizes, number: u32) -> (f64, f64) {
-    let h = sizes.number_height_mm;
-    (DIGIT_WIDTH_FACTOR * h * digits(number) as f64, h)
+    number_size(&number.to_string(), sizes.number_height_mm)
 }
 
 /// Radius of the control circle plus half its line width, in print mm at the base scale of the
@@ -496,8 +491,10 @@ mod tests {
     #[test]
     fn placement_from_centre_east_at_gap_1() {
         let at = MapPoint { x: 100.0, y: 100.0 };
+        // Centre of the box 1 mm from the circle: outer radius, gap and half the box width.
+        let (w, _) = number_box_mm(MapKind::Sprint, 1);
         let drop = MapPoint {
-            x: 105.375,
+            x: 100.0 + circle_outer_radius_mm(MapKind::Sprint) + 1.0 + w / 2.0,
             y: 100.0,
         };
         let found = placement_from_centre(&at, &drop, 1, MapKind::Sprint, 4000);
@@ -1100,10 +1097,11 @@ mod tests {
     #[test]
     fn blocked_preferred_takes_nearest_free_direction() {
         // 31: in from the west, out to the south (32), so behind is east (0). The circle of 33,
-        // 9.2 mm east of 31 and reached from the south-east, takes that direction: the box at 0 and
-        // at 15 stays 3.12 mm from its centre (needs 3.175), at 30 it is 3.3 mm away. So the
-        // smallest free step is 30; of 30 and 330 the one towards the outer side (45) wins.
-        let e = blocked_behind((100.0, 140.0), 109.2, Some((120.0, 130.0)));
+        // 10 mm east of 31 and reached from the south-east, takes that direction: the renderer's
+        // box (3.2 mm wide) at 0 and at 15 comes closer to its centre than 3.175 mm, at 30 it
+        // does not. So the smallest free step is 30; of 30 and 330 the one towards the outer
+        // side (45) wins.
+        let e = blocked_behind((100.0, 140.0), 110.0, Some((120.0, 130.0)));
         let d = place(&e, 4000)[0].direction;
         let off = angle_diff(d, 0.0);
         assert!((off - 30.0).abs() < 1e-9 && d < 90.0, "direction {d}");
@@ -1273,6 +1271,7 @@ mod tests {
             .collect();
         objects.push(line_object(LINE_502, &ring));
         let target = 90.0;
+        let target_rect = sprint_rect(&e, target);
         for k in 0..24 {
             let direction = f64::from(k) * 15.0;
             if direction == target {
@@ -1280,6 +1279,10 @@ mod tests {
             }
             let r = sprint_rect(&e, direction);
             let (cx, cy) = ((r.min.0 + r.max.0) / 2.0, (r.min.1 + r.max.1) / 2.0);
+            // The renderer's boxes are wide enough to reach the middle of the neighbours' boxes.
+            if target_rect.distance_to_point((cx, cy)) < 0.2 {
+                continue;
+            }
             objects.push(line_object(LINE_502, &[(cx - 0.1, cy), (cx + 0.1, cy)]));
         }
         let map = index(objects);

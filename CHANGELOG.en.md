@@ -8,10 +8,12 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
-- The editor has a print preview (ADR 0057). The "Print preview" button or the P key shows the selected course the way freemapper-print draws it. The server hands the course to the renderer (freemapper-core 0.15.0), which paints start, controls, finish, legs, special objects and numbers as purple layers into the map image. The overlay is hidden and nothing can be edited meanwhile. A test compares the overlay's circles, legs and number boxes with the renderer's.
+- The editor has a print preview (ADR 0057). The "Print preview" button or the P key shows the selected course the way freemapper-print draws it. The server hands the course to the renderer (freemapper-core 0.16.0), which paints start, controls, finish, legs, special objects and numbers as purple layers into the map image. The overlay is hidden and nothing can be edited meanwhile: the tree, the properties, undo and redo and the keys are switched off. A test compares the overlay's circles, legs, marked legs, crossing points and number boxes with the renderer's, for sprint, schoolyard and forest sizes.
 
 ### Fixed
 
+- The number box is as wide as freemapper-print draws it (3.23 mm instead of 2.4 mm for one digit, ADR 0030). Stored number positions (direction and gap) are drawn about 0.4 mm differently, and the automatic placement, the checks and the positions in the Purple Pen and IOF XML exports use the new width. The example's Purple Pen file and the IOF XML are regenerated.
+- The overlay's crossing point is the 3 mm symbol turned along the course, and a marked leg has the print's dashes. A map without a scale no longer gives infinite symbol sizes.
 - The overlay draws start and finish at the IOF sizes and ends legs where the renderer ends them: at the start triangle's corner, at the outer finish circle, at the control circle, at the crossing point itself. Before, it cut every leg at both ends by the control circle's radius.
 
 ## [0.10.0] - 2026-11-11

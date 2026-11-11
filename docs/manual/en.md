@@ -181,8 +181,8 @@ Three limits can show up in the status bar:
 
 The "Print preview" button (key P) shows the selected course the way freemapper-print draws it. The server hands the
 course to the shared renderer, which paints the purple layers into the map image; the editor's own overlay is hidden.
-Editing is off while the preview is on, and a press on the map only pans. The button works once you have selected a
-course. A test compares the editor's circles, legs and number boxes with the renderer's to 0.01 mm. The decisions are
+Editing is off while the preview is on (the tree, the properties, undo and the keys are switched off), and a press on the map only pans. The button works once you have selected a
+course. A test compares the editor's circles, legs, marked legs, crossing points and number boxes with the renderer's to 0.01 mm. The decisions are
 in ADR 0046, 0056 and 0057.
 
 ### Controls

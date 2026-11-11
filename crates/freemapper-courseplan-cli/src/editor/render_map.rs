@@ -116,6 +116,16 @@ pub(super) fn limits_of(report: &BuildReport) -> (bool, bool) {
     )
 }
 
+/// The page while a course is painted into it: the course is taken off again when this goes out of scope, also
+/// when the render panics, so no later plain render carries a stale course.
+struct WithCourse<'a>(std::sync::RwLockWriteGuard<'a, RenderedPage>);
+
+impl Drop for WithCourse<'_> {
+    fn drop(&mut self) {
+        self.0.overprint = Overprint::default();
+    }
+}
+
 impl RenderMap {
     pub(crate) fn new(doc: &MapDocument, index: &MapIndex) -> Result<Self, MapViewError> {
         let spec = page_spec(SYMBOL_FACTOR, GEOMETRY_FACTOR)?;
@@ -237,11 +247,9 @@ impl MapView for RenderMap {
             zoom,
         };
         self.renders.fetch_add(1, Ordering::Relaxed);
-        let mut page = self.page.write().unwrap_or_else(|e| e.into_inner());
-        page.overprint = on_map(overprint, IOF_PURPLE, &page.colours, &page.primitives);
-        let svg = write_svg(&page, &view);
-        page.overprint = Overprint::default();
-        svg.map_err(svg_error)
+        let mut page = WithCourse(self.page.write().unwrap_or_else(|e| e.into_inner()));
+        page.0.overprint = on_map(overprint, IOF_PURPLE, &page.0.colours, &page.0.primitives);
+        write_svg(&page.0, &view).map_err(svg_error)
     }
 
     /// The map objects under `page`, topmost first. `object` is the renderer's object number (the objects it

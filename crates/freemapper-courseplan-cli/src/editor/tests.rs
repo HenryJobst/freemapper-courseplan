@@ -565,6 +565,11 @@ mod overlay {
         assert!((got - want).abs() < 1e-9, "{got} vs {want}");
     }
 
+    /// The overlay rounds positions and sizes to 1 micrometre.
+    fn near_um(got: f64, want: f64) {
+        assert!((got - want).abs() < 1e-3, "{got} vs {want}");
+    }
+
     #[test]
     fn sizes_at_1_4000() {
         let s = run(&event(), Some("A"), 4000).sizes;
@@ -595,11 +600,12 @@ mod overlay {
         );
         let o = run(&e, Some("A"), 4000);
         let n = &o.numbers[0];
-        // Outer radius 3.0 + 0.35 / 2 = 3.175; the box of "1" is 0.6 * 4.0 = 2.4 wide, so the centre lies at
-        // 100 + 3.175 + 1.0 + 2.4 / 2 = 105.375.
-        near(n.centre.x, 105.375);
+        // Outer radius 3.0 + 0.35 / 2 = 3.175; the box of "1" is as wide as the renderer draws it, so the
+        // centre lies at 100 + 3.175 + 1.0 + w / 2.
+        let (w, _) = freemapper_courseplan::numbers::number_box_mm(MapKind::Sprint, 1);
+        near_um(n.centre.x, 100.0 + 3.175 + 1.0 + w / 2.0);
         near(n.centre.y, 100.0);
-        near(n.w, 2.4);
+        near_um(n.w, w);
         near(n.h, 4.0);
         assert_eq!((n.index, n.code.as_str(), n.text.as_str()), (1, "31", "1"));
         assert_eq!(n.source, "central");
@@ -616,10 +622,11 @@ mod overlay {
                 gap_mm: 1.0,
             }),
         );
-        // At 1:2000 everything is 2 times larger: 100 + 2 * (3.175 + 1.0 + 1.2) = 110.75.
+        // At 1:2000 everything is 2 times larger.
+        let (w, _) = freemapper_courseplan::numbers::number_box_mm(MapKind::Sprint, 1);
         let n = &run(&e, Some("A"), 2000).numbers[0];
-        near(n.centre.x, 110.75);
-        near(n.w, 4.8);
+        near_um(n.centre.x, 100.0 + 2.0 * (3.175 + 1.0 + w / 2.0));
+        near_um(n.w, 2.0 * w);
         near(n.h, 8.0);
     }
 

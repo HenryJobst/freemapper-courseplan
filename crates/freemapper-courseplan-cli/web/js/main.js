@@ -1,4 +1,4 @@
-import { get, post } from "./api.js";
+import { get, post, setReadOnly } from "./api.js";
 import { loadTexts, t } from "./texts.js";
 import { createView, bindMapLayer } from "./view.js";
 import * as overlay from "./overlay.js";
@@ -230,7 +230,7 @@ async function settle(answer) {
 }
 
 async function history(redo) {
-  if (busy || state.closed) return;
+  if (busy || state.closed || state.preview) return;
   const label = redo ? state.data?.undo.redo : state.data?.undo.undo;
   busy = true;
   try {
@@ -739,6 +739,12 @@ function syncPreview(force = false) {
   button.disabled = !state.course;
   button.setAttribute("aria-pressed", String(state.preview));
   svg.dataset.preview = String(state.preview);
+  setReadOnly(state.preview);
+  // The preview shows the print, it edits nothing: the panes, the tools, undo and redo and the writing menu items
+  // are dead while it is on. The preview button, zoom and help stay.
+  for (const id of ["pane-tree", "pane-props", "tool-select", "tool-control", "tool-crossing", "tool-special", "tool-course", "undo-btn", "redo-btn", "special-options", "menu-import", "menu-sync"]) {
+    document.getElementById(id).inert = state.preview;
+  }
   for (const layer of [document.getElementById("layer-overlay"), findingsLayer]) {
     layer.style.display = state.preview ? "none" : "";
   }
@@ -1317,13 +1323,13 @@ function bindMapInput() {
         tools.setTool("select");
       }
     },
-    tool: tools.setTool,
+    tool: (name) => { if (!state.preview) tools.setTool(name); },
     preview: togglePreview,
     nudge: startNudge,
     commitNudge,
     canNudge: () => state.selection?.kind === "control",
     drafting: () => draft !== null,
-    finish: finishDraft,
+    finish: () => { if (!state.preview) finishDraft(); },
     zoom: (f) => view.zoomBy(f),
     fit: () => view.fit(state.pageBox),
     pan: (dx, dy) => {

@@ -6,9 +6,7 @@
 use freemapper_courseplan::check::drawn_part_between;
 use freemapper_courseplan::course::{CourseError, control_numbers, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
-use freemapper_courseplan::numbers::{
-    GapRange, auto_place, base_scale, number_box_mm, number_centre,
-};
+use freemapper_courseplan::numbers::{GapRange, auto_place, number_box_mm, number_centre};
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, NumberPlacement, SpecialObject,
 };
@@ -43,6 +41,11 @@ pub(crate) struct Sizes {
     /// Radii of the two finish circles; a leg ends at the outer one.
     pub finish_inner_r: f64,
     pub finish_outer_r: f64,
+    /// Length of a crossing point, as the print draws it.
+    pub crossing: f64,
+    /// Dash and gap of a marked (taped) leg.
+    pub dash: f64,
+    pub dash_gap: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -50,6 +53,10 @@ pub(crate) struct OverlayControl {
     pub code: String,
     pub kind: &'static str,
     pub at: MapPoint,
+    /// Crossing points only: the direction of the way through, degrees as for a start (0 east, counter-clockwise
+    /// on the paper). The print turns the symbol along the course.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub angle_deg: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -144,7 +151,28 @@ fn sizes_at(kind: MapKind, factor: f64) -> Sizes {
         start_r: r3(triangle_radius(print.start_side_mm * factor)),
         finish_inner_r: r3(print.finish_inner_mm * factor / 2.0),
         finish_outer_r: r3(print.finish_outer_mm * factor / 2.0),
+        crossing: r3(print.crossing_point_mm * factor),
+        dash: r3(print.marked_route_dash_mm * factor),
+        dash_gap: r3(print.marked_route_gap_mm * factor),
     }
+}
+
+/// The direction the way through the crossing point at stop `stop` of the course runs, as the print turns the
+/// symbol: from the point before it to the point after it, else along the one leg it has. Degrees, 0 east,
+/// counter-clockwise on the paper.
+fn crossing_angle(legs: &[freemapper_courseplan::course::LegGeometry], stop: usize) -> Option<f64> {
+    let before = stop
+        .checked_sub(1)
+        .and_then(|i| legs.get(i))
+        .and_then(|l| l.points.get(l.points.len().checked_sub(2)?));
+    let after = legs.get(stop).and_then(|l| l.points.get(1));
+    let (from, to) = match (before, after) {
+        (Some(b), Some(a)) => (b, a),
+        (Some(b), None) => (b, &legs.get(stop - 1)?.points.last()?.clone()),
+        (None, Some(a)) => (&legs.get(stop)?.points.first()?.clone(), a),
+        (None, None) => return None,
+    };
+    Some(r3((-(to.y - from.y)).atan2(to.x - from.x).to_degrees()))
 }
 
 /// Circumradius of an equilateral triangle of side `side`, as the renderer draws the start.
@@ -165,7 +193,7 @@ pub(crate) fn overlay(
     kind: MapKind,
     gaps: GapRange,
 ) -> Result<CourseOverlay, CourseError> {
-    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let factor = super::print_layer::course_factor(kind, map_scale);
     let sizes = sizes_at(kind, factor);
     let Some(name) = course else {
         return Ok(all_controls(event, sizes));
@@ -223,14 +251,19 @@ pub(crate) fn overlay(
         .collect();
 
     let mut controls: Vec<OverlayControl> = Vec::new();
-    for stop in stops {
+    for (k, stop) in stops.iter().enumerate() {
         let known = controls.iter().any(|c| c.code == stop.code.0);
         if let (false, Some(control)) = (known, event.controls.iter().find(|c| c.code == stop.code))
         {
+            // The stop is number k + 1 of the course: the leg k arrives, the leg k + 1 leaves.
+            let angle_deg = (control.kind == ControlKind::CrossingPoint)
+                .then(|| crossing_angle(&geometry, k + 1))
+                .flatten();
             controls.push(OverlayControl {
                 code: control.code.0.clone(),
                 kind: control_kind(&control.kind),
                 at: point(&control.map_mm),
+                angle_deg,
             });
         }
     }
@@ -391,6 +424,7 @@ fn all_controls(event: &Event, sizes: Sizes) -> CourseOverlay {
                 code: c.code.0.clone(),
                 kind: control_kind(&c.kind),
                 at: point(&c.map_mm),
+                angle_deg: None,
             })
             .collect(),
         starts,

@@ -103,7 +103,7 @@ fn overlapper_imports() {
         c38.number,
         Some(NumberPlacement {
             direction: 321.73,
-            gap_mm: 1.47,
+            gap_mm: 0.84,
         })
     );
     assert!(

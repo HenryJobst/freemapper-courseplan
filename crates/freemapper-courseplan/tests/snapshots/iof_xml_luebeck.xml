@@ -64,7 +64,7 @@
       <CourseControl type="Control">
         <Control>31</Control>
         <MapText>1</MapText>
-        <MapTextPosition x="4.88" y="0" unit="mm"/>
+        <MapTextPosition x="5.29" y="0" unit="mm"/>
         <LegLength>189.2</LegLength>
       </CourseControl>
       <CourseControl type="Control">
@@ -76,31 +76,31 @@
       <CourseControl type="Control">
         <Control>33</Control>
         <MapText>3</MapText>
-        <MapTextPosition x="4.88" y="-0.26" unit="mm"/>
+        <MapTextPosition x="5.29" y="-0.29" unit="mm"/>
         <LegLength>120.17</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>34</Control>
         <MapText>4</MapText>
-        <MapTextPosition x="2.03" y="5.58" unit="mm"/>
+        <MapTextPosition x="2.06" y="5.65" unit="mm"/>
         <LegLength>193.73</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>35</Control>
         <MapText>5</MapText>
-        <MapTextPosition x="-4.37" y="-3.86" unit="mm"/>
+        <MapTextPosition x="-4.63" y="-4.1" unit="mm"/>
         <LegLength>140.84</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>36</Control>
         <MapText>6</MapText>
-        <MapTextPosition x="-3.26" y="5.04" unit="mm"/>
+        <MapTextPosition x="-3.38" y="5.22" unit="mm"/>
         <LegLength>178.19</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>37</Control>
         <MapText>7</MapText>
-        <MapTextPosition x="-4.88" y="-2" unit="mm"/>
+        <MapTextPosition x="-5.29" y="-2.17" unit="mm"/>
         <LegLength>154.8</LegLength>
       </CourseControl>
       <CourseControl type="Finish">

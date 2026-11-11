@@ -232,10 +232,10 @@ fn number_position_becomes_map_text_position() {
         gap_mm: 0.5,
     });
     e.courses = vec![individual("A", &["31", "32"])];
-    // Sprint at 1:4000: ring radius 3.175 + gap 0.5, box 2.4 wide, so the centre sits 4.875 east.
+    // Sprint at 1:4000: ring radius 3.175 + gap 0.5, box 3.23 wide, so the centre sits 5.29 east.
     let xml = export(&e);
     assert!(
-        xml.contains("<MapTextPosition x=\"4.88\" y=\"0\" unit=\"mm\"/>"),
+        xml.contains("<MapTextPosition x=\"5.29\" y=\"0\" unit=\"mm\"/>"),
         "{xml}"
     );
     assert!(xml.contains("<MapText>1</MapText>"));
@@ -386,7 +386,7 @@ fn characters_xml_forbids_are_refused_not_written() {
 fn numbers_are_short_and_never_negative_zero() {
     assert_eq!(fmt(-0.001), "0");
     assert_eq!(fmt(1200.0), "1200");
-    assert_eq!(fmt(4.875), "4.88");
+    assert_eq!(fmt(5.2915), "5.29");
     assert_eq!(fmt(-20.5), "-20.5");
 }
 
