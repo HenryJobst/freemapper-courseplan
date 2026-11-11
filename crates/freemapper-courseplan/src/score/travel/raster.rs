@@ -56,7 +56,7 @@ impl Table {
     }
 
     /// The class of the most specific (longest) code that matches `symbol`.
-    fn lookup(&self, symbol: &str) -> Option<Kind> {
+    pub(super) fn lookup(&self, symbol: &str) -> Option<Kind> {
         self.0
             .iter()
             .filter(|(code, _)| symbol_matches(symbol, code))

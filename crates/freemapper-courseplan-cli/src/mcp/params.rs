@@ -544,6 +544,8 @@ pub(super) struct SetScoreCourseDetails {
 #[serde(deny_unknown_fields)]
 pub(super) struct ScoreSuggest {
     pub(super) project: String,
+    /// A score course: its start and finish are used (`start` and `finish` still override).
+    pub(super) course: Option<Name>,
     pub(super) limit: Option<u32>,
     pub(super) min_distance_mm: Option<f64>,
     pub(super) start: Option<Name>,

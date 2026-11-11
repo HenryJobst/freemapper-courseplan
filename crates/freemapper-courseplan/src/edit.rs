@@ -80,6 +80,15 @@ pub enum EditError {
     /// A time limit of 0 minutes leaves no time to score.
     #[error("the time limit must be at least 1 minute")]
     BadTimeLimit,
+    /// The new highest value is below the value of a control that a score course holds.
+    #[error(
+        "The highest value cannot be {value_max}: control {code} is worth {value}. Recode or remove that control first."
+    )]
+    ValueMaxBelowControl {
+        value_max: u8,
+        code: ControlCode,
+        value: u32,
+    },
     /// A score value is out of range, or a score search failed.
     #[error(transparent)]
     Score(#[from] crate::score::ScoreError),

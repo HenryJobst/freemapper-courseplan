@@ -171,8 +171,8 @@ fn faster_ground_wins() {
     let slow = open.legs(a.clone(), b.clone()).unwrap().routes[0].time_s;
     let fast = road.legs(a, b).unwrap().routes[0].time_s;
     assert!(fast < slow * 0.9, "{fast} vs {slow}");
-    // Forest is slower than open land.
-    let forest = surface(&field(vec![rect("405", 0.0, 0.0, 200.0, 200.0)]), &[]);
+    // Slow vegetation is slower than open land; forest with good runnability barely is.
+    let forest = surface(&field(vec![rect("406", 0.0, 0.0, 200.0, 200.0)]), &[]);
     let wood = forest.legs(p(20.0, 100.0), p(180.0, 100.0)).unwrap().routes[0].time_s;
     assert!(wood > slow * 1.5, "{wood} vs {slow}");
 }
@@ -441,4 +441,26 @@ fn fastest_is_the_first_of_the_legs() {
     let (a, b) = (p(20.0, 100.0), p(180.0, 100.0));
     let first = s.legs(a.clone(), b.clone()).unwrap().routes.remove(0);
     assert_eq!(s.fastest(a, b).unwrap(), first);
+}
+
+#[test]
+fn speed_table_reads_the_sprint_symbols_the_way_the_standard_does() {
+    let table = raster::Table::embedded();
+    let kind = |code: &str| table.lookup(code);
+    // The impassable wall blocks; the railway helper of the same family does not.
+    assert_eq!(kind("515"), Some(raster::Kind::Block));
+    assert_eq!(kind("515.1.1"), Some(raster::Kind::Ground(1.0)));
+    assert_eq!(kind("515.1.2"), Some(raster::Kind::Ground(1.0)));
+    assert_eq!(kind("509.1"), None, "the railway line itself is crossable");
+    // Forest with good runnability is not as slow as walking.
+    let Some(raster::Kind::Ground(forest)) = kind("405") else {
+        panic!("forest is ground");
+    };
+    assert!((1.0..=1.1).contains(&forest), "{forest}");
+    let Some(raster::Kind::Ground(walk)) = kind("408") else {
+        panic!("walk is ground");
+    };
+    assert!(walk > 2.0 * forest);
+    assert_eq!(kind("521"), Some(raster::Kind::Solid));
+    assert!(matches!(kind("501.5"), Some(raster::Kind::Fast(f)) if f < 1.0));
 }

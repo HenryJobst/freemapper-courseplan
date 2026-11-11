@@ -466,6 +466,33 @@ fn a_corner_on_a_blocked_cell_stays_when_a_free_place_is_near() {
 }
 
 #[test]
+fn a_corner_the_coarse_surface_cannot_route_from_is_no_candidate() {
+    // The fine surface finds a free place beside the corner, but the tours route from the corner itself on
+    // the coarse surface, where it is lost.
+    let building = feature(
+        "521",
+        FeatureGeometry::Area(vec![vec![
+            p(40.0, 40.0),
+            p(60.0, 40.0),
+            p(60.0, 60.0),
+            p(40.0, 60.0),
+        ]]),
+    );
+    let index = MapIndex::from_features(vec![building]);
+    let fine = Fake {
+        blocked: vec![(p(40.0, 40.0), 0.7)],
+        ..Fake::plain()
+    };
+    let coarse = Fake {
+        lost: vec![p(40.0, 40.0)],
+        ..Fake::plain()
+    };
+    let found = suggest_with(&index, &fine, &coarse, &ctx(&[], &[])).unwrap();
+    assert!(!found.iter().any(|c| c.at == p(40.0, 40.0)));
+    assert_eq!(found.len(), 3);
+}
+
+#[test]
 fn unreachable_start_and_finish_are_errors() {
     let index = MapIndex::from_features(vec![boulder(30.0, 30.0)]);
     let no_start = Fake {

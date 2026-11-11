@@ -61,7 +61,7 @@ url = "https://www.orientering.se/media/urfbqdk0/t%C3%A4vlingsregler-och-anvisni
 
 [sources.IRF]
 title = "IRF Rules of Rogaining"
-url = "https://rogaining.org/"
+url = "https://rogaining.com/rules"
 
 [sources.user]
 title = "Decisions of the project owner for score courses (docs/superpowers/specs/2026-11-11-score-courses-design.md, section 3)"
@@ -546,7 +546,7 @@ key = "score_limit_and_penalty"
 severity = "warning"
 values = { min_minutes = 30.0, max_minutes = 90.0 }
 source = { doc = "BOF", section = "B12.5" }
-note = { de = "BOF B12.5 nennt meist eine Stunde, mindestens 45 Minuten. Der Bereich von 30 bis 90 Minuten ist weiter, weil das Limit frei wählbar ist. Die Strafe je Minute soll nicht unter dem höchsten Postenwert liegen.", en = "BOF B12.5 says usually one hour, at least 45 minutes. The range of 30 to 90 minutes is wider because the limit is free to choose. The penalty per minute should not be below the highest control value." }
+note = { de = "BOF B12.5 nennt meist eine Stunde, mindestens 45 Minuten. Der Bereich von 30 bis 90 Minuten ist weiter, weil das Limit frei wählbar ist. Der Abzug je Minute soll nicht unter dem höchsten Postenwert liegen.", en = "BOF B12.5 says usually one hour, at least 45 minutes. The range of 30 to 90 minutes is wider because the limit is free to choose. The penalty per minute should not be below the highest control value." }
 
 [[rules]]
 id = "wkb2026.score.link"

@@ -78,6 +78,26 @@ pub fn assign_values(candidates: &[Candidate], settings: &ScoreSettings) -> Vec<
     values
 }
 
+fn code_is_usable(taken: &[ControlCode], tens: u8, value: u8) -> bool {
+    let code = code_for(tens, value);
+    !taken
+        .iter()
+        .any(|t| t.0 == code || reads_alike_turned(&t.0, &code))
+}
+
+/// How many codes of the code space `assign_codes` can still hand out: those that are not in `taken`
+/// and do not read alike turned against it. Codes outside the value range take no room.
+pub fn free_code_count(taken: &[ControlCode], rules: &CodeRules) -> usize {
+    (1..=rules.value_max)
+        .map(|value| {
+            rules
+                .tens()
+                .filter(|&t| code_is_usable(taken, t, value))
+                .count()
+        })
+        .sum()
+}
+
 /// A code for every value: the tens digit tells controls of equal value apart. Codes are unique,
 /// avoid `taken`, and avoid codes that read alike turned by 180 degrees or by 6 and 9 against
 /// `taken` and against each other. Low tens digits come first; controls are served in reading
@@ -109,14 +129,9 @@ pub fn assign_codes(
             value_max: rules.value_max,
         });
     }
-    let usable = |tens: u8, value: u8| {
-        let code = code_for(tens, value);
-        !taken
-            .iter()
-            .any(|t| t.0 == code || reads_alike_turned(&t.0, &code))
-    };
+    let usable = |tens: u8, value: u8| code_is_usable(taken, tens, value);
     let free_for = |value: u8| rules.tens().filter(|&t| usable(t, value)).count();
-    let free_total: usize = (1..=rules.value_max).map(free_for).sum();
+    let free_total = free_code_count(taken, rules);
     if values.len() > free_total {
         return Err(ScoreError::CodeSpaceExhausted { limit: free_total });
     }

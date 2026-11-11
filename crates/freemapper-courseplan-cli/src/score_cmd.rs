@@ -69,6 +69,8 @@ pub enum ScoreCmd {
     /// Suggest control sites
     Suggest {
         project: PathBuf,
+        #[arg(long, value_name = "NAME")]
+        course: Option<String>,
         #[arg(long, value_name = "N")]
         limit: Option<String>,
         #[arg(long, value_name = "MM")]
@@ -219,6 +221,7 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
         ScoreCmd::Link { action } => link(lang, action),
         ScoreCmd::Suggest {
             project,
+            course,
             limit,
             min_distance,
             start,
@@ -226,6 +229,9 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             json,
         } => {
             let mut args = json!({});
+            if let Some(v) = course {
+                args["course"] = json!(v);
+            }
             if let Some(v) = limit {
                 args["limit"] = json!(parse_count(lang, &v)?);
             }

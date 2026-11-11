@@ -137,7 +137,7 @@ async function suggest() {
   const course = courseOf();
   if (!course) return;
   note = "";
-  const answer = await ctx.runScore("score_suggest", {});
+  const answer = await ctx.runScore("score_suggest", { course: course.name });
   if (!answer || ctx.state().course !== course.name) return done("score-suggest");
   results = { ...empty(), course: course.name, candidates: answer.result.candidates, revision: answer.revision };
   ctx.say("editor-score-status-suggested");

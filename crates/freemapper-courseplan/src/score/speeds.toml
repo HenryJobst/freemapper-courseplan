@@ -19,6 +19,12 @@ codes = ["201", "301", "307", "410", "520", "521", "709", "714"]
 kind = "block"
 codes = ["515", "518", "529", "708"]
 
+# The railway helper of the OOM set (515.1.1, 515.1.2) is a drawing aid beside the rails, not a wall.
+[[class]]
+kind = "ground"
+factor = 1.0
+codes = ["515.1"]
+
 [[class]]
 kind = "cross"
 codes = ["519", "710"]
@@ -57,7 +63,7 @@ codes = ["532"]
 [[class]]
 kind = "ground"
 factor = 1.1
-codes = ["402", "306"]
+codes = ["402", "405", "306"]
 
 [[class]]
 kind = "ground"
@@ -77,7 +83,7 @@ codes = ["310", "406", "414"]
 [[class]]
 kind = "ground"
 factor = 2.0
-codes = ["208", "405", "409"]
+codes = ["208", "409"]
 
 [[class]]
 kind = "ground"

@@ -969,6 +969,19 @@ impl Localize for EditError {
                 &[("code", v(code))],
             ),
             EditError::BadTimeLimit => text(lang, "error-edit-bad-time-limit", &[]),
+            EditError::ValueMaxBelowControl {
+                value_max,
+                code,
+                value,
+            } => text(
+                lang,
+                "error-edit-value-max-below-control",
+                &[
+                    ("value_max", v(value_max)),
+                    ("code", v(code)),
+                    ("value", v(value)),
+                ],
+            ),
             EditError::Score(e) => e.localize(lang),
         }
     }
@@ -1733,6 +1746,11 @@ mod tests {
             EditError::CodeCarriesNoValue(code("A1")),
             EditError::DuplicateScoreControl(code("31")),
             EditError::BadTimeLimit,
+            EditError::ValueMaxBelowControl {
+                value_max: 3,
+                code: code("35"),
+                value: 5,
+            },
             EditError::Score(ScoreError::BadValue {
                 value: 7,
                 value_max: 5,

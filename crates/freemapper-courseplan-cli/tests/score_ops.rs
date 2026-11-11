@@ -245,7 +245,9 @@ fn failed_draft_exits_with_one_and_names_the_hint() {
     assert!(e.starts_with("error: "), "{e}");
     assert!(e.contains("percentage points"), "{e}");
     assert!(
-        e.contains("would help") || e.contains("Check the start"),
+        e.contains("would help")
+            || e.contains("Check the start")
+            || e.contains("Raise the highest value"),
         "{e}"
     );
     assert_eq!(std::fs::read(&project).unwrap(), before);
@@ -320,6 +322,54 @@ fn start_inside_a_building_gives_a_sentence() {
     assert_eq!(o.status.code(), Some(1));
     assert!(err(&o).contains("start at"), "{}", err(&o));
     assert!(err(&o).contains("blocked area"), "{}", err(&o));
+}
+
+#[test]
+fn suggest_takes_start_and_finish_from_the_named_course() {
+    // The first start lies inside a building; the course uses the second one.
+    let dir = tempfile::tempdir().unwrap();
+    let project = synthetic::write_project(dir.path(), (-60.0, 0.0), (-92.0, 18.0));
+    let mut text = std::fs::read_to_string(&project).unwrap();
+    text.push_str("\n[[specials]]\nkind = \"start\"\nid = \"S2\"\nmap_mm = [-92.0, -18.0]\n");
+    std::fs::write(&project, text).unwrap();
+    let made = run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--start",
+        "S2",
+        "--apply",
+    ]);
+    assert_eq!(made.status.code(), Some(0), "{}", err(&made));
+    let plain = run(&["score", "suggest", p(&project)]);
+    assert_eq!(
+        plain.status.code(),
+        Some(1),
+        "the first start is unreachable"
+    );
+    let v = json_of(&run(&[
+        "score",
+        "suggest",
+        p(&project),
+        "--course",
+        "Sc",
+        "--json",
+    ]));
+    assert!(v["count"].as_u64().unwrap() > 0);
+    assert_eq!(v["start"]["x"].as_f64().unwrap(), -92.0);
+    let (is_error, text) = mcp(
+        "score_suggest",
+        json!({"project": p(&project), "course": "Sc"}),
+    );
+    assert!(!is_error, "{text}");
+    let (is_error, _) = mcp(
+        "score_suggest",
+        json!({"project": p(&project), "course": "Nope"}),
+    );
+    assert!(is_error);
 }
 
 #[test]

@@ -266,6 +266,24 @@ pub fn set_score_settings(
     apply(event, |e| {
         let mut s = e.score_settings();
         if let Some(v) = change.value_max {
+            // A control that already carries a higher value would be out of range.
+            let highest = e
+                .courses
+                .iter()
+                .filter_map(|c| match &c.kind {
+                    CourseKind::Score { controls, .. } => Some(controls),
+                    _ => None,
+                })
+                .flatten()
+                .filter(|c| c.value > u32::from(v))
+                .max_by_key(|c| c.value);
+            if let Some(c) = highest {
+                return Err(EditError::ValueMaxBelowControl {
+                    value_max: v,
+                    code: c.code.clone(),
+                    value: c.value,
+                });
+            }
             s.value_max = v;
         }
         if let Some(v) = change.good_pace_s_per_km {

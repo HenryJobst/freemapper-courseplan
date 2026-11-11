@@ -370,9 +370,9 @@ pub fn suggest_with(
                 .fold(f64::INFINITY, f64::min)
         })
         .collect();
-    // Site, route end, effort in seconds, route choice of the leg from the start.
+    // Site, effort in seconds, route choice of the leg from the start.
     let max_ratio = RouteParams::default().max_length_ratio;
-    let mut kept: Vec<(&Site, MapPoint, f64, f64)> = Vec::new();
+    let mut kept: Vec<(&Site, f64, f64)> = Vec::new();
     let mut used = vec![false; pool.len()];
     let mut tries = 0;
     while kept.len() < ctx.limit.saturating_mul(SITES_PER_LIMIT)
@@ -394,11 +394,14 @@ pub fn suggest_with(
         tries += 1;
         let (site, end) = pool[i].clone();
         used[i] = true;
-        // Reachable: from the start on the fine surface (effort), to the finish and from the start with
-        // alternatives on the coarse one (route choice).
+        // Reachable: from the start on the fine surface (effort, from the free place `end`), to the finish
+        // and from the start with alternatives on the coarse one, routed from the site itself as the
+        // tours do (route choice).
         let reachable = match fine.fastest(ctx.start.clone(), end.clone()) {
-            Ok(route) => match coarse.fastest(end.clone(), ctx.finish.clone()) {
-                Ok(_) => choice_of(coarse, &ctx.start, &end, max_ratio)?.map(|c| (route.time_s, c)),
+            Ok(route) => match coarse.fastest(site.at.clone(), ctx.finish.clone()) {
+                Ok(_) => {
+                    choice_of(coarse, &ctx.start, &site.at, max_ratio)?.map(|c| (route.time_s, c))
+                }
                 Err(ScoreError::Unreachable { .. }) => None,
                 Err(e) => return Err(e),
             },
@@ -410,13 +413,13 @@ pub fn suggest_with(
             near[j] = near[j].min(dist(&other.at, &site.at));
         }
         if let Some((effort, choice)) = reachable {
-            kept.push((site, end, effort, choice));
+            kept.push((site, effort, choice));
         }
     }
     let n = kept.len();
     let mut pairs: BTreeMap<(usize, usize), Option<f64>> = BTreeMap::new();
     let mut out = Vec::with_capacity(n);
-    for (i, (site, _, effort_s, start_choice)) in kept.iter().enumerate() {
+    for (i, (site, effort_s, start_choice)) in kept.iter().enumerate() {
         let mut values = vec![*start_choice];
         let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
         others.sort_by(|&a, &b| {
@@ -429,7 +432,7 @@ pub fn suggest_with(
             let value = match pairs.get(&key) {
                 Some(v) => *v,
                 None => {
-                    let v = choice_of(coarse, &kept[key.0].1, &kept[key.1].1, max_ratio)?;
+                    let v = choice_of(coarse, &kept[key.0].0.at, &kept[key.1].0.at, max_ratio)?;
                     pairs.insert(key, v);
                     v
                 }

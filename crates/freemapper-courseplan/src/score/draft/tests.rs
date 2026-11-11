@@ -37,6 +37,27 @@ impl TravelTime for Enclosed {
     }
 }
 
+/// Straight lines, but nothing can be reached from or to `lost`.
+struct Lossy {
+    s_per_unit: f64,
+    lost: MapPoint,
+}
+
+impl TravelTime for Lossy {
+    fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
+        if from == self.lost || to == self.lost {
+            return Err(ScoreError::Unreachable { from, to });
+        }
+        Fake {
+            s_per_unit: self.s_per_unit,
+        }
+        .legs(from, to)
+    }
+    fn passable(&self, p: MapPoint) -> bool {
+        p != self.lost
+    }
+}
+
 const GOOD: Fake = Fake { s_per_unit: 1.11 };
 const VERY_GOOD: Fake = Fake { s_per_unit: 1.0 };
 
@@ -473,4 +494,52 @@ fn a_draft_raises_no_mix_finding_at_the_default_settings() {
         assert!(report.findings.is_empty(), "{:?}", report.findings);
     }
     assert!(drafts >= 2, "only {drafts} fixtures give a draft");
+}
+
+#[test]
+fn a_pool_cut_short_by_the_code_space_asks_for_codes_not_for_the_map() {
+    // value_max 1 leaves 7 codes; the ring has 20 sites and the limit fits every one of them.
+    let cands = ring(20);
+    let mut w = World::new(cands.clone(), too_long(&cands));
+    w.settings.value_max = 1;
+    let f = w.run().expect_err("seven codes cannot cover twenty sites");
+    assert_eq!(f.hint, Hint::CodeSpace);
+    assert_eq!(f.best.controls.len(), 7);
+    // Codes outside the value range take no room: 36 and 37 are no codes of value 1 to 5... but 31 is.
+    w.taken = vec![ControlCode("31".into())];
+    let f = w.run().expect_err("six codes left");
+    assert_eq!(f.hint, Hint::CodeSpace);
+    assert_eq!(f.best.controls.len(), 6);
+}
+
+#[test]
+fn a_candidate_without_a_route_from_its_position_is_left_out() {
+    let mut cands = grid(4);
+    let lost = pt(5000.0, 5000.0);
+    cands.push(Candidate {
+        effort_s: 10.0,
+        ..cand(5000.0, 5000.0, 0.5)
+    });
+    let limit = ok_limit(&grid(4));
+    let good = Lossy {
+        s_per_unit: 1.11,
+        lost: lost.clone(),
+    };
+    let very_good = Lossy {
+        s_per_unit: 1.0,
+        lost: lost.clone(),
+    };
+    let d = draft(&DraftRequest {
+        candidates: &cands,
+        travel_good: &good,
+        travel_very_good: &very_good,
+        start: pt(0.0, 0.0),
+        finish: pt(0.0, 0.0),
+        limit_min: limit,
+        links: &[],
+        settings: &ScoreSettings::default(),
+        taken: &[],
+    })
+    .expect("the lost candidate must not block the draft");
+    assert!(d.controls.iter().all(|c| c.at != lost));
 }

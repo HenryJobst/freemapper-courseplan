@@ -1858,3 +1858,34 @@ fn individual_ops_still_refuse_team_and_relay() {
     remove_course(&mut e, "Score").unwrap();
     assert!(e.courses.iter().all(|c| c.name != "Score"));
 }
+
+#[test]
+fn value_max_below_a_control_value_is_refused() {
+    let mut e = score_event();
+    let before = e.clone();
+    // 33 is worth 3: a highest value of 2 would leave it out of range; 3 is fine.
+    assert_eq!(
+        set_score_settings(
+            &mut e,
+            &ScoreSettingsChange {
+                value_max: Some(2),
+                ..Default::default()
+            }
+        ),
+        Err(EditError::ValueMaxBelowControl {
+            value_max: 2,
+            code: code("33"),
+            value: 3,
+        })
+    );
+    assert_eq!(e, before);
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            value_max: Some(3),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(stored.value_max, 3);
+}

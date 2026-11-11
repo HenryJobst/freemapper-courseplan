@@ -525,3 +525,52 @@ fn sixty_controls_finish_in_seconds() {
     );
     assert!(el.as_secs() < 10);
 }
+
+/// Straight lines, except that nothing can be reached from or to `lost`.
+struct Lossy {
+    lost: MapPoint,
+}
+
+impl TravelTime for Lossy {
+    fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
+        if from == self.lost || to == self.lost {
+            return Err(ScoreError::Unreachable { from, to });
+        }
+        FAKE.legs(from, to)
+    }
+    fn passable(&self, p: MapPoint) -> bool {
+        p != self.lost
+    }
+}
+
+#[test]
+fn an_unreachable_control_never_gives_an_infinite_over_limit_percent() {
+    // More than 12 controls, so the heuristic runs; the unlimited solve must not take the lost one.
+    let mut cs = scatter(14, 7);
+    cs.push(sc(999.0, 999.0, 3));
+    let travel = Lossy {
+        lost: pt(999.0, 999.0),
+    };
+    let r = analyse_length(
+        &cs,
+        &[],
+        &travel,
+        &travel,
+        pt(0.0, 0.0),
+        pt(0.0, 0.0),
+        100_000.0,
+        &ScoreSettings::default(),
+    )
+    .unwrap();
+    assert!(
+        r.issues
+            .iter()
+            .any(|i| matches!(i, LengthIssue::VeryGoodMissesControls { .. }))
+    );
+    for issue in &r.issues {
+        if let LengthIssue::VeryGoodOverLimit { percent } = issue {
+            panic!("an unreachable control must not give an over-limit percent: {percent}");
+        }
+    }
+    assert!(r.good.time_s.is_finite() && r.very_good.time_s.is_finite());
+}

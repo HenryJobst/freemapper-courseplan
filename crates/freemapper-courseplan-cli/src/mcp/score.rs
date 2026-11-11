@@ -145,6 +145,12 @@ fn area_specials(event: &Event, course: Option<&str>) -> Vec<SpecialObject> {
         .collect()
 }
 
+/// Rounds to `places` decimals so CLI, MCP and the editor table show the same short numbers.
+fn round_to(value: f64, places: i32) -> f64 {
+    let f = 10f64.powi(places);
+    (value * f).round() / f
+}
+
 fn polygons(specials: &[SpecialObject]) -> Vec<Vec<MapPoint>> {
     specials
         .iter()
@@ -273,9 +279,31 @@ impl CoursePlanServer {
         let world = self.score_world(&file)?;
         let event = &file.event;
         let settings = event.score_settings();
-        let (_, start) = self.end_point(event, req.start.as_ref().map(|n| n.0.as_str()), false)?;
-        let (_, finish) = self.end_point(event, req.finish.as_ref().map(|n| n.0.as_str()), true)?;
-        let specials = area_specials(event, None);
+        // A course names its own start and finish; given ids win over it.
+        let (course_start, course_finish) = match &req.course {
+            Some(name) => match event.courses.iter().find(|c| c.name == name.0) {
+                Some(c) if matches!(c.kind, CourseKind::Score { .. }) => {
+                    (Some(c.start.clone()), Some(c.finish.clone()))
+                }
+                Some(_) => {
+                    return Err(self.refused(edit::EditError::NotScoreCourse {
+                        course: name.0.clone(),
+                    }));
+                }
+                None => {
+                    return Err(self.refused(edit::EditError::NotFound {
+                        what: "course",
+                        id: name.0.clone(),
+                    }));
+                }
+            },
+            None => (None, None),
+        };
+        let start_id = req.start.as_ref().map(|n| n.0.clone()).or(course_start);
+        let finish_id = req.finish.as_ref().map(|n| n.0.clone()).or(course_finish);
+        let (_, start) = self.end_point(event, start_id.as_deref(), false)?;
+        let (_, finish) = self.end_point(event, finish_id.as_deref(), true)?;
+        let specials = area_specials(event, req.course.as_ref().map(|n| n.0.as_str()));
         let surfaces = self.surfaces(&world, &settings, &polygons(&specials))?;
         let existing: Vec<MapPoint> = event.controls.iter().map(|c| c.map_mm.clone()).collect();
         let min_distance_mm = self.min_distance_mm(req.min_distance_mm, world.scale)?;
@@ -329,9 +357,9 @@ impl CoursePlanServer {
                     "at": point_json(&c.at),
                     "code": code,
                     "symbol_code": c.symbol_code,
-                    "route_choice": c.route_choice,
-                    "difficulty": c.difficulty,
-                    "effort_s": c.effort_s,
+                    "route_choice": round_to(c.route_choice, 2),
+                    "difficulty": round_to(c.difficulty, 2),
+                    "effort_s": round_to(c.effort_s, 1),
                     "value": value,
                 })
             })
@@ -339,7 +367,7 @@ impl CoursePlanServer {
         Ok(json!({
             "start": point_json(&start),
             "finish": point_json(&finish),
-            "min_distance_mm": min_distance_mm,
+            "min_distance_mm": round_to(min_distance_mm, 1),
             "count": list.len(),
             "candidates": list,
         }))
@@ -561,6 +589,7 @@ impl CoursePlanServer {
                 Hint::LimitUp => "score-draft-hint-limit-up",
                 Hint::LimitDown => "score-draft-hint-limit-down",
                 Hint::MoreCandidates => "score-draft-hint-more-candidates",
+                Hint::CodeSpace => "score-draft-hint-code-space",
                 Hint::FasterProfile => "score-draft-hint-faster-profile",
                 Hint::Impossible => "score-draft-hint-impossible",
             },
@@ -848,9 +877,9 @@ impl CoursePlanServer {
                     "at": point_json(&x.at),
                     "hard": x.hard,
                     "symbol_code": cand.symbol_code,
-                    "route_choice": cand.route_choice,
-                    "difficulty": cand.difficulty,
-                    "effort_s": cand.effort_s,
+                    "route_choice": round_to(cand.route_choice, 2),
+                    "difficulty": round_to(cand.difficulty, 2),
+                    "effort_s": round_to(cand.effort_s, 1),
                 })
             })
             .collect();

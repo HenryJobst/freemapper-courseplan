@@ -129,7 +129,8 @@ fn polish(p: &Problem, seq: &mut Seq, rng: &mut Rng) {
                 let (pos, rev, _) = best_insertion(p, &trial, v);
                 trial.insert(pos, (v, rev));
                 two_opt(p, &mut trial);
-                if p.eval(&trial) > p.limit + EPS {
+                let time = p.eval(&trial);
+                if !time.is_finite() || time > p.limit + EPS {
                     continue;
                 }
                 fill(p, &mut trial, rng, false);

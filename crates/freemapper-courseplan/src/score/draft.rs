@@ -8,8 +8,7 @@ use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings};
 
 use crate::score::ScoreError;
 use crate::score::candidates::Candidate;
-use crate::score::code::code_space;
-use crate::score::points::{CodeRules, assign_codes, assign_values};
+use crate::score::points::{CodeRules, assign_codes, assign_values, free_code_count};
 use crate::score::tour::{LengthIssue, LengthReport, ScoredControl, Tour, analyse_length};
 use crate::score::travel::TravelTime;
 
@@ -72,6 +71,8 @@ pub enum Hint {
     LimitUp,
     LimitDown,
     MoreCandidates,
+    /// Every free code is in use before the bands are met: raise `value_max` or free codes on the map.
+    CodeSpace,
     FasterProfile,
     /// The inputs cannot work at all (no route from the start, links that are no chain); see `error`.
     Impossible,
@@ -318,7 +319,7 @@ fn slot(forced: &mut Vec<usize>, c: usize) -> usize {
     })
 }
 
-fn hint_for(r: &LengthReport, pool_too_short: bool) -> Hint {
+fn hint_for(r: &LengthReport, pool_too_short: bool, code_bound: bool) -> Hint {
     let has = |f: fn(&LengthIssue) -> bool| r.issues.iter().any(f);
     if has(|i| {
         matches!(
@@ -329,7 +330,11 @@ fn hint_for(r: &LengthReport, pool_too_short: bool) -> Hint {
         return Hint::LimitUp;
     }
     if pool_too_short {
-        return Hint::MoreCandidates;
+        return if code_bound {
+            Hint::CodeSpace
+        } else {
+            Hint::MoreCandidates
+        };
     }
     if has(|i| matches!(i, LengthIssue::GoodBelow { .. })) {
         return Hint::FasterProfile;
@@ -349,8 +354,14 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
             Err(e) => return Err(plain_failure(Hint::Impossible, Some(e))),
         }
     }
+    // A candidate whose every leg from its own position is infinite would block every larger count.
     let pool: Vec<usize> = (0..req.candidates.len())
         .filter(|&i| req.candidates[i].effort_s.is_finite())
+        .filter(|&i| {
+            req.travel_very_good
+                .fastest(req.candidates[i].at.clone(), req.finish.clone())
+                .is_ok()
+        })
         .collect();
     if pool.is_empty() {
         return Err(plain_failure(Hint::MoreCandidates, None));
@@ -376,12 +387,19 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
         }
         links.push((slot(&mut forced, ca), slot(&mut forced, cb)));
     }
-    // Codes the map has already take room from the space; per-value room is checked per count.
-    let free_codes = code_space(s.value_max).saturating_sub(req.taken.len());
+    // Codes the map has already take room from the space (as `assign_codes` counts them); per-value room
+    // is checked per count.
+    let free_codes = free_code_count(req.taken, &CodeRules::from_settings(s));
+    let code_bound = free_codes < pool.len();
     let max_k = pool.len().min(free_codes);
     let min_k = forced.len().max(1);
     if min_k > max_k {
-        return Err(plain_failure(Hint::MoreCandidates, None));
+        let hint = if code_bound {
+            Hint::CodeSpace
+        } else {
+            Hint::MoreCandidates
+        };
+        return Err(plain_failure(hint, None));
     }
     let search = Search {
         req,
@@ -467,7 +485,7 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     if chosen.ok {
         return Ok(draft);
     }
-    let hint = hint_for(&draft.report, chosen.pool_too_short);
+    let hint = hint_for(&draft.report, chosen.pool_too_short, code_bound);
     Err(DraftFailure {
         issues: draft.report.issues.clone(),
         best: Box::new(draft),
