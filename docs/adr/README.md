@@ -86,8 +86,8 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0040](0040-ppen-sync-three-way-merge-on-the-purple-pen-view.md) | The Purple Pen sync is a three-way merge on the Purple Pen view | Accepted | 2026-11-10 |
 | [0041](0041-reader-tests-against-the-suite-contract.md) | Reader tests against the suite contract | Accepted | 2026-11-10 |
 | [0042](0042-editor-server-and-security.md) | Editor server: one process per project, a shared shell, and guarded requests | Accepted | 2026-11-11 |
+| [0043](0043-editor-operations-revision-and-undo.md) | Editor operations, revision guard and undo | Accepted | 2026-11-11 |
 | [0044](0044-save-refuses-a-changed-project-file.md) | Save refuses a project file that changed since it was read | Accepted | 2026-11-11 |
 | [0045](0045-editor-front-end.md) | Editor front end: plain modules, one SVG, texts from the server | Accepted | 2026-11-11 |
 | [0046](0046-editor-overlay-and-map-view.md) | Editor: course symbols from the server, map behind a view interface | Accepted | 2026-11-11 |
 
-Number 0043 is reserved for the editor's operations (stage 2 of the editor plan).

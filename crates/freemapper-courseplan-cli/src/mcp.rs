@@ -1694,7 +1694,6 @@ impl CoursePlanServer {
 
 /// Tools the browser editor may run as operations: they edit the project and take only plain
 /// arguments besides the project.
-#[allow(dead_code)]
 pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "add_control",
     "move_control",
@@ -1723,7 +1722,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
 
 /// Tools the editor does not run as operations: they take file paths, or they are reads served
 /// by dedicated routes. A new MCP tool must join one of the two lists (a test enforces it).
-#[allow(dead_code)]
+#[cfg(test)]
 pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
     "init_event",
     "export_iof_xml",
@@ -1741,7 +1740,6 @@ pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
 ];
 
 /// Why `call_json` did not run a tool.
-#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub(crate) enum OpError {
     UnknownTool,
@@ -1750,7 +1748,6 @@ pub(crate) enum OpError {
     Refused(String),
 }
 
-#[allow(dead_code)]
 impl CoursePlanServer {
     /// Runs one tool by name on `project` with JSON arguments, as the MCP tool would. `args`
     /// must not carry `project`; unknown fields are refused by the tool's parameter type.

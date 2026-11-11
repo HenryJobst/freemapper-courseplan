@@ -1073,3 +1073,380 @@ mod state {
         assert_eq!(same["project"], first["project"]);
     }
 }
+
+mod history {
+    use crate::editor::history::{HistoryError, MAX_STEPS, UndoHistory};
+
+    #[test]
+    fn history_keeps_100_steps() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("f.toml");
+        let mut history = UndoHistory::default();
+        for i in 0..MAX_STEPS + 20 {
+            history.record(format!("s{i}"), format!("t{i}"), format!("t{}", i + 1));
+        }
+        std::fs::write(&path, format!("t{}", MAX_STEPS + 20)).unwrap();
+        let mut undone = 0;
+        while history.undo(&path).is_ok() {
+            undone += 1;
+            // The file follows the chain backwards.
+            let want = format!("t{}", MAX_STEPS + 20 - undone);
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), want);
+        }
+        assert_eq!(undone, 100);
+        assert_eq!(history.undo(&path), Err(HistoryError::Nothing));
+        assert_eq!(history.redo(&path).as_deref(), Ok("s20"));
+    }
+}
+
+mod ops {
+    use super::state::project;
+    use super::*;
+    use serde_json::{Value, json};
+
+    fn router_for(path: &std::path::Path) -> axum::Router {
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
+    }
+
+    async fn send(
+        app: &axum::Router,
+        method: &str,
+        uri: &str,
+        revision: Option<&str>,
+        body: Value,
+    ) -> (StatusCode, Value) {
+        let mut request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", "application/json");
+        if let Some(revision) = revision {
+            request = request.header("x-courseplan-revision", revision);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::from(body.to_string())).unwrap())
+            .await
+            .unwrap();
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        )
+    }
+
+    async fn state(app: &axum::Router) -> Value {
+        send(app, "GET", "/tok/api/state", None, json!({})).await.1
+    }
+
+    async fn op(
+        app: &axum::Router,
+        tool: &str,
+        revision: &str,
+        body: Value,
+    ) -> (StatusCode, Value) {
+        send(
+            app,
+            "POST",
+            &format!("/tok/api/op/{tool}"),
+            Some(revision),
+            body,
+        )
+        .await
+    }
+
+    fn centre(state: &Value) -> Value {
+        let e = &state["map"]["extent"];
+        json!({
+            "x": (e[0][0].as_f64().unwrap() + e[1][0].as_f64().unwrap()) / 2.0,
+            "y": (e[0][1].as_f64().unwrap() + e[1][1].as_f64().unwrap()) / 2.0,
+        })
+    }
+
+    /// A project with a commented line, an app on it, and the first state.
+    async fn setup() -> (tempfile::TempDir, std::path::PathBuf, axum::Router, Value) {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project(dir.path());
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, format!("# keep this comment\n{text}")).unwrap();
+        let app = router_for(&path);
+        let first = state(&app).await;
+        (dir, path, app, first)
+    }
+
+    fn controls_in(path: &std::path::Path) -> usize {
+        std::fs::read_to_string(path)
+            .unwrap()
+            .matches("[[controls]]")
+            .count()
+    }
+
+    #[tokio::test]
+    async fn op_moves_a_control_and_returns_the_new_revision() {
+        let (_dir, path, app, first) = setup().await;
+        let at = centre(&first);
+        let (status, added) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": at}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{added}");
+        let code = added["result"]["code"].as_str().unwrap().to_owned();
+        let revision = added["revision"].as_str().unwrap().to_owned();
+        assert_ne!(revision, first["revision"].as_str().unwrap());
+        let to = json!({"x": at["x"].as_f64().unwrap() + 2.0, "y": at["y"]});
+        let (status, moved) = op(
+            &app,
+            "move_control",
+            &revision,
+            json!({"code": code, "at": to}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{moved}");
+        let now = state(&app).await;
+        assert_eq!(now["revision"], moved["revision"]);
+        assert_eq!(now["event"]["controls"][0]["map_mm"][0], to["x"]);
+        assert_eq!(controls_in(&path), 1);
+        assert!(now["undo"]["undo"].as_str().unwrap().contains("Move"));
+    }
+
+    #[tokio::test]
+    async fn stale_revision_is_refused_and_file_unchanged() {
+        let (_dir, path, app, first) = setup().await;
+        let at = centre(&first);
+        let (status, _) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": at}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let bytes = std::fs::read(&path).unwrap();
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": at}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["revision"], state(&app).await["revision"]);
+        assert!(body["error"].as_str().unwrap().contains("outside"));
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        // A change by another program is just as stale.
+        let mut other = bytes.clone();
+        other.extend_from_slice(b"\n# other\n");
+        std::fs::write(&path, &other).unwrap();
+        let (status, _) = op(
+            &app,
+            "add_control",
+            state(&app).await["revision"].as_str().unwrap(),
+            json!({"at": at}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = op(&app, "add_control", "0000000000000000", json!({"at": at})).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn refused_edit_is_422_and_file_byte_identical() {
+        let (_dir, path, app, first) = setup().await;
+        let bytes = std::fs::read(&path).unwrap();
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": {"x": 1.0e6, "y": 1.0e6}}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(!body["error"].as_str().unwrap().is_empty());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert!(state(&app).await["undo"]["undo"].is_null());
+        // Bad arguments are the caller's fault.
+        let (status, _) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"nope": 1}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let (status, _) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": {"x": 1.0, "y": 1.0}, "project": "x"}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn unknown_or_excluded_tool_is_404() {
+        let (_dir, path, app, first) = setup().await;
+        let bytes = std::fs::read(&path).unwrap();
+        for tool in ["init_event", "nope", "check", "export_ppen"] {
+            let (status, _) = op(&app, tool, first["revision"].as_str().unwrap(), json!({})).await;
+            assert_eq!(status, StatusCode::NOT_FOUND, "{tool}");
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    }
+
+    #[tokio::test]
+    async fn undo_restores_the_exact_bytes_and_redo_reapplies() {
+        let (_dir, path, app, first) = setup().await;
+        let original = std::fs::read(&path).unwrap();
+        let at = centre(&first);
+        let (_, added) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": at}),
+        )
+        .await;
+        let after = std::fs::read(&path).unwrap();
+        assert_ne!(after, original);
+        let (status, undone) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        assert_eq!(status, StatusCode::OK, "{undone}");
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert!(
+            std::fs::read_to_string(&path)
+                .unwrap()
+                .starts_with("# keep this comment")
+        );
+        assert_eq!(undone["revision"], first["revision"]);
+        let now = state(&app).await;
+        assert!(now["undo"]["undo"].is_null() && now["undo"]["redo"].is_string());
+        let (status, redone) = send(&app, "POST", "/tok/api/redo", None, json!({})).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(std::fs::read(&path).unwrap(), after);
+        assert_eq!(redone["revision"], added["revision"]);
+        let (status, _) = send(&app, "POST", "/tok/api/redo", None, json!({})).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert!(!dir_has_tmp(&path));
+    }
+
+    fn dir_has_tmp(path: &std::path::Path) -> bool {
+        std::fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .any(|e| e.unwrap().file_name().to_string_lossy().ends_with(".tmp"))
+    }
+
+    #[tokio::test]
+    async fn undo_after_external_change_is_refused_and_clears_history() {
+        let (_dir, path, app, first) = setup().await;
+        let (_, _) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        let mut other = std::fs::read(&path).unwrap();
+        other.extend_from_slice(b"\n# someone else\n");
+        std::fs::write(&path, &other).unwrap();
+        let (status, body) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(std::fs::read(&path).unwrap(), other);
+        let now = state(&app).await;
+        assert!(now["undo"]["undo"].is_null() && now["undo"]["redo"].is_null());
+        let (status, _) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(std::fs::read(&path).unwrap(), other);
+    }
+
+    #[tokio::test]
+    async fn broken_file_blocks_edits_until_fixed() {
+        let (_dir, path, app, first) = setup().await;
+        let good = std::fs::read(&path).unwrap();
+        std::fs::write(&path, "this is [not toml").unwrap();
+        let broken = state(&app).await;
+        assert!(broken["error"].is_string());
+        let (status, body) = op(
+            &app,
+            "add_control",
+            broken["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(body["error"], broken["error"]);
+        assert_eq!(std::fs::read(&path).unwrap(), b"this is [not toml");
+        std::fs::write(&path, &good).unwrap();
+        let fixed = state(&app).await;
+        assert!(fixed["error"].is_null());
+        let (status, _) = op(
+            &app,
+            "add_control",
+            fixed["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn ops_run_one_at_a_time() {
+        let (_dir, path, app, first) = setup().await;
+        let revision = first["revision"].as_str().unwrap().to_owned();
+        let at = centre(&first);
+        let mut tasks = Vec::new();
+        for _ in 0..20 {
+            let (app, revision, at) = (app.clone(), revision.clone(), at.clone());
+            tasks.push(tokio::spawn(async move {
+                op(&app, "add_control", &revision, json!({"at": at}))
+                    .await
+                    .0
+            }));
+        }
+        let mut ok = 0;
+        for task in tasks {
+            match task.await.unwrap() {
+                StatusCode::OK => ok += 1,
+                StatusCode::CONFLICT => {}
+                other => panic!("{other}"),
+            }
+        }
+        // All 20 saw the same revision, so exactly the first one in wins and no control is lost or doubled.
+        assert_eq!(ok, 1);
+        assert_eq!(controls_in(&path), ok);
+        // The same with revisions that are fresh when sent: every success is in the file.
+        let mut ok = 0;
+        for _ in 0..5 {
+            let mut tasks = Vec::new();
+            let now = state(&app).await["revision"].as_str().unwrap().to_owned();
+            for _ in 0..8 {
+                let (app, now, at) = (app.clone(), now.clone(), at.clone());
+                tasks.push(tokio::spawn(async move {
+                    op(&app, "add_control", &now, json!({"at": at})).await.0
+                }));
+            }
+            for task in tasks {
+                if task.await.unwrap() == StatusCode::OK {
+                    ok += 1;
+                }
+            }
+        }
+        assert_eq!(controls_in(&path), 1 + ok);
+        assert!(ok >= 5);
+    }
+
+    #[test]
+    fn every_editor_tool_has_an_undo_label_in_both_languages() {
+        for lang in available() {
+            for tool in crate::mcp::EDITOR_TOOLS {
+                let id = format!("editor-op-{}", tool.replace('_', "-"));
+                let label = freemapper_courseplan::text::text(&lang, &id, &[]);
+                assert!(!label.is_empty() && label != id, "{}: {id}", lang.code());
+            }
+        }
+    }
+}

@@ -10,8 +10,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
+use axum::body::Bytes;
 use axum::extract::{Path, RawQuery, State};
-use axum::http::{StatusCode, header};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, TEXTS, text};
@@ -20,10 +21,12 @@ use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
 use rust_embed::RustEmbed;
 use tokio::sync::{Mutex, Notify};
 
+use crate::mcp::CoursePlanServer;
 use api::Loaded;
 use map_view::{FileStamp, MapCache, MapResult, MapViewError, PageRect, load_map};
 
 mod api;
+mod history;
 mod map_view;
 mod overlay;
 #[cfg(test)]
@@ -54,6 +57,10 @@ pub(crate) struct EditorState {
     pub lang: Lang,
     /// The map built from the project's map file.
     pub map: MapCache,
+    /// The steps undo and redo can take back (ADR 0043).
+    pub history: history::UndoHistory,
+    /// The MCP tools, which are the editor's operations.
+    pub server: CoursePlanServer,
 }
 
 impl EditorState {
@@ -65,8 +72,10 @@ impl EditorState {
             project,
             loaded,
             stamp,
-            lang,
             map: MapCache::new(note),
+            history: history::UndoHistory::default(),
+            server: CoursePlanServer::new(lang.clone()),
+            lang,
         }
     }
 }
@@ -85,6 +94,9 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
+        .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
+        .route(&format!("{prefix}/api/undo"), post(api_undo))
+        .route(&format!("{prefix}/api/redo"), post(api_redo))
         .route(&format!("{prefix}/api/quit"), post(quit).with_state(stop))
         .with_state(state)
 }
@@ -177,11 +189,62 @@ async fn map_of(state: &Shared, loaded: &Loaded) -> MapResult {
 async fn api_state(State(state): State<Shared>) -> Response {
     let loaded = refreshed(&state).await;
     let map = map_of(&state, &loaded).await;
+    let undo = {
+        let guard = state.lock().await;
+        let (undo, redo) = guard.history.labels();
+        (undo.map(str::to_owned), redo.map(str::to_owned))
+    };
     blocking_response(move || {
         let map = map.as_ref().map(|m| &**m).map_err(String::as_str);
-        axum::Json(api::state_json(&loaded, map)).into_response()
+        let undo = (undo.0.as_deref(), undo.1.as_deref());
+        axum::Json(api::state_json(&loaded, map, undo)).into_response()
     })
     .await
+}
+
+/// Runs `work` on the blocking pool with the state locked for the whole operation: operations run one at a
+/// time, and the file is read, changed and read again without anyone else's step in between.
+async fn serialized(
+    state: Shared,
+    work: impl FnOnce(&mut EditorState) -> api::Reply + Send + 'static,
+) -> Response {
+    let mut guard = state.lock_owned().await;
+    blocking_response(move || {
+        let (status, body) = work(&mut guard);
+        (status, axum::Json(body)).into_response()
+    })
+    .await
+}
+
+/// `POST api/op/{tool}`: one of the editor's operations. The body holds the tool's arguments without
+/// `project`; the header `X-Courseplan-Revision` names the revision the page saw.
+async fn api_op(
+    State(state): State<Shared>,
+    Path(tool): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let revision = headers
+        .get("x-courseplan-revision")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned);
+    let args = if body.is_empty() {
+        Some(serde_json::json!({}))
+    } else {
+        serde_json::from_slice(&body).ok()
+    };
+    serialized(state, move |st| {
+        api::run_op(st, &tool, revision.as_deref(), args)
+    })
+    .await
+}
+
+async fn api_undo(State(state): State<Shared>) -> Response {
+    serialized(state, |st| api::run_history(st, false)).await
+}
+
+async fn api_redo(State(state): State<Shared>) -> Response {
+    serialized(state, |st| api::run_history(st, true)).await
 }
 
 async fn api_revision(State(state): State<Shared>) -> Response {
