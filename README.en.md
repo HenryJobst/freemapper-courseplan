@@ -78,7 +78,7 @@ assistant that can run commands (Claude Code, Codex) can also do the download it
 freemapper-courseplan is in early development. On a sprint or schoolyard map (`.omap`) you can already set whole
 individual courses. `freemapper-courseplan init <map>` creates the project file. With `control`, `special`,
 `class` and `course` you add controls, start, finish, classes and courses, set bends and have the control numbers
-placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course.
+placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course; `list` and `map` report the details and the map, and `--json` gives the same answer as the MCP tools.
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up, and [`AGENTS.md`](AGENTS.md) tells the assistant
 how to install and use the program itself. The project file is TOML, and

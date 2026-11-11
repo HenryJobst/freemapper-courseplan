@@ -114,7 +114,7 @@ there.
   flag. The assistant gets a list of these legs.
 - Only individual courses can be edited and measured so far. For team, relay and score courses the program
   says so.
-- The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did.
+- The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did, and `list controls|courses|specials|classes <project>` lists the details; `map extent <project>` and `map near <project> --at X,Y --radius MM` report the map. All of them take `--json`.
 
 ## 4. The editor
 
@@ -511,7 +511,7 @@ analysis can say whether it does.
 - The rule applies only to another discipline, map kind or print scale.
 - An overlay switched the rule off; the reason names it, such as "rule profile nor-bb-2021 switches the rule
   off".
-- A value is missing. `event start-window hall.courseplan.toml 90` sets the start window, `class set
+- A value is missing. `event start-window hall.courseplan.toml 90` sets the start window (`--none` instead of the minutes removes it), `class set
   hall.courseplan.toml H21 --starters 40` the expected starters of a class, and `course set hall.courseplan.toml A
   --climb 120` the climb of a course.
 - A class has no rule category, for example a name you chose yourself such as "Offen". `class set

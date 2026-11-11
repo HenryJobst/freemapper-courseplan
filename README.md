@@ -78,7 +78,7 @@ freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schul
 ganze Einzelbahnen an. `freemapper-courseplan init <Karte>` erzeugt die Projektdatei. Mit `control`, `special`,
 `class` und `course` legst du Posten, Start, Ziel, Kategorien und Bahnen an, setzt Knickpunkte und lässt die
 Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im Projekt steht, auch die Länge jeder
-Bahn. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
+Bahn; `list` und `map` berichten über Einzelheiten und Karte, und `--json` gibt dieselbe Antwort wie die MCP-Werkzeuge. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten), und [`AGENTS.md`](AGENTS.md) sagt dem
 Assistenten, wie er das Programm selbst installiert und benutzt. Die Projektdatei ist
 TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht

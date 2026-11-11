@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use clap::Subcommand;
+use clap::{ArgGroup, Subcommand};
 use freemapper_courseplan::check::{
     CheckReport, Finding, Location, Skipped, check_event_as, source_text,
 };
@@ -73,8 +73,16 @@ pub enum EventCmd {
         )]
         overlay: Vec<String>,
     },
-    /// Set the start window
-    StartWindow { project: PathBuf, minutes: String },
+    /// Set or remove the start window
+    #[command(group(
+        ArgGroup::new("mode").required(true).args(["minutes", "none"])
+    ))]
+    StartWindow {
+        project: PathBuf,
+        minutes: Option<String>,
+        #[arg(long)]
+        none: bool,
+    },
 }
 
 fn v(value: impl Into<String>) -> FluentValue<'static> {
@@ -418,16 +426,34 @@ pub fn event(lang: &Lang, cmd: EventCmd) -> Outcome {
                 );
             }
         }
-        EventCmd::StartWindow { project, minutes } => {
-            let minutes = parse_count(lang, &minutes)?;
+        EventCmd::StartWindow {
+            project,
+            minutes,
+            none,
+        } => {
+            let minutes = match minutes {
+                Some(minutes) if !none => Some(parse_count(lang, &minutes)?),
+                None if none => None,
+                _ => unreachable!("clap's argument group allows exactly one of them"),
+            };
             let mut file = load(lang, &project)?;
-            edit::set_start_window(&mut file.event, minutes).map_err(|e| refused(lang, e))?;
-            save(lang, &mut file)?;
-            say(
-                lang,
-                "cli-event-start-window-set",
-                &[("minutes", FluentValue::from(minutes))],
-            );
+            match minutes {
+                Some(minutes) => {
+                    edit::set_start_window(&mut file.event, minutes)
+                        .map_err(|e| refused(lang, e))?;
+                    save(lang, &mut file)?;
+                    say(
+                        lang,
+                        "cli-event-start-window-set",
+                        &[("minutes", FluentValue::from(minutes))],
+                    );
+                }
+                None => {
+                    edit::clear_start_window(&mut file.event).map_err(|e| refused(lang, e))?;
+                    save(lang, &mut file)?;
+                    say(lang, "cli-event-start-window-removed", &[]);
+                }
+            }
         }
     }
     Ok(())
