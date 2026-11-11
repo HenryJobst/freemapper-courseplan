@@ -1,0 +1,368 @@
+use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings};
+
+use super::*;
+use crate::score::travel::{LegRoutes, Route};
+
+/// Straight lines over plain coordinates; one coordinate unit takes `s_per_unit` seconds.
+struct Fake {
+    s_per_unit: f64,
+}
+
+impl TravelTime for Fake {
+    fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
+        let len = (from.x - to.x).hypot(from.y - to.y);
+        Ok(LegRoutes {
+            routes: vec![Route {
+                points: vec![from, to],
+                length_m: len,
+                time_s: len * self.s_per_unit,
+            }],
+        })
+    }
+    fn passable(&self, _p: MapPoint) -> bool {
+        true
+    }
+}
+
+/// A runner who cannot leave the start.
+struct Enclosed;
+
+impl TravelTime for Enclosed {
+    fn legs(&self, from: MapPoint, _to: MapPoint) -> Result<LegRoutes, ScoreError> {
+        Err(ScoreError::StartUnreachable { at: from })
+    }
+    fn passable(&self, _p: MapPoint) -> bool {
+        false
+    }
+}
+
+const GOOD: Fake = Fake { s_per_unit: 1.11 };
+const VERY_GOOD: Fake = Fake { s_per_unit: 1.0 };
+
+fn pt(x: f64, y: f64) -> MapPoint {
+    MapPoint { x, y }
+}
+
+fn cand(x: f64, y: f64, difficulty: f64) -> Candidate {
+    Candidate {
+        at: pt(x, y),
+        symbol_code: None,
+        route_choice: 0.5,
+        difficulty,
+        effort_s: x.hypot(y),
+    }
+}
+
+/// A wide map: `side` x `side` sites 100 units apart, start and finish in the corner. Every third
+/// site is hard.
+fn grid(side: usize) -> Vec<Candidate> {
+    let mut v = Vec::new();
+    for r in 0..side {
+        for c in 0..side {
+            let hard = (r * side + c).is_multiple_of(3);
+            v.push(cand(
+                100.0 * (c + 1) as f64,
+                100.0 * (r + 1) as f64,
+                if hard { 0.9 } else { 0.1 },
+            ));
+        }
+    }
+    v
+}
+
+struct World {
+    cands: Vec<Candidate>,
+    links: Vec<(MapPoint, MapPoint)>,
+    settings: ScoreSettings,
+    limit_min: u32,
+    start: MapPoint,
+    finish: MapPoint,
+    taken: Vec<ControlCode>,
+}
+
+impl World {
+    fn new(cands: Vec<Candidate>, limit_min: u32) -> World {
+        World {
+            cands,
+            links: Vec::new(),
+            settings: ScoreSettings::default(),
+            limit_min,
+            start: pt(0.0, 0.0),
+            finish: pt(0.0, 0.0),
+            taken: Vec::new(),
+        }
+    }
+
+    #[allow(clippy::result_large_err)]
+    fn run(&self) -> Result<Draft, DraftFailure> {
+        draft(&DraftRequest {
+            candidates: &self.cands,
+            travel_good: &GOOD,
+            travel_very_good: &VERY_GOOD,
+            start: self.start.clone(),
+            finish: self.finish.clone(),
+            limit_min: self.limit_min,
+            links: &self.links,
+            settings: &self.settings,
+            taken: &self.taken,
+        })
+    }
+}
+
+fn ring(n: usize) -> Vec<Candidate> {
+    (0..n)
+        .map(|i| {
+            let a = std::f64::consts::TAU * i as f64 / n as f64;
+            Candidate {
+                at: pt(300.0 * a.cos(), 300.0 * a.sin()),
+                symbol_code: None,
+                route_choice: 0.5,
+                difficulty: 0.3,
+                effort_s: 300.0,
+            }
+        })
+        .collect()
+}
+
+fn adjacent(order: &[usize], a: usize, b: usize) -> bool {
+    let (Some(i), Some(j)) = (
+        order.iter().position(|&x| x == a),
+        order.iter().position(|&x| x == b),
+    ) else {
+        return false;
+    };
+    i.abs_diff(j) == 1
+}
+
+#[test]
+fn a_draft_meets_both_bands() {
+    let d = World::new(grid(4), 28).run().expect("a draft");
+    assert!(d.report.issues.is_empty());
+    assert!((87.0..=93.0).contains(&d.report.good_percent), "{d:?}");
+    assert!((95.0..=100.0).contains(&d.report.very_good_finish_percent));
+    let mut codes: Vec<&str> = d.controls.iter().map(|c| c.code.0.as_str()).collect();
+    for c in &d.controls {
+        assert!((1..=5).contains(&c.value));
+        assert_eq!(
+            crate::score::code::value_of_code(&c.code.0),
+            Some(c.value),
+            "the code carries the value"
+        );
+    }
+    codes.sort_unstable();
+    codes.dedup();
+    assert_eq!(codes.len(), d.controls.len(), "codes are unique");
+}
+
+#[test]
+fn codes_avoid_the_taken_ones() {
+    let mut w = World::new(grid(4), 28);
+    w.taken = vec![ControlCode("31".into()), ControlCode("32".into())];
+    let d = w.run().expect("a draft");
+    assert!(
+        d.controls
+            .iter()
+            .all(|c| c.code.0 != "31" && c.code.0 != "32")
+    );
+}
+
+#[test]
+fn mix_share_bounds_the_hard_controls() {
+    let d = World::new(grid(4), 28).run().expect("a draft");
+    let k = d.controls.len();
+    let hard = d.controls.iter().filter(|c| c.hard).count();
+    assert_eq!(hard, d.hard_actual);
+    assert_eq!(hard, (0.4 * k as f64).round() as usize);
+    assert_eq!(d.mix_missed_percent, None);
+    for share in [20_u8, 60] {
+        let mut w = World::new(grid(4), 28);
+        w.settings.mix_hard_percent = share;
+        let d = match w.run() {
+            Ok(d) => d,
+            Err(f) => f.best,
+        };
+        let k = d.controls.len() as f64;
+        let wanted = (f64::from(share) / 100.0 * k).round() as usize;
+        assert_eq!(d.hard_wanted, wanted);
+        match d.mix_missed_percent {
+            None => assert_eq!(d.hard_actual, wanted, "share {share}"),
+            Some(_) => assert_ne!(d.hard_actual, wanted, "share {share}"),
+        }
+    }
+}
+
+#[test]
+fn effort_wins_when_mix_and_effort_conflict_and_the_report_names_it() {
+    // No hard candidate at all, but 40 percent hard are asked for.
+    let easy: Vec<Candidate> = grid(4)
+        .into_iter()
+        .map(|mut c| {
+            c.difficulty = 0.1;
+            c
+        })
+        .collect();
+    let d = World::new(easy, 28).run().expect("effort bands still hold");
+    assert!(d.report.issues.is_empty());
+    assert_eq!(d.hard_actual, 0);
+    assert!(d.hard_wanted > 0);
+    let missed = d.mix_missed_percent.expect("the missed share is named");
+    assert!((missed - 100.0 * d.hard_wanted as f64 / d.controls.len() as f64).abs() < 1e-9);
+}
+
+#[test]
+fn not_enough_candidates_fails_with_hint() {
+    let f = World::new(grid(4)[..3].to_vec(), 28)
+        .run()
+        .expect_err("too few");
+    assert_eq!(f.hint, Hint::MoreCandidates);
+    assert!(!f.issues.is_empty());
+}
+
+#[test]
+fn too_long_a_limit_asks_for_a_shorter_one_or_more_candidates() {
+    let f = World::new(grid(4), 40)
+        .run()
+        .expect_err("every candidate is in");
+    assert_eq!(f.hint, Hint::MoreCandidates);
+    assert_eq!(f.best.controls.len(), 16);
+}
+
+#[test]
+fn zero_candidates_fail() {
+    let f = World::new(Vec::new(), 28)
+        .run()
+        .expect_err("nothing to draft");
+    assert_eq!(f.hint, Hint::MoreCandidates);
+    assert!(f.best.controls.is_empty());
+}
+
+#[test]
+fn impossible_limit_fails_with_hint_and_best_attempt() {
+    let f = World::new(grid(4), 1)
+        .run()
+        .expect_err("one minute is too short");
+    assert_eq!(f.hint, Hint::LimitUp);
+    assert!(
+        !f.best.controls.is_empty(),
+        "the best attempt is kept for display"
+    );
+    assert!(!f.issues.is_empty());
+}
+
+#[test]
+fn a_limit_shorter_than_start_to_finish_fails() {
+    let mut w = World::new(grid(4), 5);
+    w.finish = pt(1000.0, 0.0);
+    let f = w.run().expect_err("the direct leg does not fit");
+    assert_eq!(f.hint, Hint::LimitUp);
+    assert!(f.best.controls.is_empty());
+}
+
+#[test]
+fn requested_links_are_in_the_draft_and_runnable() {
+    let mut w = World::new(grid(4), 30);
+    w.links = vec![
+        (pt(100.0, 100.0), pt(200.0, 200.0)),
+        (pt(400.0, 400.0), pt(300.0, 400.0)),
+    ];
+    let d = w.run().expect("a draft with links");
+    assert_eq!(d.links.len(), 2);
+    for &(a, b) in &d.links {
+        assert!(
+            adjacent(&d.report.good.order, a, b),
+            "{:?}",
+            d.report.good.order
+        );
+        assert!(adjacent(&d.report.very_good.order, a, b));
+    }
+    let at = |i: usize| (d.controls[i].at.x, d.controls[i].at.y);
+    assert_eq!(at(d.links[0].0), (100.0, 100.0));
+    assert_eq!(at(d.links[1].1), (300.0, 400.0));
+}
+
+#[test]
+fn a_link_that_matches_no_candidate_fails() {
+    let mut w = World::new(grid(4), 28);
+    w.links = vec![(pt(1.0, 1.0), pt(2.0, 2.0)), (pt(3.0, 3.0), pt(4.0, 4.0))];
+    let f = w.run().expect_err("no candidate there");
+    assert_eq!(f.hint, Hint::MoreCandidates);
+}
+
+#[test]
+fn a_link_that_cannot_be_run_in_time_fails() {
+    let mut w = World::new(grid(4), 20);
+    w.links = vec![(pt(100.0, 100.0), pt(400.0, 400.0))];
+    let f = w.run().expect_err("the link does not fit");
+    assert_eq!(f.hint, Hint::LimitUp);
+    assert!(
+        matches!(f.error, Some(ScoreError::LinkDoesNotFit { .. })),
+        "{:?}",
+        f.error
+    );
+}
+
+#[test]
+fn the_same_site_twice_is_a_bad_link() {
+    let mut w = World::new(grid(4), 28);
+    w.links = vec![(pt(100.0, 100.0), pt(100.0, 100.0))];
+    let f = w.run().expect_err("a link needs two controls");
+    assert!(matches!(f.error, Some(ScoreError::BadLink { .. })));
+}
+
+#[test]
+fn equal_effort_still_spreads_the_values() {
+    let d = World::new(ring(16), 40).run().expect("a draft");
+    let values: Vec<u8> = d.controls.iter().map(|c| c.value).collect();
+    assert!(values.len() >= 5);
+    assert!(values.iter().all(|v| (1..=5).contains(v)));
+    let mut distinct = values.clone();
+    distinct.sort_unstable();
+    distinct.dedup();
+    assert!(distinct.len() == 5, "{values:?}");
+}
+
+#[test]
+fn two_runs_are_byte_equal() {
+    let a = format!("{:?}", World::new(grid(4), 28).run());
+    let b = format!("{:?}", World::new(grid(4), 28).run());
+    assert_eq!(a, b);
+    let c = format!("{:?}", World::new(grid(4), 40).run());
+    let d = format!("{:?}", World::new(grid(4), 40).run());
+    assert_eq!(c, d);
+}
+
+#[test]
+fn no_draft_when_start_is_enclosed() {
+    let w = World::new(grid(4), 28);
+    let f = draft(&DraftRequest {
+        candidates: &w.cands,
+        travel_good: &Enclosed,
+        travel_very_good: &VERY_GOOD,
+        start: w.start.clone(),
+        finish: w.finish.clone(),
+        limit_min: 28,
+        links: &[],
+        settings: &w.settings,
+        taken: &[],
+    })
+    .expect_err("no route from the start");
+    assert_eq!(f.hint, Hint::Impossible);
+    assert!(matches!(f.error, Some(ScoreError::StartUnreachable { .. })));
+}
+
+#[test]
+fn start_may_equal_finish_or_not() {
+    let mut w = World::new(grid(4), 28);
+    w.start = pt(50.0, 50.0);
+    w.finish = pt(50.0, 50.0);
+    // Either a draft or a clean failure; the point is that equal ends work.
+    match w.run() {
+        Ok(d) => assert!(d.report.issues.is_empty()),
+        Err(f) => assert!(f.error.is_none()),
+    }
+    w.finish = pt(0.0, 50.0);
+    match w.run() {
+        Ok(d) => assert!(d.report.issues.is_empty()),
+        Err(f) => assert!(f.error.is_none()),
+    }
+}

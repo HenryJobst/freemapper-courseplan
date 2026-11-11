@@ -2,11 +2,13 @@
 
 pub mod candidates;
 pub mod code;
+pub mod draft;
 pub mod links;
 pub mod points;
 pub mod tour;
 pub mod travel;
 
+pub use draft::{Draft, DraftControl, DraftFailure, DraftRequest, Hint, draft};
 pub use tour::{
     LengthIssue, LengthReport, ScoredControl, Tour, analyse_length, best_tour, best_tour_seeded,
 };
