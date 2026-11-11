@@ -698,6 +698,7 @@ mod tests {
         ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("editor/map_view.rs", include_str!("editor/map_view.rs")),
         ("editor/api.rs", include_str!("editor/api.rs")),
+        ("editor/exchange.rs", include_str!("editor/exchange.rs")),
         ("editor/history.rs", include_str!("editor/history.rs")),
         ("editor/overlay.rs", include_str!("editor/overlay.rs")),
         ("editor/symbols.rs", include_str!("editor/symbols.rs")),

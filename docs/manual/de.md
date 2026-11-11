@@ -112,8 +112,8 @@ dort an.
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Die Menüpunkte zum Exportieren, Importieren
-und Abgleichen sind noch ausgegraut und folgen in späteren Versionen.
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Exportieren und Importieren findest du im
+Menü „Veranstaltung“. Das Abgleichen ist noch ausgegraut und folgt in einer späteren Version.
 
 ### Starten
 
@@ -295,6 +295,27 @@ Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus 
 - „Akzeptieren…“ fragt nach einer Begründung von höchstens 200 Zeichen und speichert die Ausnahme in der
   Projektdatei. Der Befund steht dann unter „Hier akzeptiert“ mit seiner Begründung, und „Akzeptanz zurücknehmen“
   holt ihn zurück. Beides ist ein Schritt für Rückgängig.
+
+### Exportieren und Importieren
+
+Das Menü „Veranstaltung“ hat drei Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
+verknüpfte Purple-Pen-Datei des Projekts.
+
+- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzelbahnen, benannt nach der
+  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team-, Staffel- und Score-Bahnen) und sagt es, wenn die Karte
+  keine Georeferenz hat.
+- **Nach Purple Pen exportieren…** „In die verknüpfte Datei schreiben“ aktualisiert die Datei, die `sources.ppen`
+  nennt, nach den Regeln von `export --ppen`: Sie ändert nur, was das Projekt geändert hat, und speichert neue
+  Purple-Pen-IDs im Projekt. Ohne Verknüpfung ist die Schaltfläche aus. Der Befehl `export --ppen DATEI` legt eine
+  Datei an und verknüpft sie. „Neue Datei herunterladen“ speichert eine neue `.ppen`; im Projekt wird nichts
+  gespeichert. Ein Fenster listet die Hinweise.
+- **Purple-Pen-Datei importieren…** Du wählst eine `.ppen` auf deinem Rechner. Ein Projekt, das schon Posten, Bahnen
+  oder Sonderobjekte hat, wird abgelehnt, solange du „Ersetzen“ nicht ankreuzt; das ersetzt alle drei. Der Import
+  ändert die Verknüpfung `sources.ppen` nicht: Der Editor erfährt nie, wo die Datei liegt. Ein Fenster listet die
+  Hinweise. Dateien über 50 MiB werden abgelehnt (ADR 0053).
+
+Das Schreiben in die verknüpfte Datei und der Import leeren den Rückgängig-Verlauf, weil sie mehr als einen Schritt
+ändern.
 
 ### Rückgängig und Wiederholen
 

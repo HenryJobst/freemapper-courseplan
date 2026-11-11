@@ -896,11 +896,23 @@ mod state {
         project_with(dir, |_| {})
     }
 
-    fn project_with(dir: &std::path::Path, change: impl FnOnce(&mut Event)) -> std::path::PathBuf {
+    pub(super) fn project_with(
+        dir: &std::path::Path,
+        change: impl FnOnce(&mut Event),
+    ) -> std::path::PathBuf {
+        project_on(dir, "forest-sample.omap", change)
+    }
+
+    /// A project on the map fixture `map`, copied to `map.omap` next to it.
+    pub(super) fn project_on(
+        dir: &std::path::Path,
+        map: &str,
+        change: impl FnOnce(&mut Event),
+    ) -> std::path::PathBuf {
         std::fs::copy(
-            concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/../../tests/fixtures/maps/forest-sample.omap"
+            format!(
+                "{}/../../tests/fixtures/maps/{map}",
+                env!("CARGO_MANIFEST_DIR")
             ),
             dir.join("map.omap"),
         )
@@ -2223,6 +2235,528 @@ mod ops {
         assert_eq!(
             after["summary"]["errors"].as_u64().unwrap() + 1,
             first["summary"]["errors"].as_u64().unwrap()
+        );
+    }
+}
+
+mod exchange {
+    use super::state::{numbered_project, project_on, project_with};
+    use super::*;
+    use axum::http::HeaderMap;
+    use serde_json::{Value, json};
+
+    const CHANGED_PPEN: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/fixtures/ppen/luebeck-sprint-pp4-changed.ppen"
+    );
+
+    fn router_for(path: &std::path::Path) -> axum::Router {
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
+    }
+
+    struct Answer {
+        status: StatusCode,
+        headers: HeaderMap,
+        body: Vec<u8>,
+    }
+
+    impl Answer {
+        fn json(&self) -> Value {
+            serde_json::from_slice(&self.body).unwrap_or(Value::Null)
+        }
+    }
+
+    async fn call(
+        app: &axum::Router,
+        method: &str,
+        uri: &str,
+        revision: Option<&str>,
+        content_type: &str,
+        body: Vec<u8>,
+    ) -> Answer {
+        let mut request = Request::builder()
+            .method(method)
+            .uri(uri)
+            .header("content-type", content_type);
+        if let Some(revision) = revision {
+            request = request.header("x-courseplan-revision", revision);
+        }
+        let response = app
+            .clone()
+            .oneshot(request.body(Body::from(body)).unwrap())
+            .await
+            .unwrap();
+        let (parts, body) = response.into_parts();
+        Answer {
+            status: parts.status,
+            headers: parts.headers,
+            body: axum::body::to_bytes(body, usize::MAX)
+                .await
+                .unwrap()
+                .to_vec(),
+        }
+    }
+
+    async fn revision(app: &axum::Router) -> String {
+        let a = call(app, "GET", "/tok/api/state", None, "x/y", Vec::new()).await;
+        a.json()["revision"].as_str().unwrap().to_owned()
+    }
+
+    async fn export(app: &axum::Router, to: &str, revision: Option<&str>) -> Answer {
+        let body = json!({ "to": to }).to_string().into_bytes();
+        call(
+            app,
+            "POST",
+            "/tok/api/export/ppen",
+            revision,
+            "application/json",
+            body,
+        )
+        .await
+    }
+
+    async fn upload(
+        app: &axum::Router,
+        query: &str,
+        revision: Option<&str>,
+        bytes: Vec<u8>,
+    ) -> Answer {
+        call(
+            app,
+            "POST",
+            &format!("/tok/api/import/ppen{query}"),
+            revision,
+            "application/octet-stream",
+            bytes,
+        )
+        .await
+    }
+
+    fn linked(event: &mut freemapper_courseplan_model::Event) {
+        event.sources.ppen = Some("linked.ppen".into());
+    }
+
+    fn luebeck(dir: &std::path::Path) -> std::path::PathBuf {
+        project_on(dir, "luebeck.omap", |_| {})
+    }
+
+    fn changed_ppen() -> Vec<u8> {
+        std::fs::read(CHANGED_PPEN).unwrap()
+    }
+
+    fn created_blanked(xml: &str) -> String {
+        let at = xml.find("createTime=\"").unwrap() + "createTime=\"".len();
+        let end = at + xml[at..].find('"').unwrap();
+        format!("{}{}", &xml[..at], &xml[end..])
+    }
+
+    #[test]
+    fn download_names_are_safe() {
+        use super::super::exchange::download_stem;
+        let stem = |name: &str| download_stem(std::path::Path::new(&format!("/x/{name}")));
+        assert_eq!(stem("event.courseplan.toml"), "event");
+        assert_eq!(stem("Lübeck Sprint.toml"), "L_beck_Sprint");
+        assert_eq!(stem("a\"b\r\n.toml"), "a_b__");
+        assert_eq!(stem("..toml"), "_");
+        assert_eq!(stem(".toml"), "event");
+        assert_eq!(stem(&format!("{}.toml", "x".repeat(300))).len(), 80);
+    }
+
+    #[tokio::test]
+    async fn iof_xml_download_equals_cli_export() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        let before = std::fs::read(&path).unwrap();
+        let got = call(
+            &app,
+            "GET",
+            "/tok/api/export/iof-xml",
+            None,
+            "x/y",
+            Vec::new(),
+        )
+        .await;
+        assert_eq!(
+            got.status,
+            StatusCode::OK,
+            "{}",
+            String::from_utf8_lossy(&got.body)
+        );
+        assert_eq!(got.headers["content-type"], "application/xml");
+        assert_eq!(
+            got.headers["content-disposition"],
+            "attachment; filename=\"event.xml\""
+        );
+        assert_eq!(got.headers["x-courseplan-courses"], "1");
+        let target = dir.path().join("cli.xml");
+        crate::export_cmd::export_iof_xml_file(&path, &target, "T").unwrap();
+        let cli = std::fs::read_to_string(&target).unwrap();
+        let served = String::from_utf8(got.body).unwrap();
+        assert_eq!(created_blanked(&served), created_blanked(&cli));
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn ppen_to_linked_equals_cli_export() {
+        let a = tempfile::tempdir().unwrap();
+        let b = tempfile::tempdir().unwrap();
+        let link_it = |path: &std::path::Path| {
+            let mut file = freemapper_courseplan_model::ProjectFile::load(path).unwrap();
+            linked(&mut file.event);
+            file.save().unwrap();
+        };
+        let (pa, pb) = (numbered_project(a.path()), numbered_project(b.path()));
+        link_it(&pa);
+        link_it(&pb);
+        let app = router_for(&pa);
+        // Both start from the same text.
+        assert_eq!(std::fs::read(&pa).unwrap(), std::fs::read(&pb).unwrap());
+        let rev = revision(&app).await;
+        let got = export(&app, "linked", Some(&rev)).await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        let report = crate::export_cmd::export_ppen_file(
+            &pb,
+            &b.path().join("linked.ppen"),
+            false,
+            &Lang::english(),
+        )
+        .unwrap();
+        assert_eq!(
+            std::fs::read(a.path().join("linked.ppen")).unwrap(),
+            std::fs::read(b.path().join("linked.ppen")).unwrap()
+        );
+        assert_eq!(std::fs::read(&pa).unwrap(), std::fs::read(&pb).unwrap());
+        let answer = got.json();
+        assert_eq!(answer["courses"], report.courses);
+        assert_eq!(answer["ids_stored"], report.ids_stored);
+        assert!(report.ids_stored > 0);
+        assert_ne!(answer["revision"].as_str().unwrap(), rev);
+        assert_eq!(answer["revision"], revision(&app).await);
+        assert!(answer["notes"].is_array());
+    }
+
+    #[tokio::test]
+    async fn ppen_to_linked_patches_an_existing_file_and_keeps_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project_with(dir.path(), linked);
+        let app = router_for(&path);
+        let rev = revision(&app).await;
+        let first = export(&app, "linked", Some(&rev)).await;
+        assert_eq!(first.status, StatusCode::OK);
+        assert_eq!(first.json()["patched"], false);
+        let again = export(&app, "linked", Some(&revision(&app).await)).await;
+        assert_eq!(again.status, StatusCode::OK);
+        assert_eq!(again.json()["patched"], true);
+    }
+
+    #[tokio::test]
+    async fn ppen_download_writes_nothing_and_stores_no_ids() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        let names = |d: &std::path::Path| {
+            let mut v: Vec<_> = std::fs::read_dir(d)
+                .unwrap()
+                .map(|e| e.unwrap().file_name())
+                .collect();
+            v.sort();
+            v
+        };
+        let (before, files) = (std::fs::read(&path).unwrap(), names(dir.path()));
+        let got = export(&app, "download", None).await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        let answer = got.json();
+        assert_eq!(answer["file"], "event.ppen");
+        assert_eq!(answer["ids_stored"], 0);
+        assert_eq!(answer["linked_now"], false);
+        let text = answer["text"].as_str().unwrap();
+        assert!(
+            text.contains("<course-scribe-event"),
+            "{}",
+            &text[..80.min(text.len())]
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert_eq!(names(dir.path()), files);
+        assert!(!std::fs::read_to_string(&path).unwrap().contains("ppen_id"));
+    }
+
+    #[tokio::test]
+    async fn export_to_linked_without_a_link_is_422() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        let (before, rev) = (std::fs::read(&path).unwrap(), revision(&app).await);
+        let got = export(&app, "linked", Some(&rev)).await;
+        assert_eq!(got.status, StatusCode::UNPROCESSABLE_ENTITY);
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-export-no-link", &[]);
+        assert_eq!(got.json()["error"], want);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 2);
+        // The browser names nothing but the target kind.
+        let bad = export(&app, "/tmp/x.ppen", Some(&rev)).await;
+        assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn export_to_linked_needs_the_current_revision_and_a_safe_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project_with(dir.path(), linked);
+        let app = router_for(&path);
+        let rev = revision(&app).await;
+        assert_eq!(
+            export(&app, "linked", None).await.status,
+            StatusCode::BAD_REQUEST
+        );
+        let stale = export(&app, "linked", Some("0000000000000000")).await;
+        assert_eq!(stale.status, StatusCode::CONFLICT);
+        assert!(!dir.path().join("linked.ppen").exists());
+        // A link that does not end in .ppen is refused, and so is a symbolic link.
+        let other = tempfile::tempdir().unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, text.replace("linked.ppen", "linked.txt")).unwrap();
+        let rev2 = revision(&app).await;
+        assert_ne!(rev, rev2);
+        let got = export(&app, "linked", Some(&rev2)).await;
+        assert_eq!(got.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert!(!dir.path().join("linked.txt").exists());
+        #[cfg(unix)]
+        {
+            std::fs::write(&path, text).unwrap();
+            let victim = other.path().join("victim.ppen");
+            std::fs::write(&victim, "keep").unwrap();
+            std::os::unix::fs::symlink(&victim, dir.path().join("linked.ppen")).unwrap();
+            let rev3 = revision(&app).await;
+            let got = export(&app, "linked", Some(&rev3)).await;
+            assert_eq!(got.status, StatusCode::UNPROCESSABLE_ENTITY);
+            assert_eq!(std::fs::read_to_string(&victim).unwrap(), "keep");
+        }
+    }
+
+    #[tokio::test]
+    async fn import_upload_equals_cli_import_except_link() {
+        let a = tempfile::tempdir().unwrap();
+        let b = tempfile::tempdir().unwrap();
+        let (pa, pb) = (luebeck(a.path()), luebeck(b.path()));
+        std::fs::write(b.path().join("in.ppen"), changed_ppen()).unwrap();
+        let app = router_for(&pa);
+        let rev = revision(&app).await;
+        let got = upload(&app, "", Some(&rev), changed_ppen()).await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        let report =
+            crate::import_cmd::import_ppen_file(&pb, &b.path().join("in.ppen"), false).unwrap();
+        let answer = got.json();
+        assert_eq!(answer["controls"], report.controls);
+        assert_eq!(answer["courses"], report.courses);
+        assert_eq!(
+            answer["notes"].as_array().unwrap().len(),
+            report.notes.len()
+        );
+        assert_eq!(answer["revision"], revision(&app).await);
+        let fa = freemapper_courseplan_model::ProjectFile::load(&pa).unwrap();
+        let mut fb = freemapper_courseplan_model::ProjectFile::load(&pb).unwrap();
+        assert!(fa.event.sources.ppen.is_none());
+        assert!(fb.event.sources.ppen.is_some());
+        fb.event.sources.ppen = None;
+        assert_eq!(fa.event, fb.event);
+        assert!(!fa.event.controls.is_empty());
+    }
+
+    #[tokio::test]
+    async fn import_keeps_an_existing_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project_on(dir.path(), "luebeck.omap", linked);
+        let app = router_for(&path);
+        let got = upload(&app, "", Some(&revision(&app).await), changed_ppen()).await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        let file = freemapper_courseplan_model::ProjectFile::load(&path).unwrap();
+        assert_eq!(
+            file.event.sources.ppen.as_deref(),
+            Some(std::path::Path::new("linked.ppen"))
+        );
+        assert!(!dir.path().join("linked.ppen").exists());
+    }
+
+    #[tokio::test]
+    async fn import_without_replace_on_a_full_project_is_422() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = luebeck(dir.path());
+        let app = router_for(&path);
+        let first = upload(
+            &app,
+            "?replace=false",
+            Some(&revision(&app).await),
+            changed_ppen(),
+        )
+        .await;
+        assert_eq!(first.status, StatusCode::OK);
+        let (before, rev) = (std::fs::read(&path).unwrap(), revision(&app).await);
+        let got = upload(&app, "?replace=false", Some(&rev), changed_ppen()).await;
+        assert_eq!(got.status, StatusCode::UNPROCESSABLE_ENTITY);
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-import-needs-replace", &[]);
+        assert_eq!(got.json()["error"], want);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        let replaced = upload(&app, "?replace=true", Some(&rev), changed_ppen()).await;
+        assert_eq!(replaced.status, StatusCode::OK, "{}", replaced.json());
+    }
+
+    #[tokio::test]
+    async fn import_requests_are_checked() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = luebeck(dir.path());
+        let app = router_for(&path);
+        let (before, rev) = (std::fs::read(&path).unwrap(), revision(&app).await);
+        assert_eq!(
+            upload(&app, "", None, changed_ppen()).await.status,
+            StatusCode::BAD_REQUEST
+        );
+        assert_eq!(
+            upload(&app, "", Some("0000000000000000"), changed_ppen())
+                .await
+                .status,
+            StatusCode::CONFLICT
+        );
+        for query in [
+            "?replace=yes",
+            "?replace=true&replace=false",
+            "?path=/etc/passwd",
+            "?replace",
+        ] {
+            let got = upload(&app, query, Some(&rev), changed_ppen()).await;
+            assert_eq!(got.status, StatusCode::BAD_REQUEST, "{query}");
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn upload_over_limit_is_413() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = luebeck(dir.path());
+        let app = router_for(&path);
+        let (before, rev) = (std::fs::read(&path).unwrap(), revision(&app).await);
+        let limit = freemapper_courseplan::ppen_import::MAX_COURSE_FILE_BYTES;
+        let got = upload(&app, "", Some(&rev), vec![b' '; limit + 1]).await;
+        assert_eq!(got.status, StatusCode::PAYLOAD_TOO_LARGE);
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-import-too-large", &[]);
+        assert_eq!(got.json()["error"], want);
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn a_hostile_upload_gives_a_clean_error_and_changes_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = luebeck(dir.path());
+        let app = router_for(&path);
+        let (before, rev) = (std::fs::read(&path).unwrap(), revision(&app).await);
+        let deep = format!("<course-scribe-event>{}", "<a>".repeat(200_000)).into_bytes();
+        let png = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR secret-marker".to_vec();
+        let hostile: Vec<(&str, Vec<u8>)> = vec![
+            (
+                "garbage",
+                b"\xff\xfe\x00 not xml at all secret-marker".to_vec(),
+            ),
+            ("deep", deep),
+            ("png", png),
+            ("empty", Vec::new()),
+            (
+                "doctype",
+                b"<!DOCTYPE x [<!ENTITY a \"secret-marker\">]><x>&a;</x>".to_vec(),
+            ),
+            (
+                "other xml",
+                b"<html><body>secret-marker</body></html>".to_vec(),
+            ),
+        ];
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-import-invalid", &[]);
+        for (what, bytes) in hostile {
+            let got = upload(&app, "", Some(&rev), bytes).await;
+            assert_eq!(got.status, StatusCode::UNPROCESSABLE_ENTITY, "{what}");
+            let text = got.json()["error"].as_str().unwrap().to_owned();
+            assert_eq!(text, want, "{what}");
+            assert!(!text.contains("secret-marker"));
+            assert_eq!(std::fs::read(&path).unwrap(), before, "{what}");
+        }
+    }
+
+    #[tokio::test]
+    async fn exchange_clears_history() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project_on(dir.path(), "luebeck.omap", linked);
+        let app = router_for(&path);
+        let undo_label = |app: &axum::Router| {
+            let app = app.clone();
+            async move {
+                let a = call(&app, "GET", "/tok/api/state", None, "x/y", Vec::new()).await;
+                a.json()["undo"]["undo"].clone()
+            }
+        };
+        let step = |app: &axum::Router, code: &str| {
+            let app = app.clone();
+            let body = json!({"at": {"x": 1.0, "y": 2.0}, "code": code})
+                .to_string()
+                .into_bytes();
+            async move {
+                let rev = revision(&app).await;
+                let a = call(
+                    &app,
+                    "POST",
+                    "/tok/api/op/add_control",
+                    Some(&rev),
+                    "application/json",
+                    body,
+                )
+                .await;
+                assert_eq!(a.status, StatusCode::OK, "{}", a.json());
+            }
+        };
+        step(&app, "41").await;
+        assert!(undo_label(&app).await.is_string());
+        let got = export(&app, "linked", Some(&revision(&app).await)).await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        assert!(undo_label(&app).await.is_null());
+        let undo = call(
+            &app,
+            "POST",
+            "/tok/api/undo",
+            Some(&revision(&app).await),
+            "application/json",
+            b"{}".to_vec(),
+        )
+        .await;
+        assert_eq!(undo.status, StatusCode::CONFLICT);
+        step(&app, "42").await;
+        assert!(undo_label(&app).await.is_string());
+        let got = upload(
+            &app,
+            "?replace=true",
+            Some(&revision(&app).await),
+            changed_ppen(),
+        )
+        .await;
+        assert_eq!(got.status, StatusCode::OK, "{}", got.json());
+        assert!(undo_label(&app).await.is_null());
+    }
+
+    #[tokio::test]
+    async fn a_write_between_the_read_and_the_save_is_409() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = luebeck(dir.path());
+        let app = router_for(&path);
+        let rev = revision(&app).await;
+        // Another program writes after the page's revision was taken.
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::write(&path, format!("{text}\n# outside\n")).unwrap();
+        let got = upload(&app, "", Some(&rev), changed_ppen()).await;
+        assert_eq!(got.status, StatusCode::CONFLICT);
+        assert!(
+            std::fs::read_to_string(&path)
+                .unwrap()
+                .ends_with("# outside\n")
         );
     }
 }

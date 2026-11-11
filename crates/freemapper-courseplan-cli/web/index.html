@@ -50,8 +50,9 @@
     <details class="menu">
       <summary data-text="editor-menu-event"></summary>
       <ul>
-        <li><button type="button" id="menu-export" data-text="editor-menu-export" disabled></button></li>
-        <li><button type="button" id="menu-import" data-text="editor-menu-import" disabled></button></li>
+        <li><button type="button" id="menu-export-xml" data-text="editor-menu-export-xml"></button></li>
+        <li><button type="button" id="menu-export-ppen" data-text="editor-menu-export-ppen"></button></li>
+        <li><button type="button" id="menu-import" data-text="editor-menu-import"></button></li>
         <li><button type="button" id="menu-sync" data-text="editor-menu-sync" disabled></button></li>
         <li><button type="button" id="menu-close" data-text="editor-menu-close"></button></li>
       </ul>
@@ -95,6 +96,44 @@
         <button type="button" id="accept-cancel" data-text="editor-cancel"></button>
       </div>
     </form>
+  </dialog>
+  <dialog id="export-dialog" aria-labelledby="export-title">
+    <h2 id="export-title" data-text="editor-export-ppen-title"></h2>
+    <p data-text="editor-export-ppen-intro"></p>
+    <p><strong data-text="editor-export-ppen-linked"></strong>: <span id="export-linked-file"></span></p>
+    <p class="field-error" id="export-no-link" data-text="editor-export-no-link" hidden></p>
+    <p id="export-linked-note" data-text="editor-export-ppen-linked-note"></p>
+    <p data-text="editor-export-ppen-download-note"></p>
+    <p class="field-error" id="export-error" role="alert" hidden></p>
+    <div class="dialog-buttons">
+      <button type="button" id="export-linked" data-text="editor-export-ppen-to-linked"></button>
+      <button type="button" id="export-download" data-text="editor-export-ppen-download"></button>
+      <button type="button" id="export-cancel" data-text="editor-cancel" autofocus></button>
+    </div>
+  </dialog>
+  <dialog id="import-dialog" aria-labelledby="import-title">
+    <form id="import-form" method="dialog">
+      <h2 id="import-title" data-text="editor-import-title"></h2>
+      <p><label for="import-file" data-text="editor-import-file"></label></p>
+      <p><input id="import-file" type="file" accept=".ppen"></p>
+      <p><label class="check"><input id="import-replace" type="checkbox"> <span data-text="editor-import-replace"></span></label></p>
+      <p id="import-replace-warning" data-text="editor-import-replace-warning" hidden></p>
+      <p id="import-has-content" data-text="editor-import-has-content" hidden></p>
+      <p class="field-error" id="import-error" role="alert" hidden></p>
+      <div class="dialog-buttons">
+        <button type="submit" id="import-ok" data-text="editor-import-ok"></button>
+        <button type="button" id="import-cancel" data-text="editor-cancel"></button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="report-dialog" aria-labelledby="report-title">
+    <h2 id="report-title"></h2>
+    <dl id="report-rows"></dl>
+    <ul id="report-lines"></ul>
+    <h3 id="report-notes-heading" data-text="editor-report-notes"></h3>
+    <ul id="report-notes"></ul>
+    <p id="report-no-notes" data-text="editor-report-no-notes"></p>
+    <form method="dialog"><button type="submit" data-text="editor-report-close" autofocus></button></form>
   </dialog>
   <section class="drawer" id="findings-drawer" aria-labelledby="drawer-title" tabindex="-1" hidden>
     <div class="drawer-head">

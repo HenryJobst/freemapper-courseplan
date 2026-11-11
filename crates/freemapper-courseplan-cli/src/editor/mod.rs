@@ -11,10 +11,12 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{Path, RawQuery, State};
+use axum::extract::rejection::BytesRejection;
+use axum::extract::{DefaultBodyLimit, Path, RawQuery, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
+use freemapper_courseplan::ppen_import::MAX_COURSE_FILE_BYTES;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, TEXTS, text};
 use freemapper_courseplan_model::ProjectFile;
 use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
@@ -26,6 +28,7 @@ use api::Loaded;
 use map_view::{FileStamp, MapCache, MapResult, MapViewError, PageRect, load_map};
 
 mod api;
+mod exchange;
 mod history;
 mod map_view;
 mod overlay;
@@ -104,6 +107,13 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/map/near"), get(map_near))
         .route(&format!("{prefix}/api/symbols"), get(api_symbols))
         .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
+        .route(&format!("{prefix}/api/export/iof-xml"), get(api_export_xml))
+        .route(&format!("{prefix}/api/export/ppen"), post(api_export_ppen))
+        .route(
+            &format!("{prefix}/api/import/ppen"),
+            // The shell limits bodies to 1 MiB; this inner layer wins for the upload (ADR 0053).
+            post(api_import_ppen).layer(DefaultBodyLimit::max(MAX_COURSE_FILE_BYTES)),
+        )
         .route(&format!("{prefix}/api/undo"), post(api_undo))
         .route(&format!("{prefix}/api/redo"), post(api_redo))
         .route(&format!("{prefix}/api/quit"), post(quit).with_state(stop))
@@ -266,6 +276,88 @@ async fn api_op(
     };
     serialized(state, move |st| {
         api::run_op(st, &tool, revision.as_deref(), args)
+    })
+    .await
+}
+
+/// `GET api/export/iof-xml`: the IOF XML of the project as a download. The counts of courses and of those
+/// left out come in headers; the page words them.
+async fn api_export_xml(State(state): State<Shared>) -> Response {
+    let (project, lang) = {
+        let guard = state.lock().await;
+        (guard.project.clone(), guard.lang.clone())
+    };
+    blocking_response(move || match exchange::iof_xml(&project, &lang) {
+        Ok(download) => {
+            let disposition = format!("attachment; filename=\"{}\"", download.file_name);
+            let count = |n: usize| n.to_string();
+            (
+                [
+                    (header::CONTENT_TYPE, "application/xml".to_owned()),
+                    (header::CONTENT_DISPOSITION, disposition),
+                    (
+                        header::HeaderName::from_static("x-courseplan-courses"),
+                        count(download.report.courses),
+                    ),
+                    (
+                        header::HeaderName::from_static("x-courseplan-skipped"),
+                        count(download.report.skipped.len()),
+                    ),
+                    (
+                        header::HeaderName::from_static("x-courseplan-geo"),
+                        count(usize::from(download.report.geo_positions)),
+                    ),
+                ],
+                download.xml,
+            )
+                .into_response()
+        }
+        Err((status, body)) => (status, axum::Json(body)).into_response(),
+    })
+    .await
+}
+
+/// `POST api/export/ppen {"to": "linked" | "download"}`.
+async fn api_export_ppen(State(state): State<Shared>, headers: HeaderMap, body: Bytes) -> Response {
+    let revision = page_revision(&headers);
+    let to = serde_json::from_slice::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|v| v.get("to").and_then(|t| t.as_str()).map(str::to_owned))
+        .unwrap_or_default();
+    serialized(state, move |st| {
+        exchange::export_ppen(st, &to, revision.as_deref())
+    })
+    .await
+}
+
+/// `POST api/import/ppen?replace=true|false`: the body is the Purple Pen file.
+async fn api_import_ppen(
+    State(state): State<Shared>,
+    RawQuery(query): RawQuery,
+    headers: HeaderMap,
+    body: Result<Bytes, BytesRejection>,
+) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let refuse = |status: StatusCode, id: &str| {
+        (
+            status,
+            axum::Json(serde_json::json!({ "error": text(&lang, id, &[]) })),
+        )
+            .into_response()
+    };
+    let Some(replace) = exchange::import_query(query.as_deref()) else {
+        return refuse(StatusCode::BAD_REQUEST, "editor-import-bad-request");
+    };
+    let body = match body {
+        Ok(body) => body,
+        Err(rejection) if rejection.status() == StatusCode::PAYLOAD_TOO_LARGE => {
+            return refuse(StatusCode::PAYLOAD_TOO_LARGE, "editor-import-too-large");
+        }
+        Err(_) => return refuse(StatusCode::BAD_REQUEST, "editor-import-bad-request"),
+    };
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        exchange::import_ppen(st, revision.as_deref(), replace, &body)
     })
     .await
 }

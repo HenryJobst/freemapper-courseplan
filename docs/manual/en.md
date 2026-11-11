@@ -108,7 +108,7 @@ there.
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
 bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
-It runs the check as you work and shows its findings. The menu items for export, import and sync are greyed out and follow in later versions.
+It runs the check as you work and shows its findings. Export and import are in the Event menu. Sync is greyed out and follows in a later version.
 
 ### Starting it
 
@@ -281,6 +281,25 @@ Half a second after each change the editor runs the same check as `check` and sh
   box means a gap outside the rule range. The signs differ by severity in shape too.
 - "Accept..." asks for a note of up to 200 characters and stores the exception in the project file. The finding then
   moves to "Accepted" with its note, and "Remove acceptance" brings it back. Both are one step for undo.
+
+### Export and import
+
+The Event menu has three entries. The browser never names a file; the editor writes only the project's own linked
+Purple Pen file.
+
+- **Export IOF XML (download).** The browser saves the IOF XML of the individual courses, named after the project
+  file. A dialog lists courses that were left out (team, relay and score courses) and says so when the map has no
+  georeferencing.
+- **Export to Purple Pen...** "Write to the linked file" updates the file `sources.ppen` names, by the rules of
+  `export --ppen`: it patches what the project changed and stores new Purple Pen ids in the project. Without a link
+  the button is off. The command `export --ppen FILE` creates a file and links it. "Download a new file" saves a new
+  `.ppen`; nothing is stored in the project. A dialog lists the notes.
+- **Import Purple Pen file...** You choose a `.ppen` from your computer. A project that already has controls,
+  courses or special objects is refused unless you tick "Replace", which replaces all three. The import does not
+  change the link `sources.ppen`: the editor never learns where the file lives. A dialog lists the notes. Files
+  over 50 MiB are refused (ADR 0053).
+
+Writing to the linked file and importing clear the undo history, because they change more than one step.
 
 ### Undo and redo
 

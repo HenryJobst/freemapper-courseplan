@@ -12,6 +12,7 @@ import * as bends from "./bends.js";
 import * as numbers from "./numbers.js";
 import * as specials from "./specials.js";
 import * as findings from "./findings.js";
+import * as exchange from "./exchange.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -634,6 +635,43 @@ findings.bind({
   },
 });
 
+// Export and import (ADR 0053). They run like an operation: one at a time, and the page loads the project
+// again afterwards. `written` is called with the revision the server answered, also after a refusal.
+async function exclusive(work) {
+  if (state.closed) return;
+  if (busy) {
+    dropped();
+    return;
+  }
+  busy = true;
+  try {
+    await work();
+  } catch {
+    status.say("editor-status-lost");
+  } finally {
+    await idle();
+  }
+}
+
+async function exchangeWritten(revision) {
+  if (revision) state.revision = revision;
+  await loadState(false);
+  // Our own write, also to the linked file, is not an outside change.
+  const seen = await get("api/revision");
+  if (seen.ok) state.seen = seen.data;
+}
+
+exchange.bind({
+  revision: () => state.revision,
+  link: () => state.data?.link?.ppen ?? null,
+  hasContent: () => {
+    const event = state.data?.event;
+    return !!event && (event.controls.length > 0 || event.courses.length > 0 || (event.specials ?? []).length > 0);
+  },
+  exclusive,
+  written: exchangeWritten,
+});
+
 const propActions = {
   describe: describeControl,
   rules: () => state.rules,
@@ -808,6 +846,8 @@ async function loadState(announce) {
     status.say(answer.ok && answer.data?.error ? answer.data.error : "editor-status-state-failed", answer.ok && !!answer.data?.error);
     return false;
   }
+  // The server leaves empty lists out of the event; the page counts on them.
+  for (const list of ["classes", "controls", "specials", "courses", "accepted_findings"]) answer.data.event[list] ??= [];
   state.data = answer.data;
   const m = answer.data.map;
   status.setMap(m.path, m.scale, m.kind);
@@ -1207,7 +1247,7 @@ function bindMapInput() {
       view.panBy(dx * (v.x1 - v.x0) * PAN_STEP, dy * (v.y1 - v.y0) * PAN_STEP);
     },
     help: () => helpDialog.showModal(),
-    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open || findings.dialogOpen(),
+    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open || findings.dialogOpen() || exchange.dialogOpen(),
   });
 }
 

@@ -367,7 +367,7 @@ pub(crate) fn number_at(
 pub(crate) type Reply = (StatusCode, Value);
 
 /// The text of a catalog message without arguments.
-fn msg(lang: &Lang, id: &str) -> String {
+pub(super) fn msg(lang: &Lang, id: &str) -> String {
     text(lang, id, &[])
 }
 
@@ -380,7 +380,7 @@ fn text_of(source: &Source) -> Option<String> {
 }
 
 /// Reads the project file again into the state and returns its text.
-fn reload(st: &mut EditorState) -> Option<String> {
+pub(super) fn reload(st: &mut EditorState) -> Option<String> {
     // The stamp comes first: a write after the read then shows up as a changed stamp.
     st.stamp = FileStamp::of(&st.project).ok();
     let source = Source::of(&st.project);
@@ -390,7 +390,7 @@ fn reload(st: &mut EditorState) -> Option<String> {
     text
 }
 
-fn conflict(st: &EditorState, error: String) -> Reply {
+pub(super) fn conflict(st: &EditorState, error: String) -> Reply {
     (
         StatusCode::CONFLICT,
         json!({ "error": error, "revision": st.loaded.revision.0 }),

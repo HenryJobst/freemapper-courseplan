@@ -184,7 +184,14 @@ dialog h2 { margin-top: 0; font-size: 1.05rem; }
 #help-keys { border-collapse: collapse; margin-bottom: 0.75rem; }
 #help-keys th { text-align: left; padding: 0.15rem 1rem 0.15rem 0; white-space: nowrap; font-weight: 600; }
 #help-keys td { padding: 0.15rem 0; }
-.dialog-buttons { display: flex; gap: 0.5rem; }
+.dialog-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+#report-dialog { max-width: 40rem; }
+#report-rows { display: grid; grid-template-columns: max-content 1fr; gap: 0.15rem 1rem; margin: 0 0 0.5rem; }
+#report-rows dt { font-weight: 600; }
+#report-rows dd { margin: 0; }
+#report-notes { max-height: 14rem; overflow: auto; margin: 0 0 0.75rem; padding-left: 1.1rem; }
+#report-lines { margin: 0 0 0.5rem; padding-left: 1.1rem; }
+#import-has-content, #import-replace-warning { margin: 0.25rem 0; }
 dialog button { font: inherit; }
 
 @media (max-width: 800px) {
