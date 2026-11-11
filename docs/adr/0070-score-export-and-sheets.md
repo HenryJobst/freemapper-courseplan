@@ -8,7 +8,7 @@ Design §3 and §5.3 to §5.6 ask for score courses in the IOF XML, a CSV for ha
 evaluation sheet. ADR 0033 limited the IOF XML export to individual courses. The IOF schema has `CourseControl/Score`
 (a double, after `LegLength`). It has no flag for a score course, no time limit, no penalty and no link.
 ## Decision
-- **IOF XML** *(user: write score courses; Claude's call: carriage)*. A score course is a `Course` with a
+- **IOF XML** *(Claude's call)*. A score course is a `Course` with a
   `CourseControl` for start, each control with `Score` (the value) and finish. It has no `Length` and no leg lengths,
   because the order is free. Time limit, penalty and links go into the course's `Extensions`, as
   `fcp:ScoreCourse timeLimitMin penaltyPerMin` with one `fcp:Link a b` per pair, namespace

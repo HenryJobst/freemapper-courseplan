@@ -2,9 +2,8 @@
 
 Date: 2026-11-11
 Status: Accepted
-
 ## Context
-The library suggests, values and drafts (ADRs 0062 to 0065), but nothing reached the setter. ADR 0059 applies.
+The library suggests, values and drafts (ADRs 0062 to 0065); ADR 0059 puts it in reach of the setter.
 
 ## Decision
 - Three operations, `score_suggest`, `score_draft` and `score_length`, in `mcp/score.rs`. The CLI calls them through
@@ -26,5 +25,6 @@ The library suggests, values and drafts (ADRs 0062 to 0065), but nothing reached
 - `[profile.dev.package.freemapper-courseplan] opt-level = 2`: a draft took a minute unoptimised *(Claude's call)*.
 
 ## Consequences
-On the Lübeck map (release build) `score suggest` takes about 5 s and `score draft` about 7 s; the example's start
-flag lies in a building and needs a new position.
+On the Lübeck map (release build) `suggest` takes about 5 s and `draft` 5 to 10 s. `suggest` takes `course` for a
+score course's start and finish (the editor sends it). A draft may fall back to the 2 m surface while `length` and
+`check` stay at 4 m, so they can disagree on a narrow map.

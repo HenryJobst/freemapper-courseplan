@@ -11,11 +11,11 @@ state lock for its whole run (ADR 0043), so `api/revision` waited as long. Desig
   start, finish, no legs, no numbers. A mandatory link is a `links` entry: a straight dashed line between its two
   controls in the marked-leg style. It is no leg, so nothing on it can be selected or bent. The control description
   does not mention it. This answers §10.
-- **Panel** *(user: panel, markers, accept, draft with progress; Claude's call: details)*. Time limit, penalty,
+- **Panel** *(Claude's call, ruling 7)*. Time limit, penalty,
   controls, links, settings, and the buttons Suggest, Draft and Check length. Accept adds a candidate with
   `add_control` and `set_score_controls` (two undo steps; a refused second step removes the control again). A
   candidate has a free `code` as far as the code space reaches. Course mode and preview stay with individual courses.
-- **Not stored** *(user)*. Candidates and drafts live in the page. Writes of this page keep them, but a change of the
+- **Not stored** *(Claude's call)*. Candidates and drafts live in the page. Writes of this page keep them, but a change of the
   limit or the settings drops them. A revision from outside discards them, and the panel says so.
 - **Long runs** *(Claude's call)*. `POST api/score/{tool}` (suggest, length, draft; apply is refused) takes the lock
   only to compare the revision, computes on the blocking pool, and compares the file again at the end: a change is a

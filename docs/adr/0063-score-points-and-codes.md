@@ -14,7 +14,7 @@ clashing with codes already on the map (design 2026-11-11 §3, §4.3, §9 ruling
 - The values are quantiles of the candidate set *(Claude's call)*. Candidates are ordered by score, equal scores by
   index, and cut into `value_max` bins of equal size. All-equal scores therefore spread over the values by index,
   and a set smaller than `value_max` uses the lower steps (3 candidates at 5 give 1, 2 and 4). The result does not
-  depend on absolute times, and every run gives the same answer *(user, ruling 8)*.
+  depend on absolute times, and every run gives the same answer *(Claude's call, ruling 8)*.
 - The tens digit is chosen per control, lowest first, from 3 to 9. A code is skipped when it is taken, used
   already in the set, or reads alike turned by 180 degrees or by 6 and 9 against a taken code or a chosen one. Controls
   are served top to bottom, then left to right, so low tens digits run in reading order.

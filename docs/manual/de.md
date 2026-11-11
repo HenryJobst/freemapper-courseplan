@@ -189,7 +189,8 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
   der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
   `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
-  sonst 30 m). Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
+  sonst 30 m). `--course NAME` nimmt Start und Ziel dieser Score-Bahn (`--start` und `--finish` haben weiter
+  Vorrang); ohne die Option gelten der erste Start und das erste Ziel des Events. Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
 - `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
   standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
   95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
@@ -199,8 +200,9 @@ freemapper-courseplan score length hall.courseplan.toml Score45
 - `--link "X,Y;X,Y"` macht zwei Positionen zu einer Pflichtverbindung; jede muss die Position eines Kandidaten aus
   `score suggest` sein, mit einem `--limit` von mindestens 60 aufgerufen, dem Pool des Entwurfs. Die Option lässt sich für weitere Verbindungen wiederholen.
 - Trifft kein Entwurf beide Bänder, endet der Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
-  Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, ein schnellerer guter Läufer
-  oder dass diese Eingaben nicht gehen.
+  Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, freie Codes (die Postenzahl ist
+  durch den Coderaum begrenzt: erhöhe den höchsten Wert mit `score settings --value-max`, höchstens 9, oder gib Codes
+  auf der Karte frei), ein schnellerer guter Läufer oder dass diese Eingaben nicht gehen.
 - `score length` analysiert eine vorhandene Bahn, zum Beispiel nachdem du einen Posten verschoben hast, und meldet
   dieselben Bänder und Abweichungen. Es ändert die Bahn nie.
 - Dieselben Antworten liefern die Werkzeuge `score_suggest`, `score_draft` und `score_length`; `--json` gibt sie aus.

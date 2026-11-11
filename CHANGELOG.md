@@ -8,7 +8,9 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
-- Das Lübecker Beispiel hat in einer zweiten Projektdatei, `luebeck-score.courseplan.toml`, eine Score-Bahn: 28 Posten, 82 Punkte, 22 Minuten, aus `score draft`, mit Transkript, Ausgabe von `check`, IOF-XML, CSV-Liste und Auswertungsbogen auf Deutsch und Englisch. Ein Entwurf mit 45 Minuten verfehlt auf dieser kleinen Karte die Bänder; die README sagt das.
+- Das Lübecker Beispiel hat in einer zweiten Projektdatei, `luebeck-score.courseplan.toml`, eine Score-Bahn: 9 Posten, 25 Punkte, 15 Minuten, aus `score draft`, mit Transkript, Ausgabe von `check`, IOF-XML, CSV-Liste und Auswertungsbogen auf Deutsch und Englisch. Ein Entwurf mit 45 Minuten scheitert, weil die freien Codes ausgehen (30 Posten beim höchsten Wert 5, 54 bei 9), nicht weil die Karte klein ist; die README sagt das.
+- `score suggest` nimmt `--course NAME` (Werkzeugparameter `course`): Start und Ziel dieser Score-Bahn. Der Vorschlag im Editor schickt die gewählte Bahn; vorher benutzte er den ersten Start des Events, und der kann in einem Gebäude liegen.
+- Ein gescheiterter Entwurf, dessen Postenzahl durch die freien Codes begrenzt ist, sagt das (Hinweis „höchsten Wert erhöhen oder Codes freigeben“), statt die Karte verantwortlich zu machen.
 - `info` nennt Posten, Punkte und Zeitlimit einer Score-Bahn. Bisher stand dort, die Länge werde nicht unterstützt.
 - Score-Bahnen in den Exporten. Das IOF-XML enthält jetzt Score-Bahnen mit dem Wert jedes Postens in `CourseControl/Score`; Zeitlimit, Abzug und Pflichtverbindungen stehen in einem `Extensions`-Element, weil das Schema dafür keinen Platz hat. Neu: `export --csv DATEI --course NAME` schreibt Code, Wert und Position der Posten, `export --sheet DATEI --course NAME` einen Auswertungsbogen mit Zeitlimit, Abzug, der Regel, dass bei gleicher Punktzahl gewinnt, wer schneller ist, und der Regel, dass disqualifiziert wird, wer eine Verbindung auslässt (Werkzeuge `export_score_csv`, `export_score_sheet`). Der Purple-Pen-Export lässt Score-Bahnen weiter aus und sagt es. Das IOF-XML ist in OE nicht erprobt (ADR 0070).
 - Der Editor zeichnet Score-Bahnen und hat ein Score-Fenster: ein Vorschlag mit Kandidatenmarken und ihren Werten, „Übernehmen“ für einen einzelnen Kandidaten, ein Entwurf mit Längenbericht, „Entwurf übernehmen“ und eine Fortschrittszeile, solange das Programm rechnet. Pflichtverbindungen erscheinen als gestrichelte Linien zwischen ihren Posten. Kandidaten und Entwürfe sind nicht gespeichert, bis du sie übernimmst. Ein langer Lauf hindert den Editor nicht mehr daran, Änderungen an der Datei zu bemerken (ADR 0069).
@@ -19,6 +21,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Geändert
 
+- Korrekturen an den Score-Bahnen vor der ersten Veröffentlichung: Ein vorgeschlagener Posten hat in den Touren immer eine Route, ein Längenbericht sagt nie „inf Prozent“, die Geschwindigkeitstabelle behandelt Wald 405 als gut laufbar (1,1) und den Bahnhelfer 515.1 nicht als Mauer, und `score suggest` zeigt Routenwahl und Schwierigkeit mit zwei Nachkommastellen und Sekunden mit einer. `score settings --value-max` lehnt einen Wert unter dem eines vorhandenen Postens ab.
 - Die Werkzeugbeschreibungen von `check` und `export_iof_xml` sagen nicht mehr, Score-Bahnen würden nicht geprüft oder geschrieben. README, Handbuch, Glossar, Entwurf und AGENTS.md beschreiben Score-Bahnen als gebaut.
 - Intern: Kartenart, Sidecar-Leser und Objektklasse kommen aus `freemapper-core` v0.19.0 (`freemapper-contract`) statt aus eigenen Kopien. Namen und Ausgaben bleiben gleich.
 

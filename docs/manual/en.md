@@ -179,7 +179,8 @@ freemapper-courseplan score length hall.courseplan.toml Score45
 - `score suggest` lists control sites, best route choice first, each with its position, the symbol code of the map
   feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
   would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
-  smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m).
+  smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m). `--course NAME` takes the start and
+  finish of that score course (`--start` and `--finish` still win); without it the first start and finish of the event count.
   Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded. With `--json`
   and over MCP each candidate also has a free `code` that carries its value. It is `null` when no free code is left:
   only the best-ranked candidates get one.
@@ -191,7 +192,7 @@ freemapper-courseplan score length hall.courseplan.toml Score45
 - `--link "X,Y;X,Y"` makes two positions a mandatory link; each must be the position of a candidate from `score
   suggest`, run with a `--limit` of at least 60, the pool the draft uses. Repeat the option for more links.
 - When no draft meets both bands, the command exits with 1. It names each missed band with the size of the miss, and
-  one hint: a longer or shorter limit, more suitable sites, a faster good runner, or that these inputs cannot work.
+  one hint: a longer or shorter limit, more suitable sites, free codes (the control count is capped by the code space: raise the highest value with `score settings --value-max`, 9 at most, or free codes on the map), a faster good runner, or that these inputs cannot work.
 - `score length` analyses a course that exists, for example after you moved a control, and reports the same bands and
   misses. It never changes the course.
 - The same answers come from the tools `score_suggest`, `score_draft` and `score_length`; `--json` prints them.

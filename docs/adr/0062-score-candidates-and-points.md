@@ -7,7 +7,7 @@ The score builder needs sites where a control could stand, each with route choic
 (design §4.2, §9 rulings 4, 5, 8). freemapper-core has no class for a clear control site.
 
 ## Decision
-Candidates *(user: the feature list; Claude's call: the rest)*:
+Candidates *(Claude's call)*:
 - Sites come from `score/candidates.toml`: ISSprOM point symbols at their position, and corners (turn of 45
   degrees or more) of walls, fences, stairs, step lines, buildings and canopies. Each has a clarity from 0 to 1.
   ISSprOM has no bench symbol; benches show up as 530 or 531.
@@ -16,8 +16,8 @@ Candidates *(user: the feature list; Claude's call: the rest)*:
   wall routes from the nearest free place within 1.5 map mm. An unreachable start or finish is an error
   (`StartUnreachable`, `FinishUnreachable`), for example the Lübeck example's start flag inside a building.
 - Sites are picked farthest-point first from start, finish and earlier picks, clear features preferred. A pick
-  without a route is skipped: at most `4 * limit` tries for `2 * limit` candidates. Each gets legs to the start
-  and its 4 nearest others. Legs with alternatives run on a coarser surface (8 m cells; the fine one if the
+  without a route is skipped, checked from the site itself on the coarse surface as the tours route it: at most `4 * limit` tries for `2 * limit` candidates. Each gets legs to the start
+  and its 4 nearest others. Legs with alternatives run on a coarser surface (4 m cells; the fine one if the
   coarse one cannot join start and finish); `effort_s` in seconds runs on the fine one through `TravelTime::fastest`.
 - Route choice (0 to 1) of a leg is 0 for one route; otherwise 0.5 for two routes within `max_length_ratio` of
   the best length and 1 for three or more, times `1 - 0.5 * s`, where `s` runs from 0 (second route as long as

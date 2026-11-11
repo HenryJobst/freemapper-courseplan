@@ -8,7 +8,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
-- The Lübeck example has a score course in a second project file, `luebeck-score.courseplan.toml`: 28 controls, 82 points, 22 minutes, from `score draft`, with its transcript, check output, IOF XML, CSV list and evaluation sheet in English and German. A draft at 45 minutes misses the bands on this small map; the README says so.
+- The Lübeck example has a score course in a second project file, `luebeck-score.courseplan.toml`: 9 controls, 25 points, 15 minutes, from `score draft`, with its transcript, check output, IOF XML, CSV list and evaluation sheet in English and German. A draft at 45 minutes fails because the free codes run out (30 controls at the highest value 5, 54 at 9), not because the map is small; the README says so.
+- `score suggest` takes `--course NAME` (tool parameter `course`): start and finish of that score course. The editor's Suggest sends the selected course; before, it used the first start of the event, which can lie inside a building.
+- A failed draft whose control count is capped by the free codes says so (hint "raise the highest value or free codes") instead of blaming the map.
 - `info` names controls, points and time limit of a score course. It used to say that the length was not supported.
 - Score courses in the exports. The IOF XML now holds score courses with the value of each control in `CourseControl/Score`; time limit, penalty and mandatory links sit in an `Extensions` element, because the schema has no place for them. New `export --csv FILE --course NAME` writes code, value and position of the controls, and `export --sheet FILE --course NAME` writes an evaluation sheet with the time limit, the penalty, the rule that the faster runner wins on equal points and the rule that a runner who skips a link is disqualified (tools `export_score_csv`, `export_score_sheet`). The Purple Pen export still skips score courses and says so. The IOF XML has not been tried in OE (ADR 0070).
 - The editor draws score courses and has a Score panel: a suggestion with candidate markers and their values, "Accept" for a single candidate, a draft with a length report, "Apply" and a progress line while the program computes. Mandatory links appear as dashed lines between their controls. Candidates and drafts are not saved until you accept or apply them. A long run no longer stops the editor from noticing changes to the file (ADR 0069).
@@ -19,6 +21,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Changed
 
+- Score fixes before the first release: a suggested control always has a route in the tours, a length report never says "inf percent", the speed table treats forest 405 as good running (1.1) and the railway helper 515.1 as no wall, and `score suggest` shows route choice and difficulty to two decimals and seconds to one. `score settings --value-max` refuses a value below that of an existing control.
+- Score fixes before the first release: a suggested control always has a route in the tours, a length report never says "inf percent", the speed table treats forest 405 as good running (1.1) and the railway helper 515.1 as no wall, and `score suggest` shows route choice and difficulty to two decimals and seconds to one. `score settings --value-max` refuses a value below that of an existing control.
 - The tool descriptions of `check` and `export_iof_xml` no longer say that score courses are not checked or written. README, manual, glossary, design and AGENTS.md describe score courses as built.
 - Internal: the map kind, the sidecar reader and the object class now come from `freemapper-core` v0.19.0 (`freemapper-contract`) instead of local copies. Names and output stay the same.
 

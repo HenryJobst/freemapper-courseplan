@@ -28,8 +28,10 @@ Tell the person these limits before you start:
   sprint map, about 6 s for `score suggest` and 8 s for `score draft` on the Lübeck map (release build, an idle machine; a draft that misses the bands can take twice as long). A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
-  A draft can miss the length bands, for example when the map offers few usable sites for a long limit. The command
-  then exits with 1 and names each missed band; try a shorter limit and tell the person what happened.
+  A draft can miss the length bands, for example when the free codes run out before the bands are met (30
+  controls at the highest value 5, 54 at 9) or when the map has too few usable sites. The command then exits with 1,
+  names each missed band and ends with a hint. Try another limit or a higher `score settings --value-max`, and tell
+  the person what happened.
 - The score extension in the IOF XML (time limit, penalty, links, in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1`) is not tried in OE or any other reader; a strict reader may ignore it. The `Score` values are standard.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in
   Purple Pen 4.0 (checked once by the author).
@@ -134,7 +136,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
 | `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
-| `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles meet the length bands; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band exits with 1 and names each miss and what would help. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
+| `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--course NAME` for the start and finish of a score course, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles meet the length bands; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band exits with 1 and names each miss and what would help. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
 | `export --csv FILE --course NAME`, `export --sheet FILE --course NAME` | Control list (`code,value,x_mm,y_mm`, map millimetres) and Markdown evaluation sheet of a score course; other courses are refused. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
@@ -330,8 +332,8 @@ Texts as the English catalog has them:
   `score draft` and `score length` need a start and finish outside buildings and blocked areas. Add a new start or
   finish with `special add` at a free position (`map near` shows what lies there); do not move the person's own.
 - `The good runner scores 100 percent of all points ...` or `The very good runner ...` (`score draft`, exit 1): the
-  draft misses a length band and names the miss. The last line gives a hint, such as a shorter limit or too few
-  suitable sites. Try another limit and tell the person which band was missed; never present such a draft as a
+  draft misses a length band and names the miss. The last line gives a hint, such as a shorter limit, too few
+  suitable sites on the map, or free codes that run out (raise the highest value or free codes). Try another limit and tell the person which band was missed; never present such a draft as a
   success.
 - `<path> has no link to a Purple Pen file. Link it first with export --ppen FILE or import --ppen FILE`: link
   the project before `sync`.
