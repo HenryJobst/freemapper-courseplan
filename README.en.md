@@ -68,7 +68,10 @@ course A: 7 controls, 1.3 km, climb 5 m
 
 Ready-made programs for Windows, macOS and Linux are on the
 [releases page](https://github.com/HenryJobst/freemapper-courseplan/releases). Download the archive, unpack it and
-start `freemapper-courseplan` in a terminal or register it with your AI assistant (user manual, chapter 3).
+start `freemapper-courseplan` in a terminal or register it with your AI assistant (user manual, chapter 3). An
+assistant that can run commands (Claude Code, Codex) can also do the download and the registration itself; tell it
+"Read AGENTS.md from github.com/HenryJobst/freemapper-courseplan and set up freemapper-courseplan." The file
+[`AGENTS.md`](AGENTS.md) is in every archive.
 
 ## Status
 
@@ -77,7 +80,8 @@ individual courses. `freemapper-courseplan init <map>` creates the project file.
 `class` and `course` you add controls, start, finish, classes and courses, set bends and have the control numbers
 placed. `freemapper-courseplan info <project>` shows what the project holds, including the length of each course.
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
-[user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up. The project file is TOML, and
+[user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up, and [`AGENTS.md`](AGENTS.md) tells the assistant
+how to install and use the program itself. The project file is TOML, and
 you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. The program cannot edit or measure team, relay or score courses yet. It cannot print
 courses either, and it does not read forest maps.
 
