@@ -70,18 +70,21 @@ function itemButton(column, entry, selected) {
   button.className = "pick";
   if (entry.id !== null) button.id = itemId(column, entry.id);
   else button.id = `pick-${column}-none`;
-  const icon = entry.id === null ? null : iconOf(entry.svg);
+  const icon = entry.id === null || entry.unlisted ? null : iconOf(entry.svg);
   if (icon) {
     icon.classList.add("pick-icon");
     button.append(icon);
   }
   const label = document.createElement("span");
   label.className = "pick-text";
-  label.textContent = entry.id === null ? entry.text : `${entry.id} ${entry.text}`;
+  if (entry.unlisted) label.textContent = `${t("editor-desc-current")} ${entry.id}`;
+  else label.textContent = entry.id === null ? entry.text : `${entry.id} ${entry.text}`;
   button.append(label);
   if (selected) {
     const mark = document.createElement("span");
     mark.className = "pick-mark";
+    // aria-selected already says it; the mark is only for the eye.
+    mark.setAttribute("aria-hidden", "true");
     mark.textContent = `✓ ${t("editor-desc-selected")}`;
     button.append(mark);
   }
@@ -90,7 +93,10 @@ function itemButton(column, entry, selected) {
 
 // Builds the grid for `entries` (the symbols of a column) into `list`.
 function fillList(list, column, entries, current, pick) {
-  const all = [{ id: null, text: t("editor-desc-none") }, ...entries];
+  // A current id the column does not list (an old or hand-written one) shows as an extra selected entry on
+  // top, so it is visible and "No symbol" is never the selected one by accident.
+  const unlisted = current && !entries.some((e) => e.id === current) ? [{ id: current, text: "", unlisted: true }] : [];
+  const all = [...unlisted, { id: null, text: t("editor-desc-none") }, ...entries];
   list.replaceChildren(...all.map((e) => itemButton(column, e, (e.id ?? null) === (current ?? null))));
   const items = [...list.children];
   let start = all.findIndex((e) => (e.id ?? null) === (current ?? null));
@@ -120,7 +126,13 @@ function fillList(list, column, entries, current, pick) {
       typed += evt.key.toUpperCase();
       clearTimeout(timer);
       timer = setTimeout(() => { typed = ""; }, TYPE_AHEAD_MS);
-      const found = all.findIndex((e) => e.id !== null && e.id.toUpperCase().startsWith(typed));
+      const search = (prefix) => all.findIndex((e) => e.id !== null && !e.unlisted && e.id.toUpperCase().startsWith(prefix));
+      let found = search(typed);
+      if (found < 0 && typed.length > 1) {
+        // A miss restarts the buffer with this key instead of blocking until the timeout.
+        typed = evt.key.toUpperCase();
+        found = search(typed);
+      }
       to = found >= 0 ? found : at;
     } else if (to === null) {
       return;

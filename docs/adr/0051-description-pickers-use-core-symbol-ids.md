@@ -17,6 +17,18 @@ which is keyed by Purple Pen ids (the 2004 numbers with variant suffixes).
 - **Columns** *(Claude's call)*. A symbol is offered in the column named by its `symbol_kind`; column E also takes
   the D symbols, as Purple Pen and `ppen_export` do. Column C offers the "which of similar features" symbols only,
   not the instruction rows.
+- **No number symbols** *(Claude's call)*. A symbol with nothing to draw is not listed. That drops 9.1 to 9.4
+  (height, size): they need a value, and `ControlDescription` holds ids only. Column F offers 10.1, 10.2 and 11.1.
+  They return when the model carries a value. Tests pin the size of every column and check that no listed
+  symbol has an empty drawing.
+- **The operation checks what it sets** *(Claude's call)*. `describe_control` (CLI, MCP and editor alike) refuses
+  a symbol it is about to change when the Purple Pen export would not write it in that column (`ppen_columns`:
+  D takes D, E takes D or E, and so on) with an `EditError::BadSymbol`. Ids already in the file and left as they
+  are stay unchecked, and loading a project checks nothing. A test sends a handful of ids, among them D=E with
+  F 10.1 and G 12.1N, through the export and the import and gets the same ids back.
+- **An id the list lacks** *(Claude's call)*. If a control holds an id the column does not list (an old or
+  hand-written one), the picker shows it as an extra selected entry "current value: <id>" on top, so "No symbol"
+  never erases it unless the user chooses that entry.
 - **Text and drawing** *(Claude's call)*. The text is in the process language with English as fallback;
   placeholders such as `{0}` are shown as an ellipsis. The drawing is an SVG with `currentColor`, built only from
   the geometry's numbers, so no text from a client reaches it. The page parses it as SVG and imports the element;

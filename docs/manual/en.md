@@ -242,10 +242,12 @@ within 3 mm of the control are listed below column D.
   Typing a number such as `1.3` jumps to it. The symbol in use is marked, and the focus stays on the pick.
 - **What a column offers.** Column C has the symbols 0.1 to 0.5 for which of several similar features is meant, with
   the compass directions 0.1N to 0.2NW; the instruction rows are not offered there.
-  Column D has 1.1 to 6.2, column E has the symbols of column D and 8.1 to 8.11, column F has 9.1 to 9.4, 10.1,
-  10.2 and 11.1, column G has the 12.x symbols, and column H has 13.1 to 13.3.
+  Column D has 1.1 to 6.2, column E has the symbols of column D and 8.1 to 8.11, column F has 10.1,
+  10.2 and 11.1 (the number symbols 9.1 to 9.4 are not offered, because the project file holds no value for them), column G has the 12.x symbols, and column H has 13.1 to 13.3.
 - **Directions.** A symbol with a direction exists only with one: choose `12.1N`, `12.1NE` and so on, there is no
   plain `12.1`.
+- **A symbol the column does not list.** If the control holds one (an old or hand-written one), it appears at the top
+  as "current value" and stays until you pick something else.
 - **No symbol.** The entry "No symbol" empties the column.
 - **Undo.** Each pick, and each emptied column, is one step for undo.
 

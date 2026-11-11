@@ -252,10 +252,12 @@ des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
   und drücke Enter. Tippst du eine Nummer wie `1.3`, springt die Auswahl dorthin. Das Symbol in Gebrauch ist
   markiert, und der Fokus bleibt auf der Wahl.
 - **Was eine Spalte anbietet.** Spalte C hat die Symbole 0.1 bis 0.5 dafür, welches von mehreren gleichen Objekten
-  gemeint ist, mit den Himmelsrichtungen 0.1N bis 0.2NW; die Anweisungszeilen bietet sie nicht an. Spalte D hat 1.1 bis 6.2, Spalte E die Symbole der Spalte D und 8.1 bis 8.11, Spalte F 9.1 bis 9.4, 10.1,
-  10.2 und 11.1, Spalte G die Symbole 12.x und Spalte H 13.1 bis 13.3.
+  gemeint ist, mit den Himmelsrichtungen 0.1N bis 0.2NW; die Anweisungszeilen bietet sie nicht an. Spalte D hat 1.1 bis 6.2, Spalte E die Symbole der Spalte D und 8.1 bis 8.11, Spalte F 10.1,
+  10.2 und 11.1 (die Zahlensymbole 9.1 bis 9.4 bietet sie nicht an, weil die Projektdatei keinen Wert dafür hält), Spalte G die Symbole 12.x und Spalte H 13.1 bis 13.3.
 - **Richtungen.** Ein Symbol mit Richtung gibt es nur mit einer: wähle `12.1N`, `12.1NE` und so weiter, ein
   einfaches `12.1` gibt es nicht.
+- **Ein Symbol, das die Spalte nicht anbietet.** Hält die Kontrolle eines (ein altes oder von Hand geschriebenes), steht
+  es oben als „aktueller Wert“ und bleibt, bis du etwas anderes wählst.
 - **Kein Symbol.** Der Eintrag „Kein Symbol“ leert die Spalte.
 - **Rückgängig.** Jede Wahl und jede geleerte Spalte ist ein Schritt für Rückgängig.
 

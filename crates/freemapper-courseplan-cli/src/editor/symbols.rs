@@ -22,6 +22,7 @@ const STANDARD: Standard = Standard::Iof2018;
 struct Listed {
     id: String,
     ppen: String,
+    geometry: &'static SymbolGeometry,
 }
 
 /// The column (`C` to `H`) as an index 0 to 5, or `None` for any other text.
@@ -80,11 +81,17 @@ fn columns() -> &'static [Vec<Listed>; 6] {
             let Some(kind) = symbol_kind(&inverse.id, STANDARD) else {
                 continue;
             };
+            // A symbol with nothing to draw is a number symbol (9.1 to 9.4: height, size): the project file
+            // has no place for its value, so it is not offered (ADR 0051).
+            let Some(geometry) = symbol(&inverse.id, STANDARD).filter(|g| !g.is_empty()) else {
+                continue;
+            };
             for (index, list) in out.iter_mut().enumerate() {
                 if accepts(index, kind) {
                     list.push(Listed {
                         id: id.clone(),
                         ppen: inverse.id.clone(),
+                        geometry,
                     });
                 }
             }
@@ -212,13 +219,12 @@ pub(crate) fn symbols_json(index: usize, lang: &Lang) -> Value {
     let list = columns().get(index).map_or(&[][..], Vec::as_slice);
     Value::Array(
         list.iter()
-            .filter_map(|l| {
-                let geometry = symbol(&l.ppen, STANDARD)?;
-                Some(json!({
+            .map(|l| {
+                json!({
                     "id": l.id,
                     "text": text_of(&l.ppen, &l.id, lang),
-                    "svg": symbol_svg(geometry),
-                }))
+                    "svg": symbol_svg(l.geometry),
+                })
             })
             .collect(),
     )
@@ -346,7 +352,26 @@ mod tests {
                 assert!(symbol_text(&inverse.id, TextLang::En).is_some(), "{}", l.id);
             }
         }
-        assert!(total > 150, "{total} symbols");
+        assert_eq!(total, 11 + 73 + 84 + 3 + 70 + 3, "{total} symbols");
+    }
+
+    #[test]
+    fn column_sizes_are_pinned_and_every_listed_symbol_has_a_drawing() {
+        let sizes: Vec<usize> = (0..6).map(|i| columns()[i].len()).collect();
+        // F lost 9.1 to 9.4 (number symbols without a drawing), which leaves 10.1, 10.2 and the bend 11.1.
+        assert_eq!(sizes, [11, 73, 84, 3, 70, 3]);
+        for index in 0..6 {
+            let json = symbols_json(index, &Lang::english());
+            assert_eq!(json.as_array().unwrap().len(), columns()[index].len());
+            for l in &columns()[index] {
+                assert!(!l.geometry.is_empty(), "{} has an empty drawing", l.id);
+            }
+            for entry in json.as_array().unwrap() {
+                let svg = entry["svg"].as_str().unwrap();
+                assert!(!svg.ends_with("\">"), "{entry}");
+                assert!(svg.len() > 120, "{entry}");
+            }
+        }
     }
 
     #[test]

@@ -86,28 +86,28 @@ fn control_add_move_describe_remove() {
 
     ok(
         d,
-        &["control", "describe", p, "31", "--c", "1.8", "--e", "2.1"],
+        &["control", "describe", p, "31", "--c", "0.3", "--e", "2.1"],
     );
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(
-        toml.contains("\"1.8\"") && toml.contains("\"2.1\""),
+        toml.contains("\"0.3\"") && toml.contains("\"2.1\""),
         "{toml}"
     );
     // Unset columns stay.
     ok(d, &["control", "describe", p, "31", "--d", "5.1"]);
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(
-        toml.contains("\"1.8\"") && toml.contains("\"5.1\""),
+        toml.contains("\"0.3\"") && toml.contains("\"5.1\""),
         "{toml}"
     );
     // --clear empties first.
     ok(
         d,
-        &["control", "describe", p, "31", "--clear", "--h", "11.1"],
+        &["control", "describe", p, "31", "--clear", "--h", "13.1"],
     );
     let toml = std::fs::read_to_string(&project).unwrap();
     assert!(
-        !toml.contains("\"1.8\"") && toml.contains("\"11.1\""),
+        !toml.contains("\"0.3\"") && toml.contains("\"13.1\""),
         "{toml}"
     );
 

@@ -107,6 +107,7 @@ error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund
 error-edit-start-window-zero = Das Startfenster muss mindestens 1 Minute lang sein
 error-edit-too-many-bends = Eine Strecke der Bahn { $course } darf höchstens { $limit } Knickpunkte haben
 error-edit-blank-rule-category = Die Regelkategorie der Kategorie { $name } ist leer; gib eine an oder entferne sie
+error-edit-bad-symbol = Das Symbol { $id } passt nicht in Spalte { $column } einer Kontrollbeschreibung; wähle ein Symbol, das diese Spalte anbietet
 
 ## OOM-Karten lesen (OmapError)
 
@@ -1116,4 +1117,5 @@ editor-desc-none = Kein Symbol
 editor-desc-loading = Symbole werden geladen.
 editor-desc-failed = Die Symbole konnten nicht geladen werden.
 editor-desc-selected = gewählt
+editor-desc-current = aktueller Wert:
 editor-status-described = Beschreibung geändert.

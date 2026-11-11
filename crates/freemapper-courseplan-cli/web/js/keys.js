@@ -30,8 +30,12 @@ const ARROWS = {
   ArrowDown: [0, 1],
 };
 
-function typing(target) {
-  return target instanceof Element && target.closest("input, textarea, select, [role='listbox'], [contenteditable]") !== null;
+// Whether the key goes to a text field or a picker. Undo and redo (Ctrl/Cmd) pass through a picker's listbox,
+// which is not a text field; letters, Delete and Backspace stay with it.
+function typing(target, modified) {
+  if (!(target instanceof Element)) return false;
+  if (target.closest("input, textarea, select, [contenteditable]") !== null) return true;
+  return !modified && target.closest("[role='listbox']") !== null;
 }
 
 // Fills the dialog's table from SHORTCUTS.
@@ -53,7 +57,7 @@ export function fillHelp(table) {
 // help, canNudge() (a control is selected), drafting() (a line or an area is being drawn), finish(), dialogOpen().
 export function bind(actions) {
   document.addEventListener("keydown", (evt) => {
-    if (evt.defaultPrevented || actions.dialogOpen() || typing(evt.target)) return;
+    if (evt.defaultPrevented || actions.dialogOpen() || typing(evt.target, evt.ctrlKey || evt.metaKey)) return;
     const mod = evt.ctrlKey || evt.metaKey;
     const key = evt.key;
     const inTree = evt.target instanceof Element && evt.target.closest("[role='tree']") !== null;

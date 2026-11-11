@@ -868,3 +868,74 @@ fn a_georeferenced_map_gets_no_no_geo_message() {
         stdout(&result)
     );
 }
+
+// Descriptions through the Purple Pen file and back
+
+/// The descriptions of every control of a project file, as `code -> "c=.. d=.."`.
+fn descriptions_of(project: &Path) -> std::collections::BTreeMap<String, String> {
+    let text = std::fs::read_to_string(project).unwrap();
+    let mut out = std::collections::BTreeMap::new();
+    let mut header = String::new();
+    let mut code = String::new();
+    for line in text.lines().map(str::trim) {
+        if line.starts_with('[') {
+            header = line.to_owned();
+        } else if header == "[[controls]]" && line.starts_with("code = ") {
+            code = line["code = ".len()..].to_owned();
+        } else if header == "[controls.description]" {
+            let entry: &mut String = out.entry(code.clone()).or_default();
+            if !entry.is_empty() {
+                entry.push(' ');
+            }
+            entry.push_str(&line.replace(" = ", "="));
+        }
+    }
+    out
+}
+
+#[test]
+fn described_symbols_survive_the_purple_pen_round_trip() {
+    let (dir, project) = example("");
+    let p = project.to_str().unwrap();
+    let cases: [(&str, &[&str]); 7] = [
+        (
+            "31",
+            &["--c", "0.1N", "--d", "5.2", "--g", "12.1N", "--h", "13.1"],
+        ),
+        ("32", &["--d", "1.3", "--e", "1.3", "--f", "10.1"]),
+        (
+            "33",
+            &["--d", "1.3", "--e", "8.1", "--f", "10.2", "--g", "12.3SW"],
+        ),
+        ("34", &["--d", "2.1", "--f", "11.1", "--g", "12.14"]),
+        ("35", &["--e", "3.1", "--g", "12.12NE", "--h", "13.2"]),
+        ("36", &["--d", "4.1", "--e", "4.1", "--g", "12.14"]),
+        ("37", &["--d", "6.1", "--e", "8.5", "--f", "10.1"]),
+    ];
+    for (code, columns) in cases {
+        let mut args = vec!["control", "describe", p, code, "--clear"];
+        args.extend_from_slice(columns);
+        let out = run(dir.path(), "en", &args);
+        assert!(out.status.success(), "{code}: {}", stderr(&out));
+    }
+    let before = descriptions_of(&project);
+    assert_eq!(before.len(), 7, "{before:?}");
+    let ppen = dir.path().join("out.ppen");
+    let out = export_ppen(dir.path(), "en", &project, &ppen, &["--new"]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let init = run(dir.path(), "en", &["init", "luebeck.omap"]);
+    assert!(init.status.success(), "{}", stderr(&init));
+    let back = dir.path().join("luebeck.courseplan.toml");
+    let out = run(
+        dir.path(),
+        "en",
+        &[
+            "import",
+            back.to_str().unwrap(),
+            "--ppen",
+            ppen.to_str().unwrap(),
+        ],
+    );
+    assert!(out.status.success(), "{}", stderr(&out));
+    assert_eq!(descriptions_of(&back), before);
+}

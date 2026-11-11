@@ -892,6 +892,11 @@ impl Localize for EditError {
                 "error-edit-blank-rule-category",
                 &[("name", v(class))],
             ),
+            EditError::BadSymbol { column, id } => text(
+                lang,
+                "error-edit-bad-symbol",
+                &[("column", v(column)), ("id", v(id))],
+            ),
             EditError::Rules(e) => e.localize(lang),
         }
     }
@@ -1565,6 +1570,10 @@ mod tests {
                 limit: 200,
             },
             EditError::BlankRuleCategory { class: s("H21") },
+            EditError::BadSymbol {
+                column: 'D',
+                id: s("12.1N"),
+            },
             EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
         for what in [
