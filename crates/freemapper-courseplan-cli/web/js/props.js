@@ -255,15 +255,57 @@ function legRows(host, list, state, selection, overlay, actions) {
   list.append(term, detail);
 }
 
-function specialRows(list, state, id) {
+// A selected special object: id, kind, position, the courses as check boxes (none ticked: all courses; start and
+// finish have no course list) and the delete button. No operation moves a special object, so the panel says to
+// delete and draw it again.
+function specialRows(host, list, state, id, actions) {
   const special = state.event.specials.find((s) => s.id === id);
   if (!special) return;
   row(list, "editor-prop-id", special.id);
   row(list, "editor-prop-kind", kindLabel(special.kind));
   const at = specialPosition(special);
   row(list, "editor-prop-position", at ? mm(at) : null);
+  const count = (special.points ?? special.polygon ?? []).length;
+  if (count > 1) row(list, "editor-prop-points", count);
+  host.append(list);
+  if (special.kind !== "start" && special.kind !== "finish") {
+    const ticked = special.courses ?? [];
+    const group = document.createElement("fieldset");
+    group.className = "courses";
+    const legend = document.createElement("legend");
+    legend.textContent = t("editor-prop-courses");
+    group.append(legend);
+    state.event.courses.forEach((course, i) => {
+      const label = document.createElement("label");
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.id = `prop-course-${i}`;
+      box.checked = ticked.includes(course.name);
+      box.addEventListener("change", () => {
+        const names = state.event.courses.map((c, k) => [c.name, k])
+          .filter(([, k]) => host.querySelector(`#prop-course-${k}`)?.checked)
+          .map(([name]) => name);
+        actions.setSpecialCourses(special.id, names);
+      });
+      label.append(box, ` ${course.name}`);
+      group.append(label);
+    });
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = t(ticked.length === 0 ? "editor-prop-courses-all" : "editor-prop-courses-some");
+    group.append(hint);
+    host.append(group);
+  }
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.id = "prop-delete";
+  remove.textContent = t("editor-prop-delete-special");
+  remove.addEventListener("click", () => actions.remove());
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = t("editor-prop-special-no-move");
+  host.append(remove, note);
 }
-
 
 // Fills `host` for the selection { kind, id, course? }, or the empty hint without one.
 export function show(host, state, selection, overlay, actions) {
@@ -290,7 +332,7 @@ export function show(host, state, selection, overlay, actions) {
     case "control": controlRows(host, list, state, selection.id, actions); break;
     case "leg":
     case "bend": legRows(host, list, state, selection, overlay, actions); break;
-    case "special": specialRows(list, state, selection.id); break;
+    case "special": specialRows(host, list, state, selection.id, actions); break;
     case "class": classPanel(host, list, state, selection.id, actions); break;
     case "event": eventPanel(host, list, state, actions); break;
     case "number": {
@@ -306,7 +348,7 @@ export function show(host, state, selection, overlay, actions) {
     }
     default: break;
   }
-  if (!["control", "course", "class", "event", "number"].includes(selection.kind)) host.append(list);
+  if (!["control", "course", "class", "event", "number", "special"].includes(selection.kind)) host.append(list);
   if (focused) host.querySelector(`#${focused}`)?.focus();
   if (selection.kind === "course" && overlay?.numbers.some((n) => n.source === "auto")) {
     const note = document.createElement("p");

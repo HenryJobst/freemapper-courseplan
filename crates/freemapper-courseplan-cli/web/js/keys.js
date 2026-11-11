@@ -11,6 +11,8 @@ export const SHORTCUTS = [
   { keys: "Alt+↑, Alt+↓", text: "editor-key-move-stop" },
   { keys: "V", text: "editor-key-select-tool" },
   { keys: "C", text: "editor-key-control-tool" },
+  { keys: "S", text: "editor-key-special-tool" },
+  { keys: "Enter", text: "editor-key-finish" },
   { keys: "← ↑ → ↓", text: "editor-key-nudge" },
   { keys: "Shift+← ↑ → ↓", text: "editor-key-nudge-big" },
   { keys: "+", text: "editor-key-zoom-in" },
@@ -48,7 +50,7 @@ export function fillHelp(table) {
 }
 
 // actions: undo, redo, remove, cancel, tool(name), nudge(dx, dy), commitNudge, zoom(factor), fit, pan(dx, dy),
-// help, canNudge() (a control is selected), dialogOpen().
+// help, canNudge() (a control is selected), drafting() (a line or an area is being drawn), finish(), dialogOpen().
 export function bind(actions) {
   document.addEventListener("keydown", (evt) => {
     if (evt.defaultPrevented || actions.dialogOpen() || typing(evt.target)) return;
@@ -70,12 +72,19 @@ export function bind(actions) {
       const onMap = !(at instanceof Element) || at === document.body || at.id === "map-svg" || inTree;
       if (!onMap) handled = false;
       else actions.remove();
+    } else if (key === "Enter" && actions.drafting()) {
+      // Finishes a line or an area being drawn; on a button or in a field Enter keeps its own meaning.
+      const at = evt.target;
+      if (!(at instanceof Element) || at === document.body || at.id === "map-svg") actions.finish();
+      else handled = false;
     } else if (key === "Escape") {
       actions.cancel();
     } else if (key === "v" || key === "V") {
       actions.tool("select");
     } else if (key === "c" || key === "C") {
       actions.tool("control");
+    } else if (key === "s" || key === "S") {
+      actions.tool("special");
     } else if (key === "?") {
       actions.help();
     } else if (key in ARROWS && !inTree && actions.canNudge()) {

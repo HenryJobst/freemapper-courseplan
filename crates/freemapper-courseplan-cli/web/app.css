@@ -104,7 +104,20 @@ body {
 #layer-overlay .number rect { fill: var(--map-bg); fill-opacity: 0.7; }
 #layer-overlay .number rect.auto { stroke-dasharray: 0.6 0.4; }
 #layer-overlay .number text, #layer-overlay text.code { fill: var(--course); stroke: none; font-family: system-ui, sans-serif; }
-#layer-overlay .special polygon { fill: var(--course); fill-opacity: 0.12; }
+#layer-overlay .special polygon { fill: var(--course); fill-opacity: 0.12; pointer-events: stroke; }
+#layer-overlay .special polyline { pointer-events: none; }
+#layer-overlay .special polyline.hit-line { stroke: transparent; fill: none; pointer-events: stroke; }
+#layer-overlay .special text.cue { fill: var(--course); stroke: none; font-family: system-ui, sans-serif; font-weight: 700; pointer-events: none; }
+#layer-overlay .draft { pointer-events: none; stroke: var(--sel); }
+#layer-overlay .draft circle { fill: var(--sel); }
+#layer-overlay .draft .draft-fill { fill: var(--sel); fill-opacity: 0.12; }
+#map-svg[data-tool="special"] { cursor: crosshair; }
+.toolbar select, .toolbar input { font: inherit; padding: 0.15rem 0.3rem; background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+.toolbar .special-options { display: flex; gap: 0.2rem; align-items: center; }
+.toolbar .special-options[hidden] { display: none; }
+.props .courses { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; }
+.props .courses label { display: block; }
+.props .courses legend { padding: 0; opacity: 0.75; }
 #layer-overlay .special polyline { stroke-linejoin: round; }
 #layer-overlay .selected { filter: drop-shadow(0 0 0.4px var(--sel)); }
 

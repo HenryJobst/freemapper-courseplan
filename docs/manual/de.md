@@ -111,7 +111,7 @@ dort an.
 ## 4. Der Editor (Vorschau)
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und Kategorien anlegen und jeden
-Schritt zurücknehmen. Knicke, Nummern, Sonderobjekte und Postenbeschreibungen änderst du weiter mit der
+Schritt zurücknehmen. Knicke, Nummern und Sonderobjekte änderst du auch im Editor. Postenbeschreibungen änderst du weiter mit der
 Kommandozeile oder dem KI-Assistenten; der Editor zeigt sie an. Die Menüpunkte zum Exportieren, Importieren und
 Abgleichen sind noch ausgegraut.
 
@@ -208,6 +208,17 @@ nennt den Grund.
   gesetzte Nummern stehen; mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle
   Bahnen gesetzten bleiben. Ein Ziehen ist ein Schritt für Rückgängig. Hat die Bahn für die Nummer schon eine eigene Lage, geht sie der Lage am Posten vor; dann bleibt das Feld stehen, und die Statusleiste sagt es. Eine Warnung zu einem Abstand außerhalb des
   Regelbereichs zeigt der Editor noch nicht; `check` meldet ihn.
+- **Sonderobjekte.** Wähle „Sonderobjekt“, dann eine Art (Start, Ziel, Erste-Hilfe-Posten, Wasserstelle, markierte
+  Strecke, verbotene Route, Sperrgebiet, Gefahrenfläche) und prüfe die Kennung in der Werkzeugleiste. Sie wird als
+  `<Art>-<n>` vorgeschlagen und lässt sich ändern. Start, Ziel, Erste-Hilfe-Posten und Wasserstelle setzt ein Klick.
+  Eine Linie oder Fläche zeichnest du durch Klicken ihrer Punkte und schließt sie mit Enter oder einem Doppelklick ab;
+  Esc bricht ab, Entf nimmt den letzten Punkt zurück, und eine gestrichelte Vorschau mit Punkten zeigt die Zeichnung.
+  Eine Fläche braucht drei Punkte, eine markierte Strecke zwei. Eine verbotene Route darf einen einzigen Punkt haben;
+  sie wird als Kreuz gezeichnet. Jedes Objekt ist ein Schritt für Rückgängig. In der Karte tragen die Arten zusätzlich
+  einen Buchstaben oder ein Zeichen: M markierte Strecke, Kreuz verbotene Route, OB Sperrgebiet, ! Gefahrenfläche,
+  Plus Erste Hilfe, W Wasser. In den Eigenschaften eines gewählten Objekts hakst du die Bahnen an, zu denen es gehört;
+  ohne Haken gehört es zu allen Bahnen (Start und Ziel haben keine Bahnliste). „Sonderobjekt löschen“ entfernt das
+  Objekt, Rückgängig holt es zurück. Der Editor kann ein Sonderobjekt nicht verschieben: Lösche es und zeichne es neu.
 - **Posten der Bahn.** Die Eigenschaften einer Bahn listen ihre Posten. Mit „Nach oben“, „Nach unten“ und „Entfernen“
   änderst du die Reihenfolge. Liegt der Fokus auf einer Zeile, verschieben Alt+Pfeil hoch und Alt+Pfeil runter den
   Posten. Jede Änderung ist ein Schritt für Rückgängig und speichert die ganze Liste auf einmal. Läuft durch eine

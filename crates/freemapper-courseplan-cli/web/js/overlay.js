@@ -3,6 +3,7 @@
 // Each drawn element carries data-kind and data-id. A selection is marked by a dashed halo as well as a colour.
 
 import { t } from "./texts.js";
+import { CUES, middle } from "./specials.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -117,32 +118,77 @@ function drawNumber(n, o, course, selection, parent, halos) {
     }));
 }
 
+// A forbidden route of one point is a cross; first aid is a plus sign in a square, water a circle.
+function cross(at, r, width, parent) {
+  return el("path", {
+    d: `M${at[0] - r},${at[1] - r}L${at[0] + r},${at[1] + r}M${at[0] - r},${at[1] + r}L${at[0] + r},${at[1] - r}`,
+    "stroke-width": width,
+    fill: "none",
+  }, parent);
+}
+
 function drawSpecial(s, o, selection, parent, halos) {
   const group = el("g", { class: `sym special ${s.kind}` }, parent);
   const w = o.sizes.line * 1.5;
+  const r = o.sizes.circle_r;
   const first = s.points[0];
+  const line = (extra) => {
+    // The wide transparent copy makes a thin line easy to hit.
+    el("polyline", { points: pointList(s.points), class: "hit-line", "stroke-width": Math.max(w * 4, r) }, group);
+    return el("polyline", { points: pointList(s.points), fill: "none", ...extra }, group);
+  };
   const shape = {
-    marked_route: () => el("polyline", { points: pointList(s.points), "stroke-width": w * 2, fill: "none" }, group),
-    forbidden_route: () => el("polyline", {
-      points: pointList(s.points), "stroke-width": w, fill: "none", "stroke-dasharray": `${w * 4} ${w * 3}`,
-    }, group),
+    marked_route: () => line({ "stroke-width": w * 2 }),
+    forbidden_route: () => {
+      if (s.points.length === 1) cross(first, r, w * 2, group);
+      else line({ "stroke-width": w, "stroke-dasharray": `${w * 4} ${w * 3}` });
+    },
     out_of_bounds_area: () => el("polygon", { points: pointList(s.points), "stroke-width": w }, group),
     dangerous_area: () => el("polygon", {
       points: pointList(s.points), "stroke-width": w, "stroke-dasharray": `${w * 3} ${w * 2}`,
     }, group),
     first_aid: () => {
-      const r = o.sizes.circle_r;
+      el("rect", { x: first[0] - r, y: first[1] - r, width: r * 2, height: r * 2, "stroke-width": w, fill: "none" }, group);
       el("path", {
-        d: `M${first[0] - r},${first[1]}H${first[0] + r}M${first[0]},${first[1] - r}V${first[1] + r}`,
+        d: `M${first[0] - r * 0.6},${first[1]}H${first[0] + r * 0.6}M${first[0]},${first[1] - r * 0.6}V${first[1] + r * 0.6}`,
         "stroke-width": w * 2,
       }, group);
     },
-    water: () => el("circle", { cx: first[0], cy: first[1], r: o.sizes.circle_r * 0.6, "stroke-width": w }, group),
+    water: () => el("circle", { cx: first[0], cy: first[1], r: r * 0.6, "stroke-width": w, fill: "none" }, group),
   }[s.kind];
   if (shape) shape();
+  // The cue letter sits beside the middle of the object, so the kind is also told by text.
+  const [mx, my] = middle(s.points);
+  const point = s.points.length === 1;
+  const cue = el("text", {
+    x: point ? mx + r * 1.4 : mx,
+    y: point ? my - r * 1.1 : my,
+    "font-size": o.sizes.number_h * 0.9,
+    "text-anchor": point ? "start" : "middle",
+    "dominant-baseline": "central",
+    class: "cue",
+  }, group);
+  cue.textContent = CUES[s.kind] ?? "";
   el("title", {}, group).textContent = `${kindLabel(s.kind)} ${s.id}`;
   return tag(group, "special", s.id, selection, halos, () =>
-    el("circle", { cx: first[0], cy: first[1], r: o.sizes.circle_r * 1.8, class: "halo", "stroke-width": w }));
+    el("circle", { cx: mx, cy: my, r: Math.max(r * 1.8, o.sizes.line * 6), class: "halo", "stroke-width": w }));
+}
+
+// The drawing in progress: the points clicked so far, joined, and a band to the pointer. A point kind needs no
+// preview. The preview is dashed and marked by dots, so it differs from a finished object without colour.
+function drawDraft(draft, o, parent) {
+  const group = el("g", { class: "draft" }, parent);
+  const line = [...draft.points, ...(draft.cursor ? [draft.cursor] : [])];
+  const w = o.sizes.line * 1.5;
+  if (line.length > 1) {
+    el("polyline", { points: pointList(line), fill: "none", "stroke-width": w, "stroke-dasharray": `${w * 2} ${w * 2}` }, group);
+  }
+  if (draft.shape === "area" && draft.points.length > 2) {
+    el("polygon", { points: pointList(draft.points), class: "draft-fill", "stroke-width": 0 }, group);
+  }
+  for (const p of draft.points) {
+    el("circle", { cx: p[0], cy: p[1], r: o.sizes.circle_r * 0.25, "stroke-width": o.sizes.line }, group);
+  }
 }
 
 // The handles of the bends of the selected leg, and a halo along the leg.
@@ -202,6 +248,7 @@ export function draw(overlay, selection, course = null, extras = {}) {
   for (const f of overlay.finishes) drawFinish(f, overlay, selection, body, halos);
   for (const c of overlay.controls) drawControl(c, overlay, selection, body, halos);
   for (const n of overlay.numbers) drawNumber(n, overlay, course, selection, body, halos);
+  if (extras.draft) drawDraft(extras.draft, overlay, layer);
   if (overlay.numbers.length === 0) {
     // The "all controls" view has no numbers: each circle gets its code beside it.
     const r = overlay.sizes.circle_r;

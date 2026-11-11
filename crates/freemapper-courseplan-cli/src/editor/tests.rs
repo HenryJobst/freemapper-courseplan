@@ -714,6 +714,78 @@ mod overlay {
     }
 
     #[test]
+    fn overlay_draws_every_special_kind() {
+        let mut e = event();
+        e.specials.truncate(2);
+        let pts = |v: &[(f64, f64)]| v.iter().map(|&(x, y)| p(x, y)).collect::<Vec<_>>();
+        e.specials.extend([
+            SpecialObject::MarkedRoute {
+                id: "marked-1".to_owned(),
+                ppen_id: None,
+                points: pts(&[(0.0, 10.0), (20.0, 10.0)]),
+                courses: vec![],
+            },
+            SpecialObject::OutOfBoundsArea {
+                id: "out-of-bounds-1".to_owned(),
+                ppen_id: None,
+                polygon: pts(&[(10.0, 10.0), (30.0, 10.0), (30.0, 30.0)]),
+                courses: vec![],
+            },
+            SpecialObject::ForbiddenRoute {
+                id: "forbidden-1".to_owned(),
+                ppen_id: None,
+                points: pts(&[(40.0, 40.0)]),
+                courses: vec![],
+            },
+            SpecialObject::ForbiddenRoute {
+                id: "forbidden-2".to_owned(),
+                ppen_id: None,
+                points: pts(&[(40.0, 0.0), (50.0, 5.0), (60.0, 0.0)]),
+                courses: vec!["A".to_owned()],
+            },
+            SpecialObject::DangerousArea {
+                id: "danger-1".to_owned(),
+                ppen_id: None,
+                polygon: pts(&[(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]),
+                courses: vec![],
+            },
+            SpecialObject::FirstAid {
+                id: "aid-1".to_owned(),
+                ppen_id: None,
+                map_mm: p(70.0, 70.0),
+                courses: vec![],
+            },
+            SpecialObject::Water {
+                id: "water-1".to_owned(),
+                ppen_id: None,
+                map_mm: p(80.0, 80.0),
+                courses: vec![],
+            },
+        ]);
+        for course in [Some("A"), None] {
+            let o = run(&e, course, 4000);
+            let drawn: Vec<(&str, &str, usize)> = o
+                .specials
+                .iter()
+                .map(|s| (s.id.as_str(), s.kind, s.points.len()))
+                .collect();
+            assert_eq!(
+                drawn,
+                [
+                    ("marked-1", "marked_route", 2),
+                    ("out-of-bounds-1", "out_of_bounds_area", 3),
+                    ("forbidden-1", "forbidden_route", 1),
+                    ("forbidden-2", "forbidden_route", 3),
+                    ("danger-1", "dangerous_area", 3),
+                    ("aid-1", "first_aid", 1),
+                    ("water-1", "water", 1),
+                ]
+            );
+            assert_eq!((o.starts.len(), o.finishes.len()), (1, 1));
+        }
+    }
+
+    #[test]
     fn unknown_course_is_an_error() {
         let r = overlay(
             &event(),

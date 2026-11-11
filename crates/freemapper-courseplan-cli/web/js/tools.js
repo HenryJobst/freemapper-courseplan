@@ -1,8 +1,8 @@
-// The tool in hand: "select", "control" (place a control), "crossing" (place a crossing point) or "course"
+// The tool in hand: "select", "control" (place a control), "crossing" (place a crossing point), "special" (draw a special object) or "course"
 // (course mode: clicks build the selected course).
 // The toolbar buttons carry aria-pressed; the map element carries the tool in data-tool for its cursor.
 
-const IDS = { select: "tool-select", control: "tool-control", crossing: "tool-crossing", course: "tool-course" };
+const IDS = { select: "tool-select", control: "tool-control", crossing: "tool-crossing", special: "tool-special", course: "tool-course" };
 
 let listener = () => {};
 
@@ -25,6 +25,7 @@ export function setTool(name) {
     document.getElementById(id).setAttribute("aria-pressed", String(tool === name));
   }
   document.getElementById("map-svg").dataset.tool = name;
+  document.getElementById("special-options").hidden = name !== "special";
   if (changed) listener(name);
 }
 

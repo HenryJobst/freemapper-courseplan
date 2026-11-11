@@ -107,8 +107,8 @@ there.
 ## 4. The editor (preview)
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories, and take each step back. Bends,
-numbers, special objects and control descriptions still go through the command line or the AI assistant,
-and the editor shows them. The menu items for export, import and sync are greyed out.
+numbers and special objects can be edited too. Control descriptions still go through the command line or the AI
+assistant, and the editor shows them. The menu items for export, import and sync are greyed out.
 
 ### Starting it
 
@@ -199,6 +199,16 @@ a position outside the map, the file stays as it was and a message says why.
   automatically and leaves placed numbers alone; with "also replace placed numbers" everything is computed again,
   except the numbers set on the control for all courses. One drag is one step for undo. A placement the course already has for itself comes before the one on the control; the box then stays, and the status bar says so. The editor does not yet
   warn about a gap outside the rule range; `check` reports it.
+- **Special objects.** Choose "Special object", pick a kind (start, finish, first aid post, water point, marked
+  route, forbidden route, out-of-bounds area, dangerous area) and check the id in the toolbar; it is proposed as
+  `<kind>-<n>` and you may change it. A start, finish, first aid post or water point is placed by one click. A line or
+  an area is drawn by clicking its points and finished with Enter or a double click; Esc cancels, Delete takes back
+  the last point, and a dashed preview with dots shows the drawing. An area needs three points, a marked route two.
+  A forbidden route may have a single point, which is drawn as a cross. Each object is one step for undo. On the
+  map the kinds carry a letter or sign as well: M marked route, a cross forbidden route, OB out-of-bounds area, ! dangerous
+  area, plus first aid, W water. In the properties of a selected object, tick the courses it belongs to; with none
+  ticked it belongs to all courses (start and finish have no course list). Delete removes the object; undo brings it
+  back. The editor cannot move a special object: delete it and draw it again.
 - **Stops.** The properties of a course list its stops. The buttons "Move up", "Move down" and "Remove" change the
   order. With the focus on a row, Alt+Up and Alt+Down move the stop. Each change is one step for undo and saves the
   whole list at once. If a change sends a leg to another stop, that leg loses its bends and tape. The status bar names

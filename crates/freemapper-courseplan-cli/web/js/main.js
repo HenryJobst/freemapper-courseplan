@@ -10,6 +10,7 @@ import * as keys from "./keys.js";
 import * as course from "./course.js";
 import * as bends from "./bends.js";
 import * as numbers from "./numbers.js";
+import * as specials from "./specials.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -107,11 +108,14 @@ function redraw() {
   loadNear();
 }
 
+// The line or area being drawn with the special tool, or null: { kind, shape, points (map mm), cursor }.
+let draft = null;
+
 // Course mode: the controls the course does not visit are drawn faint and can be clicked; a chosen leg is thick.
 let pendingLeg = null;
 
 function extras() {
-  return { pool: tools.getTool() === "course" ? state.pool : [], pending: pendingLeg };
+  return { pool: tools.getTool() === "course" ? state.pool : [], pending: pendingLeg, draft };
 }
 
 function controlOf(code) {
@@ -286,6 +290,18 @@ function refreshConfirm() {
 // Deleting asks first when a course visits the control.
 function requestDelete() {
   const selected = state.selection;
+  if (draft) {
+    // While a line or an area is drawn, Delete takes back its last point.
+    draft.points.pop();
+    if (draft.points.length === 0) draft = null;
+    showOverlay();
+    draftHint();
+    return;
+  }
+  if (selected?.kind === "special" && !busy) {
+    removeSpecial(selected.id);
+    return;
+  }
   if (selected?.kind === "bend") {
     removeBend();
     return;
@@ -303,6 +319,99 @@ document.getElementById("confirm-no").addEventListener("click", () => confirmDia
 document.getElementById("confirm-yes").addEventListener("click", () => {
   confirmDialog.close();
   deleteControl(confirmDialog.dataset.code);
+});
+
+// --- Special objects -------------------------------------------------------------------------------------------
+// Point kinds are placed by one click; lines and areas by clicks, finished with Enter or a double click. Each
+// finished object is one add_special, so one undo step. Nothing moves a special object: delete and draw again.
+
+const kindSelect = document.getElementById("special-kind");
+const idInput = document.getElementById("special-id");
+
+function takenIds() {
+  return state.data?.event.specials.map((s) => s.id) ?? [];
+}
+
+function proposeId() {
+  idInput.value = specials.nextId(kindSelect.value, takenIds());
+}
+
+function fillKinds() {
+  kindSelect.replaceChildren(...specials.KINDS.map((k) => {
+    const option = document.createElement("option");
+    option.value = k.kind;
+    option.textContent = overlay.kindLabel(k.kind);
+    return option;
+  }));
+}
+
+function draftHint() {
+  if (!draft) {
+    status.say("editor-status-special-tool");
+    return;
+  }
+  status.say(`${draft.points.length} ${t("editor-status-draft-points")}. ${t("editor-status-draft-hint")}`, true);
+}
+
+function dropDraft() {
+  if (!draft) return false;
+  draft = null;
+  showOverlay();
+  status.say("editor-status-draft-cancelled");
+  return true;
+}
+
+// Sends the object: the id in the toolbar is the one used; a refused id keeps the drawing.
+async function addSpecial(kind, points) {
+  const id = idInput.value;
+  if (course.nameProblem(id, course.MAX_NAME_CHARS, takenIds())) {
+    status.say("editor-error-special-id");
+    idInput.focus();
+    return;
+  }
+  const done = await runOp("add_special", specials.addBody(kind, id, points));
+  if (!done) return;
+  draft = null;
+  status.say("editor-status-special-added");
+  proposeId();
+  await selectKey(`special:${done.result.id}`);
+}
+
+function specialClick(at) {
+  const entry = specials.info(kindSelect.value);
+  if (entry.shape === "point") {
+    addSpecial(entry.kind, [at]);
+    return;
+  }
+  draft ??= { kind: entry.kind, shape: entry.shape, points: [], cursor: null };
+  draft.points.push(at);
+  showOverlay();
+  draftHint();
+}
+
+function finishDraft() {
+  if (!draft) return;
+  if (!specials.enough(draft.kind, draft.points)) {
+    status.say("editor-status-draft-short");
+    return;
+  }
+  addSpecial(draft.kind, draft.points);
+}
+
+async function removeSpecial(id) {
+  const done = await runOp("remove_special", { id });
+  if (!done) return;
+  status.say("editor-status-special-deleted");
+}
+
+async function setSpecialCourses(id, names) {
+  const done = await runOp("set_special_courses", specials.coursesBody(id, names));
+  if (done) status.say("editor-status-special-courses");
+}
+
+kindSelect.addEventListener("change", () => {
+  dropDraft();
+  proposeId();
 });
 
 // --- Courses and categories ------------------------------------------------------------------------------------
@@ -435,6 +544,7 @@ const propActions = {
   setProfile,
   setWindow,
   setTaped,
+  setSpecialCourses,
 };
 
 function updateHistoryButtons() {
@@ -602,6 +712,11 @@ async function loadState(announce) {
     state.selection = null;
     state.treeKey = "all";
   }
+  if (state.selection?.kind === "special" && !state.data.event.specials.some((s) => s.id === state.selection.id)) {
+    state.selection = null;
+    state.treeKey = state.course ? `course:${state.course}` : "all";
+  }
+  if (!idInput.value || takenIds().includes(idInput.value)) proposeId();
   if (state.selection?.kind === "control" && !controlOf(state.selection.id)) {
     state.selection = null;
     state.treeKey = state.course ? `course:${state.course}` : "all";
@@ -791,6 +906,11 @@ async function courseClick(at) {
 
 tools.onChange((name) => {
   pendingLeg = null;
+  draft = null;
+  if (name === "special") {
+    proposeId();
+    status.say("editor-status-special-tool");
+  }
   if (name === "course") status.say(state.course ? "editor-status-course-mode" : "editor-status-pick-course");
   showOverlay();
 });
@@ -838,6 +958,10 @@ function bindMapInput() {
   svg.addEventListener("pointermove", (evt) => {
     if (!evt.isPrimary) return;
     status.setCursor(view.screenToMap(evt));
+    if (draft) {
+      draft.cursor = view.screenToMap(evt);
+      showOverlay();
+    }
     if (!ours(evt)) return;
     const dx = evt.clientX - press.x;
     const dy = evt.clientY - press.y;
@@ -915,6 +1039,7 @@ function bindMapInput() {
     if (finished.moved) return;
     const tool = tools.getTool();
     if (tool === "course") courseClick(finished.at);
+    else if (tool === "special") specialClick(finished.at);
     else if (tool !== "select" && !hitControl(finished.at)) placeControl(finished.at, tool === "crossing");
     else selectDrawn(finished.target, finished.at);
   });
@@ -930,6 +1055,12 @@ function bindMapInput() {
     if (ours(evt)) abandon();
   });
   svg.addEventListener("pointerleave", () => status.setCursor(null));
+  // The second click of a double click has added a point of its own: it is taken back, then the drawing ends.
+  svg.addEventListener("dblclick", () => {
+    if (!draft) return;
+    draft.points.pop();
+    finishDraft();
+  });
   svg.addEventListener("wheel", (evt) => {
     evt.preventDefault();
     view.zoomBy(evt.deltaY < 0 ? 1.2 : 1 / 1.2, view.screenToPage(evt));
@@ -951,7 +1082,7 @@ function bindMapInput() {
         }
         cancelDrag();
         press = null;
-      } else if (!dropPendingLeg()) {
+      } else if (!dropDraft() && !dropPendingLeg()) {
         tools.setTool("select");
       }
     },
@@ -959,6 +1090,8 @@ function bindMapInput() {
     nudge: startNudge,
     commitNudge,
     canNudge: () => state.selection?.kind === "control",
+    drafting: () => draft !== null,
+    finish: finishDraft,
     zoom: (f) => view.zoomBy(f),
     fit: () => view.fit(state.pageBox),
     pan: (dx, dy) => {
@@ -999,6 +1132,7 @@ async function poll() {
 
 try {
   await loadTexts();
+  fillKinds();
   tools.bind();
   keys.fillHelp(document.getElementById("help-keys"));
   status.say("editor-status-ready");

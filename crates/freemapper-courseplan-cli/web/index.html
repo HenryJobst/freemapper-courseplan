@@ -16,7 +16,13 @@
         <button type="button" id="tool-select" data-text="editor-tool-select" aria-pressed="true"></button>
         <button type="button" id="tool-control" data-text="editor-tool-control" aria-pressed="false"></button>
         <button type="button" id="tool-crossing" data-text="editor-tool-crossing" aria-pressed="false"></button>
-        <button type="button" data-text="editor-tool-special" disabled></button>
+        <button type="button" id="tool-special" data-text="editor-tool-special" aria-pressed="false"></button>
+        <span class="special-options" id="special-options" hidden>
+          <label for="special-kind" data-text="editor-special-kind"></label>
+          <select id="special-kind"></select>
+          <label for="special-id" data-text="editor-special-id"></label>
+          <input id="special-id" type="text" autocomplete="off" size="16">
+        </span>
         <button type="button" id="tool-course" data-text="editor-tool-course" aria-pressed="false"></button>
         <span class="spacer"></span>
         <button type="button" id="undo-btn" data-text="editor-tool-undo" disabled></button>
