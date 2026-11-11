@@ -7,6 +7,7 @@ mod editor;
 mod export_cmd;
 mod import_cmd;
 mod mcp;
+mod query_cmd;
 mod sync_cmd;
 
 use std::ffi::OsString;
@@ -25,6 +26,7 @@ use freemapper_courseplan::text::{
     FluentValue, Lang, Localize, available, detect_lang, parse_lang_arg, text,
 };
 use freemapper_courseplan_model::{ControlKind, CourseKind, ProjectFile};
+use query_cmd::{ListCmd, MapCmd};
 
 // The help texts come from the Fluent catalog, not from doc comments: `localized_command` sets
 // `about` and `help` on the command that `Cli::command()` derives, once the language is known.
@@ -135,6 +137,16 @@ enum Command {
     Event {
         #[command(subcommand)]
         action: EventCmd,
+    },
+    /// List the controls, courses, special objects or classes
+    List {
+        #[command(subcommand)]
+        action: ListCmd,
+    },
+    /// Show the map extent and the map objects near a point
+    Map {
+        #[command(subcommand)]
+        action: MapCmd,
     },
     /// Open the course editor in the browser
     Edit {
@@ -474,6 +486,8 @@ fn main() -> ExitCode {
         Command::Check { project, all } => check_cmd::check(&lang, project, all),
         Command::Finding { action } => check_cmd::finding(&lang, action),
         Command::Event { action } => check_cmd::event(&lang, action),
+        Command::List { action } => query_cmd::list(&lang, action),
+        Command::Map { action } => query_cmd::map(&lang, action),
         Command::Edit {
             project,
             port,
@@ -695,6 +709,7 @@ mod tests {
     const SCANNED_SOURCES: &[(&str, &str)] = &[
         ("main.rs", include_str!("main.rs")),
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
+        ("query_cmd.rs", include_str!("query_cmd.rs")),
         ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("editor/map_view.rs", include_str!("editor/map_view.rs")),
         ("editor/render_map.rs", include_str!("editor/render_map.rs")),

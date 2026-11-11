@@ -119,8 +119,10 @@ freemapper-courseplan check hall.courseplan.toml
 |---|---|
 | `init <MAP>` | Makes the project file (`--project`, `--title`, `--ppen` to start from a Purple Pen event). |
 | `info <PROJECT>` | Summary of the project: counts, and per course controls, length and climb. |
+| `list controls\|courses\|specials\|classes` | The details as a table; `--json` gives the MCP answer. |
+| `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers. Positions are `--at X,Y` in map millimetres. |
-| `event profile`, `event start-window` | Rule profile with overlays, and the start window. |
+| `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
 | `export`, `import`, `sync` | IOF XML and Purple Pen. `sync --dry-run` shows the merge first; `--json` prints the result as JSON. |
@@ -130,16 +132,11 @@ The commands follow the tool names of the MCP section: `add_control` is `control
 and so on. The rules at the end of the MCP section apply here too: ask before `export` replaces a file (also
 `export --ppen --new`) or `import --replace` swaps content, and let the person decide `sync` conflicts.
 
-What the command line does not offer, compared with the MCP tools:
-
-- `map_extent` and `map_features_near`: there is no command that reports the extent of the map or the map objects
-  near a position. `info` shows no extent. Without them you cannot work out positions yourself; ask the person for
-  them, or read them from the Purple Pen event (`init --ppen`), or use MCP for this step.
-- `list_controls`, `list_courses`, `list_specials`, `list_classes`: `info` prints counts, per-course length and
-  climb only. It does not print positions, descriptions or number placements. Read the project file
-  (`*.courseplan.toml`, plain TOML) for those.
-- `set_start_window` with `no_start_window`: `event start-window` takes minutes (at least 1) and has no way to
-  remove the window.
+Reading commands, so you do not have to open the project file: `list controls|courses|specials|classes` print
+tables (positions in map millimetres, descriptions and number placements only with `--json`), `map extent` prints
+the extent of the map content, the scale and the map kind, and `map near --at X,Y --radius MM [--limit N]` lists
+the map objects near a point, nearest first. Use them to find usable positions. With `--json` each prints exactly
+what the MCP tool of the same name returns (`list_controls`, `map_features_near`, ...), including `"ok": true`.
 
 Output and exit codes: results and progress go to stdout. On failure the program prints one line `error: <message>`
 to stderr (with `--lang de`: `Fehler: …`) and exits with code 1; a usage error exits with code 2. `check` exits
@@ -155,8 +152,8 @@ your command timeout. No other command is a long-running one, so no timeout need
 Workflow:
 
 1. Ask for the map (`.omap`) and what the courses are for. `init <map>` with its path.
-2. `info`. Ask the person for positions in map millimetres (see the gaps above), or take them from a Purple Pen
-   event.
+2. `info`, `map extent` and `map near`. Positions are map millimetres; ask the person for them, or take them from
+   the map, or from a Purple Pen event.
 3. `special add` for the start and the finish, `control add` for each control, `course add`, then
    `course numbers`. `info` again reads the length. Add `class add` and `class set` where the checks need a rule
    category or expected starters, and `event start-window` for the start capacity check.

@@ -327,7 +327,9 @@ fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
 }
 
 /// The command groups whose texts [`localize_groups`] sets.
-pub const GROUPS: [&str; 6] = ["control", "special", "class", "course", "finding", "event"];
+pub const GROUPS: [&str; 8] = [
+    "control", "special", "class", "course", "finding", "event", "list", "map",
+];
 
 /// Sets the catalog texts on the command groups and everything below them, and the trimming
 /// value parser on the arguments in [`TRIMMED`].
@@ -412,7 +414,7 @@ pub fn parse_count(lang: &Lang, value: &str) -> Result<u32, Failure> {
 }
 
 /// `X,Y` in map millimetres with a dot as decimal separator.
-fn parse_point(lang: &Lang, value: &str) -> Result<MapPoint, Failure> {
+pub(crate) fn parse_point(lang: &Lang, value: &str) -> Result<MapPoint, Failure> {
     let parsed = value.split_once(',').and_then(|(x, y)| {
         let x = x.parse::<f64>().ok().filter(|x| x.is_finite())?;
         let y = y.parse::<f64>().ok().filter(|y| y.is_finite())?;

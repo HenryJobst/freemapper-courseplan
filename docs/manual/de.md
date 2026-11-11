@@ -119,7 +119,7 @@ dort an.
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
 - Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das
   Programm das.
-- Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat.
+- Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat, und `list controls|courses|specials|classes <Projekt>` führt die Einzelheiten auf; `map extent <Projekt>` und `map near <Projekt> --at X,Y --radius MM` berichten über die Karte. Alle nehmen `--json`.
 
 ## 4. Der Editor
 
@@ -536,7 +536,7 @@ Häufige Gründe:
 - Die Prüfregel gilt nur für eine andere Disziplin, Kartenart oder einen anderen Druckmaßstab.
 - Ein Aufsatz hat die Prüfregel abgeschaltet; der Grund nennt ihn, etwa „Das Regelprofil nor-bb-2021 schaltet die
   Prüfregel ab“.
-- Ein Wert fehlt. Das Startfenster setzt `event start-window halle.courseplan.toml 90`, die erwartete Starterzahl
+- Ein Wert fehlt. Das Startfenster setzt `event start-window halle.courseplan.toml 90` (`--none` statt der Minuten entfernt es), die erwartete Starterzahl
   einer Kategorie `class set halle.courseplan.toml H21 --starters 40`, den Anstieg einer Bahn `course set
   halle.courseplan.toml A --climb 120`.
 - Eine Kategorie hat keine Regelkategorie, zum Beispiel ein selbst gewählter Name wie „Offen“. `class set

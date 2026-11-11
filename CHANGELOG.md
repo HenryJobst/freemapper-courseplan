@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `list controls|courses|specials|classes` führen die Einzelheiten eines Projekts als Tabelle auf, `map extent` und `map near --at X,Y --radius MM` nennen den Umfang der Karte und die Kartenobjekte nahe einem Punkt. Mit `--json` geben sie die Antwort des gleichnamigen MCP-Werkzeugs unverändert aus (ADR 0059). `event start-window --none` entfernt das Startfenster, wie es `set_start_window` mit `no_start_window` tut.
+
 ### Geändert
 
 - `AGENTS.md` nennt die Befehlszeile zuerst und MCP danach. Ein Assistent, der Befehle ausführen kann, kommt mit weniger Zügen aus; MCP bleibt für Assistenten ohne Shell wie Claude Desktop. Der Abschnitt zur Befehlszeile verweist auf `--help`, nennt Ausgabe und Exit-Codes, sagt, dass `edit` blockiert, und führt auf, was die Befehlszeile gegenüber den MCP-Werkzeugen nicht kann.
