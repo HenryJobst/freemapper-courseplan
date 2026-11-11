@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.11.0] - 2026-11-11
+
 ### Hinzugefügt
 
 - Der Editor hat eine Druckvorschau (ADR 0057). Die Schaltfläche „Druckvorschau“ oder die Taste P zeigt die gewählte Bahn so, wie freemapper-print sie zeichnet: Der Server gibt die Bahn an den Renderer (freemapper-core 0.16.0), der Start, Posten, Ziel, Strecken, Sonderobjekte und Nummern als Purpurebenen ins Kartenbild malt. Das Overlay ist dabei ausgeblendet, und es lässt sich nichts bearbeiten: Baum, Eigenschaften, Rückgängig und Wiederholen und die Tasten sind abgeschaltet. Ein Test vergleicht Kreise, Strecken, Bandstrecken, Querungsstellen und Nummernfelder des Overlays mit denen des Renderers, für Sprint-, Schulhof- und Waldgrößen.

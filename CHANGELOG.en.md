@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-11
+
 ### Added
 
 - The editor has a print preview (ADR 0057). The "Print preview" button or the P key shows the selected course the way freemapper-print draws it. The server hands the course to the renderer (freemapper-core 0.16.0), which paints start, controls, finish, legs, special objects and numbers as purple layers into the map image. The overlay is hidden and nothing can be edited meanwhile: the tree, the properties, undo and redo and the keys are switched off. A test compares the overlay's circles, legs, marked legs, crossing points and number boxes with the renderer's, for sprint, schoolyard and forest sizes.
