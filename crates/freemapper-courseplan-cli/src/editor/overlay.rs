@@ -66,7 +66,15 @@ pub(crate) struct OverlayLeg {
     pub after: usize,
     pub points: Vec<MapPoint>,
     pub drawn: Vec<MapPoint>,
+    /// The leg's bends in running order, as `{x, y}` like the `bends` argument of `set_leg`.
+    pub bends: Vec<OverlayBend>,
     pub taped: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub(crate) struct OverlayBend {
+    pub x: f64,
+    pub y: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -165,6 +173,16 @@ pub(crate) fn overlay(
             after,
             points: points(&leg.points),
             drawn: points(&drawn_part(&leg.points, circle_r)),
+            bends: leg
+                .points
+                .iter()
+                .skip(1)
+                .take(leg.points.len().saturating_sub(2))
+                .map(|b| OverlayBend {
+                    x: r3(b.x),
+                    y: r3(b.y),
+                })
+                .collect(),
             taped: leg.taped,
         })
         .collect();

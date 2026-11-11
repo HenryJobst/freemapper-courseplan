@@ -189,6 +189,10 @@ a position outside the map, the file stays as it was and a message says why.
   grey. A click on a control adds it before the finish. To insert a control inside the course, first click the leg
   where it belongs, then the control. The chosen leg turns thick and blue, and the status bar says which one it is.
   Esc drops the chosen leg; a second Esc leaves course mode.
+- **Bends and taped legs.** With the select tool, click a leg of the course to choose it. Drag its line to add a
+  bend there, drag a bend to move it, and press Delete on a chosen bend to remove it. A click on a bend chooses it.
+  Each gesture is one step for undo, and the course length in the properties changes with it. The "Taped" check box
+  in the properties of the leg marks it as a taped leg.
 - **Stops.** The properties of a course list its stops. The buttons "Move up", "Move down" and "Remove" change the
   order. With the focus on a row, Alt+Up and Alt+Down move the stop. Each change is one step for undo and saves the
   whole list at once. If a change sends a leg to another stop, that leg loses its bends and tape. The status bar names

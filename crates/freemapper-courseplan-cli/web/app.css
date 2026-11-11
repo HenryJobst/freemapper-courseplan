@@ -183,3 +183,5 @@ dialog button { font: inherit; }
 .props input[type="checkbox"] { width: auto; }
 .danger { margin: 0.5rem 0; }
 #name-input { width: 100%; font: inherit; padding: 0.1rem 0.3rem; background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
+#layer-overlay .bend { fill: var(--map-bg); stroke: var(--sel); pointer-events: none; }
+#layer-overlay .bend.selected { fill: var(--sel); }

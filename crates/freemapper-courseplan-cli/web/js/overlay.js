@@ -145,6 +145,28 @@ function drawSpecial(s, o, selection, parent, halos) {
     el("circle", { cx: first[0], cy: first[1], r: o.sizes.circle_r * 1.8, class: "halo", "stroke-width": w }));
 }
 
+// The handles of the bends of the selected leg, and a halo along the leg.
+function drawBends(leg, o, selection, parent, halos) {
+  el("polyline", {
+    points: pointList(leg.drawn),
+    class: "halo",
+    "stroke-width": o.sizes.line * 3,
+  }, halos);
+  leg.bends.forEach((b, i) => {
+    const chosen = selection.kind === "bend" && selection.index === i;
+    const handle = el("circle", {
+      cx: b.x,
+      cy: b.y,
+      r: o.sizes.circle_r * 0.3,
+      class: chosen ? "bend selected" : "bend",
+      "stroke-width": o.sizes.line,
+    }, parent);
+    handle.dataset.kind = "bend";
+    handle.dataset.id = `${leg.after}:${i}`;
+    if (chosen) el("circle", { cx: b.x, cy: b.y, r: o.sizes.circle_r * 0.6, class: "halo", "stroke-width": o.sizes.line }, halos);
+  });
+}
+
 // Draws `overlay` (the answer of api/overlay) into the attached layer. `course` names the course drawn, or null.
 // `extras` (course mode): { pool: controls not in the course, drawn faint and clickable; pending: the leg
 // (its `after`) chosen for an insertion, drawn thick }.
@@ -171,6 +193,10 @@ export function draw(overlay, selection, course = null, extras = {}) {
     if (leg.taped) line.setAttribute("stroke-dasharray", `${overlay.sizes.line * 4} ${overlay.sizes.line * 3}`);
     line.dataset.kind = "leg";
     line.dataset.id = `${course ?? ""}:${leg.after}`;
+    if (selection && (selection.kind === "leg" || selection.kind === "bend") && selection.after === leg.after) {
+      line.classList.add("selected");
+      drawBends(leg, overlay, selection, body, halos);
+    }
   }
   for (const s of overlay.starts) drawStart(s, overlay, selection, body, halos);
   for (const f of overlay.finishes) drawFinish(f, overlay, selection, body, halos);

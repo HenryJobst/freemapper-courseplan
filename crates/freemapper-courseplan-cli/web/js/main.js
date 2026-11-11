@@ -8,6 +8,7 @@ import * as status from "./status.js";
 import * as tools from "./tools.js";
 import * as keys from "./keys.js";
 import * as course from "./course.js";
+import * as bends from "./bends.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -284,6 +285,10 @@ function refreshConfirm() {
 // Deleting asks first when a course visits the control.
 function requestDelete() {
   const selected = state.selection;
+  if (selected?.kind === "bend") {
+    removeBend();
+    return;
+  }
   if (selected?.kind !== "control" || !controlOf(selected.id) || busy) return;
   if (!fillConfirm(selected.id)) {
     deleteControl(selected.id);
@@ -361,6 +366,28 @@ const removeClass = (name) => runAndSay("remove_class", { name }, "editor-status
 const setProfile = (base, overlays) => runAndSay("set_rule_profile", { base, overlays }, "editor-status-profile-changed");
 const setWindow = (minutes) => runAndSay("set_start_window", { minutes }, "editor-status-window-changed");
 
+// One set_leg per gesture: the leg's whole bend list and its taped flag.
+async function setLeg(after, list, taped, messageId) {
+  const done = await runOp("set_leg", bends.legBody(state.course, after, list, taped));
+  if (done) status.say(messageId);
+  return done;
+}
+
+const legOf = (after) => state.overlay?.legs.find((l) => l.after === after);
+
+function setTaped(after, taped) {
+  const leg = legOf(after);
+  if (leg) setLeg(after, leg.bends, taped, "editor-status-taped-changed");
+}
+
+function removeBend() {
+  const selected = state.selection;
+  const leg = selected?.kind === "bend" ? legOf(selected.after) : null;
+  if (!leg || busy) return;
+  state.selection = { kind: "leg", id: String(leg.after), after: leg.after, course: state.course };
+  setLeg(leg.after, bends.withoutBend(leg.bends, selected.index), leg.taped, "editor-status-bend-removed");
+}
+
 const propActions = {
   move: moveControl,
   remove: requestDelete,
@@ -373,6 +400,7 @@ const propActions = {
   removeClass,
   setProfile,
   setWindow,
+  setTaped,
 };
 
 function updateHistoryButtons() {
@@ -463,6 +491,42 @@ function selectControl(code) {
   redraw();
 }
 
+const BEND_HIT_PX = 7;
+
+// The leg selected, or null. A bend counts as its leg.
+function selectedLeg() {
+  const sel = state.selection;
+  return sel?.kind === "leg" || sel?.kind === "bend" ? legOf(sel.after) : null;
+}
+
+// What a press at a map point hits on the selected leg: { bend } (index), { line } (segment index) or null.
+function legTarget(at) {
+  const leg = selectedLeg();
+  if (!leg || !state.view) return null;
+  const bend = bends.bendNear(leg.bends, at, BEND_HIT_PX / state.view.scale);
+  if (bend !== null) return { leg, bend };
+  const near = bends.nearestSegment(leg.points, at);
+  return near && near.d <= LEG_HIT_PX / state.view.scale ? { leg, line: near.index } : null;
+}
+
+const legSelection = (after) => ({ kind: "leg", id: String(after), after, course: state.course });
+const bendSelection = (after, index) => ({ kind: "bend", id: `${after}:${index}`, after, index, course: state.course });
+
+// A click on a bend of the selected leg, or on any leg of the drawn course, selects it.
+function selectLegAt(at) {
+  const target = legTarget(at);
+  if (target?.bend != null) {
+    state.selection = bendSelection(target.leg.after, target.bend);
+  } else {
+    const after = hitLeg(at);
+    if (after === null) return false;
+    state.selection = legSelection(after);
+    status.say(`${t("editor-leg-word")} ${course.legLabel(after)}. ${t("editor-status-leg-selected")}`, true);
+  }
+  redraw();
+  return true;
+}
+
 // A click on a symbol selects it; the tree follows when the symbol is a control or a special object.
 function selectDrawn(target, at) {
   const node = target.closest("[data-kind]");
@@ -474,6 +538,8 @@ function selectDrawn(target, at) {
   const hit = hitControl(at);
   if (hit) {
     selectControl(hit);
+  } else if ((!node || node.dataset.kind === "leg" || node.dataset.kind === "bend") && selectLegAt(at)) {
+    // A bend or a leg of the course was hit.
   } else if (!node || node.dataset.kind === "leg" || node.dataset.kind === "control") {
     state.selection = null;
     state.treeKey = state.course ? `course:${state.course}` : "all";
@@ -509,9 +575,21 @@ async function loadState(announce) {
   updateHistoryButtons();
   refreshConfirm();
   await loadOverlay(state.course);
+  keepLegSelection();
   redraw();
   if (announce) status.say("editor-status-reloaded");
   return true;
+}
+
+// A selected leg or bend stays only while the overlay still has it; a bend that is gone falls back to its leg.
+function keepLegSelection() {
+  const sel = state.selection;
+  if (sel?.kind !== "leg" && sel?.kind !== "bend") return;
+  const leg = sel.course === state.course ? legOf(sel.after) : null;
+  if (!leg) state.selection = null;
+  else if (sel.kind === "bend" && sel.index >= leg.bends.length) {
+    state.selection = { kind: "leg", id: String(sel.after), after: sel.after, course: sel.course };
+  }
 }
 
 async function loadMapInfo(fit) {
@@ -547,10 +625,54 @@ function showOverlay() {
   overlay.draw(state.overlay, state.selection, state.course, extras());
 }
 
+// A bend being dragged, or null: { after, index (null until the line gave one), at (the segment to split),
+// orig (the bends before), start (map mm under the pointer), moved }.
+let legDrag = null;
+
 function cancelDrag() {
   if (drag?.moved) setCircle(drag.code, drag.orig);
   if (drag?.moved) showOverlay();
   drag = null;
+  if (legDrag?.moved) {
+    const leg = legOf(legDrag.after);
+    if (leg) bends.setLegBends(leg, legDrag.orig);
+    state.selection = legSelection(legDrag.after);
+    redraw();
+  }
+  legDrag = null;
+}
+
+// The pointer moved with a bend in hand: insert it on the first move over a line, then follow the pointer.
+function dragBend(at) {
+  const leg = legOf(legDrag.after);
+  if (!leg) return;
+  if (!legDrag.moved) {
+    legDrag.moved = true;
+    if (legDrag.index === null) {
+      legDrag.index = legDrag.at;
+      legDrag.inserted = true;
+      bends.setLegBends(leg, bends.withInserted(leg.bends, legDrag.at, { x: at[0], y: at[1] }));
+    }
+    state.selection = bendSelection(legDrag.after, legDrag.index);
+  }
+  const origin = legDrag.inserted ? at : [legDrag.orig[legDrag.index].x + at[0] - legDrag.start[0], legDrag.orig[legDrag.index].y + at[1] - legDrag.start[1]];
+  bends.setLegBends(leg, bends.withMoved(leg.bends, legDrag.index, { x: origin[0], y: origin[1] }));
+  showOverlay();
+}
+
+// The drop: one set_leg, or nothing when the bend is back where it was.
+function dropBend() {
+  const done = legDrag;
+  legDrag = null;
+  const leg = legOf(done.after);
+  if (!leg) return;
+  const rounded = leg.bends.map((b) => ({ x: mmValue(b.x), y: mmValue(b.y) }));
+  if (!done.inserted && bends.sameBends(rounded, done.orig.map((b) => ({ x: mmValue(b.x), y: mmValue(b.y) })))) {
+    bends.setLegBends(leg, done.orig);
+    redraw();
+    return;
+  }
+  setLeg(done.after, rounded, leg.taped, done.inserted ? "editor-status-bend-added" : "editor-status-bend-moved");
 }
 
 function startNudge(dx, dy) {
@@ -580,21 +702,13 @@ async function commitNudge() {
 
 const LEG_HIT_PX = 8;
 
-function distanceToSegment(p, a, b) {
-  const dx = b[0] - a[0];
-  const dy = b[1] - a[1];
-  const len2 = dx * dx + dy * dy;
-  const u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2));
-  return Math.hypot(p[0] - (a[0] + u * dx), p[1] - (a[1] + u * dy));
-}
-
 // The `after` of the leg nearest to a map point within a few pixels, or null.
 function hitLeg(at) {
   const reach = LEG_HIT_PX / state.view.scale;
   let best = null;
   for (const leg of state.overlay?.legs ?? []) {
     for (let i = 1; i < leg.drawn.length; i++) {
-      const d = distanceToSegment(at, leg.drawn[i - 1], leg.drawn[i]);
+      const d = bends.distanceToSegment(at, leg.drawn[i - 1], leg.drawn[i]);
       if (d <= reach && (!best || d < best.d)) best = { after: leg.after, d };
     }
   }
@@ -654,6 +768,19 @@ function bindMapInput() {
     if (hit) {
       const c = state.overlay.controls.find((x) => x.code === hit);
       drag = { code: hit, start: at, orig: [...c.at], moved: false };
+    } else if (tools.getTool() === "select") {
+      const target = legTarget(at);
+      if (target) {
+        legDrag = {
+          after: target.leg.after,
+          index: target.bend ?? null,
+          at: target.line,
+          orig: target.leg.bends.map((b) => ({ ...b })),
+          start: at,
+          inserted: false,
+          moved: false,
+        };
+      }
     }
     try {
       svg.setPointerCapture(evt.pointerId);
@@ -669,6 +796,10 @@ function bindMapInput() {
     const dy = evt.clientY - press.y;
     if (!press.moved && Math.hypot(dx, dy) < DRAG_PIXELS) return;
     press.moved = true;
+    if (legDrag) {
+      dragBend(view.screenToMap(evt));
+      return;
+    }
     if (drag) {
       const at = view.screenToMap(evt);
       if (!drag.moved) {
@@ -688,8 +819,15 @@ function bindMapInput() {
     if (!ours(evt)) return;
     const finished = press;
     const dragged = drag;
+    const bending = legDrag;
     press = null;
     drag = null;
+    if (bending?.moved) {
+      if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
+      dropBend();
+      return;
+    }
+    legDrag = null;
     if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
     if (!finished) return;
     if (dragged?.moved) {
@@ -734,7 +872,7 @@ function bindMapInput() {
     redo: () => history(true),
     remove: requestDelete,
     cancel: () => {
-      if (drag || nudge) {
+      if (drag || nudge || legDrag) {
         if (nudge) {
           setCircle(nudge.code, nudge.orig);
           nudge = null;

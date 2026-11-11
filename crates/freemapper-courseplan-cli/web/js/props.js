@@ -3,6 +3,7 @@
 
 import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
+import { legLabel } from "./course.js";
 import {
   MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
 } from "./course.js";
@@ -225,6 +226,33 @@ export function showNear(host, answer) {
   }
 }
 
+// A selected leg or bend: the course and the leg, the number of bends and the taped box. The course length is
+// shown here too, because every bend changes it.
+function legRows(host, list, state, selection, overlay, actions) {
+  const leg = overlay?.legs.find((l) => l.after === selection.after);
+  if (!leg) return;
+  const info = state.courses.find((c) => c.name === selection.course);
+  row(list, "editor-prop-kind", t("editor-leg-word"));
+  row(list, "editor-prop-name", selection.course);
+  row(list, "editor-leg-word", legLabel(leg.after));
+  row(list, "editor-prop-bends", leg.bends.length);
+  if (selection.kind === "bend") row(list, "editor-prop-bend", `${selection.index + 1} / ${leg.bends.length}`);
+  row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
+  const term = document.createElement("dt");
+  const label = document.createElement("label");
+  label.htmlFor = "prop-taped";
+  label.textContent = t("editor-prop-taped");
+  term.append(label);
+  const detail = document.createElement("dd");
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.id = "prop-taped";
+  box.checked = leg.taped;
+  box.addEventListener("change", () => actions.setTaped(leg.after, box.checked));
+  detail.append(box);
+  list.append(term, detail);
+}
+
 function specialRows(list, state, id) {
   const special = state.event.specials.find((s) => s.id === id);
   if (!special) return;
@@ -258,6 +286,8 @@ export function show(host, state, selection, overlay, actions) {
   switch (selection.kind) {
     case "course": courseRows(host, list, state, selection.id, actions); break;
     case "control": controlRows(host, list, state, selection.id, actions); break;
+    case "leg":
+    case "bend": legRows(host, list, state, selection, overlay, actions); break;
     case "special": specialRows(list, state, selection.id); break;
     case "class": classPanel(host, list, state, selection.id, actions); break;
     case "event": eventPanel(host, list, state, actions); break;

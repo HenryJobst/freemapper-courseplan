@@ -743,6 +743,35 @@ mod overlay {
     }
 
     #[test]
+    fn overlay_legs_list_their_bends_in_order() {
+        let mut e = event();
+        e.courses[0].start_bends = vec![p(1.0, -10.0)];
+        e.courses[0].kind = CourseKind::Individual {
+            controls: vec![
+                CourseControl {
+                    bends: vec![p(20.0, -50.0), p(50.123_456, 0.0)],
+                    ..stop("31", None)
+                },
+                stop("32", None),
+            ],
+        };
+        let o = run(&e, Some("A"), 4000);
+        let bends: Vec<Vec<(f64, f64)>> = o
+            .legs
+            .iter()
+            .map(|l| l.bends.iter().map(|b| (b.x, b.y)).collect())
+            .collect();
+        assert_eq!(
+            bends,
+            [
+                vec![(1.0, -10.0)],
+                vec![(20.0, -50.0), (50.123, 0.0)],
+                vec![]
+            ]
+        );
+    }
+
+    #[test]
     fn a_taped_leg_follows_the_control_that_leaves() {
         let mut e = event();
         e.courses[0].kind = CourseKind::Individual {

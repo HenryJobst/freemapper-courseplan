@@ -197,6 +197,11 @@ nennt den Grund.
   auf einen Posten hängt ihn vor dem Ziel an. Um einen Posten mitten in die Bahn einzufügen, klickst du zuerst die
   Strecke, an die er gehört, und dann den Posten. Die gewählte Strecke wird dick und blau, und die Statusleiste nennt
   sie. Esc verwirft die gewählte Strecke; ein zweites Esc verlässt den Bahnmodus.
+- **Knickpunkte und abgeflaggte Strecken.** Klicke mit dem Auswahlwerkzeug auf eine Strecke der Bahn, um sie zu
+  wählen. Ziehst du an ihrer Linie, entsteht dort ein Knickpunkt. Ziehst du einen Knickpunkt, verschiebt er sich, und
+  Entf löscht den gewählten Knickpunkt. Ein Klick auf einen Knickpunkt wählt ihn. Jede Geste ist ein Schritt für
+  Rückgängig, und die Bahnlänge in den Eigenschaften ändert sich mit. Das Feld „Abgeflaggt“ in den Eigenschaften der
+  Strecke markiert sie als abgeflaggte Strecke.
 - **Posten der Bahn.** Die Eigenschaften einer Bahn listen ihre Posten. Mit „Nach oben“, „Nach unten“ und „Entfernen“
   änderst du die Reihenfolge. Liegt der Fokus auf einer Zeile, verschieben Alt+Pfeil hoch und Alt+Pfeil runter den
   Posten. Jede Änderung ist ein Schritt für Rückgängig und speichert die ganze Liste auf einmal. Läuft durch eine
