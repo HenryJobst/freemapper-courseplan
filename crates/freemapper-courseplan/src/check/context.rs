@@ -3,10 +3,14 @@
 
 use freemapper_courseplan_model::{Control, ControlCode, Course, CourseControl, CourseKind, Event};
 
-use super::{ArgValue, LegEnd, LegSpan, Location, SKIP_COURSE_UNRESOLVED, Skipped};
+use super::{
+    ArgValue, LegEnd, LegSpan, Location, NOTE_NON_STANDARD_SCALE, SKIP_COURSE_UNRESOLVED, Skipped,
+};
 use crate::course::{CourseError, LegGeometry, control_numbers, course_legs};
 use crate::map::{MapIndex, MapKind, map_kind};
-use crate::numbers::{OverprintSizes, base_scale, overprint_sizes};
+use crate::numbers::{
+    OverprintSizes, base_scale, course_factor, is_standard_scale, overprint_sizes,
+};
 use crate::omap::MapDocument;
 use crate::rules::print_scale_of;
 
@@ -19,7 +23,7 @@ pub struct CheckContext<'a> {
     pub map_kind: MapKind,
     /// Scale denominator of the map.
     pub map_scale: u32,
-    /// Overprint sizes in print mm at [`base_scale`] of the map kind.
+    /// Overprint sizes in print mm at the base scale of the map kind.
     pub sizes: OverprintSizes,
     /// The individual courses of the event, in file order. Other kinds are not checked.
     pub courses: Vec<CourseContext<'a>>,
@@ -82,6 +86,19 @@ impl<'a> CheckContext<'a> {
             let CourseKind::Individual { controls } = &course.kind else {
                 continue;
             };
+            if !is_standard_scale(kind, map_scale) {
+                unresolved.push(Skipped {
+                    rule: None,
+                    profile: None,
+                    location: Location::Course(course.name.clone()),
+                    reason_id: NOTE_NON_STANDARD_SCALE,
+                    args: vec![
+                        ("kind", ArgValue::Text(kind.as_str().to_owned())),
+                        ("scale", ArgValue::Int(i64::from(map_scale))),
+                        ("base_scale", ArgValue::Int(i64::from(base_scale(kind)))),
+                    ],
+                });
+            }
             // A loaded project file is consistent, so this fails only for an event built in
             // code; the course is then reported as skipped, never as passed.
             match course_legs(event, course) {
@@ -134,10 +151,10 @@ impl<'a> CheckContext<'a> {
         metres * 1000.0 / f64::from(self.map_scale)
     }
 
-    /// A print size of the overprint in map millimetres: `print_mm × base_scale / map_scale`
+    /// A print size of the overprint in map millimetres: `print_mm × course_factor`
     /// (ADR 0024).
     pub fn print_to_map_mm(&self, print_mm: f64) -> f64 {
-        print_mm * f64::from(base_scale(self.map_kind)) / f64::from(self.map_scale)
+        print_mm * course_factor(self.map_kind, self.map_scale)
     }
 
     /// Radius of the control circle in map millimetres.

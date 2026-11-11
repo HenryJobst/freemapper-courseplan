@@ -6,6 +6,11 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- freemapper-core 0.16.1. Die gemeinsamen Platzierungsfälle nutzen das Nummernfeld des Renderers (0,8083747 × Höhe × Ziffern) und laufen ohne Ausnahmen durch.
+- Bei Maßstäben, die die Norm nicht vorsieht (etwa Sprint 1:5000), behalten die Bahnsymbole ihre Grundgröße, wie in freemapper-print (ADR 0058). Overlay, Druckvorschau, Platzierung und Prüfungen messen mit demselben Faktor; vorher schrumpften die Kreise dort auf 4,8 mm. Die Prüfung meldet für solche Karten, dass die Bahn nur fürs Training taugt.
+
 ## [0.11.0] - 2026-11-11
 
 ### Hinzugefügt

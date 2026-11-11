@@ -146,6 +146,12 @@ check-skip-map-kind = the rule is not for { $kind ->
         [forest] forest maps
        *[other] { $kind } maps
     }
+check-note-non-standard-scale = 1:{ $scale } is not a standard scale for { $kind ->
+        [sprint] sprint maps
+        [schoolyard] schoolyard maps
+        [forest] forest maps
+       *[other] { $kind } maps
+    }. The course symbols keep their 1:{ $base_scale } size. Use this course for training only.
 check-skip-print-scale = no rule of this kind for print scale 1:{ $scale }
 check-skip-course-kind = { $kind ->
         [team] team courses

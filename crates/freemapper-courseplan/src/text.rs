@@ -1100,6 +1100,7 @@ mod tests {
             "both",
             "side",
             "base",
+            "base_scale",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

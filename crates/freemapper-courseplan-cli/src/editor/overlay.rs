@@ -1,5 +1,5 @@
 //! The course overlay: the course symbols in map millimetres, computed here and only drawn by the page
-//! (ADR 0046, D12). Sizes grow from the print sizes of `numbers.rs` by `base_scale / map_scale`, the number
+//! (ADR 0046, D12). Sizes grow from the print sizes of `numbers.rs` by `numbers::course_factor` (ADR 0058), the number
 //! boxes come from the same placement code the checks use, and numbers without a stored placement sit where
 //! `auto_place` would put them.
 
