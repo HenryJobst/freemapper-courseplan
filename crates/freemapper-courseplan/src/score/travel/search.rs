@@ -103,20 +103,29 @@ impl<'g> Searcher<'g> {
         self.dist.fill(f64::INFINITY);
         self.prev.fill(u32::MAX);
         let w = self.grid.width as i64;
+        // A*: the straight line at the least factor never overestimates (a penalty only raises costs), so
+        // the cost found is the cheapest one, while far fewer cells are visited than in plain Dijkstra.
+        let (tc, tr) = ((t as i64) % w, (t as i64) / w);
+        let scale = self.cell_m * self.grid.min_factor;
+        let h = |cell: usize| -> f64 {
+            let (dc, dr) = ((cell as i64) % w - tc, (cell as i64) / w - tr);
+            ((dc * dc + dr * dr) as f64).sqrt() * scale
+        };
         let mut heap = BinaryHeap::new();
         self.dist[s] = 0.0;
         heap.push(Entry {
-            cost: 0.0,
+            cost: h(s),
             cell: s as u32,
         });
         while let Some(Entry { cost, cell }) = heap.pop() {
             let cell = cell as usize;
-            if cost > self.dist[cell] {
+            if cost > self.dist[cell] + h(cell) + 1e-9 {
                 continue;
             }
             if cell == t {
                 break;
             }
+            let cost = self.dist[cell];
             let (col, row) = ((cell as i64) % w, (cell as i64) / w);
             for (dx, dy) in STEPS {
                 let diagonal = dx != 0 && dy != 0;
@@ -135,7 +144,7 @@ impl<'g> Searcher<'g> {
                     self.dist[next] = next_cost;
                     self.prev[next] = cell as u32;
                     heap.push(Entry {
-                        cost: next_cost,
+                        cost: next_cost + h(next),
                         cell: next as u32,
                     });
                 }
@@ -150,6 +159,63 @@ impl<'g> Searcher<'g> {
         }
         path.reverse();
         Some(path)
+    }
+
+    /// Plain Dijkstra from `s` until every cell of `targets` is settled (or the reachable cells run out);
+    /// afterwards [`Searcher::cost_to`] reads the cost of each. One search serves many targets.
+    pub(super) fn settle(&mut self, s: usize, targets: &[usize]) {
+        self.dist.fill(f64::INFINITY);
+        let w = self.grid.width as i64;
+        let mut open: Vec<usize> = targets.to_vec();
+        open.sort_unstable();
+        open.dedup();
+        let mut left = open.len();
+        let mut settled = vec![false; self.dist.len()];
+        let mut heap = BinaryHeap::new();
+        self.dist[s] = 0.0;
+        heap.push(Entry {
+            cost: 0.0,
+            cell: s as u32,
+        });
+        while let Some(Entry { cost, cell }) = heap.pop() {
+            let cell = cell as usize;
+            if cost > self.dist[cell] || settled[cell] {
+                continue;
+            }
+            settled[cell] = true;
+            if open.binary_search(&cell).is_ok() {
+                left -= 1;
+                if left == 0 {
+                    return;
+                }
+            }
+            let (col, row) = ((cell as i64) % w, (cell as i64) / w);
+            for (dx, dy) in STEPS {
+                let diagonal = dx != 0 && dy != 0;
+                let Some(next) = self.passable(col + i64::from(dx), row + i64::from(dy)) else {
+                    continue;
+                };
+                if diagonal
+                    && (self.passable(col + i64::from(dx), row).is_none()
+                        || self.passable(col, row + i64::from(dy)).is_none())
+                {
+                    continue;
+                }
+                let next_cost = cost + self.step_cost(cell, next, diagonal, None);
+                if next_cost < self.dist[next] {
+                    self.dist[next] = next_cost;
+                    heap.push(Entry {
+                        cost: next_cost,
+                        cell: next as u32,
+                    });
+                }
+            }
+        }
+    }
+
+    /// The cost found by [`Searcher::settle`] for a target cell, in factor-metres; infinite when none.
+    pub(super) fn cost_to(&self, cell: usize) -> f64 {
+        self.dist[cell]
     }
 
     /// Length of a cell path in metres.

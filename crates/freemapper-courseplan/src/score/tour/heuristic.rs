@@ -199,25 +199,46 @@ fn build(p: &Problem, mut seq: Seq, rng: &mut Rng, noisy: bool) -> Seq {
 
 /// Where unit `k` costs the least time: position, direction, added seconds.
 fn best_insertion(p: &Problem, seq: &Seq, k: usize) -> (usize, bool, f64) {
+    best_insertion_skip(p, seq, None, k)
+}
+
+/// [`best_insertion`] into the tour without its entry at `skip`; positions count in that shorter tour.
+fn best_insertion_skip(
+    p: &Problem,
+    seq: &Seq,
+    skip: Option<usize>,
+    k: usize,
+) -> (usize, bool, f64) {
+    let at = |v: usize| {
+        seq[if skip.is_some_and(|s| v >= s) {
+            v + 1
+        } else {
+            v
+        }]
+    };
+    let len = seq.len() - usize::from(skip.is_some());
     let mut best = (0, false, f64::INFINITY);
-    for pos in 0..=seq.len() {
+    for pos in 0..=len {
         let prev = if pos == 0 {
             p.start()
         } else {
-            p.exit(seq[pos - 1].0, seq[pos - 1].1)
+            let (u, r) = at(pos - 1);
+            p.exit(u, r)
         };
-        let next = if pos == seq.len() {
+        let next = if pos == len {
             p.finish()
         } else {
-            p.entry(seq[pos].0, seq[pos].1)
+            let (u, r) = at(pos);
+            p.entry(u, r)
         };
+        let direct = p.dist(prev, next);
         for rev in [false, true] {
             if rev && !p.reversible(k) {
                 continue;
             }
             let added =
                 p.dist(prev, p.entry(k, rev)) + p.internal[k] + p.dist(p.exit(k, rev), next)
-                    - p.dist(prev, next);
+                    - direct;
             if added < best.2 {
                 best = (pos, rev, added);
             }
@@ -288,13 +309,23 @@ fn two_opt(p: &Problem, seq: &mut Seq) {
         }
         // Or-opt: move one unit to its cheapest place.
         for i in 0..seq.len() {
-            let now = p.eval(seq);
-            let mut trial = seq.clone();
-            let (k, _) = trial.remove(i);
-            let (pos, rev, _) = best_insertion(p, &trial, k);
-            trial.insert(pos, (k, rev));
-            if p.eval(&trial) < now - 1e-9 {
-                *seq = trial;
+            let (k, rev) = seq[i];
+            let prev = if i == 0 {
+                p.start()
+            } else {
+                p.exit(seq[i - 1].0, seq[i - 1].1)
+            };
+            let next = if i + 1 == seq.len() {
+                p.finish()
+            } else {
+                p.entry(seq[i + 1].0, seq[i + 1].1)
+            };
+            let gain = p.dist(prev, p.entry(k, rev)) + p.internal[k] + p.dist(p.exit(k, rev), next)
+                - p.dist(prev, next);
+            let (pos, new_rev, added) = best_insertion_skip(p, seq, Some(i), k);
+            if added < gain - 1e-9 {
+                seq.remove(i);
+                seq.insert(pos, (k, new_rev));
                 improved = true;
             }
         }

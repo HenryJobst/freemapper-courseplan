@@ -464,3 +464,65 @@ fn speed_table_reads_the_sprint_symbols_the_way_the_standard_does() {
     assert_eq!(kind("521"), Some(raster::Kind::Solid));
     assert!(matches!(kind("501.5"), Some(raster::Kind::Fast(f)) if f < 1.0));
 }
+
+/// A field with a wall that has a gap, a blocked square and a slow patch: the routes bend, and a
+/// straight-line estimate is far from the cost.
+fn obstacle_surface() -> CostSurface {
+    let index = framed(vec![
+        line("515", &[(100.0, 0.0), (100.0, 150.0)]),
+        rect("310", 30.0, 30.0, 60.0, 60.0),
+    ]);
+    surface(
+        &index,
+        &[vec![
+            p(140.0, 20.0),
+            p(170.0, 20.0),
+            p(170.0, 60.0),
+            p(140.0, 60.0),
+        ]],
+    )
+}
+
+#[test]
+fn one_search_per_source_gives_the_times_of_single_fastest_searches() {
+    let s = obstacle_surface();
+    let points = [
+        p(20.0, 20.0),
+        p(20.0, 180.0),
+        p(180.0, 180.0),
+        p(150.0, 40.0), // inside the blocked square: snaps or fails like `fastest`
+        p(180.0, 20.0),
+        p(95.0, 100.0),
+    ];
+    for (i, from) in points.iter().enumerate() {
+        let many = s.times_from(from, &points[i + 1..]);
+        for (to, got) in points[i + 1..].iter().zip(many) {
+            match (s.fastest(from.clone(), to.clone()), got) {
+                (Ok(route), Ok(t)) => assert!(
+                    (route.time_s - t).abs() < 1e-6,
+                    "{from:?} to {to:?}: {} against {t}",
+                    route.time_s
+                ),
+                (Err(_), Err(_)) => {}
+                (a, b) => panic!("{from:?} to {to:?}: {a:?} against {b:?}"),
+            }
+        }
+    }
+}
+
+#[test]
+fn shared_profiles_read_prefetched_times_in_both_directions() {
+    let shared = SharedRoutes::new(obstacle_surface());
+    let good = shared.profile(1.0);
+    let fast = shared.profile(0.9);
+    let (a, b, c) = (p(20.0, 20.0), p(20.0, 180.0), p(180.0, 180.0));
+    good.prefetch(&a, &[b.clone(), c.clone()]);
+    let ab = good.fastest_time(a.clone(), b.clone()).unwrap();
+    assert_eq!(good.fastest_time(b.clone(), a.clone()).unwrap(), ab);
+    assert!((fast.fastest_time(a.clone(), b.clone()).unwrap() - 0.9 * ab).abs() < 1e-9);
+    // Without a prefetch the answer is the same as the single search gives.
+    let direct = shared.profile(1.0).fastest(b, c.clone()).unwrap().time_s;
+    let other = SharedRoutes::new(obstacle_surface());
+    let cached = other.profile(1.0).fastest_time(p(20.0, 180.0), c).unwrap();
+    assert!((direct - cached).abs() < 1e-6);
+}

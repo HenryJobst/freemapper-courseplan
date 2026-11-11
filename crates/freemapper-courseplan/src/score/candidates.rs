@@ -423,10 +423,43 @@ fn choice_of(
     }
 }
 
+/// `f` over `items` on up to eight threads, results in the order of `items`.
+fn parallel_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<R> {
+    let threads = std::thread::available_parallelism()
+        .map_or(1, std::num::NonZero::get)
+        .min(8)
+        .min(items.len().max(1));
+    if threads <= 1 {
+        return items.iter().map(f).collect();
+    }
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let mut done: Vec<(usize, R)> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut mine = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(item) = items.get(i) else { break };
+                        mine.push((i, f(item)));
+                    }
+                    mine
+                })
+            })
+            .collect();
+        workers
+            .into_iter()
+            .flat_map(|w| w.join().expect("a worker thread does not panic"))
+            .collect()
+    });
+    done.sort_unstable_by_key(|(i, _)| *i);
+    done.into_iter().map(|(_, r)| r).collect()
+}
+
 /// The candidates for control sites, best route choice first, ties by position. See [`suggest_with`].
 pub fn suggest(
     index: &MapIndex,
-    travel: &dyn TravelTime,
+    travel: &(dyn TravelTime + Sync),
     ctx: &SuggestContext<'_>,
 ) -> Result<Vec<Candidate>, ScoreError> {
     suggest_with(index, travel, travel, ctx)
@@ -436,8 +469,8 @@ pub fn suggest(
 /// cell) for the finish probe and every leg that gets alternatives, which dominate the run time.
 pub fn suggest_with(
     index: &MapIndex,
-    fine: &dyn TravelTime,
-    coarse: &dyn TravelTime,
+    fine: &(dyn TravelTime + Sync),
+    coarse: &(dyn TravelTime + Sync),
     ctx: &SuggestContext<'_>,
 ) -> Result<Vec<Candidate>, ScoreError> {
     if ctx.limit == 0 {
@@ -575,27 +608,39 @@ pub fn suggest_with(
         }
     }
     let n = kept.len();
+    // The nearest legs of every site, in the order the sites ask for them; each pair once.
+    let nearest: Vec<Vec<usize>> = (0..n)
+        .map(|i| {
+            let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
+            others.sort_by(|&a, &b| {
+                dist(&kept[i].0.at, &kept[a].0.at)
+                    .total_cmp(&dist(&kept[i].0.at, &kept[b].0.at))
+                    .then(a.cmp(&b))
+            });
+            others.truncate(NEAREST_LEGS);
+            others
+        })
+        .collect();
+    let mut keys: Vec<(usize, usize)> = nearest
+        .iter()
+        .enumerate()
+        .flat_map(|(i, js)| js.iter().map(move |&j| (i.min(j), i.max(j))))
+        .collect();
+    keys.sort_unstable();
+    keys.dedup();
+    // The searches are independent, so they run on several threads; the results are the same as one by one.
+    let results = parallel_map(&keys, |&(a, b)| {
+        choice_of(coarse, &kept[a].0.at, &kept[b].0.at, max_ratio)
+    });
     let mut pairs: BTreeMap<(usize, usize), Option<f64>> = BTreeMap::new();
+    for (key, result) in keys.into_iter().zip(results) {
+        pairs.insert(key, result?);
+    }
     let mut out = Vec::with_capacity(n);
     for (i, (site, effort_s, start_choice)) in kept.iter().enumerate() {
         let mut values = vec![*start_choice];
-        let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
-        others.sort_by(|&a, &b| {
-            dist(&site.at, &kept[a].0.at)
-                .total_cmp(&dist(&site.at, &kept[b].0.at))
-                .then(a.cmp(&b))
-        });
-        for j in others.into_iter().take(NEAREST_LEGS) {
-            let key = (i.min(j), i.max(j));
-            let value = match pairs.get(&key) {
-                Some(v) => *v,
-                None => {
-                    let v = choice_of(coarse, &kept[key.0].0.at, &kept[key.1].0.at, max_ratio)?;
-                    pairs.insert(key, v);
-                    v
-                }
-            };
-            values.extend(value);
+        for &j in &nearest[i] {
+            values.extend(pairs[&(i.min(j), i.max(j))]);
         }
         let route_choice = values.iter().sum::<f64>() / values.len() as f64;
         let neighbours = raw

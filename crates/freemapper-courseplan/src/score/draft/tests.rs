@@ -608,3 +608,88 @@ fn first_violation_names_the_later_high_control_and_spares_forced_ones() {
     );
     assert_eq!(first_violation(&picks, &[5, 4, 5], &cands, 4, 5.0, 0), None);
 }
+
+/// Runs the draft of a world with a budget of local-search evaluations.
+fn run_with_budget(w: &World, budget: usize) -> Result<Draft, DraftFailure> {
+    draft_with_budget(
+        &DraftRequest {
+            candidates: &w.cands,
+            travel_good: &GOOD,
+            travel_very_good: &VERY_GOOD,
+            start: w.start.clone(),
+            finish: w.finish.clone(),
+            limit_min: w.limit_min,
+            links: &w.links,
+            settings: &w.settings,
+            taken: &w.taken,
+            scale: w.scale,
+        },
+        budget,
+    )
+}
+
+/// Limit in minutes at `pct` percent of the time the very good runner needs for the whole grid.
+fn share_limit(cands: &[Candidate], pct: u32) -> u32 {
+    ((t_all(cands) / 60.0) as u32 * pct / 100).max(2)
+}
+
+#[test]
+fn the_local_search_finds_a_set_the_prefixes_miss() {
+    // Measured once on this grid (ADR 0074): at these shares of the whole course no prefix of the spread
+    // order meets both bands, while a swap or a value step does.
+    let cands = grid(5);
+    for pct in [30, 40, 50] {
+        let w = World::new(cands.clone(), share_limit(&cands, pct));
+        assert!(run_with_budget(&w, 0).is_err(), "prefixes alone at {pct}");
+        let d = run_with_budget(&w, REFINE_BUDGET).expect("the local search meets the bands");
+        assert!(d.report.issues.is_empty(), "{pct}: {:?}", d.report.issues);
+        assert!((87.0..=93.0).contains(&d.report.good_percent));
+        assert!((95.0..=100.0).contains(&d.report.very_good_finish_percent));
+        for c in &d.controls {
+            assert_eq!(
+                crate::score::code::value_of_code(&c.code.0),
+                Some(c.value),
+                "the code carries the value"
+            );
+            assert!((1..=5).contains(&c.value));
+        }
+    }
+}
+
+#[test]
+fn the_local_search_never_spoils_a_draft_and_is_repeatable() {
+    let cands = grid(5);
+    for pct in [70, 75, 80] {
+        let w = World::new(cands.clone(), share_limit(&cands, pct));
+        let first = run_with_budget(&w, 0).expect("prefixes meet the bands here");
+        let with = run_with_budget(&w, REFINE_BUDGET).expect("still a draft");
+        assert_eq!(first, with, "a draft that meets the bands is left alone");
+    }
+    let w = World::new(cands.clone(), share_limit(&cands, 40));
+    assert_eq!(
+        run_with_budget(&w, REFINE_BUDGET),
+        run_with_budget(&w, REFINE_BUDGET)
+    );
+}
+
+#[test]
+fn the_local_search_keeps_links_and_the_high_value_gap() {
+    let cands = grid(5);
+    let mut w = World::new(cands.clone(), share_limit(&cands, 40));
+    w.links = vec![(cands[0].at.clone(), cands[1].at.clone())];
+    let d = match run_with_budget(&w, REFINE_BUDGET) {
+        Ok(d) => d,
+        Err(f) => *f.best,
+    };
+    assert_eq!(d.links.len(), 1);
+    for &(a, b) in &d.links {
+        for tour in [&d.report.good, &d.report.very_good] {
+            assert!(
+                adjacent(&tour.order, a, b),
+                "linked controls run one after the other"
+            );
+        }
+    }
+    let gap = f64::from(w.settings.high_value_gap_m) * 1000.0 / f64::from(w.scale);
+    assert_eq!(close_high_pairs(&d, w.settings.high_from(), gap), 0);
+}
