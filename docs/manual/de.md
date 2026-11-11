@@ -57,7 +57,7 @@ Werkzeugnamen und Feldnamen bleiben in jeder Sprache Englisch.
 
 Das Archiv enthält neben dem Programm die READMEs, die Lizenz, dieses Handbuch und `AGENTS.md`, eine Anleitung für
 KI-Assistenten. Ein Assistent, der Befehle auf deinem Computer ausführen kann (etwa Claude Code oder Codex), lädt
-das Programm herunter, prüft und entpackt es und trägt es nach den Schritten dieser Datei ein. Sag ihm:
+das Programm herunter, prüft und entpackt es und trägt es nach den Schritten in dieser Datei ein. Sag ihm:
 
 > Lies AGENTS.md von github.com/HenryJobst/freemapper-courseplan und richte freemapper-courseplan ein.
 
