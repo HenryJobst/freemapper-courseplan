@@ -1462,35 +1462,15 @@ impl CoursePlanServer {
     }
 
     fn map_features_near_op(&self, req: FeaturesNear) -> Answer {
-        {
-            let file = self.load(&req.project)?;
-            let doc = self.read_map(&file)?;
-            let index = MapIndex::from_document(&doc);
-            let limit = req
-                .limit
-                .map_or(LIMIT_DEFAULT, |l| l as usize)
-                .clamp(1, LIMIT_MAX);
-            let at = MapPoint { x: req.x, y: req.y };
-            let near = index.features_near(at, req.radius_mm);
-            let total = near.len();
-            let features: Vec<Value> = near
-                .into_iter()
-                .take(limit)
-                .map(|(f, distance)| {
-                    json!({
-                        "symbol_code": f.symbol_code,
-                        "kind": match f.geometry {
-                            FeatureGeometry::Point(_) => "point",
-                            FeatureGeometry::Line(_) => "line",
-                            FeatureGeometry::Area(_) => "area",
-                        },
-                        "distance_mm": round(distance, 2),
-                        "part": f.part,
-                    })
-                })
-                .collect();
-            Ok(json!({ "features": features, "total": total }))
-        }
+        let file = self.load(&req.project)?;
+        let doc = self.read_map(&file)?;
+        let index = MapIndex::from_document(&doc);
+        Ok(features_near_json(
+            &index,
+            MapPoint { x: req.x, y: req.y },
+            req.radius_mm,
+            req.limit,
+        ))
     }
 
     fn map_extent_op(&self, req: ProjectOnly) -> Answer {
@@ -1816,6 +1796,38 @@ impl CoursePlanServer {
             _ => Err(OpError::UnknownTool),
         }
     }
+}
+
+/// The map objects within `radius_mm` of `at`, nearest first: the answer of `map_features_near`, which the
+/// editor's `api/map/near` serves from its cached index (ADR 0047).
+pub(crate) fn features_near_json(
+    index: &MapIndex,
+    at: MapPoint,
+    radius_mm: f64,
+    limit: Option<u32>,
+) -> Value {
+    let limit = limit
+        .map_or(LIMIT_DEFAULT, |l| l as usize)
+        .clamp(1, LIMIT_MAX);
+    let near = index.features_near(at, radius_mm);
+    let total = near.len();
+    let features: Vec<Value> = near
+        .into_iter()
+        .take(limit)
+        .map(|(f, distance)| {
+            json!({
+                "symbol_code": f.symbol_code,
+                "kind": match f.geometry {
+                    FeatureGeometry::Point(_) => "point",
+                    FeatureGeometry::Line(_) => "line",
+                    FeatureGeometry::Area(_) => "area",
+                },
+                "distance_mm": round(distance, 2),
+                "part": f.part,
+            })
+        })
+        .collect();
+    json!({ "features": features, "total": total })
 }
 
 fn extent_json(extent: Option<(MapPoint, MapPoint)>) -> Value {

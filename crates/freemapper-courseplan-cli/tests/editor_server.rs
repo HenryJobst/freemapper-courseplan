@@ -117,6 +117,36 @@ impl Editor {
         (status, head.to_owned(), body.to_owned())
     }
 
+    /// A POST with a JSON body and the revision the caller saw; the status and the parsed JSON answer.
+    fn post_json(
+        &self,
+        path: &str,
+        revision: &str,
+        body: &serde_json::Value,
+    ) -> (u16, serde_json::Value) {
+        let body = body.to_string();
+        let mut stream = TcpStream::connect(("127.0.0.1", self.port)).unwrap();
+        write!(
+            stream,
+            "POST {}{path} HTTP/1.1\r\nConnection: close\r\nHost: 127.0.0.1:{port}\r\n\
+             Origin: http://127.0.0.1:{port}\r\nContent-Type: application/json\r\n\
+             X-Courseplan-Revision: {revision}\r\nContent-Length: {}\r\n\r\n{body}",
+            self.path,
+            body.len(),
+            port = self.port
+        )
+        .unwrap();
+        let mut answer = String::new();
+        stream.read_to_string(&mut answer).unwrap();
+        let (head, body) = answer.split_once("\r\n\r\n").unwrap();
+        let status = head.split(' ').nth(1).unwrap().parse().unwrap();
+        (status, serde_json::from_str(body).unwrap_or_default())
+    }
+
+    fn project_file(&self) -> PathBuf {
+        self._dir.path().join("event.courseplan.toml")
+    }
+
     fn wait_exit(&mut self) -> std::process::ExitStatus {
         let start = Instant::now();
         loop {
@@ -307,4 +337,56 @@ fn port_in_use_is_a_clear_error() {
     assert_eq!(out.status.code(), Some(1), "{}", stderr(&out));
     assert!(out.stdout.is_empty());
     assert!(stderr(&out).contains(&port.to_string()), "{}", stderr(&out));
+}
+
+#[test]
+fn place_move_undo_over_http() {
+    let editor = Editor::start();
+    let state = |editor: &Editor| -> serde_json::Value {
+        serde_json::from_str(&editor.request("GET", "api/state", &[]).2).unwrap()
+    };
+    let first = state(&editor);
+    let revision = first["revision"].as_str().unwrap().to_owned();
+    let (status, added) = editor.post_json(
+        "api/op/add_control",
+        &revision,
+        &serde_json::json!({ "at": { "x": 100.0, "y": -50.0 } }),
+    );
+    assert_eq!(status, 200, "{added}");
+    let revision = added["revision"].as_str().unwrap().to_owned();
+    let code = added["result"]["code"].clone();
+    let after_add = std::fs::read_to_string(editor.project_file()).unwrap();
+
+    let (status, moved) = editor.post_json(
+        "api/op/move_control",
+        &revision,
+        &serde_json::json!({ "code": code, "at": { "x": 110.0, "y": -40.0 } }),
+    );
+    assert_eq!(status, 200, "{moved}");
+    let revision = moved["revision"].as_str().unwrap().to_owned();
+    assert_ne!(
+        std::fs::read_to_string(editor.project_file()).unwrap(),
+        after_add
+    );
+    assert_eq!(state(&editor)["undo"]["undo"], "Move control");
+
+    let (status, undone) = editor.post_json("api/undo", &revision, &serde_json::json!({}));
+    assert_eq!(status, 200, "{undone}");
+    assert_eq!(
+        std::fs::read_to_string(editor.project_file()).unwrap(),
+        after_add
+    );
+    assert_eq!(undone["revision"], state(&editor)["revision"]);
+
+    // An old revision is refused with the current one, and nothing is written.
+    let (status, stale) = editor.post_json(
+        "api/op/move_control",
+        &revision,
+        &serde_json::json!({ "code": code, "at": { "x": 1.0, "y": 1.0 } }),
+    );
+    assert_eq!(status, 409, "{stale}");
+    assert_eq!(
+        std::fs::read_to_string(editor.project_file()).unwrap(),
+        after_add
+    );
 }

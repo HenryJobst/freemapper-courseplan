@@ -945,6 +945,55 @@ mod state {
         );
     }
 
+    #[tokio::test]
+    async fn near_route_lists_map_objects_and_refuses_bad_queries() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&project(dir.path()));
+        let (_, state) = get(&app, "/tok/api/state").await;
+        let e = &state["map"]["extent"];
+        let (x, y) = (
+            (e[0][0].as_f64().unwrap() + e[1][0].as_f64().unwrap()) / 2.0,
+            (e[0][1].as_f64().unwrap() + e[1][1].as_f64().unwrap()) / 2.0,
+        );
+        let (status, body) = get(&app, &format!("/tok/api/map/near?x={x}&y={y}&r=50")).await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(
+            body["features"].is_array() && body["total"].is_u64(),
+            "{body}"
+        );
+        let first = &body["features"][0];
+        assert!(first["symbol_code"].is_string() && first["distance_mm"].is_number());
+        // The same answer as the MCP tool's, which the route shares its code with.
+        let tool = crate::mcp::CoursePlanServer::new(Lang::english())
+            .call_json(
+                &dir.path().join("event.courseplan.toml"),
+                "map_features_near",
+                serde_json::json!({ "x": x, "y": y, "radius_mm": 50.0 }),
+            )
+            .unwrap();
+        assert_eq!(tool, body);
+        for query in [
+            "",
+            "?x=1&y=2",
+            "?x=1&y=2&r=0",
+            "?x=1&y=2&r=-3",
+            "?x=1&y=2&r=51",
+            "?x=1&y=2&r=NaN",
+            "?x=inf&y=2&r=3",
+            "?x=1&x=2&y=2&r=3",
+            "?x=1&y=2&r=3&limit=1",
+            "?x=abc&y=2&r=3",
+            "?x=1e9&y=2&r=3",
+            "?path=/etc/passwd&x=1&y=2&r=3",
+        ] {
+            assert_eq!(
+                get(&app, &format!("/tok/api/map/near{query}")).await.0,
+                StatusCode::BAD_REQUEST,
+                "{query}"
+            );
+        }
+    }
+
     async fn raw(
         app: &axum::Router,
         request: Request<Body>,

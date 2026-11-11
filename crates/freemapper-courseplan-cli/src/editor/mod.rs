@@ -94,6 +94,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
+        .route(&format!("{prefix}/api/map/near"), get(map_near))
         .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
         .route(&format!("{prefix}/api/undo"), post(api_undo))
         .route(&format!("{prefix}/api/redo"), post(api_redo))
@@ -410,6 +411,51 @@ async fn map_svg(State(state): State<Shared>, RawQuery(query): RawQuery) -> Resp
         Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
         Err(MapViewError::TooLarge) => bad(&lang),
         Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    })
+    .await
+}
+
+/// Largest radius `api/map/near` takes, in map millimetres: the page asks for a few.
+const MAX_NEAR_RADIUS: f64 = 50.0;
+
+/// The query of `api/map/near`: `x`, `y` and `r` (map mm), each exactly once, finite, in range.
+fn parse_near(raw: &str) -> Option<(f64, f64, f64)> {
+    let (mut x, mut y, mut r) = (None, None, None);
+    for pair in raw.split('&').filter(|p| !p.is_empty()) {
+        let (key, value) = pair.split_once('=')?;
+        let slot = match key {
+            "x" => &mut x,
+            "y" => &mut y,
+            "r" => &mut r,
+            _ => return None,
+        };
+        let value: f64 = value.parse().ok()?;
+        if !value.is_finite() || slot.replace(value).is_some() {
+            return None;
+        }
+    }
+    let (x, y, r) = (x?, y?, r?);
+    (x.abs() <= MAX_COORDINATE && y.abs() <= MAX_COORDINATE && r > 0.0 && r <= MAX_NEAR_RADIUS)
+        .then_some((x, y, r))
+}
+
+/// `GET api/map/near?x&y&r`: the map objects within `r` mm of a point, from the cached map index.
+async fn map_near(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let Some((x, y, r)) = query.as_deref().and_then(parse_near) else {
+        return plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-map-bad-request", &[]),
+        );
+    };
+    let loaded = current(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    blocking_response(move || {
+        let at = freemapper_courseplan_model::MapPoint { x, y };
+        axum::Json(crate::mcp::features_near_json(&entry.index, at, r, None)).into_response()
     })
     .await
 }

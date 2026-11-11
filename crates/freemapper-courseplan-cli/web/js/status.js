@@ -25,3 +25,24 @@ export function setMap(path, scale, kind) {
 export function setCursor(point) {
   fields.cursor.textContent = point ? `${point[0].toFixed(2)}; ${point[1].toFixed(2)}` : "";
 }
+
+const banner = document.getElementById("banner");
+
+// A refusal or a conflict stays above the map until it is dismissed or the next change succeeds.
+// The container is a role="alert" region, so a screen reader reads the text when it appears.
+export function showBanner(text) {
+  const box = document.createElement("div");
+  box.className = "banner-box";
+  const words = document.createElement("span");
+  words.textContent = text;
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = t("editor-banner-dismiss");
+  close.addEventListener("click", clearBanner);
+  box.append(words, close);
+  banner.replaceChildren(box);
+}
+
+export function clearBanner() {
+  banner.replaceChildren();
+}

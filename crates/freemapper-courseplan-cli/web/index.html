@@ -13,16 +13,20 @@
     <nav class="pane" id="pane-tree" data-label="editor-pane-tree"></nav>
     <section class="pane" id="pane-map" data-label="editor-pane-map">
       <div class="toolbar" role="toolbar" data-label="editor-toolbar-label">
-        <button type="button" data-text="editor-tool-select" aria-pressed="true"></button>
-        <button type="button" data-text="editor-tool-control" disabled></button>
-        <button type="button" data-text="editor-tool-crossing" disabled></button>
+        <button type="button" id="tool-select" data-text="editor-tool-select" aria-pressed="true"></button>
+        <button type="button" id="tool-control" data-text="editor-tool-control" aria-pressed="false"></button>
+        <button type="button" id="tool-crossing" data-text="editor-tool-crossing" aria-pressed="false"></button>
         <button type="button" data-text="editor-tool-special" disabled></button>
         <button type="button" data-text="editor-tool-course" disabled></button>
         <span class="spacer"></span>
+        <button type="button" id="undo-btn" data-text="editor-tool-undo" disabled></button>
+        <button type="button" id="redo-btn" data-text="editor-tool-redo" disabled></button>
+        <button type="button" id="help-btn" data-label="editor-tool-help" data-title="editor-tool-help">?</button>
         <button type="button" id="zoom-out" data-label="editor-zoom-out" data-title="editor-zoom-out">&minus;</button>
         <button type="button" id="zoom-in" data-label="editor-zoom-in" data-title="editor-zoom-in">+</button>
         <button type="button" id="zoom-fit" data-label="editor-zoom-fit" data-title="editor-zoom-fit">0</button>
       </div>
+      <div id="banner" role="alert"></div>
       <svg id="map-svg" tabindex="0" role="application" data-label="editor-pane-map" xmlns="http://www.w3.org/2000/svg">
         <g id="layer-map"></g>
         <g id="layer-overlay"></g>
@@ -46,6 +50,20 @@
       </ul>
     </details>
   </header>
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <h2 id="help-title" data-text="editor-help-title"></h2>
+    <table id="help-keys"></table>
+    <form method="dialog"><button type="submit" data-text="editor-help-close" autofocus></button></form>
+  </dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title">
+    <h2 id="confirm-title" data-text="editor-confirm-title"></h2>
+    <p data-text="editor-confirm-used"></p>
+    <ul id="confirm-courses"></ul>
+    <div class="dialog-buttons">
+      <button type="button" id="confirm-yes" data-text="editor-confirm-delete"></button>
+      <button type="button" id="confirm-no" data-text="editor-cancel" autofocus></button>
+    </div>
+  </dialog>
   <footer class="status" id="status">
     <span id="status-message" role="status" aria-live="polite"></span>
     <span class="field"><span class="name" data-text="editor-status-map"></span> <span id="status-map"></span></span>
