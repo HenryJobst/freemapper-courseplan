@@ -9,6 +9,7 @@ import * as tools from "./tools.js";
 import * as keys from "./keys.js";
 import * as course from "./course.js";
 import * as bends from "./bends.js";
+import * as numbers from "./numbers.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -388,7 +389,40 @@ function removeBend() {
   setLeg(leg.after, bends.withoutBend(leg.bends, selected.index), leg.taped, "editor-status-bend-removed");
 }
 
+// Drops a dragged number box: the server turns the centre into direction and gap, then one operation stores it.
+async function dropNumber(n, centre) {
+  if (busy || state.closed) return;
+  busy = true;
+  let found = null;
+  try {
+    const answer = await get(numbers.numberAtQuery(state.course, n, centre));
+    if (answer.ok) found = answer.data;
+    else status.showBanner(failure(answer));
+  } catch {
+    status.say("editor-status-lost");
+  } finally {
+    busy = false;
+  }
+  if (!found) {
+    await loadState(false);
+    return;
+  }
+  const { tool, body } = numbers.dropOperation(state.course, n, found, numbers.options.forAll);
+  const done = await runOp(tool, body);
+  if (!done) return;
+  // A number set for this course comes before the one on the control, so the box does not move.
+  const shadowed = numbers.options.forAll && n.source === "course";
+  status.say(shadowed ? "editor-status-number-shadowed" : "editor-status-number-moved");
+}
+
+async function placeNumbers() {
+  if (!state.course) return;
+  const done = await runOp("place_numbers", numbers.placeBody(state.course, numbers.options.overwrite));
+  if (done) status.say(`${t("editor-status-numbers-placed")} ${done.result.placed}`, true);
+}
+
 const propActions = {
+  placeNumbers,
   move: moveControl,
   remove: requestDelete,
   changeCode,
@@ -629,7 +663,16 @@ function showOverlay() {
 // orig (the bends before), start (map mm under the pointer), moved }.
 let legDrag = null;
 
+// A number box being dragged in course mode, or null: { number (the overlay entry), start, orig (its centre),
+// moved }.
+let numberDrag = null;
+
 function cancelDrag() {
+  if (numberDrag?.moved) {
+    numberDrag.number.centre = numberDrag.orig;
+    showOverlay();
+  }
+  numberDrag = null;
   if (drag?.moved) setCircle(drag.code, drag.orig);
   if (drag?.moved) showOverlay();
   drag = null;
@@ -764,6 +807,10 @@ function bindMapInput() {
     if (!evt.isPrimary || evt.button !== 0 || busy) return;
     const at = view.screenToMap(evt);
     const hit = tools.getTool() === "select" ? hitControl(at) : null;
+    if (tools.getTool() === "course" && state.overlay) {
+      const box = numbers.numberAt(state.overlay.numbers, at, 0);
+      if (box) numberDrag = { number: box, start: at, orig: [...box.centre], moved: false };
+    }
     press = { id: evt.pointerId, x: evt.clientX, y: evt.clientY, moved: false, target: evt.target, at };
     if (hit) {
       const c = state.overlay.controls.find((x) => x.code === hit);
@@ -800,6 +847,16 @@ function bindMapInput() {
       dragBend(view.screenToMap(evt));
       return;
     }
+    if (numberDrag) {
+      const at = view.screenToMap(evt);
+      if (!numberDrag.moved) {
+        numberDrag.moved = true;
+        state.selection = { kind: "number", id: String(numberDrag.number.index), course: state.course, index: numberDrag.number.index };
+      }
+      numberDrag.number.centre = [numberDrag.orig[0] + at[0] - numberDrag.start[0], numberDrag.orig[1] + at[1] - numberDrag.start[1]];
+      showOverlay();
+      return;
+    }
     if (drag) {
       const at = view.screenToMap(evt);
       if (!drag.moved) {
@@ -820,8 +877,22 @@ function bindMapInput() {
     const finished = press;
     const dragged = drag;
     const bending = legDrag;
+    const carried = numberDrag;
     press = null;
     drag = null;
+    numberDrag = null;
+    if (carried) {
+      if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
+      if (carried.moved) {
+        dropNumber(carried.number, [carried.number.centre[0], carried.number.centre[1]]);
+      } else {
+        // A click on a number box selects it.
+        state.selection = { kind: "number", id: String(carried.number.index), course: state.course, index: carried.number.index };
+        redraw();
+        status.say("editor-status-number-selected");
+      }
+      return;
+    }
     if (bending?.moved) {
       if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
       dropBend();

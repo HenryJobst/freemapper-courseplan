@@ -216,6 +216,34 @@ pub fn number_centre(
     MapPoint { x: cx, y: cy }
 }
 
+/// The placement whose number box of `number` is centred on `drop` (map mm at `map_scale`) for a control at
+/// `at`: the inverse of [`number_centre`]. The direction points from the circle centre to `drop`; the gap
+/// (print mm) is the shortest distance from the outer edge of the circle line to the box, negative when the
+/// box reaches into the circle (ADR 0030). The direction is not normalised.
+pub fn placement_from_centre(
+    at: &MapPoint,
+    drop: &MapPoint,
+    number: u32,
+    kind: MapKind,
+    map_scale: u32,
+) -> NumberPlacement {
+    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let sizes = overprint_sizes(kind);
+    let found = freemapper_course::placement_from_offset(
+        freemapper_course::model::Offset {
+            dx_mm: drop.x - at.x,
+            dy_mm: drop.y - at.y,
+        },
+        outer_radius(&sizes),
+        box_size(&sizes, number),
+        factor,
+    );
+    NumberPlacement {
+        direction: found.direction,
+        gap_mm: found.gap_mm,
+    }
+}
+
 /// The obstacle a map feature makes, or `None` for areas and magnetic north lines (601 and its
 /// sub-codes, ruling R5). A point is a zero-length segment with the half width of a point symbol,
 /// a line segment by segment with the half width of a line symbol; both rank as map symbols and
@@ -464,6 +492,33 @@ pub fn place_numbers(
 mod tests {
     use super::*;
     use freemapper_course::placement::{angle_diff, candidate};
+
+    #[test]
+    fn placement_from_centre_east_at_gap_1() {
+        let at = MapPoint { x: 100.0, y: 100.0 };
+        let drop = MapPoint {
+            x: 105.375,
+            y: 100.0,
+        };
+        let found = placement_from_centre(&at, &drop, 1, MapKind::Sprint, 4000);
+        assert!(found.direction.abs() < 1e-9 && (found.gap_mm - 1.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn placement_from_centre_inverts_number_centre() {
+        let at = MapPoint { x: 12.0, y: -7.0 };
+        for (direction, gap_mm, number, scale) in [
+            (37.0, 0.5, 12, 4000),
+            (180.0, 1.7, 3, 2000),
+            (271.5, 0.2, 104, 5000),
+        ] {
+            let placement = NumberPlacement { direction, gap_mm };
+            let centre = number_centre(&at, &placement, number, MapKind::Sprint, scale);
+            let back = placement_from_centre(&at, &centre, number, MapKind::Sprint, scale);
+            assert!((back.direction - direction).abs() < 1e-6, "{back:?}");
+            assert!((back.gap_mm - gap_mm).abs() < 1e-6, "{back:?}");
+        }
+    }
 
     // Shims over the core API for the scenarios that predate the switch (ADR 0036).
     fn candidate_direction(preferred: f64, step: i32) -> f64 {

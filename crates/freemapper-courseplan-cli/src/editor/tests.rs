@@ -974,6 +974,168 @@ mod state {
         );
     }
 
+    /// A project with an individual course "A" through control 31 at (100, 100) on the sample map.
+    fn numbered_project(dir: &std::path::Path) -> std::path::PathBuf {
+        use freemapper_courseplan_model::{
+            Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
+            CourseKind, MapPoint, SpecialObject,
+        };
+        project_with(dir, |event| {
+            let at = |x, y| MapPoint { x, y };
+            event.specials = vec![
+                SpecialObject::Start {
+                    id: "S1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at(50.0, 50.0),
+                },
+                SpecialObject::Finish {
+                    id: "F1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at(150.0, 150.0),
+                },
+            ];
+            event.controls = vec![Control {
+                ppen_id: None,
+                code: ControlCode("31".to_owned()),
+                kind: ControlKind::Control,
+                map_mm: at(100.0, 100.0),
+                description: ControlDescription::default(),
+                number: None,
+            }];
+            event.courses = vec![Course {
+                ppen_id: None,
+                name: "A".to_owned(),
+                classes: vec![],
+                start: "S1".to_owned(),
+                finish: "F1".to_owned(),
+                start_bends: vec![],
+                start_taped: false,
+                print_area: None,
+                climb_m: None,
+                planned_print_scale: None,
+                kind: CourseKind::Individual {
+                    controls: vec![CourseControl {
+                        code: ControlCode("31".to_owned()),
+                        number: None,
+                        bends: vec![],
+                        taped: false,
+                    }],
+                },
+            }];
+        })
+    }
+
+    #[tokio::test]
+    async fn number_at_inverts_the_overlay_box() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        // Whatever the overlay draws for the number is the point the server turns back into a placement.
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let number = &overlay["numbers"][0];
+        assert_eq!(number["index"], 1);
+        let (cx, cy) = (
+            number["centre"][0].as_f64().unwrap(),
+            number["centre"][1].as_f64().unwrap(),
+        );
+        let (status, found) = get(
+            &app,
+            &format!("/tok/api/number-at?course=A&index=1&x={cx}&y={cy}"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{found}");
+        let (direction, gap) = (
+            found["direction"].as_f64().unwrap(),
+            found["gap_mm"].as_f64().unwrap(),
+        );
+        assert!((0.0..360.0).contains(&direction), "{direction}");
+        // Store the answer and read the overlay again: the box lands on the same centre (the 0.01 degree
+        // and 0.01 mm rounding of the answer allows a few hundredths of a millimetre).
+        crate::mcp::CoursePlanServer::new(Lang::english())
+            .call_json(
+                &path,
+                "set_course_number",
+                serde_json::json!({ "name": "A", "after": 1, "direction": direction, "gap_mm": gap }),
+            )
+            .unwrap();
+        let app = router_for(&path);
+        let (_, again) = get(&app, "/tok/api/overlay?course=A").await;
+        assert_eq!(again["numbers"][0]["source"], "course");
+        for axis in [0, 1] {
+            let a = again["numbers"][0]["centre"][axis].as_f64().unwrap();
+            let b = number["centre"][axis].as_f64().unwrap();
+            assert!((a - b).abs() < 0.05, "{axis}: {a} vs {b}");
+        }
+    }
+
+    #[tokio::test]
+    async fn number_at_answers_direction_and_gap_for_a_drop_point() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let number = &overlay["numbers"][0];
+        let w = number["w"].as_f64().unwrap();
+        let sizes = &overlay["sizes"];
+        let outer = sizes["circle_r"].as_f64().unwrap() + sizes["line"].as_f64().unwrap() / 2.0;
+        // The box of a drop 1 map mm beyond the circle edge; the exact gap in print mm depends on the map
+        // kind (the library test pins 1.0 for the sprint case), so only direction and symmetry are checked.
+        let reach = outer + 1.0 + w / 2.0;
+        let (_, east) = get(
+            &app,
+            &format!(
+                "/tok/api/number-at?course=A&index=1&x={}&y=100",
+                100.0 + reach
+            ),
+        )
+        .await;
+        let (_, west) = get(
+            &app,
+            &format!(
+                "/tok/api/number-at?course=A&index=1&x={}&y=100",
+                100.0 - reach
+            ),
+        )
+        .await;
+        assert_eq!(east["direction"], 0.0);
+        assert_eq!(west["direction"], 180.0);
+        assert!(east["gap_mm"].as_f64().unwrap() > 0.1, "{east}");
+        assert_eq!(east["gap_mm"], west["gap_mm"]);
+    }
+
+    #[tokio::test]
+    async fn number_at_unknown_course_is_404_and_bad_queries_are_400() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        for query in ["course=Nope&index=1&x=1&y=2", "course=A&index=2&x=1&y=2"] {
+            assert_eq!(
+                get(&app, &format!("/tok/api/number-at?{query}")).await.0,
+                StatusCode::NOT_FOUND,
+                "{query}"
+            );
+        }
+        for query in [
+            "",
+            "course=A&index=1&x=1",
+            "course=A&index=0&x=1&y=2",
+            "course=A&index=-1&x=1&y=2",
+            "course=A&index=1.5&x=1&y=2",
+            "course=A&index=1&x=NaN&y=2",
+            "course=A&index=1&x=inf&y=2",
+            "course=A&index=1&x=1e9&y=2",
+            "course=A&index=1&x=1&x=2&y=2",
+            "course=A&course=A&index=1&x=1&y=2",
+            "course=%zz&index=1&x=1&y=2",
+            "course=A&index=1&x=1&y=2&r=3",
+            "course=A&index=99999999999999999999&x=1&y=2",
+        ] {
+            assert_eq!(
+                get(&app, &format!("/tok/api/number-at?{query}")).await.0,
+                StatusCode::BAD_REQUEST,
+                "{query}"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn near_route_lists_map_objects_and_refuses_bad_queries() {
         let dir = tempfile::tempdir().unwrap();

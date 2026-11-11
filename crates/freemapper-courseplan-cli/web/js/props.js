@@ -4,6 +4,7 @@
 import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
 import { legLabel } from "./course.js";
+import * as numbers from "./numbers.js";
 import {
   MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
 } from "./course.js";
@@ -92,6 +93,7 @@ function courseRows(host, list, state, name, actions) {
   row(list, "editor-prop-finish", course.finish);
   courseFields(list, state, course, actions);
   stopList(host, course, actions);
+  numbers.panel(host, actions);
   courseRemoveButton(host, course, actions);
 }
 
@@ -296,12 +298,15 @@ export function show(host, state, selection, overlay, actions) {
       if (n) {
         row(list, "editor-prop-code", n.code);
         row(list, "editor-prop-name", n.text);
+        row(list, "editor-prop-source", t(`editor-number-source-${n.source}`));
+        host.append(list);
+        numbers.panel(host, actions);
       }
       break;
     }
     default: break;
   }
-  if (!["control", "course", "class", "event"].includes(selection.kind)) host.append(list);
+  if (!["control", "course", "class", "event", "number"].includes(selection.kind)) host.append(list);
   if (focused) host.querySelector(`#${focused}`)?.focus();
   if (selection.kind === "course" && overlay?.numbers.some((n) => n.source === "auto")) {
     const note = document.createElement("p");

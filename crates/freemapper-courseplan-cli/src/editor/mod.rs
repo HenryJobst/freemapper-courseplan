@@ -92,6 +92,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/state"), get(api_state))
         .route(&format!("{prefix}/api/revision"), get(api_revision))
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
+        .route(&format!("{prefix}/api/number-at"), get(api_number_at))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
         .route(&format!("{prefix}/api/map/near"), get(map_near))
@@ -264,6 +265,38 @@ async fn api_redo(State(state): State<Shared>, headers: HeaderMap) -> Response {
 async fn api_revision(State(state): State<Shared>) -> Response {
     let loaded = refreshed(&state).await;
     blocking_response(move || axum::Json(api::revision_json(&loaded)).into_response()).await
+}
+
+/// `GET api/number-at?course&index&x&y`: direction and gap of a number whose box is centred on a point.
+async fn api_number_at(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let Some((course, index, x, y)) = api::number_at_query(query.as_deref()) else {
+        return plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-number-bad-request", &[]),
+        );
+    };
+    let loaded = current(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    blocking_response(move || {
+        let Ok(file) = &loaded.file else {
+            return plain(StatusCode::INTERNAL_SERVER_ERROR, String::new());
+        };
+        let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+        let drop = freemapper_courseplan_model::MapPoint { x, y };
+        let scale = entry.doc.georef.scale_denominator;
+        match api::number_at(&file.event, &course, index, &drop, kind, scale) {
+            Some(found) => axum::Json(found).into_response(),
+            None => plain(
+                StatusCode::NOT_FOUND,
+                text(&lang, "editor-number-not-found", &[]),
+            ),
+        }
+    })
+    .await
 }
 
 /// The course symbols in map mm; `?course=NAME` for one course, no parameter for all controls.

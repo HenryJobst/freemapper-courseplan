@@ -287,6 +287,74 @@ pub(crate) fn overlay_query(raw: Option<&str>) -> Result<Option<String>, ()> {
     Ok(course)
 }
 
+/// Largest coordinate the page may send, in map mm.
+const MAX_COORDINATE: f64 = 1.0e7;
+
+/// The query of `api/number-at`: `course`, `index` (from 1, the overlay's `numbers[].index`), `x` and `y` (map
+/// mm), each exactly once, finite and in range.
+pub(crate) fn number_at_query(raw: Option<&str>) -> Option<(String, usize, f64, f64)> {
+    let (mut course, mut index, mut x, mut y) = (None, None, None, None);
+    for pair in raw.unwrap_or("").split('&').filter(|p| !p.is_empty()) {
+        let (key, value) = pair.split_once('=')?;
+        let fresh = match key {
+            "course" => course.replace(decode(value)?).is_none(),
+            "index" => index.replace(value.parse::<usize>().ok()?).is_none(),
+            "x" => x.replace(finite(value)?).is_none(),
+            "y" => y.replace(finite(value)?).is_none(),
+            _ => false,
+        };
+        if !fresh {
+            return None;
+        }
+    }
+    let (course, index, x, y) = (course?, index?, x?, y?);
+    (index >= 1 && x.abs() <= MAX_COORDINATE && y.abs() <= MAX_COORDINATE)
+        .then_some((course, index, x, y))
+}
+
+fn finite(value: &str) -> Option<f64> {
+    value.parse::<f64>().ok().filter(|v| v.is_finite())
+}
+
+/// Rounds to 0.01 without float noise; no negative zero.
+fn r2(v: f64) -> f64 {
+    ((v * 100.0).round() / 100.0) + 0.0
+}
+
+/// The direction and gap of the number of control `index` (from 1, as in the overlay) of `course` when its box
+/// is centred on `drop`. `None` when the course or the number does not exist.
+pub(crate) fn number_at(
+    event: &freemapper_courseplan_model::Event,
+    course: &str,
+    index: usize,
+    drop: &freemapper_courseplan_model::MapPoint,
+    kind: freemapper_courseplan::map::MapKind,
+    map_scale: u32,
+) -> Option<Value> {
+    use freemapper_courseplan_model::CourseKind;
+    let course = event.courses.iter().find(|c| c.name == course)?;
+    let CourseKind::Individual { controls } = &course.kind else {
+        return None;
+    };
+    let number = control_numbers(event, course)
+        .get(index.checked_sub(1)?)
+        .copied()
+        .flatten()?;
+    let code = &controls.get(index - 1)?.code;
+    let control = event.controls.iter().find(|c| &c.code == code)?;
+    let found = freemapper_courseplan::numbers::placement_from_centre(
+        &control.map_mm,
+        drop,
+        number,
+        kind,
+        map_scale,
+    );
+    let direction = found.direction.rem_euclid(360.0);
+    let direction = r2(direction);
+    let direction = if direction >= 360.0 { 0.0 } else { direction };
+    Some(json!({ "direction": direction, "gap_mm": r2(found.gap_mm) }))
+}
+
 /// Status and JSON body of an operation or history answer.
 pub(crate) type Reply = (StatusCode, Value);
 

@@ -193,6 +193,12 @@ a position outside the map, the file stays as it was and a message says why.
   bend there, drag a bend to move it, and press Delete on a chosen bend to remove it. A click on a bend chooses it.
   Each gesture is one step for undo, and the course length in the properties changes with it. The "Taped" check box
   in the properties of the leg marks it as a taped leg.
+- **Control numbers.** In course mode, drag a number box to another place. On release the editor turns the place
+  into a direction and a gap and stores both for this course. With "for all courses" ticked, the placement is stored
+  on the control and applies to every course that uses it. "Place numbers" places the numbers of the course
+  automatically and leaves placed numbers alone; with "also replace placed numbers" everything is computed again,
+  except the numbers set on the control for all courses. One drag is one step for undo. A placement the course already has for itself comes before the one on the control; the box then stays, and the status bar says so. The editor does not yet
+  warn about a gap outside the rule range; `check` reports it.
 - **Stops.** The properties of a course list its stops. The buttons "Move up", "Move down" and "Remove" change the
   order. With the focus on a row, Alt+Up and Alt+Down move the stop. Each change is one step for undo and saves the
   whole list at once. If a change sends a leg to another stop, that leg loses its bends and tape. The status bar names

@@ -202,6 +202,12 @@ nennt den Grund.
   Entf löscht den gewählten Knickpunkt. Ein Klick auf einen Knickpunkt wählt ihn. Jede Geste ist ein Schritt für
   Rückgängig, und die Bahnlänge in den Eigenschaften ändert sich mit. Das Feld „Abgeflaggt“ in den Eigenschaften der
   Strecke markiert sie als abgeflaggte Strecke.
+- **Postennummern.** Im Bahnmodus ziehst du ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor
+  den Ort in Richtung und Abstand um und speichert beides für diese Bahn. Ist „für alle Bahnen“ angekreuzt, gilt die
+  Lage am Posten für jede Bahn, die ihn nutzt. „Nummern platzieren“ setzt die Nummern der Bahn automatisch und lässt
+  gesetzte Nummern stehen; mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle
+  Bahnen gesetzten bleiben. Ein Ziehen ist ein Schritt für Rückgängig. Hat die Bahn für die Nummer schon eine eigene Lage, geht sie der Lage am Posten vor; dann bleibt das Feld stehen, und die Statusleiste sagt es. Eine Warnung zu einem Abstand außerhalb des
+  Regelbereichs zeigt der Editor noch nicht; `check` meldet ihn.
 - **Posten der Bahn.** Die Eigenschaften einer Bahn listen ihre Posten. Mit „Nach oben“, „Nach unten“ und „Entfernen“
   änderst du die Reihenfolge. Liegt der Fokus auf einer Zeile, verschieben Alt+Pfeil hoch und Alt+Pfeil runter den
   Posten. Jede Änderung ist ein Schritt für Rückgängig und speichert die ganze Liste auf einmal. Läuft durch eine
