@@ -12,6 +12,7 @@ use crate::score::points::{CodeRules, assign_codes, assign_values, free_code_cou
 use crate::score::tour::{LengthIssue, LengthReport, ScoredControl, Tour, analyse_length};
 use crate::score::travel::TravelTime;
 
+mod refine;
 mod select;
 #[cfg(test)]
 mod tests;
@@ -22,6 +23,8 @@ use select::{is_hard, priority_order};
 pub const LINK_MATCH_MM: f64 = 0.5;
 /// How many control counts below the largest feasible one the search tries.
 const SCAN_BELOW: usize = 10;
+/// Tour evaluations the local search may spend on a draft that misses a band (ADR 0074).
+const REFINE_BUDGET: usize = 150;
 
 /// What the draft is built from.
 pub struct DraftRequest<'a> {
@@ -95,6 +98,7 @@ pub struct DraftFailure {
     pub error: Option<ScoreError>,
 }
 
+#[derive(Clone)]
 struct Trial {
     k: usize,
     /// The candidates of this count in running order of the pool, after high-value repairs.
@@ -119,6 +123,8 @@ struct Search<'a> {
     forced: usize,
     min_k: usize,
     max_k: usize,
+    /// Every candidate the draft may use, in index order.
+    pool: Vec<usize>,
 }
 
 struct Outcome {
@@ -132,7 +138,20 @@ struct Outcome {
 impl Search<'_> {
     fn attempt(&self, order: &[usize], k: usize) -> Result<Trial, ScoreError> {
         let picks = self.repaired(order, k);
-        let (values, controls) = self.values_of(&picks);
+        let (values, _) = self.values_of(&picks);
+        self.evaluate(picks, values)
+    }
+
+    /// The length analysis and the codes of a set with its values.
+    fn evaluate(&self, picks: Vec<usize>, values: Vec<u8>) -> Result<Trial, ScoreError> {
+        let controls: Vec<ScoredControl> = picks
+            .iter()
+            .zip(&values)
+            .map(|(&i, &value)| ScoredControl {
+                at: self.req.candidates[i].at.clone(),
+                value,
+            })
+            .collect();
         let report = analyse_length(
             &controls,
             &self.links,
@@ -151,7 +170,7 @@ impl Search<'_> {
             &CodeRules::from_settings(self.req.settings),
         );
         Ok(Trial {
-            k,
+            k: picks.len(),
             picks,
             report,
             values,
@@ -403,6 +422,11 @@ fn hint_for(r: &LengthReport, pool_too_short: bool, code_bound: bool) -> Hint {
 /// Builds the draft; see ADR 0065. On a miss the failure carries the best attempt, the issues of
 /// its length analysis and a hint. The result is the same on every run.
 pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
+    draft_with_budget(req, REFINE_BUDGET)
+}
+
+/// [`draft`] with its own budget of local-search evaluations; 0 keeps the prefix search alone.
+fn draft_with_budget(req: &DraftRequest<'_>, budget: usize) -> Result<Draft, DraftFailure> {
     let s = req.settings;
     let limit_s = f64::from(req.limit_min) * 60.0;
     for travel in [req.travel_good, req.travel_very_good] {
@@ -412,12 +436,21 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
             Err(e) => return Err(plain_failure(Hint::Impossible, Some(e))),
         }
     }
+    // One search per point reads the times to all later ones; the tours then find every leg ready.
+    let mut points: Vec<MapPoint> = req.candidates.iter().map(|c| c.at.clone()).collect();
+    points.push(req.start.clone());
+    points.push(req.finish.clone());
+    for (i, p) in points.iter().enumerate() {
+        for travel in [req.travel_good, req.travel_very_good] {
+            travel.prefetch(p, &points[i + 1..]);
+        }
+    }
     // A candidate whose every leg from its own position is infinite would block every larger count.
     let pool: Vec<usize> = (0..req.candidates.len())
         .filter(|&i| req.candidates[i].effort_s.is_finite())
         .filter(|&i| {
             req.travel_very_good
-                .fastest(req.candidates[i].at.clone(), req.finish.clone())
+                .fastest_time(req.candidates[i].at.clone(), req.finish.clone())
                 .is_ok()
         })
         .collect();
@@ -466,6 +499,7 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
         forced: forced.len(),
         min_k,
         max_k,
+        pool: pool.clone(),
     };
     let share = f64::from(s.mix_hard_percent) / 100.0;
     let mut outcomes = Vec::new();
@@ -502,7 +536,7 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
             }
         }
     }
-    let chosen = if let Some(i) = outcomes.iter().position(|o| o.ok) {
+    let mut chosen = if let Some(i) = outcomes.iter().position(|o| o.ok) {
         outcomes.swap_remove(i)
     } else if let Some(best) = outcomes.into_iter().min_by(|a, b| {
         miss(&a.trial.report)
@@ -513,6 +547,12 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     } else {
         return Err(plain_failure(Hint::Impossible, code_error));
     };
+    if !chosen.ok
+        && let Ok(better) = search.refine(chosen.trial.clone(), budget)
+    {
+        chosen.ok = better.ok();
+        chosen.trial = better;
+    }
     let picks = &chosen.trial.picks;
     let k = picks.len();
     let codes = chosen.trial.codes.expect("a chosen count has codes");

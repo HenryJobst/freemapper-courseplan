@@ -77,6 +77,13 @@ pub trait TravelTime {
             .next()
             .ok_or(unreachable)
     }
+    /// Only the time of the fastest route in seconds.
+    fn fastest_time(&self, from: MapPoint, to: MapPoint) -> Result<f64, ScoreError> {
+        self.fastest(from, to).map(|r| r.time_s)
+    }
+    /// Hints that the times from `from` to every point of `to` are about to be asked, so a surface can
+    /// answer them with one search. The default does nothing.
+    fn prefetch(&self, _from: &MapPoint, _to: &[MapPoint]) {}
     /// Whether a runner can stand at `p`: inside the raster and not in a blocked cell. `legs`
     /// is more forgiving: an end point in a blocked cell moves to a free cell within three cells
     /// that a straight line over free cells reaches, and fails with `Unreachable` if there is none.
@@ -174,6 +181,37 @@ impl CostSurface {
         })
     }
 
+    /// The fastest time from `from` to each of `tos` with one search, as `fastest` would give it.
+    fn times_from(&self, from: &MapPoint, tos: &[MapPoint]) -> Vec<Result<f64, ScoreError>> {
+        let unreachable = |to: &MapPoint| ScoreError::Unreachable {
+            from: from.clone(),
+            to: to.clone(),
+        };
+        let Some(s) = self.cell_for(from) else {
+            return tos.iter().map(|to| Err(unreachable(to))).collect();
+        };
+        let cells: Vec<Option<usize>> = tos.iter().map(|to| self.cell_for(to)).collect();
+        let targets: Vec<usize> = cells.iter().flatten().copied().collect();
+        let mut search = Searcher::new(&self.grid, self.params.cell_m);
+        search.settle(s, &targets);
+        let hop = |a: &MapPoint, b: &MapPoint| self.metres((a.x - b.x).hypot(a.y - b.y));
+        tos.iter()
+            .zip(&cells)
+            .map(|(to, cell)| {
+                let t = (*cell).ok_or_else(|| unreachable(to))?;
+                let cost = search.cost_to(t);
+                if cost.is_infinite() {
+                    return Err(unreachable(to));
+                }
+                let end_cost: f64 = [(from, s), (to, t)]
+                    .iter()
+                    .map(|(p, c)| hop(p, &self.grid.centre(*c)) * f64::from(self.grid.factor[*c]))
+                    .sum();
+                Ok((cost + end_cost) * f64::from(self.pace.0) / 1000.0)
+            })
+            .collect()
+    }
+
     fn route(
         &self,
         search: &Searcher<'_>,
@@ -260,6 +298,9 @@ impl TravelTime for CostSurface {
 pub struct SharedRoutes {
     surface: CostSurface,
     cache: RefCell<HashMap<[u64; 4], Result<Route, ScoreError>>>,
+    /// Times of the surface's own pace by unordered pair of points: the surface is symmetric, so one
+    /// entry serves both directions.
+    times: RefCell<HashMap<[u64; 4], Result<f64, ScoreError>>>,
 }
 
 /// One runner profile on [`SharedRoutes`].
@@ -274,6 +315,7 @@ impl SharedRoutes {
         SharedRoutes {
             surface,
             cache: RefCell::new(HashMap::new()),
+            times: RefCell::new(HashMap::new()),
         }
     }
 
@@ -295,7 +337,52 @@ fn pair_key(from: &MapPoint, to: &MapPoint) -> [u64; 4] {
     ]
 }
 
+/// The key of a pair of points whichever way round they are given.
+fn unordered_key(a: &MapPoint, b: &MapPoint) -> [u64; 4] {
+    let (ka, kb) = (
+        [a.x.to_bits(), a.y.to_bits()],
+        [b.x.to_bits(), b.y.to_bits()],
+    );
+    if ka <= kb {
+        [ka[0], ka[1], kb[0], kb[1]]
+    } else {
+        [kb[0], kb[1], ka[0], ka[1]]
+    }
+}
+
 impl TravelTime for Profile<'_> {
+    fn fastest_time(&self, from: MapPoint, to: MapPoint) -> Result<f64, ScoreError> {
+        let k = unordered_key(&from, &to);
+        let known = self.shared.times.borrow().get(&k).cloned();
+        let base = match known {
+            Some(found) => found,
+            None => {
+                let found = self.shared.surface.fastest(from, to).map(|r| r.time_s);
+                self.shared.times.borrow_mut().insert(k, found.clone());
+                found
+            }
+        };
+        base.map(|t| t * self.factor)
+    }
+
+    fn prefetch(&self, from: &MapPoint, to: &[MapPoint]) {
+        let missing: Vec<MapPoint> = {
+            let times = self.shared.times.borrow();
+            to.iter()
+                .filter(|p| !times.contains_key(&unordered_key(from, p)))
+                .cloned()
+                .collect()
+        };
+        if missing.is_empty() {
+            return;
+        }
+        let found = self.shared.surface.times_from(from, &missing);
+        let mut times = self.shared.times.borrow_mut();
+        for (p, t) in missing.iter().zip(found) {
+            times.insert(unordered_key(from, p), t);
+        }
+    }
+
     fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
         let mut legs = self.shared.surface.legs(from, to)?;
         for route in &mut legs.routes {

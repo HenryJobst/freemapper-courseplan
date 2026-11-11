@@ -51,6 +51,8 @@ pub(crate) struct Problem {
     values: Vec<u32>,
     units: Vec<Unit>,
     internal: Vec<f64>,
+    /// Entry and exit control of every unit, forwards then reversed.
+    ends: Vec<[(usize, usize); 2]>,
     links: Vec<(usize, usize)>,
     limit: f64,
 }
@@ -98,6 +100,7 @@ impl Problem {
             values: controls.iter().map(|c| u32::from(c.value)).collect(),
             units,
             internal: Vec::new(),
+            ends: Vec::new(),
             links,
             limit: limit_s,
         };
@@ -105,6 +108,14 @@ impl Problem {
             .units
             .iter()
             .map(|u| u.path.windows(2).map(|w| p.dist(w[0], w[1])).sum())
+            .collect();
+        p.ends = p
+            .units
+            .iter()
+            .map(|u| {
+                let (first, last) = (u.path[0], u.path[u.path.len() - 1]);
+                [(first, last), (last, first)]
+            })
             .collect();
         Ok(p)
     }
@@ -122,11 +133,10 @@ impl Problem {
         self.units[u].path.len() > 1
     }
     fn entry(&self, u: usize, rev: bool) -> usize {
-        let p = &self.units[u].path;
-        if rev { p[p.len() - 1] } else { p[0] }
+        self.ends[u][usize::from(rev)].0
     }
     fn exit(&self, u: usize, rev: bool) -> usize {
-        self.entry(u, !rev)
+        self.ends[u][usize::from(rev)].1
     }
     fn unit_points(&self, u: usize) -> u32 {
         self.units[u].path.iter().map(|&c| self.values[c]).sum()
@@ -202,8 +212,8 @@ fn leg(
     to: &MapPoint,
     required: bool,
 ) -> Result<f64, ScoreError> {
-    match travel.fastest(from.clone(), to.clone()) {
-        Ok(r) => Ok(r.time_s),
+    match travel.fastest_time(from.clone(), to.clone()) {
+        Ok(t) => Ok(t),
         Err(ScoreError::Unreachable { .. }) if !required => Ok(f64::INFINITY),
         Err(e) => Err(e),
     }

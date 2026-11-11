@@ -72,6 +72,8 @@ pub(super) struct Grid {
     pub(super) width: usize,
     pub(super) height: usize,
     pub(super) factor: Vec<f32>,
+    /// The least factor of a passable cell; with it the straight line is a lower bound of any route's cost.
+    pub(super) min_factor: f64,
 }
 
 struct Layers {
@@ -128,6 +130,7 @@ impl Grid {
             width,
             height,
             factor: Vec::new(),
+            min_factor: 0.0,
         };
         let mut layers = Layers {
             ground: vec![1.0; n],
@@ -169,6 +172,13 @@ impl Grid {
                 }
             })
             .collect();
+        grid.min_factor = grid
+            .factor
+            .iter()
+            .copied()
+            .filter(|f| f.is_finite())
+            .fold(f32::INFINITY, f32::min)
+            .min(1.0) as f64;
         Ok(grid)
     }
 

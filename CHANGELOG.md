@@ -13,6 +13,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Behoben
 
+- `score draft` findet eine Menge, die beide Bänder trifft, wo es sie gibt, und läuft schneller (ADR 0074). Nach der Präfix-Suche sucht der Entwurf jetzt lokal: Er tauscht, ergänzt oder streicht einen Posten oder verschiebt einen Wert um bis zu zwei Stufen gegen seinen Quantilwert, mit höchstens 150 Tourbewertungen und dem Seed der Einstellungen. Auf einer Karte von Berlin-Kreuzberg (1,8 x 2,0 km) trifft jetzt jeder Start und jedes Limit, die wir versucht haben (30 und 45 Minuten, drei Starts), beide Bänder; vorher lag der gute Läufer jedes Mal 0,3 bis 3 Punkte über seinem Band. Die Werte eines Entwurfs sind deshalb nicht immer genaue Quantile. Ein zu kleiner Vorrat scheitert weiterhin: Auf der Lübecker Karte erreicht der gute Läufer bei 30 und 45 Minuten alle Punkte.
+- Schnellere Routensuche. Die Kürzeste-Wege-Suche nutzt A*, eine Suche je Posten liest seine Wege zu allen anderen, die Routenwahl-Suchen von `score suggest` und `score draft` laufen auf mehreren Threads, und der Or-opt-Schritt der Tour-Heuristik kopiert die Tour nicht mehr. Auf der Kreuzberger Karte sank die CPU-Zeit von `score draft` von 44 bis 63 s auf 24 bis 35 s; der Rest ist überwiegend die Routensuche von `score suggest` (ADR 0074).
 - Score-Vorschläge liegen seltener am Kartenrand und näher am Start: Die Auswahl setzt Stellen nahe dem Start dichter und wertet Stellen am Rand ab. Im Lübecker Beispiel sanken die Kandidaten bis 48 m vom Rand von 21 auf 3 von 60, und die Posten mit Wert 1 rückten von 360 m auf 230 m an den Start (ADR 0071).
 
 ## [0.13.0] - 2026-11-11

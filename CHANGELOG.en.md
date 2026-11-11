@@ -13,6 +13,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Fixed
 
+- `score draft` finds a set that meets both bands where one exists, and runs faster (ADR 0074). After the prefix search it now searches locally: it swaps, adds or drops a control, or moves a value up to two steps off its quantile, for at most 150 tour evaluations with the seed of the settings. On a 1.8 x 2.0 km map of Berlin-Kreuzberg every start and limit we tried (30 and 45 minutes, three starts) now meets both bands; before, the good runner landed 0.3 to 3 points above his band every time. The values of a draft are therefore not always exact quantiles. A pool that is too small still fails: on the Lübeck map 30 and 45 minutes give the good runner every point.
+- Faster route searches. The shortest-path search uses A*, one search per control reads its legs to all others, the route-choice searches of `score suggest` and `score draft` run on several threads, and the or-opt step of the tour heuristic no longer copies the tour. On the Kreuzberg map the CPU time of `score draft` fell from 44 to 63 s to 24 to 35 s; most of what is left is the route search of `score suggest` (ADR 0074).
 - Score suggestions sit less at the rim of the map and closer to the start: the pick spaces sites more densely near the start and weighs down sites at the rim. On the Lübeck example the candidates within 48 m of the rim fell from 21 of 60 to 3, and the value-1 controls moved from 360 m to 230 m from the start (ADR 0071).
 
 ## [0.13.0] - 2026-11-11
