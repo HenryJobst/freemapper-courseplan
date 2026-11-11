@@ -164,6 +164,8 @@ check-skip-class-not-mapped = class { $name } has no rule category; class set --
 check-skip-climb-missing = the course has no climb
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
+check-skip-score-no-map = the map has no objects, so no route times can be computed
+check-skip-score-travel = route times cannot be computed: { $error }
 check-skip-start-window-missing = the event has no start window; event start-window sets it
 check-skip-starters-missing = classes without an expected number of starters: { $classes }; class set --starters sets it
 check-skip-length-no-reference = no course carries category { $category }, so the length table has no reference
@@ -227,7 +229,27 @@ check-length-table-reference-twice = courses { $courses } all carry category { $
 check-difficulty-mix = the course mixes easy categories ({ $easy }) with hard ones ({ $hard })
 check-nor-lkm = the course has { $actual } Lkm ({ $length } km length, { $climb } m climb), outside the recommendation: { $rows }
 check-nor-lkm-row = { $categories }: target { $target } Lkm, allowed { $min } to { $max } Lkm
+check-score-value-mismatch = control { $code } carries the value { $expected } in its code, but score course { $course } gives it { $value } points
+check-score-value-no-code = the code { $code } carries no value (a score code has two or more digits and does not end in 0), but score course { $course } gives the control { $value } points
+check-score-code-alike = codes { $first } and { $second } in score course { $course } look alike when turned upside down or differ only by 6 and 9
+check-score-ring = the { $count } controls of score course { $course } stand in a ring round start and finish (largest gap { $gap } degrees, distances vary by { $variation } percent), so the order is obvious
+check-score-obvious-order = the controls of score course { $course } have an obvious order: { $hull } percent lie on the outer hull, and always running to the nearest control is only { $excess } percent longer than the shortest order found
+check-score-length-good-below = in score course { $course } the good runner scores { $percent } percent of all points, below the band of { $low } to { $high } percent; the course is too long
+check-score-length-good-above = in score course { $course } the good runner scores { $percent } percent of all points, above the band of { $low } to { $high } percent; the course is too short
+check-score-length-very-good-misses = in score course { $course } the very good runner cannot take every control within the limit; { $missing } points stay out of reach
+check-score-length-very-good-over = in score course { $course } the very good runner needs { $percent } percent of the limit for every control
+check-score-length-very-good-early = in score course { $course } the very good runner takes every control and finishes after { $percent } percent of the limit, before the band of { $low } to { $high } percent
+check-score-limit-range = score course { $course } has a time limit of { $limit } minutes; { $min } to { $max } minutes is usual
+check-score-penalty-pays = score course { $course } deducts { $penalty } points per minute over the limit, less than its highest control value { $highest }, so running over can pay off
+check-score-link-self = score course { $course } links control { $code } to itself
+check-score-link-not-in-course = the link { $first }–{ $second } of score course { $course } names control { $missing }, which the course does not have
+check-score-link-duplicate = the link { $first }–{ $second } appears more than once in score course { $course }
+check-score-link-out-of-bounds = the straight line of the link { $first }–{ $second } in score course { $course } crosses the out-of-bounds area { $id }
+check-score-link-forbidden-route = the straight line of the link { $first }–{ $second } in score course { $course } crosses the forbidden route { $id }
+check-score-link-no-choice = the link { $first }–{ $second } in score course { $course } has no second route of similar length; accept this finding with a note if that is intended
+check-score-mix = in score course { $course } { $hard } of { $count } controls are hard ({ $actual } percent); the setting asks for { $wanted } percent, with a tolerance of { $tolerance } points
 check-source-claude = proposal of freemapper-courseplan
+check-source-user = decision of the project owner
 
 ## Command line
 

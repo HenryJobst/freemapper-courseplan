@@ -16,11 +16,12 @@ mod distance;
 mod geometry;
 mod legs;
 mod numbers;
+mod score;
 mod start;
 mod stops;
 mod tables;
 
-pub use context::{CheckContext, CourseContext};
+pub use context::{CheckContext, CourseContext, ScoreControlRef, ScoreCourseContext};
 pub use geometry::{drawn_part, drawn_part_between};
 
 use freemapper_courseplan_model::{
@@ -31,7 +32,7 @@ use crate::map::MapKind;
 use crate::omap::MapDocument;
 use crate::rules::{
     FIELD_DISCIPLINES, FIELD_MAP_KINDS, FIELD_PRINT_SCALES, FilterArg, PROPOSAL_DOC, Rule, RuleSet,
-    SetRule, Severity, SourceRef,
+    SetRule, Severity, SourceRef, USER_DOC,
 };
 use crate::text::{FluentValue, Lang, text};
 
@@ -301,6 +302,8 @@ fn v(s: &str) -> FluentValue<'static> {
 pub fn source_text(lang: &Lang, source: &SourceRef) -> String {
     if source.doc == PROPOSAL_DOC {
         text(lang, "check-source-claude", &[])
+    } else if source.doc == USER_DOC {
+        text(lang, "check-source-user", &[])
     } else {
         format!("{} {}", source.doc, source.section)
     }
@@ -470,6 +473,10 @@ pub const SKIP_START_WINDOW_MISSING: &str = "check-skip-start-window-missing";
 pub const SKIP_STARTERS_MISSING: &str = "check-skip-starters-missing";
 /// Reason: the map has no features, so it has no extent.
 pub const SKIP_NO_MAP_EXTENT: &str = "check-skip-no-map-extent";
+/// Reason: the map has no objects, so no route times can be computed for a score rule.
+pub const SKIP_SCORE_NO_MAP: &str = "check-skip-score-no-map";
+/// Reason: the route search of a score rule failed; argument `error`, in English.
+pub const SKIP_SCORE_TRAVEL: &str = "check-skip-score-travel";
 /// Reason: a profile switched the rule off (`enabled = false`); argument `overlay`, the id of
 /// that profile (ruling R27).
 pub const SKIP_SWITCHED_OFF: &str = "check-skip-switched-off";
@@ -725,6 +732,34 @@ pub const CHECKS: &[Check] = &[
     ),
     Check::at("difficulty_mix", tables::difficulty_mix, &[Place::Course]),
     Check::at("nor_lkm", tables::nor_lkm, &[Place::Course]),
+    Check::at(
+        "score_value_matches_code",
+        score::value_matches_code,
+        &[Place::Control],
+    ),
+    Check::at(
+        "score_code_ambiguity",
+        score::code_ambiguity,
+        &[Place::Controls],
+    ),
+    Check::at("score_ring", score::ring, &[Place::Course]),
+    Check::at(
+        "score_obvious_order",
+        score::obvious_order,
+        &[Place::Course],
+    ),
+    Check::at("score_length_bands", score::length_bands, &[Place::Course]),
+    Check::at(
+        "score_limit_and_penalty",
+        score::limit_and_penalty,
+        &[Place::Course],
+    ),
+    Check::at(
+        "score_link_valid",
+        score::link_valid,
+        &[Place::Control, Place::Controls],
+    ),
+    Check::at("score_mix", score::mix, &[Place::Course]),
 ];
 
 /// The check of a rule key.
@@ -753,10 +788,9 @@ pub(crate) fn run_checks(ctx: &CheckContext<'_>, rules: &RuleSet, checks: &[Chec
     let mut skipped = Vec::new();
     for course in &ctx.event.courses {
         let kind = match course.kind {
-            CourseKind::Individual { .. } => continue,
+            CourseKind::Individual { .. } | CourseKind::Score { .. } => continue,
             CourseKind::Team { .. } => "team",
             CourseKind::Relay { .. } => "relay",
-            CourseKind::Score { .. } => "score",
         };
         skipped.push(Skipped {
             rule: None,
@@ -851,6 +885,11 @@ fn run_key(
     found: &mut Vec<Finding>,
     skipped: &mut Vec<Skipped>,
 ) {
+    // The score rules read the score courses of the context; the print scale filter does not
+    // apply to them.
+    let is_score = of_key
+        .first()
+        .is_some_and(|r| r.rule.key.starts_with("score_"));
     let (active, filtered): (Vec<&SetRule>, Vec<&SetRule>) = of_key
         .iter()
         .partition(|r| event_filter(ctx, &r.rule).is_none());
@@ -862,7 +901,7 @@ fn run_key(
         }
         return;
     }
-    for course in &ctx.courses {
+    for course in ctx.courses.iter().filter(|_| !is_score) {
         if !active.iter().any(|r| covers(&r.rule, course)) {
             for set_rule in &active {
                 let scale = ArgValue::Int(i64::from(course.print_scale));
@@ -881,7 +920,7 @@ fn run_key(
             courses: ctx
                 .courses
                 .iter()
-                .filter(|c| covers(&set_rule.rule, c))
+                .filter(|c| !is_score && covers(&set_rule.rule, c))
                 .collect(),
             siblings: active
                 .iter()

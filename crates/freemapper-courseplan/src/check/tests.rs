@@ -372,11 +372,10 @@ fn a_print_scale_without_rule_is_skipped_per_course() {
 #[test]
 fn courses_of_other_kinds_are_skipped_once() {
     let mut event = sample_event();
-    event.courses[1].kind = CourseKind::Score {
-        time_limit_min: 45,
-        penalty_per_min: 10,
-        controls: vec![],
-        links: vec![],
+    event.courses[1].kind = CourseKind::Team {
+        team_size: 3,
+        mandatory: vec![],
+        free: vec![],
     };
     let rules = rule_set(vec![(fake_rule(), "base")]);
     let report = run(&event, &rules);
@@ -388,7 +387,7 @@ fn courses_of_other_kinds_are_skipped_once() {
             profile: None,
             location: Location::Course("B".to_owned()),
             reason_id: SKIP_COURSE_KIND,
-            args: vec![("kind", ArgValue::Text("score".into()))],
+            args: vec![("kind", ArgValue::Text("team".into()))],
         }]
     );
 }

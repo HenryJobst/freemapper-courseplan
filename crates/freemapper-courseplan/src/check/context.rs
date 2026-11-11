@@ -1,7 +1,9 @@
 //! What every check reads: the event, the map index, the map kind and scale, and per individual
 //! course its legs, control numbers and print scale. Built once per `check` run.
 
-use freemapper_courseplan_model::{Control, ControlCode, Course, CourseControl, CourseKind, Event};
+use freemapper_courseplan_model::{
+    Control, ControlCode, Course, CourseControl, CourseKind, Event, MapPoint, SpecialObject,
+};
 
 use super::{
     ArgValue, LegEnd, LegSpan, Location, NOTE_NON_STANDARD_SCALE, SKIP_COURSE_UNRESOLVED, Skipped,
@@ -27,8 +29,37 @@ pub struct CheckContext<'a> {
     pub sizes: OverprintSizes,
     /// The individual courses of the event, in file order. Other kinds are not checked.
     pub courses: Vec<CourseContext<'a>>,
+    /// The score courses of the event, in file order; only the score rules read them.
+    pub score_courses: Vec<ScoreCourseContext<'a>>,
     /// Individual courses left out of `courses` because their legs cannot be built, one skip each.
     pub unresolved: Vec<Skipped>,
+}
+
+/// A control of a score course with its value and position.
+#[derive(Debug, Clone)]
+pub struct ScoreControlRef {
+    pub code: ControlCode,
+    pub value: u32,
+    pub at: MapPoint,
+}
+
+/// One score course as the score checks see it: controls resolved to positions, start and finish.
+pub struct ScoreCourseContext<'a> {
+    pub course: &'a Course,
+    pub time_limit_min: u32,
+    pub penalty_per_min: u32,
+    pub controls: Vec<ScoreControlRef>,
+    /// The mandatory links as pairs of codes, in file order; the codes may name no control of the
+    /// course, which `score_link_valid` reports.
+    pub links: Vec<(ControlCode, ControlCode)>,
+    pub start: MapPoint,
+    pub finish: MapPoint,
+}
+
+impl ScoreCourseContext<'_> {
+    pub fn location(&self) -> Location {
+        Location::Course(self.course.name.clone())
+    }
 }
 
 /// One individual course as the checks see it.
@@ -81,8 +112,22 @@ impl<'a> CheckContext<'a> {
     pub fn with_kind(event: &'a Event, map: &'a MapDocument, kind: MapKind) -> CheckContext<'a> {
         let map_scale = map.georef.scale_denominator;
         let mut courses = Vec::new();
+        let mut score_courses = Vec::new();
         let mut unresolved = Vec::new();
         for course in &event.courses {
+            if let CourseKind::Score { .. } = &course.kind {
+                match score_context(event, course) {
+                    Ok(score) => score_courses.push(score),
+                    Err(id) => unresolved.push(Skipped {
+                        rule: None,
+                        profile: None,
+                        location: Location::Course(course.name.clone()),
+                        reason_id: SKIP_COURSE_UNRESOLVED,
+                        args: vec![("id", ArgValue::Text(id))],
+                    }),
+                }
+                continue;
+            }
             let CourseKind::Individual { controls } = &course.kind else {
                 continue;
             };
@@ -132,6 +177,7 @@ impl<'a> CheckContext<'a> {
             map_scale,
             sizes: overprint_sizes(kind),
             courses,
+            score_courses,
             unresolved,
         }
     }
@@ -161,4 +207,56 @@ impl<'a> CheckContext<'a> {
     pub fn circle_radius_mm(&self) -> f64 {
         self.print_to_map_mm(self.sizes.circle_diameter_mm) / 2.0
     }
+}
+
+/// The score course with its controls, start and finish resolved; the id that does not resolve
+/// otherwise.
+fn score_context<'a>(
+    event: &'a Event,
+    course: &'a Course,
+) -> Result<ScoreCourseContext<'a>, String> {
+    let CourseKind::Score {
+        time_limit_min,
+        penalty_per_min,
+        controls,
+        links,
+    } = &course.kind
+    else {
+        unreachable!("only called for score courses")
+    };
+    let special = |id: &str| {
+        event.specials.iter().find_map(|s| match s {
+            SpecialObject::Start { id: i, map_mm, .. }
+            | SpecialObject::Finish { id: i, map_mm, .. }
+                if i == id =>
+            {
+                Some(map_mm.clone())
+            }
+            _ => None,
+        })
+    };
+    let start = special(&course.start).ok_or_else(|| course.start.clone())?;
+    let finish = special(&course.finish).ok_or_else(|| course.finish.clone())?;
+    let mut resolved = Vec::with_capacity(controls.len());
+    for c in controls {
+        let control = event
+            .controls
+            .iter()
+            .find(|x| x.code == c.code)
+            .ok_or_else(|| c.code.0.clone())?;
+        resolved.push(ScoreControlRef {
+            code: c.code.clone(),
+            value: c.value,
+            at: control.map_mm.clone(),
+        });
+    }
+    Ok(ScoreCourseContext {
+        course,
+        time_limit_min: *time_limit_min,
+        penalty_per_min: *penalty_per_min,
+        controls: resolved,
+        links: links.iter().map(|l| (l.a.clone(), l.b.clone())).collect(),
+        start,
+        finish,
+    })
 }

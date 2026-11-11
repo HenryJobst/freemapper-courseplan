@@ -59,6 +59,13 @@ url = "https://o-sport.de/assets/dokumente/allgemein/protokolle/td-tagung2011pos
 title = "Tävlingsregler för orienteringslöpning (Svensk Orientering), 2023-07-01"
 url = "https://www.orientering.se/media/urfbqdk0/t%C3%A4vlingsregler-och-anvisningar-f%C3%B6r-orienteringsl%C3%B6pning-20230701-%C3%B6verg%C3%A5ngsperiod-fram-till-2023-12-31.pdf"
 
+[sources.IRF]
+title = "IRF Rules of Rogaining"
+url = "https://rogaining.org/"
+
+[sources.user]
+title = "Decisions of the project owner for score courses (docs/superpowers/specs/2026-11-11-score-courses-design.md, section 3)"
+
 [sources.claude]
 title = "Values chosen in plan M2b (docs/superpowers/plans/2026-11-09-m2b-check-rules.md) where no source gives a number"
 
@@ -481,3 +488,77 @@ hard_levels = [3, 4, 5]
 "DirKS" = 4
 "DirMS" = 4
 "DirLS" = 4
+
+# ---------------------------------------------------------------------------------------------
+# Score courses (ADR 0066). The score rules apply to score courses only; the individual rules never
+# see them. The section of BOF is the one the design names; the IRF source names the document
+# without a section, because none was verified.
+
+[[rules]]
+id = "wkb2026.score.value_code"
+key = "score_value_matches_code"
+severity = "error"
+source = { doc = "user", section = "design 2026-11-11 section 3" }
+note = { de = "Der Code trägt den Wert: die zweite Ziffer eines zweistelligen Codes, bei längeren Codes die letzte Ziffer.", en = "The code carries the value: the second digit of a two-digit code, the last digit of a longer one." }
+
+[[rules]]
+id = "wkb2026.score.code_ambiguity"
+key = "score_code_ambiguity"
+severity = "warning"
+source = { doc = "claude", section = "design 2026-11-11 section 6" }
+note = { de = "Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden, verwechseln Läufer leicht; im Score-Lauf hängt der Wert am Code.", en = "Runners easily mix up codes that look alike upside down or differ only by 6 and 9; in a score event the value hangs on the code." }
+
+[[rules]]
+id = "wkb2026.score.ring"
+key = "score_ring"
+severity = "warning"
+# The controls enclose the middle of start and finish (largest gap between neighbouring bearings
+# below max_gap_degrees) at similar distances (variation of the distances, standard deviation over
+# mean, below max_radius_variation_percent). Judged from six controls on.
+values = { max_gap_degrees = 120.0, max_radius_variation_percent = 25.0 }
+source = { doc = "BOF", section = "B12" }
+note = { de = "Liegen die Posten im Ring um Start und Ziel, gibt es eine offensichtliche Reihenfolge; die Schwellen sind Vorschläge dieses Programms.", en = "Controls in a ring round start and finish give an obvious order; the thresholds are proposals of this program." }
+
+[[rules]]
+id = "wkb2026.score.order"
+key = "score_obvious_order"
+severity = "warning"
+# At least min_hull_percent of the controls are corners of their convex hull, and the chain that
+# always runs to the nearest control is at most max_chain_excess_percent longer than the shortest
+# order found by 2-opt. Judged from six controls on.
+values = { min_hull_percent = 60.0, max_chain_excess_percent = 10.0 }
+source = { doc = "BOF", section = "B12" }
+note = { de = "Eine Reihenfolge, die alle sofort finden, nimmt dem Score-Lauf die Wahl; die Schwellen sind Vorschläge dieses Programms.", en = "An order everybody finds at once takes the choice out of a score event; the thresholds are proposals of this program." }
+
+[[rules]]
+id = "wkb2026.score.length_bands"
+key = "score_length_bands"
+severity = "warning"
+# Edge of a raster cell of the cost surface in metres on the ground; coarser than the draft's 2 m so
+# that check stays fast on 60 controls. The bands themselves are the score settings of the event.
+values = { cell_metres = 4.0 }
+source = { doc = "user", section = "design 2026-11-11 section 3" }
+note = { de = "Die gute Läuferin holt etwa 90 Prozent aller Punkte, der sehr gute Läufer alle knapp unter dem Limit; die Bänder stehen in den Score-Einstellungen.", en = "The good runner scores about 90 percent of all points, the very good runner all of them just under the limit; the bands are in the score settings." }
+
+[[rules]]
+id = "wkb2026.score.limit_penalty"
+key = "score_limit_and_penalty"
+severity = "warning"
+values = { min_minutes = 30.0, max_minutes = 90.0 }
+source = { doc = "IRF", section = "Rules of Rogaining" }
+note = { de = "Üblich sind 30 bis 90 Minuten; die Strafe je Minute soll nicht unter dem höchsten Postenwert liegen.", en = "30 to 90 minutes is usual; the penalty per minute should not be below the highest control value." }
+
+[[rules]]
+id = "wkb2026.score.link"
+key = "score_link_valid"
+severity = "error"
+source = { doc = "claude", section = "design 2026-11-11 section 6" }
+note = { de = "Eine Pflichtverbindung braucht zwei verschiedene Posten der Bahn, darf nur einmal vorkommen, nicht durch Sperrgebiet oder verbotene Wege führen und soll eine Routenwahl haben.", en = "A mandatory link needs two different controls of the course, may appear once, should not run through out-of-bounds areas or forbidden routes and should offer route choice." }
+
+[[rules]]
+id = "wkb2026.score.mix"
+key = "score_mix"
+severity = "warning"
+values = { tolerance_percent = 15.0 }
+source = { doc = "user", section = "design 2026-11-11 section 4.4" }
+note = { de = "Der Anteil schwerer Posten soll zur Einstellung mix_hard_percent passen.", en = "The share of hard controls should match the mix_hard_percent setting." }
