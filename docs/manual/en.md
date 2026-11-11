@@ -55,7 +55,8 @@ program. Tool names and field names stay English in every language.
 
 The archive holds, besides the program, the READMEs, the licence, this manual and `AGENTS.md`, instructions for AI
 assistants. An assistant that can run commands on your computer (such as Claude Code or Codex) downloads the
-program, checks and unpacks it and registers it by the steps in that file. Tell it:
+program, checks and unpacks it by the steps in that file and then works through the command line; it needs no
+registration. Only an assistant that cannot run commands needs the registration described above. Tell it:
 
 > Read AGENTS.md from github.com/HenryJobst/freemapper-courseplan and set up freemapper-courseplan.
 

@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- `AGENTS.md` nennt die Befehlszeile zuerst und MCP danach. Ein Assistent, der Befehle ausführen kann, kommt mit weniger Zügen aus; MCP bleibt für Assistenten ohne Shell wie Claude Desktop. Der Abschnitt zur Befehlszeile verweist auf `--help`, nennt Ausgabe und Exit-Codes, sagt, dass `edit` blockiert, und führt auf, was die Befehlszeile gegenüber den MCP-Werkzeugen nicht kann.
+
 ## [0.11.1] - 2026-11-11
 
 ### Geändert

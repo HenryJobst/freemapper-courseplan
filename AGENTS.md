@@ -87,15 +87,87 @@ source unless the person asks; the release archives are ready to run.
      avoids it; otherwise the person confirms with *More info* > *Run anyway*.
 5. Check: `<folder>/freemapper-courseplan --version` prints `freemapper-courseplan <version>`.
 
-Remember the absolute path of the executable; the MCP registration needs it. Updating means unpacking a newer
+Remember the absolute path of the executable; the MCP registration needs it, and so do commands run from another folder. Updating means unpacking a newer
 archive and pointing the registration at the new path. Project files stay valid.
 
 Do not put the person's e-mail address, name or other personal data into any request, file name, event title or
 setting.
 
-## Use it through MCP (preferred)
+## Use it from the command line (preferred)
 
-`freemapper-courseplan mcp` is an MCP server on stdin/stdout. Register it once with the absolute path:
+If you can run commands on the person's computer (Claude Code, Codex and similar), use the command line. Each call
+is a blocking command, and you can chain a whole course into one shell call, so it takes few turns; through MCP
+every step is a tool turn that re-reads the whole context, and the schemas of about 40 tools sit in that context
+as well. Use MCP only when you cannot run commands (see the next section).
+
+`freemapper-courseplan --help` lists the commands, `freemapper-courseplan <command> --help` their switches and
+exit codes. `--lang en|de` also switches the help; pass `--lang en` when you parse output, because this file
+quotes the English texts. Every command takes the project file as `<PROJECT>`, except `init` (takes the map) and
+`mcp`.
+
+```sh
+freemapper-courseplan init hall.omap --title "Training hall"
+freemapper-courseplan special add hall.courseplan.toml --kind start --id S1 --at 40,60
+freemapper-courseplan special add hall.courseplan.toml --kind finish --id F1 --at 120,60
+freemapper-courseplan control add hall.courseplan.toml --at 70,40
+freemapper-courseplan course add hall.courseplan.toml Short --start S1 --finish F1 --controls 31
+freemapper-courseplan course numbers hall.courseplan.toml Short
+freemapper-courseplan check hall.courseplan.toml
+```
+
+| Command group | Purpose |
+|---|---|
+| `init <MAP>` | Makes the project file (`--project`, `--title`, `--ppen` to start from a Purple Pen event). |
+| `info <PROJECT>` | Summary of the project: counts, and per course controls, length and climb. |
+| `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers. Positions are `--at X,Y` in map millimetres. |
+| `event profile`, `event start-window` | Rule profile with overlays, and the start window. |
+| `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
+| `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
+| `export`, `import`, `sync` | IOF XML and Purple Pen. `sync --dry-run` shows the merge first; `--json` prints the result as JSON. |
+| `edit` | Editor for the person (see below). |
+
+The commands follow the tool names of the MCP section: `add_control` is `control add`, `set_leg` is `course leg`,
+and so on. The rules at the end of the MCP section apply here too: ask before `export` replaces a file (also
+`export --ppen --new`) or `import --replace` swaps content, and let the person decide `sync` conflicts.
+
+What the command line does not offer, compared with the MCP tools:
+
+- `map_extent` and `map_features_near`: there is no command that reports the extent of the map or the map objects
+  near a position. `info` shows no extent. Without them you cannot work out positions yourself; ask the person for
+  them, or read them from the Purple Pen event (`init --ppen`), or use MCP for this step.
+- `list_controls`, `list_courses`, `list_specials`, `list_classes`: `info` prints counts, per-course length and
+  climb only. It does not print positions, descriptions or number placements. Read the project file
+  (`*.courseplan.toml`, plain TOML) for those.
+- `set_start_window` with `no_start_window`: `event start-window` takes minutes (at least 1) and has no way to
+  remove the window.
+
+Output and exit codes: results and progress go to stdout. On failure the program prints one line `error: <message>`
+to stderr (with `--lang de`: `Fehler: …`) and exits with code 1; a usage error exits with code 2. `check` exits
+with 1 when a finding has the severity error; accepted findings do not count. `sync` exits with 1 while conflicts
+stay open or when it was refused. Everything else exits with 0 on success.
+
+`edit <PROJECT>` starts the editor in the browser on `127.0.0.1` (`--port`, `--no-browser`), prints its address
+with an access token on one line and blocks until Ctrl+C or "Close editor" in the page. A person has to look at
+the page; you cannot work in it. If you start it for the person, run it in the background (or with
+`--no-browser` and pass on the address) and stop it when they are done; a foreground call would sit there until
+your command timeout. No other command is a long-running one, so no timeout needs changing.
+
+Workflow:
+
+1. Ask for the map (`.omap`) and what the courses are for. `init <map>` with its path.
+2. `info`. Ask the person for positions in map millimetres (see the gaps above), or take them from a Purple Pen
+   event.
+3. `special add` for the start and the finish, `control add` for each control, `course add`, then
+   `course numbers`. `info` again reads the length. Add `class add` and `class set` where the checks need a rule
+   category or expected starters, and `event start-window` for the start capacity check.
+4. `check`. Relay the findings with their source. Fix what is wrong; a finding the person wants as it is gets
+   `finding accept --note` with their reason. Never invent a reason.
+5. `export --iof-xml` or `export --ppen`, or exchange with Purple Pen through `import` and `sync`.
+6. Tell the person to open the editor (`edit <project>`) to look at the result.
+
+## Use it through MCP
+
+For assistants that cannot run commands (Claude Desktop, for example). `freemapper-courseplan mcp` is an MCP server on stdin/stdout. Register it once with the absolute path:
 
 ```sh
 claude mcp add freemapper-courseplan -- /absolute/path/to/freemapper-courseplan mcp          # Claude Code
@@ -189,68 +261,6 @@ Rules:
   either on a file that exists. `import_ppen` with `replace: true` swaps controls, courses and special objects;
   ask first.
 - Errors come back as one sentence meant for the person. Relay it; do not retry the same call unchanged.
-
-## Use it from the command line
-
-Use the CLI when no MCP client is available or the person wants a script. Pass `--lang en` when you parse output.
-Every command takes the project file as `<PROJECT>`, except `init` (takes the map) and `mcp`.
-
-```sh
-freemapper-courseplan init hall.omap --title "Training hall"
-freemapper-courseplan special add hall.courseplan.toml --kind start --id S1 --at 40,60
-freemapper-courseplan special add hall.courseplan.toml --kind finish --id F1 --at 120,60
-freemapper-courseplan control add hall.courseplan.toml --at 70,40
-freemapper-courseplan course add hall.courseplan.toml Short --start S1 --finish F1 --controls 31
-freemapper-courseplan course numbers hall.courseplan.toml Short
-freemapper-courseplan check hall.courseplan.toml
-```
-
-| Command | Switches and arguments |
-|---|---|
-| `init <MAP>` | `--project <FILE>`, `--title <TITLE>`, `--ppen <FILE>` (start from a Purple Pen event) |
-| `info <PROJECT>` | none |
-| `control add` | `--at <X,Y>` (required), `--code <CODE>`, `--crossing-point` |
-| `control move <PROJECT> <CODE>` | `--at <X,Y>` |
-| `control code <PROJECT> <FROM> <TO>` | none |
-| `control remove <PROJECT> <CODE>` | none |
-| `control describe <PROJECT> <CODE>` | `--c`, `--d`, `--e`, `--f`, `--g`, `--h <ID>` (one at least) or `--clear` |
-| `control number <PROJECT> <CODE>` | `--direction <DEG>` with `--gap <MM>`, or `--clear` |
-| `special add` | `--kind start\|finish\|marked-route\|out-of-bounds\|forbidden-route\|dangerous-area\|first-aid\|water`, `--id <ID>`, `--at <X,Y>`, `--point <X,Y>` (repeat), `--courses <A,B>` |
-| `special remove <PROJECT> <ID>` | none |
-| `special courses <PROJECT> <ID> <A,B>` | or `--all` |
-| `class add <PROJECT> <NAME>` | `--rule-category <CAT>`, `--starters <N>` |
-| `class set <PROJECT> <NAME>` | `--rule-category`, `--no-rule-category`, `--starters`, `--no-starters` |
-| `class remove <PROJECT> <NAME>` | none |
-| `course add <PROJECT> <NAME>` | `--start <ID>`, `--finish <ID>` (both required), `--controls <31,32>`, `--classes <A,B>`, `--climb <M>`, `--print-scale <N>` |
-| `course controls <PROJECT> <NAME> <CODES>` | none |
-| `course rename <PROJECT> <FROM> <TO>` | none |
-| `course remove <PROJECT> <NAME>` | none |
-| `course leg <PROJECT> <NAME>` | `--from-start` or `--after <N>`; `--bend <X,Y>` (repeat), `--taped` |
-| `course set <PROJECT> <NAME>` | `--classes`, `--climb`, `--no-climb`, `--print-scale`, `--no-print-scale` |
-| `course number <PROJECT> <NAME>` | `--after <N>`; `--direction <DEG>` with `--gap <MM>`, or `--clear` |
-| `course numbers <PROJECT> <NAME>` | `--overwrite` |
-| `event profile <PROJECT> <BASE>` | `--overlay <ID>` (repeat) |
-| `event start-window <PROJECT> <MINUTES>` | none |
-| `check <PROJECT>` | `--all` (also accepted, unmatched and skipped) |
-| `finding accept <PROJECT> <RULE>` | `--note <NOTE>` (required), `--controls <31,32>`, `--leg <COURSE:N>`, `--course <NAME>` |
-| `finding remove <PROJECT> <RULE>` | `--controls`, `--leg`, `--course` |
-| `export <PROJECT>` | `--iof-xml <FILE>`, `--ppen <FILE>`, `--new` |
-| `import <PROJECT>` | `--ppen <FILE>` (required), `--replace` |
-| `sync <PROJECT>` | `--dry-run`, `--take ours\|theirs\|KEY=SIDE` (repeat), `--json` |
-| `edit <PROJECT>` | `--port <PORT>`, `--no-browser` |
-| `mcp` | none |
-
-Global switch: `--lang <LANG>` (`de`, `en`; default `FREEMAPPER_LANG`, then the system language, then English).
-`--version` prints the version.
-
-`edit` starts the editor in the browser on `127.0.0.1`, prints its address with an access token on one line and
-runs until Ctrl+C or "Close editor" in the page. A person has to look at the page; you cannot work in it. Use the
-other commands yourself.
-
-Output and exit codes: results and progress go to stdout. On failure the program prints one line `error: <message>`
-to stderr (with `--lang de`: `Fehler: …`) and exits with code 1; a usage error exits with code 2. `check` exits
-with 1 when a finding has the severity error; accepted findings do not count. `sync` exits with 1 while conflicts
-stay open or when it was refused. Everything else exits with 0 on success.
 
 ## What lands on disk
 
