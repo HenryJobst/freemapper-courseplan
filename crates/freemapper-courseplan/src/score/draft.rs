@@ -37,6 +37,9 @@ pub struct DraftRequest<'a> {
     pub settings: &'a ScoreSettings,
     /// Codes that stand already on the map.
     pub taken: &'a [ControlCode],
+    /// Scale denominator of the map: the high-value gap is in metres on the ground, positions are in
+    /// map millimetres.
+    pub scale: u32,
 }
 
 /// A control of the draft.
@@ -94,6 +97,8 @@ pub struct DraftFailure {
 
 struct Trial {
     k: usize,
+    /// The candidates of this count in running order of the pool, after high-value repairs.
+    picks: Vec<usize>,
     report: LengthReport,
     values: Vec<u8>,
     /// The codes of this count, or why none can be assigned; such a count is no draft.
@@ -110,12 +115,13 @@ struct Search<'a> {
     req: &'a DraftRequest<'a>,
     limit_s: f64,
     links: Vec<(usize, usize)>,
+    /// How many of the first picks are forced (link ends) and must stay.
+    forced: usize,
     min_k: usize,
     max_k: usize,
 }
 
 struct Outcome {
-    order: Vec<usize>,
     trial: Trial,
     ok: bool,
     /// With every candidate in, the very good runner still finishes early or the good runner
@@ -125,8 +131,8 @@ struct Outcome {
 
 impl Search<'_> {
     fn attempt(&self, order: &[usize], k: usize) -> Result<Trial, ScoreError> {
-        let picks = &order[..k];
-        let (values, controls) = self.values_of(picks);
+        let picks = self.repaired(order, k);
+        let (values, controls) = self.values_of(&picks);
         let report = analyse_length(
             &controls,
             &self.links,
@@ -146,10 +152,41 @@ impl Search<'_> {
         );
         Ok(Trial {
             k,
+            picks,
             report,
             values,
             codes,
         })
+    }
+
+    /// The first `k` of `order`, where of two high-valued controls closer than the high-value gap the
+    /// later one gives way to the next unused candidate of the order (forced ones stay). When the order is
+    /// used up the control is dropped, so the set may end up smaller than `k`.
+    fn repaired(&self, order: &[usize], k: usize) -> Vec<usize> {
+        let gap_mm = f64::from(self.req.settings.high_value_gap_m) * 1000.0
+            / f64::from(self.req.scale.max(1));
+        let high_from = self.req.settings.high_from();
+        let mut picks: Vec<usize> = order[..k].to_vec();
+        let mut next = k;
+        while let Some(j) = {
+            let (values, _) = self.values_of(&picks);
+            first_violation(
+                &picks,
+                &values,
+                self.req.candidates,
+                high_from,
+                gap_mm,
+                self.forced,
+            )
+        } {
+            if next < order.len() {
+                picks[j] = order[next];
+                next += 1;
+            } else {
+                picks.remove(j);
+            }
+        }
+        picks
     }
 
     fn values_of(&self, picks: &[usize]) -> (Vec<u8>, Vec<ScoredControl>) {
@@ -209,7 +246,6 @@ impl Search<'_> {
             if eval(k)?.1 {
                 let trial = seen.remove(&k).expect("just evaluated");
                 return Ok(Outcome {
-                    order,
                     trial,
                     ok: true,
                     pool_too_short: false,
@@ -238,7 +274,6 @@ impl Search<'_> {
             })
             .ok_or_else(|| code_error.expect("a count without codes has an error"))?;
         Ok(Outcome {
-            order,
             trial: best,
             ok: false,
             pool_too_short,
@@ -296,6 +331,29 @@ fn plain_failure(hint: Hint, error: Option<ScoreError>) -> DraftFailure {
         hint,
         error,
     }
+}
+
+/// The index of the later control of the first pair of high-valued controls closer than `gap_mm`; a
+/// forced control (among the first `forced`) never gives way, so a pair of two forced ones is skipped.
+fn first_violation(
+    picks: &[usize],
+    values: &[u8],
+    cands: &[Candidate],
+    high_from: u8,
+    gap_mm: f64,
+    forced: usize,
+) -> Option<usize> {
+    for j in 1..picks.len() {
+        if j < forced || values[j] < high_from {
+            continue;
+        }
+        for i in 0..j {
+            if values[i] >= high_from && dist(&cands[picks[i]].at, &cands[picks[j]].at) < gap_mm {
+                return Some(j);
+            }
+        }
+    }
+    None
 }
 
 fn dist(a: &MapPoint, b: &MapPoint) -> f64 {
@@ -405,6 +463,7 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
         req,
         limit_s,
         links,
+        forced: forced.len(),
         min_k,
         max_k,
     };
@@ -454,8 +513,8 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     } else {
         return Err(plain_failure(Hint::Impossible, code_error));
     };
-    let k = chosen.trial.k;
-    let picks = &chosen.order[..k];
+    let picks = &chosen.trial.picks;
+    let k = picks.len();
     let codes = chosen.trial.codes.expect("a chosen count has codes");
     let hard_actual = picks
         .iter()

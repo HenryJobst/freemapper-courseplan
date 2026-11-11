@@ -44,7 +44,10 @@ pub enum ScoreCmd {
         ArgGroup::new("change")
             .required(true)
             .multiple(true)
-            .args(["value_max", "good_pace", "very_good_pace", "mix_hard", "seed"])
+            .args([
+                "value_max", "good_pace", "very_good_pace", "mix_hard", "seed", "value1_min",
+                "min_gap", "max_reach", "auto_reach", "high_value_gap",
+            ])
     ))]
     Settings {
         project: PathBuf,
@@ -58,6 +61,16 @@ pub enum ScoreCmd {
         mix_hard: Option<String>,
         #[arg(long, value_name = "N")]
         seed: Option<String>,
+        #[arg(long, value_name = "M")]
+        value1_min: Option<String>,
+        #[arg(long, value_name = "M")]
+        min_gap: Option<String>,
+        #[arg(long, value_name = "M", conflicts_with = "auto_reach")]
+        max_reach: Option<String>,
+        #[arg(long)]
+        auto_reach: bool,
+        #[arg(long, value_name = "M")]
+        high_value_gap: Option<String>,
         #[arg(long)]
         json: bool,
     },
@@ -362,9 +375,29 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             very_good_pace,
             mix_hard,
             seed,
+            value1_min,
+            min_gap,
+            max_reach,
+            auto_reach,
+            high_value_gap,
             json,
         } => {
             let mut args = json!({});
+            if let Some(v) = value1_min {
+                args["value1_min_m"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = min_gap {
+                args["min_gap_m"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = max_reach {
+                args["max_reach_m"] = json!(parse_count(lang, &v)?);
+            }
+            if auto_reach {
+                args["auto_reach"] = json!(true);
+            }
+            if let Some(v) = high_value_gap {
+                args["high_value_gap_m"] = json!(parse_count(lang, &v)?);
+            }
             if let Some(v) = value_max {
                 args["value_max"] = json!(clamp_u8(parse_count(lang, &v)?));
             }
@@ -393,6 +426,17 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
                     ("very_good", s(&value["very_good_pace_s_per_km"])),
                     ("mix_hard", s(&value["mix_hard_percent"])),
                     ("seed", s(&value["seed"])),
+                    ("value1_min", s(&value["value1_min_m"])),
+                    ("min_gap", s(&value["min_gap_m"])),
+                    (
+                        "reach",
+                        if value["max_reach_m"].is_null() {
+                            text(lang, "cli-score-reach-automatic", &[])
+                        } else {
+                            s(&value["max_reach_m"])
+                        },
+                    ),
+                    ("high_gap", s(&value["high_value_gap_m"])),
                 ],
             );
             Ok(())

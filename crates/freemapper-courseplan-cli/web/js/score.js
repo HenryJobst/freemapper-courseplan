@@ -351,8 +351,21 @@ export function panel(host, state, course) {
       ["score-very-good-pace", "editor-score-very-good-pace", "very_good_pace_s_per_km"],
       ["score-mix-hard", "editor-score-mix-hard", "mix_hard_percent"],
       ["score-seed", "editor-score-seed", "seed"],
+      ["score-value1-min", "editor-score-value1-min", "value1_min_m"],
+      ["score-min-gap", "editor-score-min-gap", "min_gap_m"],
+      ["score-max-reach", "editor-score-max-reach", "max_reach_m"],
+      ["score-high-value-gap", "editor-score-high-value-gap", "high_value_gap_m"],
     ]) {
-      numberRow(settings, id, labelId, s[key], (n) => change("set_score_settings", { [key]: n }, id));
+      const input = numberRow(settings, id, labelId, s[key], (n) => change("set_score_settings", { [key]: n }, id));
+      if (key === "max_reach_m") {
+        // An empty field returns the reach to automatic.
+        input.addEventListener("change", () => {
+          if (input.value.trim() === "" && s[key] !== null && s[key] !== undefined) {
+            input.setAttribute("aria-invalid", "false");
+            change("set_score_settings", { auto_reach: true }, id);
+          }
+        });
+      }
     }
     row(settings, "editor-score-good-band", `${s.good_band_percent[0]}${DASH}${s.good_band_percent[1]} %`);
     row(settings, "editor-score-very-good-band", `${s.very_good_band_percent[0]}${DASH}${s.very_good_band_percent[1]} %`);

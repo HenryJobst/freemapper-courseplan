@@ -562,3 +562,17 @@ severity = "warning"
 values = { tolerance_percent = 15.0 }
 source = { doc = "user", section = "design 2026-11-11 section 4.4" }
 note = { de = "Der Anteil schwerer Posten soll zur Einstellung mix_hard_percent passen.", en = "The share of hard controls should match the mix_hard_percent setting." }
+
+[[rules]]
+id = "wkb2026.score.min_gap"
+key = "score_min_gap"
+severity = "warning"
+source = { doc = "user", section = "design 2026-11-11 section 4.2, ADR 0072" }
+note = { de = "Zwei Posten einer Score-Bahn sollen mindestens min_gap_m auseinander stehen (Score-Einstellungen).", en = "Two controls of a score course should stand at least min_gap_m apart (score settings)." }
+
+[[rules]]
+id = "wkb2026.score.high_gap"
+key = "score_high_gap"
+severity = "warning"
+source = { doc = "user", section = "design 2026-11-11 section 4.2, ADR 0072" }
+note = { de = "Zwei hochwertige Posten einer Score-Bahn sollen mindestens high_value_gap_m auseinander stehen (Score-Einstellungen).", en = "Two high-valued controls of a score course should stand at least high_value_gap_m apart (score settings)." }

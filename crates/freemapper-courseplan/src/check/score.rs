@@ -723,6 +723,70 @@ fn is_hard(value: u32, value_max: u8) -> bool {
     u64::from(value) * 5 > u64::from(value_max) * 3
 }
 
+/// Findings for each pair of controls of a score course that stand closer than `gap_m` metres (by the
+/// map scale); `high_only` counts pairs of two high-valued controls only.
+fn gap_findings(
+    ctx: &CheckContext<'_>,
+    run: &RuleRun<'_>,
+    findings: &mut Vec<Finding>,
+    gap_m: u32,
+    high_only: bool,
+    id: &'static str,
+) {
+    let high_from = u32::from(ctx.event.score_settings().high_from());
+    let scale = f64::from(ctx.map_scale.max(1));
+    for course in &ctx.score_courses {
+        let controls = &course.controls;
+        for (i, a) in controls.iter().enumerate() {
+            for b in &controls[i + 1..] {
+                if high_only && (a.value < high_from || b.value < high_from) {
+                    continue;
+                }
+                let metres = distance(&a.at, &b.at) * scale / 1000.0;
+                if metres < f64::from(gap_m) {
+                    findings.push(run.finding(
+                        Location::Controls {
+                            codes: vec![a.code.clone(), b.code.clone()],
+                        },
+                        id,
+                        vec![
+                            ("first", text(&a.code.0)),
+                            ("second", text(&b.code.0)),
+                            ("course", text(&course.course.name)),
+                            ("distance", ArgValue::Int(metres.round() as i64)),
+                            ("gap", ArgValue::Int(i64::from(gap_m))),
+                        ],
+                    ));
+                }
+            }
+        }
+    }
+}
+
+/// `score_min_gap`: two controls of a score course closer than `min_gap_m` of the score settings
+/// (ADR 0072).
+pub(super) fn min_gap(
+    ctx: &CheckContext<'_>,
+    run: &RuleRun<'_>,
+    findings: &mut Vec<Finding>,
+    _skipped: &mut Vec<Skipped>,
+) {
+    let gap = ctx.event.score_settings().min_gap_m;
+    gap_findings(ctx, run, findings, gap, false, "check-score-min-gap");
+}
+
+/// `score_high_gap`: two high-valued controls of a score course closer than `high_value_gap_m` of the
+/// score settings (ADR 0072).
+pub(super) fn high_gap(
+    ctx: &CheckContext<'_>,
+    run: &RuleRun<'_>,
+    findings: &mut Vec<Finding>,
+    _skipped: &mut Vec<Skipped>,
+) {
+    let gap = ctx.event.score_settings().high_value_gap_m;
+    gap_findings(ctx, run, findings, gap, true, "check-score-high-gap");
+}
+
 /// `score_mix`: the share of hard controls differs from `mix_hard_percent` of the score settings
 /// by more than `tolerance_percent` points. Courses with fewer than five controls are not judged.
 pub(super) fn mix(

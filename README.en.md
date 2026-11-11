@@ -93,8 +93,8 @@ points. `course add --kind score` makes the course, and `score controls`, `score
 settings` and `score course set` edit it. `score suggest` ranks control sites on the map by route choice,
 `score draft` picks controls, values and codes so that a good runner scores about 90 percent of the points and a
 very good runner just reaches all of them within the limit, and `score length` re-measures a course after you
-changed it. The draft writes nothing until you add `--apply`. Eight rules of `check` read score courses (value and
-code, alike codes, ring and obvious order, length bands, limit and penalty, links, mix of hard controls), the editor
+changed it. The draft writes nothing until you add `--apply`. Ten rules of `check` read score courses (value and
+code, alike codes, ring and obvious order, length bands, limit and penalty, links, mix of hard controls, gaps between controls), the editor
 has a Score panel, and `export --csv` and `export --sheet` write the control list and the evaluation sheet. Routes
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
 length bands as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,

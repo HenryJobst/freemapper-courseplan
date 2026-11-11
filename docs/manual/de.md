@@ -153,7 +153,13 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
   Ring schließen. Ein Posten mit Verbindung bleibt in der Bahn, bis du die Verbindung entfernst
   (`score link remove`).
 - `score settings` schreibt den Abschnitt `[score]` der Veranstaltung: Wertebereich, die Pace eines guten und eines
-  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), den Anteil schwerer Posten und den Startwert.
+  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), den Anteil schwerer Posten und den Startwert. Vier Abstände
+  in Metern im Gelände regeln, wo Posten stehen (ADR 0072): `--value1-min` (150 m) ist der kleinste Abstand eines
+  Postens von Start und Ziel, ab dort beginnt Wert 1; `--min-gap` (100 m, nicht kleiner) der kleinste Abstand zweier
+  Posten; `--high-value-gap` (200 m, mindestens `--min-gap`) der kleinste Abstand zweier hochwertiger Posten, also
+  der oberen vier Zehntel der Werte (4 und 5 bei höchstem Wert 5); `--max-reach` der größte Abstand vom Start. Ohne
+  ihn gilt automatisch ein Viertel der Strecke, die der gute Läufer im Zeitlimit schafft (900 m bei 15 Minuten und
+  4:10 min/km); `--auto-reach` kehrt dazu zurück. Ein Abstand ist ein ganzer Wert in Metern.
 - Jeder dieser Befehle nimmt `--json` und gibt aus, was das gleichnamige MCP-Werkzeug antwortet
   (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
   `set_score_settings`, `set_score_course_details`). Der Editor führt dieselben Operationen aus, und Rückgängig
@@ -188,8 +194,10 @@ freemapper-courseplan score length hall.courseplan.toml Score45
 - `score suggest` listet Postenplätze, die beste Routenwahl zuerst, jeweils mit Position, Symbolcode des
   Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
   der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
-  `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
-  sonst 30 m). `--course NAME` nimmt Start und Ziel dieser Score-Bahn (`--start` und `--finish` haben weiter
+  `--min-distance` den kleinsten Abstand in Kartenmillimetern (standardmäßig die Einstellung `min_gap_m`, 100 m im
+  Gelände). Plätze näher als `value1_min_m` an Start oder Ziel und, mit `--course`, weiter als die Reichweite vom Start
+  entfernt fallen weg. `score draft` hält zusätzlich den Abstand hochwertiger Posten ein; `check` warnt, wenn eine
+  Bahn ihn oder den Mindestabstand unterschreitet. `--course NAME` nimmt Start und Ziel dieser Score-Bahn (`--start` und `--finish` haben weiter
   Vorrang); ohne die Option gelten der erste Start und das erste Ziel des Events. Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
 - `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
   standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
@@ -397,7 +405,8 @@ Pflichtverbindung als gestrichelte Linie zwischen ihren beiden Posten. Wähle di
 Eigenschaften das Score-Fenster.
 
 - **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
-  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten und der Startwert. Die beiden
+  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert und die vier Abstände (Wert 1 ab,
+  Posten auseinander, Reichweite vom Start, hohe Werte auseinander). Die beiden
   Spannen werden angezeigt, nicht bearbeitet. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
   Veranstaltung braucht dafür einen Start und ein Ziel.
 - **Posten vorschlagen.** Zeigt geordnete Kandidaten als gestrichelte Kreise mit ihrem Wert und als Tabelle.

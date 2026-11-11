@@ -341,6 +341,9 @@ fn root<'a>(
     at
 }
 
+/// Least value of `min_gap_m` in metres (ADR 0072).
+const MIN_GAP_FLOOR_M: u32 = 100;
+
 fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
     let mut bad = |what: &'static str, reason: &'static str| {
         errors.push(ModelError::ScoreSettingOutOfRange { what, reason });
@@ -372,5 +375,23 @@ fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
     }
     if s.mix_hard_percent > 100 {
         bad("mix_hard_percent", "must not exceed 100");
+    }
+    if s.value1_min_m == 0 {
+        bad("value1_min_m", "must be more than 0");
+    }
+    if s.min_gap_m < MIN_GAP_FLOOR_M {
+        bad("min_gap_m", "must be at least 100");
+    }
+    if s.max_reach_m == Some(0) {
+        bad("max_reach_m", "must be more than 0");
+    }
+    if let Some(reach) = s.max_reach_m
+        && reach > 0
+        && s.value1_min_m > reach
+    {
+        bad("max_reach_m", "must not be below value1_min_m");
+    }
+    if s.high_value_gap_m < s.min_gap_m {
+        bad("high_value_gap_m", "must not be below min_gap_m");
     }
 }

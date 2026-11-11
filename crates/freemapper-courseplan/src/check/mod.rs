@@ -760,6 +760,8 @@ pub const CHECKS: &[Check] = &[
         &[Place::Control, Place::Controls],
     ),
     Check::at("score_mix", score::mix, &[Place::Course]),
+    Check::at("score_min_gap", score::min_gap, &[Place::Controls]),
+    Check::at("score_high_gap", score::high_gap, &[Place::Controls]),
 ];
 
 /// The check of a rule key.

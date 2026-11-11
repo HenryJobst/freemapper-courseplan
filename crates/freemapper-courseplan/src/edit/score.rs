@@ -25,6 +25,11 @@ pub struct ScoreSettingsChange {
     pub very_good_pace_s_per_km: Option<u32>,
     pub mix_hard_percent: Option<u8>,
     pub seed: Option<u32>,
+    pub value1_min_m: Option<u32>,
+    pub min_gap_m: Option<u32>,
+    /// `Some(None)` returns the reach to automatic.
+    pub max_reach_m: Option<Option<u32>>,
+    pub high_value_gap_m: Option<u32>,
 }
 
 impl ScoreSettingsChange {
@@ -297,6 +302,18 @@ pub fn set_score_settings(
         }
         if let Some(v) = change.seed {
             s.seed = v;
+        }
+        if let Some(v) = change.value1_min_m {
+            s.value1_min_m = v;
+        }
+        if let Some(v) = change.min_gap_m {
+            s.min_gap_m = v;
+        }
+        if let Some(v) = change.max_reach_m {
+            s.max_reach_m = v;
+        }
+        if let Some(v) = change.high_value_gap_m {
+            s.high_value_gap_m = v;
         }
         e.score = Some(s.clone());
         Ok(s)

@@ -1889,3 +1889,59 @@ fn value_max_below_a_control_value_is_refused() {
     .unwrap();
     assert_eq!(stored.value_max, 3);
 }
+
+#[test]
+fn score_distance_settings_are_stored_and_checked() {
+    let mut e = score_event();
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            value1_min_m: Some(120),
+            min_gap_m: Some(110),
+            max_reach_m: Some(Some(800)),
+            high_value_gap_m: Some(250),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            stored.value1_min_m,
+            stored.min_gap_m,
+            stored.max_reach_m,
+            stored.high_value_gap_m
+        ),
+        (120, 110, Some(800), 250)
+    );
+    // Back to automatic.
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            max_reach_m: Some(None),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(stored.max_reach_m, None);
+    let before = e.clone();
+    for bad in [
+        ScoreSettingsChange {
+            min_gap_m: Some(99),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            high_value_gap_m: Some(50),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            max_reach_m: Some(Some(100)),
+            ..Default::default()
+        },
+    ] {
+        assert!(matches!(
+            set_score_settings(&mut e, &bad),
+            Err(EditError::Invalid(_))
+        ));
+        assert_eq!(e, before);
+    }
+}

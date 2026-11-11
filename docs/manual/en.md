@@ -146,7 +146,13 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
   who does not is disqualified. A control takes at most two links, and links may not close a ring. A control with a
   link stays in the course until you remove the link (`score link remove`).
 - `score settings` writes the `[score]` table of the event: value range, the paces of a good and a very good runner
-  (seconds per kilometre, or `4:10`), the share of hard controls and the seed.
+  (seconds per kilometre, or `4:10`), the share of hard controls and the seed. Four distances in metres on the ground
+  decide where controls stand (ADR 0072): `--value1-min` (150 m) is the least distance of a control from start and
+  finish, where value 1 begins; `--min-gap` (100 m, not lower) the least distance between two controls;
+  `--high-value-gap` (200 m, at least `--min-gap`) the least distance between two high-valued controls, the upper four
+  tenths of the values (4 and 5 at a highest value of 5); `--max-reach` the farthest distance from the start. Without
+  it the reach is automatic, a quarter of the ground the good runner covers in the time limit (900 m at 15 minutes
+  and 4:10 min/km); `--auto-reach` returns to that. A distance is a whole number of metres.
 - Each of these commands takes `--json` and prints what the MCP tool of the same name answers
   (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
   `set_score_settings`, `set_score_course_details`). The editor runs the same operations, and undo takes each back.
@@ -179,7 +185,10 @@ freemapper-courseplan score length hall.courseplan.toml Score45
 - `score suggest` lists control sites, best route choice first, each with its position, the symbol code of the map
   feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
   would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
-  smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m). `--course NAME` takes the start and
+  smallest distance in map millimetres (by default the setting `min_gap_m`, 100 m on the ground). Sites closer than
+  `value1_min_m` to the start or finish are dropped, and with `--course` so are sites beyond the reach from the start.
+  `score draft` also keeps the gap between high-valued controls; `check` warns when a course falls below it or below
+  the minimum gap. `--course NAME` takes the start and
   finish of that score course (`--start` and `--finish` still win); without it the first start and finish of the event count.
   Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded. With `--json`
   and over MCP each candidate also has a free `code` that carries its value. It is `null` when no free code is left:
@@ -343,7 +352,8 @@ A score course has no running order, so the editor draws its controls, start and
 dashed line between its two controls. Select the course in the tree to open the Score panel in the properties.
 
 - **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
-  settings: highest value, the paces, the share of hard controls and the seed. The two bands are shown, not edited.
+  settings: highest value, the paces, the share of hard controls, the seed and the four distances (value 1 from, controls apart, reach from the start,
+  high values apart). The two bands are shown, not edited.
   "New score course..." in the tree makes a course with a 45 minute limit; the event needs one start and one finish.
 - **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
   one to the course, as two steps for undo. A candidate without a free code cannot be accepted.

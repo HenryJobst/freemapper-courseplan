@@ -100,6 +100,8 @@ struct World {
     start: MapPoint,
     finish: MapPoint,
     taken: Vec<ControlCode>,
+    /// Map scale; large, so that the metre gaps of the settings are tiny next to the fixtures.
+    scale: u32,
 }
 
 impl World {
@@ -112,6 +114,7 @@ impl World {
             start: pt(0.0, 0.0),
             finish: pt(0.0, 0.0),
             taken: Vec::new(),
+            scale: 1_000_000,
         }
     }
 
@@ -126,6 +129,7 @@ impl World {
             links: &self.links,
             settings: &self.settings,
             taken: &self.taken,
+            scale: self.scale,
         })
     }
 }
@@ -393,6 +397,7 @@ fn no_draft_when_start_is_enclosed() {
         links: &[],
         settings: &w.settings,
         taken: &[],
+        scale: 1_000_000,
     })
     .expect_err("no route from the start");
     assert_eq!(f.hint, Hint::Impossible);
@@ -539,7 +544,67 @@ fn a_candidate_without_a_route_from_its_position_is_left_out() {
         links: &[],
         settings: &ScoreSettings::default(),
         taken: &[],
+        scale: 1_000_000,
     })
     .expect("the lost candidate must not block the draft");
     assert!(d.controls.iter().all(|c| c.at != lost));
+}
+
+/// Pairs of controls of the draft that are high-valued and closer than `gap` units.
+fn close_high_pairs(d: &Draft, high_from: u8, gap: f64) -> usize {
+    let mut n = 0;
+    for (i, a) in d.controls.iter().enumerate() {
+        for b in &d.controls[i + 1..] {
+            if a.value >= high_from && b.value >= high_from && dist(&a.at, &b.at) < gap {
+                n += 1;
+            }
+        }
+    }
+    n
+}
+
+#[test]
+fn high_valued_controls_keep_the_high_value_gap() {
+    // Scale 1000: one metre is one unit. The grid sits 100 units apart, the gap asks 150.
+    let mut w = World::new(grid(4), ok_limit(&grid(4)));
+    w.scale = 1000;
+    w.settings.high_value_gap_m = 150;
+    let d = match w.run() {
+        Ok(d) => d,
+        Err(f) => *f.best,
+    };
+    assert!(d.controls.iter().any(|c| c.value >= 4), "{d:?}");
+    assert_eq!(close_high_pairs(&d, 4, 150.0), 0, "{d:?}");
+    // Without the rule the same grid does put high controls closer.
+    let mut loose = World::new(grid(4), ok_limit(&grid(4)));
+    loose.scale = 1000;
+    loose.settings.high_value_gap_m = 1;
+    let d = match loose.run() {
+        Ok(d) => d,
+        Err(f) => *f.best,
+    };
+    assert!(close_high_pairs(&d, 4, 150.0) > 0, "{d:?}");
+}
+
+#[test]
+fn first_violation_names_the_later_high_control_and_spares_forced_ones() {
+    let cands = vec![
+        cand(0.0, 0.0, 0.1),
+        cand(10.0, 0.0, 0.1),
+        cand(500.0, 0.0, 0.1),
+    ];
+    let picks = [0, 1, 2];
+    assert_eq!(
+        first_violation(&picks, &[5, 4, 5], &cands, 4, 50.0, 0),
+        Some(1)
+    );
+    assert_eq!(
+        first_violation(&picks, &[5, 4, 5], &cands, 4, 50.0, 2),
+        None
+    );
+    assert_eq!(
+        first_violation(&picks, &[5, 3, 5], &cands, 4, 50.0, 0),
+        None
+    );
+    assert_eq!(first_violation(&picks, &[5, 4, 5], &cands, 4, 5.0, 0), None);
 }

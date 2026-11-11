@@ -1293,6 +1293,12 @@ mod tests {
             "difficulty",
             "effort",
             "miss",
+            "distance",
+            "gap",
+            "value1_min",
+            "min_gap",
+            "reach",
+            "high_gap",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

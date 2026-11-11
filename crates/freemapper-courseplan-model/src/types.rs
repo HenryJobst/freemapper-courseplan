@@ -568,6 +568,37 @@ pub struct ScoreSettings {
     pub mix_hard_percent: u8,
     /// Seed of the draft search, so that every run gives the same answer.
     pub seed: u32,
+    /// Smallest distance in metres on the ground from start and finish to any control, so value 1 starts there
+    /// (ADR 0072).
+    pub value1_min_m: u32,
+    /// Smallest distance in metres between two controls of a score course (ADR 0072).
+    pub min_gap_m: u32,
+    /// Farthest distance in metres from the start to any candidate; none means a quarter of the ground
+    /// the good runner covers in the time limit (see [`ScoreSettings::reach_m`]).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_reach_m: Option<u32>,
+    /// Smallest distance in metres between two high-valued controls (ADR 0072).
+    pub high_value_gap_m: u32,
+}
+
+/// Share of `value_max` from which a control counts as high-valued (ADR 0072).
+pub const HIGH_VALUE_SHARE: f64 = 0.6;
+
+impl ScoreSettings {
+    /// The lowest value that counts as high: the first one above 0.6 of `value_max` (4 at 5, 6 at 9).
+    pub fn high_from(&self) -> u8 {
+        (HIGH_VALUE_SHARE * f64::from(self.value_max)).floor() as u8 + 1
+    }
+
+    /// The reach in metres for a time limit: the stored one, else a quarter of the ground the good runner
+    /// covers in the limit. None while the reach is automatic and no limit is known.
+    pub fn reach_m(&self, time_limit_min: Option<u32>) -> Option<f64> {
+        self.max_reach_m.map(f64::from).or_else(|| {
+            time_limit_min.map(|min| {
+                f64::from(min) * 60.0 / f64::from(self.good_pace_s_per_km.max(1)) * 1000.0 / 4.0
+            })
+        })
+    }
 }
 
 impl Default for ScoreSettings {
@@ -580,6 +611,10 @@ impl Default for ScoreSettings {
             very_good_band_percent: (95, 100),
             mix_hard_percent: 40,
             seed: 1,
+            value1_min_m: 150,
+            min_gap_m: 100,
+            max_reach_m: None,
+            high_value_gap_m: 200,
         }
     }
 }

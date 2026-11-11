@@ -101,6 +101,8 @@ fn ctx<'a>(specials: &'a [SpecialObject], existing: &'a [MapPoint]) -> SuggestCo
         finish: p(100.0, 0.0),
         specials,
         min_distance_mm: 1.0,
+        min_end_distance_mm: 0.0,
+        max_reach_mm: None,
         existing,
         limit: 50,
         line_margin_mm: 1.0,
@@ -645,6 +647,8 @@ fn luebeck_timing_for_limit_60() {
         finish: at(false),
         specials,
         min_distance_mm: 3.0,
+        min_end_distance_mm: 0.0,
+        max_reach_mm: None,
         line_margin_mm: 1.0,
         existing: &[],
         limit: 60,
@@ -674,4 +678,56 @@ fn site_weight_favours_near_clear_sites_away_from_the_rim() {
     assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.9, 3.0, 1.0));
     assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.9, 1.0, 0.3));
     assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.6, 1.0, 1.0));
+}
+
+fn grid() -> MapIndex {
+    let mut f = Vec::new();
+    for x in (10..=90).step_by(10) {
+        for y in (10..=60).step_by(10) {
+            f.push(boulder(f64::from(x), f64::from(y)));
+        }
+    }
+    MapIndex::from_features(f)
+}
+
+#[test]
+fn no_candidate_lies_closer_to_start_or_finish_than_the_value_1_distance() {
+    let mut c = ctx(&[], &[]);
+    c.min_end_distance_mm = 25.0;
+    let found = suggest(&grid(), &Fake::plain(), &c).unwrap();
+    assert!(!found.is_empty());
+    for f in &found {
+        assert!(
+            dist(&f.at, &c.start) >= 25.0 && dist(&f.at, &c.finish) >= 25.0,
+            "{:?}",
+            f.at
+        );
+    }
+    // Without the filter sites nearer than that exist.
+    let all = suggest(&grid(), &Fake::plain(), &ctx(&[], &[])).unwrap();
+    assert!(all.iter().any(|f| dist(&f.at, &c.start) < 25.0));
+}
+
+#[test]
+fn candidates_keep_the_minimum_gap_between_each_other() {
+    let mut c = ctx(&[], &[]);
+    c.min_distance_mm = 25.0;
+    let found = suggest(&grid(), &Fake::plain(), &c).unwrap();
+    assert!(found.len() > 2);
+    for (i, a) in found.iter().enumerate() {
+        for b in &found[i + 1..] {
+            assert!(dist(&a.at, &b.at) >= 25.0, "{:?} {:?}", a.at, b.at);
+        }
+    }
+}
+
+#[test]
+fn no_candidate_lies_farther_from_the_start_than_the_reach() {
+    let mut c = ctx(&[], &[]);
+    c.max_reach_mm = Some(40.0);
+    let found = suggest(&grid(), &Fake::plain(), &c).unwrap();
+    assert!(!found.is_empty());
+    assert!(found.iter().all(|f| dist(&f.at, &c.start) <= 40.0));
+    let all = suggest(&grid(), &Fake::plain(), &ctx(&[], &[])).unwrap();
+    assert!(all.iter().any(|f| dist(&f.at, &c.start) > 40.0));
 }
