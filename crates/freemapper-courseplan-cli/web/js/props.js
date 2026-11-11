@@ -3,6 +3,18 @@
 
 import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
+import {
+  MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
+} from "./course.js";
+
+export { nameProblem };
+
+let wantFocus = null;
+
+// The element with this id gets the focus when the properties are built next (a moved stop keeps it).
+export function focusAfter(id) {
+  wantFocus = id;
+}
 
 const COLUMNS = ["c", "d", "e", "f", "g", "h"];
 
@@ -23,14 +35,6 @@ function specialPosition(s) {
 }
 
 const MAX_CODE_CHARS = 64;
-const MAX_NAME_CHARS = 200;
-
-// Whether a code or name is fit to commit: not empty, no white space at its ends, within the limit, and not
-// the text of another entry. The server checks the same and has the last word.
-export function nameProblem(text, limit, others) {
-  if (text === "" || text.trim() !== text) return true;
-  return [...text].length > limit || others.includes(text);
-}
 
 // A text field for the code of a control or the name of a course. A refused text shows `errorId`'s message at
 // the field; a good one different from `value` is passed to commit(text). Returns the message element.
@@ -83,11 +87,11 @@ function courseRows(host, list, state, name, actions) {
   host.append(list, error);
   row(list, "editor-prop-kind", t("editor-kind-course"));
   row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
-  row(list, "editor-prop-climb", course.climb_m == null ? null : `${course.climb_m} m`);
   row(list, "editor-prop-start", course.start);
   row(list, "editor-prop-finish", course.finish);
-  row(list, "editor-prop-classes", (course.classes ?? []).join(", "));
-  row(list, "editor-prop-stops", course.controls.map((c) => c.code).join(" → "));
+  courseFields(list, state, course, actions);
+  stopList(host, course, actions);
+  courseRemoveButton(host, course, actions);
 }
 
 // A decimal number in millimetres; a comma counts as the decimal separator. Null when it is not a number.
@@ -230,11 +234,6 @@ function specialRows(list, state, id) {
   row(list, "editor-prop-position", at ? mm(at) : null);
 }
 
-function classRows(list, state, name) {
-  row(list, "editor-prop-name", name);
-  const courses = state.event.courses.filter((c) => (c.classes ?? []).includes(name)).map((c) => c.name);
-  row(list, "editor-prop-used-in", courses.join(", "));
-}
 
 // Fills `host` for the selection { kind, id, course? }, or the empty hint without one.
 export function show(host, state, selection, overlay, actions) {
@@ -244,7 +243,8 @@ export function show(host, state, selection, overlay, actions) {
   if (state && selection && host.dataset.key === key && host.contains(active) && active.dataset?.dirty) return;
   host.dataset.key = key;
   // Keep the focus in the field being edited: the page is rebuilt after each change.
-  const focused = host.contains(document.activeElement) ? document.activeElement.id : "";
+  const focused = wantFocus ?? (host.contains(document.activeElement) ? document.activeElement.id : "");
+  wantFocus = null;
   host.replaceChildren();
   if (!state || !selection) {
     const hint = document.createElement("p");
@@ -259,7 +259,8 @@ export function show(host, state, selection, overlay, actions) {
     case "course": courseRows(host, list, state, selection.id, actions); break;
     case "control": controlRows(host, list, state, selection.id, actions); break;
     case "special": specialRows(list, state, selection.id); break;
-    case "class": classRows(list, state, selection.id); break;
+    case "class": classPanel(host, list, state, selection.id, actions); break;
+    case "event": eventPanel(host, list, state, actions); break;
     case "number": {
       const n = overlay?.numbers.find((x) => String(x.index) === String(selection.id));
       if (n) {
@@ -270,7 +271,7 @@ export function show(host, state, selection, overlay, actions) {
     }
     default: break;
   }
-  if (selection.kind !== "control" && selection.kind !== "course") host.append(list);
+  if (!["control", "course", "class", "event"].includes(selection.kind)) host.append(list);
   if (focused) host.querySelector(`#${focused}`)?.focus();
   if (selection.kind === "course" && overlay?.numbers.some((n) => n.source === "auto")) {
     const note = document.createElement("p");

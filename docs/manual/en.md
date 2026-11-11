@@ -106,8 +106,8 @@ there.
 
 ## 4. The editor (preview)
 
-The editor shows the event in the browser. You can place, move and delete controls and take each step back. Courses,
-bends, numbers, special objects and control descriptions still go through the command line or the AI assistant,
+The editor shows the event in the browser. You can place, move and delete controls, build courses and categories, and take each step back. Bends,
+numbers, special objects and control descriptions still go through the command line or the AI assistant,
 and the editor shows them. The menu items for export, import and sync are greyed out.
 
 ### Starting it
@@ -180,6 +180,28 @@ a position outside the map, the file stays as it was and a message says why.
   focus is on "Cancel". "Delete" removes the control and takes it out of those courses. A stray Backspace
   on a selected, unused control therefore deletes it without a question; undo brings it back.
 
+### Courses, categories and the event
+
+- **New course.** Choose "New course..." under "Courses" in the tree and type a name. The course gets the start and
+  the finish of the event. If the event has not exactly one start and one finish, the editor says so and adds
+  nothing.
+- **Course mode.** Select a course, then choose "Course mode". The controls the course does not visit appear in
+  grey. A click on a control adds it before the finish. To insert a control inside the course, first click the leg
+  where it belongs, then the control. The chosen leg turns thick and blue, and the status bar says which one it is.
+  Esc drops the chosen leg; a second Esc leaves course mode.
+- **Stops.** The properties of a course list its stops. The buttons "Move up", "Move down" and "Remove" change the
+  order. With the focus on a row, Alt+Up and Alt+Down move the stop. Each change is one step for undo and saves the
+  whole list at once. If a change sends a leg to another stop, that leg loses its bends and tape. The status bar names
+  those legs.
+- **Course details.** Climb and planned print scale are fields in the properties; an empty field removes the value.
+  The check boxes assign the course to categories.
+- **Categories.** "New category..." adds one. Its properties hold the rule category and the expected starters; an
+  empty field removes the value. "Delete category" removes it. The editor refuses this while a course still uses
+  it, and says so above the map.
+- **Event.** "Event settings" in the tree shows the discipline, which you cannot change here, the rule profile with
+  its overlays (separated by commas) and the start window in minutes. The server checks the names of the
+  profiles.
+
 ### Undo and redo
 
 The toolbar buttons "Undo" and "Redo" and the keys Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or Ctrl+Y) walk through the
@@ -206,7 +228,8 @@ a shortcut.
 | Ctrl/Cmd+Z | Undo |
 | Ctrl/Cmd+Shift+Z, Ctrl+Y | Redo |
 | Delete, Backspace | Delete the selected control |
-| Esc | Cancel the drag, or go back to the select tool |
+| Esc | Cancel the drag or the chosen leg, or go back to the select tool |
+| Alt+Up, Alt+Down | Move the focused stop of a course |
 | V | Select tool |
 | C | Place-control tool |
 | Arrow keys | Move the selected control by 0.1 mm (without a selection: move the view) |

@@ -146,17 +146,26 @@ function drawSpecial(s, o, selection, parent, halos) {
 }
 
 // Draws `overlay` (the answer of api/overlay) into the attached layer. `course` names the course drawn, or null.
-export function draw(overlay, selection, course = null) {
+// `extras` (course mode): { pool: controls not in the course, drawn faint and clickable; pending: the leg
+// (its `after`) chosen for an insertion, drawn thick }.
+export function draw(overlay, selection, course = null, extras = {}) {
   layer.replaceChildren();
   if (!overlay) return;
   const halos = el("g", { class: "halos" }, layer);
+  const pool = el("g", { class: "pool" }, layer);
+  for (const c of extras.pool ?? []) {
+    drawControl(c, overlay, selection, pool, halos);
+    const r = overlay.sizes.circle_r;
+    const label = el("text", { x: c.at[0] + r * 1.4, y: c.at[1] - r * 1.1, "font-size": overlay.sizes.number_h * 0.9, class: "code" }, pool);
+    label.textContent = c.code;
+  }
   const body = el("g", { class: "course" }, layer);
   for (const s of overlay.specials) drawSpecial(s, overlay, selection, body, halos);
   for (const leg of overlay.legs) {
     const line = el("polyline", {
       points: pointList(leg.drawn),
       fill: "none",
-      class: leg.taped ? "leg taped" : "leg",
+      class: `${leg.taped ? "leg taped" : "leg"}${leg.after === extras.pending ? " pending" : ""}`,
       "stroke-width": overlay.sizes.line,
     }, body);
     if (leg.taped) line.setAttribute("stroke-dasharray", `${overlay.sizes.line * 4} ${overlay.sizes.line * 3}`);

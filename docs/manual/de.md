@@ -110,8 +110,8 @@ dort an.
 
 ## 4. Der Editor (Vorschau)
 
-Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen und jeden Schritt
-zurücknehmen. Bahnen, Knicke, Nummern, Sonderobjekte und Postenbeschreibungen änderst du weiter mit der
+Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und Kategorien anlegen und jeden
+Schritt zurücknehmen. Knicke, Nummern, Sonderobjekte und Postenbeschreibungen änderst du weiter mit der
 Kommandozeile oder dem KI-Assistenten; der Editor zeigt sie an. Die Menüpunkte zum Exportieren, Importieren und
 Abgleichen sind noch ausgegraut.
 
@@ -189,6 +189,28 @@ nennt den Grund.
   diesen Bahnen. Eine versehentliche Rücktaste löscht deshalb einen gewählten, unbenutzten Posten ohne Rückfrage;
   Rückgängig bringt ihn zurück.
 
+### Bahnen, Kategorien und Veranstaltung
+
+- **Neue Bahn.** Wähle unter „Bahnen“ im Baum „Neue Bahn...“ und tippe einen Namen. Die Bahn bekommt Start und Ziel der
+  Veranstaltung. Hat die Veranstaltung nicht genau einen Start und ein Ziel, sagt der Editor das und legt nichts an.
+- **Bahnmodus.** Wähle eine Bahn und dann „Bahnmodus“. Die Posten, die die Bahn nicht besucht, erscheinen grau. Ein Klick
+  auf einen Posten hängt ihn vor dem Ziel an. Um einen Posten mitten in die Bahn einzufügen, klickst du zuerst die
+  Strecke, an die er gehört, und dann den Posten. Die gewählte Strecke wird dick und blau, und die Statusleiste nennt
+  sie. Esc verwirft die gewählte Strecke; ein zweites Esc verlässt den Bahnmodus.
+- **Posten der Bahn.** Die Eigenschaften einer Bahn listen ihre Posten. Mit „Nach oben“, „Nach unten“ und „Entfernen“
+  änderst du die Reihenfolge. Liegt der Fokus auf einer Zeile, verschieben Alt+Pfeil hoch und Alt+Pfeil runter den
+  Posten. Jede Änderung ist ein Schritt für Rückgängig und speichert die ganze Liste auf einmal. Läuft durch eine
+  Änderung eine Strecke zu einem anderen Posten, verliert sie ihre Knicke und ihr Absperrband. Die Statusleiste nennt
+  diese Strecken.
+- **Bahndaten.** Steigung und geplanter Druckmaßstab sind Felder in den Eigenschaften; ein leeres Feld entfernt den
+  Wert. Mit den Kontrollkästchen ordnest du die Bahn Kategorien zu.
+- **Kategorien.** „Neue Kategorie...“ legt eine an. Ihre Eigenschaften enthalten die Regelkategorie und die
+  erwarteten Starter; ein leeres Feld entfernt den Wert. „Kategorie löschen“ entfernt sie. Solange eine Bahn sie noch
+  nutzt, lehnt der Editor das ab und sagt es über der Karte.
+- **Veranstaltung.** „Einstellungen“ unter „Veranstaltung“ im Baum zeigen die Disziplin, die du hier nicht ändern
+  kannst, das Regelprofil mit seinen Overlays (durch Kommas getrennt) und das Startfenster in Minuten. Der Server
+  prüft die Namen der Profile.
+
 ### Rückgängig und Wiederholen
 
 Die Schaltflächen „Rückgängig“ und „Wiederholen“ und die Tasten Strg/Cmd+Z und Strg/Cmd+Umschalt+Z (oder Strg+Y) gehen
@@ -218,7 +240,8 @@ tippst, gilt nie als Kürzel.
 | Strg/Cmd+Z | Rückgängig |
 | Strg/Cmd+Umschalt+Z, Strg+Y | Wiederholen |
 | Entf, Rücktaste | Gewählten Posten löschen |
-| Esc | Ziehen abbrechen oder zum Auswahlwerkzeug zurückgehen |
+| Esc | Ziehen oder gewählte Strecke abbrechen oder zum Auswahlwerkzeug zurückgehen |
+| Alt+Pfeil hoch, Alt+Pfeil runter | Fokussierten Posten einer Bahn verschieben |
 | V | Auswahlwerkzeug |
 | C | Werkzeug „Posten setzen“ |
 | Pfeiltasten | Gewählten Posten um 0,1 mm verschieben (ohne Auswahl: Ansicht verschieben) |

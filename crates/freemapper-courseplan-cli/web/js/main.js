@@ -7,6 +7,7 @@ import * as props from "./props.js";
 import * as status from "./status.js";
 import * as tools from "./tools.js";
 import * as keys from "./keys.js";
+import * as course from "./course.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -54,8 +55,23 @@ function treeGroups() {
   const event = state.data.event;
   const crossing = t("editor-kind-crossing-point");
   return [
-    { id: "courses", label: t("editor-tree-courses"), items: event.courses.map((c) => ({ key: `course:${c.name}`, label: c.name })) },
-    { id: "classes", label: t("editor-tree-classes"), items: event.classes.map((c) => ({ key: `class:${c.name}`, label: c.name })) },
+    { id: "event", label: t("editor-tree-event"), items: [{ key: "event:settings", label: t("editor-tree-event-settings") }] },
+    {
+      id: "courses",
+      label: t("editor-tree-courses"),
+      items: [
+        ...event.courses.map((c) => ({ key: `course:${c.name}`, label: c.name })),
+        { key: "action:new-course", label: t("editor-tree-new-course") },
+      ],
+    },
+    {
+      id: "classes",
+      label: t("editor-tree-classes"),
+      items: [
+        ...event.classes.map((c) => ({ key: `class:${c.name}`, label: c.name })),
+        { key: "action:new-class", label: t("editor-tree-new-class") },
+      ],
+    },
     {
       id: "controls",
       label: t("editor-tree-controls"),
@@ -83,10 +99,17 @@ function renderTree() {
 }
 
 function redraw() {
-  overlay.draw(state.overlay, state.selection, state.course);
+  overlay.draw(state.overlay, state.selection, state.course, extras());
   props.show(propsHost, state.data, state.selection, state.overlay, propActions);
   state.tree?.setCurrent(state.treeKey);
   loadNear();
+}
+
+// Course mode: the controls the course does not visit are drawn faint and can be clicked; a chosen leg is thick.
+let pendingLeg = null;
+
+function extras() {
+  return { pool: tools.getTool() === "course" ? state.pool : [], pending: pendingLeg };
 }
 
 function controlOf(code) {
@@ -224,6 +247,7 @@ async function placeControl(at, crossing) {
 
 const confirmDialog = document.getElementById("confirm-dialog");
 const helpDialog = document.getElementById("help-dialog");
+const nameDialog = document.getElementById("name-dialog");
 
 function coursesUsing(code) {
   return state.data.event.courses
@@ -275,7 +299,81 @@ document.getElementById("confirm-yes").addEventListener("click", () => {
   deleteControl(confirmDialog.dataset.code);
 });
 
-const propActions = { move: moveControl, remove: requestDelete, changeCode, renameCourse };
+// --- Courses and categories ------------------------------------------------------------------------------------
+
+async function newCourse() {
+  const specials = state.data.event.specials;
+  const starts = specials.filter((s) => s.kind === "start");
+  const finishes = specials.filter((s) => s.kind === "finish");
+  if (starts.length !== 1 || finishes.length !== 1) {
+    status.say("editor-status-need-start-finish");
+    return;
+  }
+  const name = await course.askName({
+    titleId: "editor-new-course-title",
+    labelId: "editor-new-course-label",
+    errorId: "editor-error-course-name",
+    others: state.data.event.courses.map((c) => c.name),
+  });
+  if (name === null) return;
+  const done = await runOp("add_course", { name, start: starts[0].id, finish: finishes[0].id });
+  if (!done) return;
+  status.say("editor-status-course-created");
+  await selectKey(`course:${name}`);
+}
+
+async function newClass() {
+  const name = await course.askName({
+    titleId: "editor-new-class-title",
+    labelId: "editor-new-class-label",
+    errorId: "editor-error-class-name",
+    others: state.data.event.classes.map((c) => c.name),
+  });
+  if (name === null) return;
+  const done = await runOp("add_class", { name });
+  if (!done) return;
+  status.say("editor-status-class-added");
+  await selectKey(`class:${name}`);
+}
+
+// One set_course_controls with the whole new list; `focusId` is the element to keep the focus on.
+async function setStops(name, codes, focusId) {
+  if (focusId) props.focusAfter(focusId);
+  const done = await runOp("set_course_controls", { name, codes });
+  if (!done) {
+    props.focusAfter(null);
+    return;
+  }
+  status.say(course.changedText(done.result.cleared_legs), true);
+}
+
+async function runAndSay(tool, body, messageId, after = null) {
+  const done = await runOp(tool, body);
+  if (!done) return;
+  status.say(messageId);
+  if (after) await after();
+}
+
+const setDetails = (name, body) => runAndSay("set_course_details", { name, ...body }, "editor-status-details-changed");
+const removeCourse = (name) => runAndSay("remove_course", { name }, "editor-status-course-deleted", () => selectKey("all"));
+const setClass = (name, body) => runAndSay("set_class", { name, ...body }, "editor-status-class-changed");
+const removeClass = (name) => runAndSay("remove_class", { name }, "editor-status-class-deleted", () => selectKey("all"));
+const setProfile = (base, overlays) => runAndSay("set_rule_profile", { base, overlays }, "editor-status-profile-changed");
+const setWindow = (minutes) => runAndSay("set_start_window", { minutes }, "editor-status-window-changed");
+
+const propActions = {
+  move: moveControl,
+  remove: requestDelete,
+  changeCode,
+  renameCourse,
+  setStops,
+  setDetails,
+  removeCourse,
+  setClass,
+  removeClass,
+  setProfile,
+  setWindow,
+};
 
 function updateHistoryButtons() {
   const u = state.data?.undo;
@@ -303,6 +401,12 @@ async function loadOverlay(course) {
   }
   state.course = course;
   state.overlay = answer.data;
+  state.pool = [];
+  if (course) {
+    // The controls the course does not visit, for course mode.
+    const all = await get("api/overlay");
+    if (all.ok) state.pool = all.data.controls.filter((c) => !answer.data.controls.some((x) => x.code === c.code));
+  }
   return true;
 }
 
@@ -316,6 +420,14 @@ function overlayHas(kind, id) {
 async function selectKey(key) {
   const [kind, ...rest] = key.split(":");
   const id = rest.join(":");
+  if (kind === "action") {
+    // A list entry that starts a dialog; the selection stays as it is.
+    pendingLeg = null;
+    state.tree?.setCurrent(state.treeKey);
+    await (id === "new-course" ? newCourse() : newClass());
+    return;
+  }
+  pendingLeg = null;
   state.treeKey = key;
   if (key === "all") {
     state.selection = null;
@@ -323,8 +435,8 @@ async function selectKey(key) {
   } else if (kind === "course") {
     state.selection = { kind: "course", id };
     await loadOverlay(id);
-  } else if (kind === "class") {
-    state.selection = { kind: "class", id };
+  } else if (kind === "class" || kind === "event") {
+    state.selection = { kind, id };
   } else {
     state.selection = { kind, id };
     if (!overlayHas(kind, id)) await loadOverlay(null);
@@ -333,12 +445,12 @@ async function selectKey(key) {
 }
 
 // The control whose circle a map point (map mm) hits: within the circle's radius plus the line width.
-function hitControl(at) {
+function hitControl(at, extra = []) {
   const o = state.overlay;
   if (!o) return null;
   const reach = o.sizes.circle_r + o.sizes.line;
   let best = null;
-  for (const c of o.controls) {
+  for (const c of [...o.controls, ...extra]) {
     const d = Math.hypot(c.at[0] - at[0], c.at[1] - at[1]);
     if (d <= reach && (!best || d < best.d)) best = { code: c.code, d };
   }
@@ -432,7 +544,7 @@ function setCircle(code, at) {
 }
 
 function showOverlay() {
-  overlay.draw(state.overlay, state.selection, state.course);
+  overlay.draw(state.overlay, state.selection, state.course, extras());
 }
 
 function cancelDrag() {
@@ -461,6 +573,70 @@ async function commitNudge() {
   const y = mmValue(done.orig[1] + done.dy);
   await moveControl(done.code, x, y);
 }
+
+// --- Course mode -------------------------------------------------------------------------------------------------
+// A click on a control appends it before the finish. A click on a leg chooses that leg; the next click on a
+// control inserts the control there. Esc drops the chosen leg.
+
+const LEG_HIT_PX = 8;
+
+function distanceToSegment(p, a, b) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  const u = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2));
+  return Math.hypot(p[0] - (a[0] + u * dx), p[1] - (a[1] + u * dy));
+}
+
+// The `after` of the leg nearest to a map point within a few pixels, or null.
+function hitLeg(at) {
+  const reach = LEG_HIT_PX / state.view.scale;
+  let best = null;
+  for (const leg of state.overlay?.legs ?? []) {
+    for (let i = 1; i < leg.drawn.length; i++) {
+      const d = distanceToSegment(at, leg.drawn[i - 1], leg.drawn[i]);
+      if (d <= reach && (!best || d < best.d)) best = { after: leg.after, d };
+    }
+  }
+  return best?.after ?? null;
+}
+
+function dropPendingLeg() {
+  if (pendingLeg === null) return false;
+  pendingLeg = null;
+  showOverlay();
+  status.say("editor-status-leg-cancelled");
+  return true;
+}
+
+async function courseClick(at) {
+  if (!state.course || !state.overlay) {
+    status.say("editor-status-pick-course");
+    return;
+  }
+  const code = hitControl(at, state.pool);
+  if (code) {
+    const stops = state.data.event.courses.find((c) => c.name === state.course).controls.map((c) => String(c.code));
+    const next = pendingLeg === null ? course.withAppended(stops, code) : course.withInsertedAt(stops, pendingLeg, code);
+    pendingLeg = null;
+    await setStops(state.course, next, null);
+    return;
+  }
+  const leg = hitLeg(at);
+  if (leg !== null) {
+    pendingLeg = leg;
+    showOverlay();
+    status.say(`${t("editor-leg-word")} ${course.legLabel(leg)}. ${t("editor-status-leg-picked")}`, true);
+  } else {
+    dropPendingLeg();
+  }
+}
+
+tools.onChange((name) => {
+  pendingLeg = null;
+  if (name === "course") status.say(state.course ? "editor-status-course-mode" : "editor-status-pick-course");
+  showOverlay();
+});
 
 function bindMapInput() {
   const view = state.view;
@@ -529,7 +705,8 @@ function bindMapInput() {
     }
     if (finished.moved) return;
     const tool = tools.getTool();
-    if (tool !== "select" && !hitControl(finished.at)) placeControl(finished.at, tool === "crossing");
+    if (tool === "course") courseClick(finished.at);
+    else if (tool !== "select" && !hitControl(finished.at)) placeControl(finished.at, tool === "crossing");
     else selectDrawn(finished.target, finished.at);
   });
   // A cancelled touch or a lost capture ends the press like a release, without selecting or moving anything.
@@ -565,7 +742,7 @@ function bindMapInput() {
         }
         cancelDrag();
         press = null;
-      } else {
+      } else if (!dropPendingLeg()) {
         tools.setTool("select");
       }
     },
@@ -580,7 +757,7 @@ function bindMapInput() {
       view.panBy(dx * (v.x1 - v.x0) * PAN_STEP, dy * (v.y1 - v.y0) * PAN_STEP);
     },
     help: () => helpDialog.showModal(),
-    dialogOpen: () => confirmDialog.open || helpDialog.open,
+    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open,
   });
 }
 

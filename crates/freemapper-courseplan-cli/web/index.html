@@ -17,7 +17,7 @@
         <button type="button" id="tool-control" data-text="editor-tool-control" aria-pressed="false"></button>
         <button type="button" id="tool-crossing" data-text="editor-tool-crossing" aria-pressed="false"></button>
         <button type="button" data-text="editor-tool-special" disabled></button>
-        <button type="button" data-text="editor-tool-course" disabled></button>
+        <button type="button" id="tool-course" data-text="editor-tool-course" aria-pressed="false"></button>
         <span class="spacer"></span>
         <button type="button" id="undo-btn" data-text="editor-tool-undo" disabled></button>
         <button type="button" id="redo-btn" data-text="editor-tool-redo" disabled></button>
@@ -63,6 +63,18 @@
       <button type="button" id="confirm-yes" data-text="editor-confirm-delete"></button>
       <button type="button" id="confirm-no" data-text="editor-cancel" autofocus></button>
     </div>
+  </dialog>
+  <dialog id="name-dialog" aria-labelledby="name-title">
+    <form id="name-form" method="dialog">
+      <h2 id="name-title"></h2>
+      <p><label for="name-input" id="name-label"></label></p>
+      <p><input id="name-input" type="text" autocomplete="off"></p>
+      <p class="field-error" id="name-error" role="alert" hidden></p>
+      <div class="dialog-buttons">
+        <button type="submit" id="name-ok" data-text="editor-create"></button>
+        <button type="button" id="name-cancel" data-text="editor-cancel"></button>
+      </div>
+    </form>
   </dialog>
   <footer class="status" id="status">
     <span id="status-message" role="status" aria-live="polite"></span>

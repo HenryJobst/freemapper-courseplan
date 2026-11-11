@@ -8,6 +8,7 @@ export const SHORTCUTS = [
   { keys: "Ctrl/Cmd+Shift+Z, Ctrl+Y", text: "editor-key-redo" },
   { keys: "Delete, Backspace", text: "editor-key-delete" },
   { keys: "Esc", text: "editor-key-cancel" },
+  { keys: "Alt+↑, Alt+↓", text: "editor-key-move-stop" },
   { keys: "V", text: "editor-key-select-tool" },
   { keys: "C", text: "editor-key-control-tool" },
   { keys: "← ↑ → ↓", text: "editor-key-nudge" },
