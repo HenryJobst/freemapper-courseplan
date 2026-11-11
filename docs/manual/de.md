@@ -112,8 +112,8 @@ dort an.
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Bereich für Befunde ist leer, und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch
-ausgegraut. Beides folgt in späteren Versionen.
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Bereich für Befunde ist leer,
+und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch ausgegraut. Beides folgt in späteren Versionen.
 
 ### Starten
 
@@ -245,10 +245,22 @@ noch nicht; `check` meldet ihn.
 ### Postenbeschreibungen
 
 Wähle einen Posten. Seine Eigenschaften führen die Spalten C bis H auf, jede zugeklappt und mit dem aktuellen Symbol.
-Klappe eine Spalte auf, dann siehst du ihre Symbole als Raster aus Zeichen mit Nummer und Text; die Kartenobjekte im
-Umkreis von 3 mm stehen unter Spalte D. Klicke ein Symbol an oder gehe mit den Pfeiltasten hin und drücke Enter. Tippst
-du eine Nummer wie `1.3`, springt die Auswahl dorthin. „Kein Symbol“ leert die Spalte. Jede Wahl ist ein Schritt für
-Rückgängig. Spalte E bietet auch die Symbole der Spalte D an (ADR 0051).
+Klappe eine Spalte auf, dann siehst du ihre Symbole als Raster aus Zeichen, jedes mit Nummer und Text in der Sprache
+des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
+
+- **Wählen.** Klicke ein Symbol an oder gehe mit den Pfeiltasten hin (Pos1 und Ende springen zum ersten und letzten)
+  und drücke Enter. Tippst du eine Nummer wie `1.3`, springt die Auswahl dorthin. Das Symbol in Gebrauch ist
+  markiert, und der Fokus bleibt auf der Wahl.
+- **Was eine Spalte anbietet.** Spalte C hat die Symbole 0.1 bis 0.5 dafür, welches von mehreren gleichen Objekten
+  gemeint ist, mit den Himmelsrichtungen 0.1N bis 0.2NW; die Anweisungszeilen bietet sie nicht an. Spalte D hat 1.1 bis 6.2, Spalte E die Symbole der Spalte D und 8.1 bis 8.11, Spalte F 9.1 bis 9.4, 10.1,
+  10.2 und 11.1, Spalte G die Symbole 12.x und Spalte H 13.1 bis 13.3.
+- **Richtungen.** Ein Symbol mit Richtung gibt es nur mit einer: wähle `12.1N`, `12.1NE` und so weiter, ein
+  einfaches `12.1` gibt es nicht.
+- **Kein Symbol.** Der Eintrag „Kein Symbol“ leert die Spalte.
+- **Rückgängig.** Jede Wahl und jede geleerte Spalte ist ein Schritt für Rückgängig.
+
+Die Liste kommt aus freemapper-core. Jedes Symbol, das du wählen kannst, lässt sich also auch in eine `.ppen`-Datei
+schreiben (ADR 0051).
 
 ### Sonderobjekte
 

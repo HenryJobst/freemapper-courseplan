@@ -480,7 +480,10 @@ Paths are relative to the project file. The editor keeps comments it did not cre
   - **Built (stage 3 of the M4 plan, ADR 0048, 0049):** new course, course mode, stop list, categories and event
     settings, rename of controls and courses, bends and taped legs, number drag with `GET api/number-at` and
     "Place numbers", and special objects (draw, assign to courses, delete; no move).
-  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 4 control descriptions (columns C to H); stage 5 findings panel,
+  - **Built (stage 4 of the M4 plan, ADR 0051):** pickers for the description columns C to H in the properties,
+    with icons and texts from freemapper-core's symbol database, keyboard and type-ahead, direction variants, a
+    "No symbol" entry and one undo step per pick (`GET api/symbols?column=`).
+  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 5 findings panel,
     export and import, sync panel with conflicts; stage 6 the real map from `freemapper-render`; stage 7 manual
     and release 0.10.0. The release waits for stage 6.
 
@@ -527,7 +530,7 @@ Paths are relative to the project file. The editor keeps comments it did not cre
    Purple Pen, freemapper-print and OE.
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
    Under way: stage 1 (read-only preview with a placeholder map), stage 2 (editing controls, save guard,
-   undo) and stage 3 (courses, bends, numbers, special objects) are built; see §5.8.
+   undo), stage 3 (courses, bends, numbers, special objects) and stage 4 (control descriptions) are built; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 
