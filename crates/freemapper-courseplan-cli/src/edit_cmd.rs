@@ -413,12 +413,22 @@ pub fn load(lang: &Lang, path: &Path) -> Result<ProjectFile, Failure> {
     ProjectFile::load(path).map_err(|e| Failure::Error(e.localize(lang)))
 }
 
-/// The test hook of debug builds: appends a comment to the project file between the load and the
-/// save, as another program writing at that moment would. It does not exist in release builds.
+/// Projects the in-process test hook touches (debug builds, tests only).
 #[cfg(debug_assertions)]
-fn test_touch_project(path: &Path) {
+pub(crate) static TEST_TOUCH: std::sync::Mutex<Vec<std::path::PathBuf>> =
+    std::sync::Mutex::new(Vec::new());
+
+/// The test hook of debug builds: appends a comment to the project file between the load and the
+/// save, as another program writing at that moment would. Set by the environment variable
+/// `FREEMAPPER_TEST_TOUCH_PROJECT` (CLI tests) or by a path in [`TEST_TOUCH`] (editor tests). It does
+/// not exist in release builds.
+#[cfg(debug_assertions)]
+pub(crate) fn test_touch_project(path: &Path) {
     use std::io::Write;
-    if std::env::var_os("FREEMAPPER_TEST_TOUCH_PROJECT").is_some()
+    let listed = TEST_TOUCH
+        .lock()
+        .is_ok_and(|paths| paths.iter().any(|p| p == path));
+    if (listed || std::env::var_os("FREEMAPPER_TEST_TOUCH_PROJECT").is_some())
         && let Ok(mut file) = std::fs::OpenOptions::new().append(true).open(path)
     {
         let _ = file.write_all(b"\n# touched\n");
@@ -426,7 +436,7 @@ fn test_touch_project(path: &Path) {
 }
 
 #[cfg(not(debug_assertions))]
-fn test_touch_project(_path: &Path) {}
+pub(crate) fn test_touch_project(_path: &Path) {}
 
 pub fn save(lang: &Lang, project: &mut ProjectFile) -> Outcome {
     test_touch_project(&project.path);

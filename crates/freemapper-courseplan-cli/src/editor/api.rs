@@ -321,6 +321,30 @@ fn conflict(st: &EditorState, error: String) -> Reply {
     )
 }
 
+/// Projects that get a write between the first read and the tool (tests only).
+#[cfg(test)]
+pub(super) static RACE: std::sync::Mutex<Vec<PathBuf>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(test)]
+fn race_hook(path: &Path) {
+    use std::io::Write as _;
+    if RACE
+        .lock()
+        .is_ok_and(|paths| paths.iter().any(|p| p == path))
+        && let Ok(mut file) = std::fs::OpenOptions::new().append(true).open(path)
+    {
+        let _ = file.write_all(b"\n# raced\n");
+    }
+}
+
+/// Takes the injected field `project` out of the list of expected fields in a serde error text.
+pub(crate) fn without_project_field(message: &str) -> String {
+    message
+        .replace("`project`, ", "")
+        .replace("`project` or ", "")
+        .replace(", `project`", "")
+}
+
 /// One editor operation (`POST api/op/{tool}`), under the state lock: read the file, compare the revision
 /// the page saw, run the MCP tool, read the file again and record the step (ADR 0043).
 pub(crate) fn run_op(
@@ -349,6 +373,14 @@ pub(crate) fn run_op(
     if seen.0 != revision {
         return conflict(st, msg(&lang, "editor-op-stale"));
     }
+    // The tool reads the file again. If another program wrote in between, `before` is not what the tool
+    // will start from, and a step recorded from it would let undo drop that write.
+    #[cfg(test)]
+    race_hook(&st.project);
+    if std::fs::read(&st.project).ok().as_deref() != before.as_deref().map(str::as_bytes) {
+        reload(st);
+        return conflict(st, msg(&lang, "editor-op-stale"));
+    }
     match st.server.call_json(&st.project, tool, args) {
         Ok(result) => {
             let after = reload(st);
@@ -366,8 +398,12 @@ pub(crate) fn run_op(
         Err(OpError::UnknownTool) => fail(StatusCode::NOT_FOUND, "editor-op-unknown"),
         Err(OpError::BadArgs(message)) => (
             StatusCode::BAD_REQUEST,
-            json!({ "error": tidy(&message, &[]) }),
+            json!({ "error": tidy(&without_project_field(&message), &[]) }),
         ),
+        Err(OpError::Io) => {
+            reload(st);
+            fail(StatusCode::INTERNAL_SERVER_ERROR, "editor-io-failed")
+        }
         Err(OpError::Refused(message)) => {
             reload(st);
             if st.loaded.revision == seen {
@@ -383,9 +419,20 @@ pub(crate) fn run_op(
     }
 }
 
-/// `POST api/undo` and `POST api/redo`.
-pub(crate) fn run_history(st: &mut EditorState, redo: bool) -> Reply {
+/// `POST api/undo` and `POST api/redo`. Like an operation, they name the revision the page saw: a second
+/// tab that shows an older revision must not revert what the first tab did.
+pub(crate) fn run_history(st: &mut EditorState, redo: bool, revision: Option<&str>) -> Reply {
     let lang = st.lang.clone();
+    let Some(revision) = revision else {
+        return (
+            StatusCode::BAD_REQUEST,
+            json!({ "error": msg(&lang, "editor-op-no-revision") }),
+        );
+    };
+    reload(st);
+    if st.loaded.revision.0 != revision {
+        return conflict(st, msg(&lang, "editor-op-stale"));
+    }
     let result = if redo {
         st.history.redo(&st.project)
     } else {

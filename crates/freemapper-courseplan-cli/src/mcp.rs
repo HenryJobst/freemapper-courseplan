@@ -433,6 +433,12 @@ fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
 /// source line, a value, a field name), so only the position stays, with a fixed reason from
 /// the catalog. Read errors keep the OS text.
 fn project_error(lang: &Lang, error: ProjectError) -> String {
+    if matches!(
+        error,
+        ProjectError::Read { .. } | ProjectError::Write { .. }
+    ) {
+        IO_FAILED.with(|failed| failed.set(true));
+    }
     let (path, message) = match error {
         ProjectError::Parse { path, message } => (path, message),
         ProjectError::ChangedMeanwhile { path } => {
@@ -575,6 +581,7 @@ impl CoursePlanServer {
     ) -> Result<T, String> {
         let mut file = self.load(project)?;
         let out = change(&mut file)?;
+        crate::edit_cmd::test_touch_project(&file.path);
         file.save().map_err(|e| project_error(&self.lang, e))?;
         Ok(out)
     }
@@ -1719,11 +1726,18 @@ pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
     "check",
 ];
 
+thread_local! {
+    /// Set when a project file could not be read or written; `call_json` turns it into [`OpError::Io`].
+    static IO_FAILED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 /// Why `call_json` did not run a tool.
 #[derive(Debug, PartialEq)]
 pub(crate) enum OpError {
     UnknownTool,
     BadArgs(String),
+    /// The project file could not be read or written: a problem of the machine, not of the request.
+    Io,
     /// The tool refused; the text is the redacted message the MCP tool returns.
     Refused(String),
 }
@@ -1753,7 +1767,14 @@ impl CoursePlanServer {
             ($ty:ty, $op:ident) => {{
                 let req: $ty = serde_json::from_value(Value::Object(map))
                     .map_err(|e| OpError::BadArgs(e.to_string()))?;
-                self.$op(req).map_err(OpError::Refused)
+                IO_FAILED.with(|failed| failed.set(false));
+                self.$op(req).map_err(|message| {
+                    if IO_FAILED.with(|failed| failed.replace(false)) {
+                        OpError::Io
+                    } else {
+                        OpError::Refused(message)
+                    }
+                })
             }};
         }
         match tool {

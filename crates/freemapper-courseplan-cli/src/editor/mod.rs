@@ -225,10 +225,7 @@ async fn api_op(
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
-    let revision = headers
-        .get("x-courseplan-revision")
-        .and_then(|v| v.to_str().ok())
-        .map(str::to_owned);
+    let revision = page_revision(&headers);
     let args = if body.is_empty() {
         Some(serde_json::json!({}))
     } else {
@@ -240,12 +237,28 @@ async fn api_op(
     .await
 }
 
-async fn api_undo(State(state): State<Shared>) -> Response {
-    serialized(state, |st| api::run_history(st, false)).await
+/// The revision the page names in `X-Courseplan-Revision`.
+fn page_revision(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get("x-courseplan-revision")
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_owned)
 }
 
-async fn api_redo(State(state): State<Shared>) -> Response {
-    serialized(state, |st| api::run_history(st, true)).await
+async fn api_undo(State(state): State<Shared>, headers: HeaderMap) -> Response {
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        api::run_history(st, false, revision.as_deref())
+    })
+    .await
+}
+
+async fn api_redo(State(state): State<Shared>, headers: HeaderMap) -> Response {
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        api::run_history(st, true, revision.as_deref())
+    })
+    .await
 }
 
 async fn api_revision(State(state): State<Shared>) -> Response {

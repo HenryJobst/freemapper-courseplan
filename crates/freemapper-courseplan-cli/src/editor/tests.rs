@@ -1124,7 +1124,7 @@ mod state {
 }
 
 mod history {
-    use crate::editor::history::{HistoryError, MAX_STEPS, UndoHistory};
+    use crate::editor::history::{HistoryError, MAX_BYTES, MAX_STEPS, UndoHistory};
 
     #[test]
     fn history_keeps_100_steps() {
@@ -1145,6 +1145,51 @@ mod history {
         assert_eq!(undone, 100);
         assert_eq!(history.undo(&path), Err(HistoryError::Nothing));
         assert_eq!(history.redo(&path).as_deref(), Ok("s20"));
+    }
+
+    #[test]
+    fn history_stays_within_its_byte_budget_and_keeps_the_newest_steps() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("f.toml");
+        let budget = 10 * 1024;
+        let mut history = UndoHistory::with_budget(budget);
+        let state = |i: usize| format!("{i:04}{}", "x".repeat(1024 - 4));
+        for i in 0..50 {
+            history.record(format!("s{i}"), state(i), state(i + 1));
+            assert!(history.bytes() <= budget, "{} bytes", history.bytes());
+        }
+        // One chain: about one state per step, not two.
+        assert!(history.steps() >= 9, "{} steps", history.steps());
+        std::fs::write(&path, state(50)).unwrap();
+        let steps_before = history.steps();
+        let mut undone = 0;
+        while history.undo(&path).is_ok() {
+            undone += 1;
+            assert_eq!(std::fs::read_to_string(&path).unwrap(), state(50 - undone));
+        }
+        assert_eq!(undone, steps_before);
+        assert!(undone >= 9);
+        // Redo walks back to the newest text, byte for byte.
+        while history.redo(&path).is_ok() {}
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), state(50));
+    }
+
+    #[test]
+    fn a_step_larger_than_the_budget_is_still_kept() {
+        let mut history = UndoHistory::with_budget(10);
+        history.record("big".to_owned(), "a".repeat(100), "b".repeat(100));
+        assert_eq!(history.steps(), 1);
+    }
+
+    #[test]
+    fn a_hundred_steps_of_one_mib_stay_under_the_default_budget() {
+        let mut history = UndoHistory::default();
+        let big = |i: usize| format!("{i:08}{}", "x".repeat(1024 * 1024 - 8));
+        for i in 0..100 {
+            history.record(format!("s{i}"), big(i), big(i + 1));
+        }
+        assert!(history.bytes() <= MAX_BYTES, "{} bytes", history.bytes());
+        assert!(history.steps() >= 1);
     }
 }
 
@@ -1203,6 +1248,21 @@ mod ops {
             &format!("/tok/api/op/{tool}"),
             Some(revision),
             body,
+        )
+        .await
+    }
+
+    async fn history(
+        app: &axum::Router,
+        which: &str,
+        revision: Option<&str>,
+    ) -> (StatusCode, Value) {
+        send(
+            app,
+            "POST",
+            &format!("/tok/api/{which}"),
+            revision,
+            json!({}),
         )
         .await
     }
@@ -1363,7 +1423,7 @@ mod ops {
         .await;
         let after = std::fs::read(&path).unwrap();
         assert_ne!(after, original);
-        let (status, undone) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        let (status, undone) = history(&app, "undo", added["revision"].as_str()).await;
         assert_eq!(status, StatusCode::OK, "{undone}");
         assert_eq!(std::fs::read(&path).unwrap(), original);
         assert!(
@@ -1374,11 +1434,11 @@ mod ops {
         assert_eq!(undone["revision"], first["revision"]);
         let now = state(&app).await;
         assert!(now["undo"]["undo"].is_null() && now["undo"]["redo"].is_string());
-        let (status, redone) = send(&app, "POST", "/tok/api/redo", None, json!({})).await;
+        let (status, redone) = history(&app, "redo", undone["revision"].as_str()).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(std::fs::read(&path).unwrap(), after);
         assert_eq!(redone["revision"], added["revision"]);
-        let (status, _) = send(&app, "POST", "/tok/api/redo", None, json!({})).await;
+        let (status, _) = history(&app, "redo", redone["revision"].as_str()).await;
         assert_eq!(status, StatusCode::CONFLICT);
         assert!(!dir_has_tmp(&path));
     }
@@ -1402,12 +1462,13 @@ mod ops {
         let mut other = std::fs::read(&path).unwrap();
         other.extend_from_slice(b"\n# someone else\n");
         std::fs::write(&path, &other).unwrap();
-        let (status, body) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        let now = state(&app).await;
+        let (status, body) = history(&app, "undo", now["revision"].as_str()).await;
         assert_eq!(status, StatusCode::CONFLICT, "{body}");
         assert_eq!(std::fs::read(&path).unwrap(), other);
         let now = state(&app).await;
         assert!(now["undo"]["undo"].is_null() && now["undo"]["redo"].is_null());
-        let (status, _) = send(&app, "POST", "/tok/api/undo", None, json!({})).await;
+        let (status, _) = history(&app, "undo", now["revision"].as_str()).await;
         assert_eq!(status, StatusCode::CONFLICT);
         assert_eq!(std::fs::read(&path).unwrap(), other);
     }
@@ -1486,6 +1547,206 @@ mod ops {
         }
         assert_eq!(controls_in(&path), 1 + ok);
         assert!(ok >= 5);
+    }
+
+    #[tokio::test]
+    async fn undo_and_redo_need_the_current_revision() {
+        let (_dir, path, app, first) = setup().await;
+        let first_rev = first["revision"].as_str().unwrap();
+        let (_, added) = op(
+            &app,
+            "add_control",
+            first_rev,
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        let after = std::fs::read(&path).unwrap();
+        // No header: the caller's fault.
+        let (status, _) = history(&app, "undo", None).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        // A second tab that still shows the old revision does not revert the first tab's edit.
+        let (status, body) = history(&app, "undo", Some(first_rev)).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(body["revision"], added["revision"]);
+        assert_eq!(std::fs::read(&path).unwrap(), after);
+        assert!(state(&app).await["undo"]["undo"].is_string());
+        // With the current revision it works, and so does redo, but not with a stale one.
+        let (status, undone) = history(&app, "undo", added["revision"].as_str()).await;
+        assert_eq!(status, StatusCode::OK);
+        let (status, _) = history(&app, "redo", added["revision"].as_str()).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_ne!(std::fs::read(&path).unwrap(), after);
+        let (status, _) = history(&app, "redo", undone["revision"].as_str()).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(std::fs::read(&path).unwrap(), after);
+    }
+
+    #[cfg(debug_assertions)]
+    #[tokio::test]
+    async fn a_write_between_load_and_save_is_409_and_nothing_is_recorded() {
+        let (_dir, path, app, first) = setup().await;
+        let before = std::fs::read_to_string(&path).unwrap();
+        crate::edit_cmd::TEST_TOUCH
+            .lock()
+            .unwrap()
+            .push(path.clone());
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        crate::edit_cmd::TEST_TOUCH
+            .lock()
+            .unwrap()
+            .retain(|p| p != &path);
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert!(body["error"].as_str().unwrap().contains("outside"));
+        // Only the other program's write is in the file, and the page is told its revision.
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            format!("{before}\n# touched\n")
+        );
+        assert_eq!(body["revision"], state(&app).await["revision"]);
+        assert!(state(&app).await["undo"]["undo"].is_null());
+    }
+
+    #[tokio::test]
+    async fn a_write_between_the_first_read_and_the_tool_is_409_and_not_recorded() {
+        let (_dir, path, app, first) = setup().await;
+        let before = std::fs::read_to_string(&path).unwrap();
+        super::super::api::RACE.lock().unwrap().push(path.clone());
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        super::super::api::RACE
+            .lock()
+            .unwrap()
+            .retain(|p| p != &path);
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert_eq!(
+            std::fs::read_to_string(&path).unwrap(),
+            format!("{before}\n# raced\n")
+        );
+        assert_eq!(controls_in(&path), 0);
+        assert!(state(&app).await["undo"]["undo"].is_null());
+    }
+
+    #[tokio::test]
+    async fn a_failing_write_is_500_with_a_generic_text() {
+        let (_dir, path, app, first) = setup().await;
+        let bytes = std::fs::read(&path).unwrap();
+        let mut tmp = path.as_os_str().to_owned();
+        tmp.push(".tmp");
+        std::fs::create_dir(&tmp).unwrap();
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR, "{body}");
+        let error = body["error"].as_str().unwrap();
+        assert!(
+            !error.contains("tmp") && !error.contains("Is a directory"),
+            "{error}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        assert!(state(&app).await["undo"]["undo"].is_null());
+    }
+
+    #[tokio::test]
+    async fn over_long_codes_and_names_are_refused_with_a_text() {
+        let (_dir, path, app, first) = setup().await;
+        let bytes = std::fs::read(&path).unwrap();
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first), "code": "7".repeat(65)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(
+            body["error"].as_str().unwrap().contains("at most 64"),
+            "{body}"
+        );
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        let (status, body) = op(
+            &app,
+            "add_class",
+            first["revision"].as_str().unwrap(),
+            json!({"name": "c".repeat(201)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(
+            body["error"].as_str().unwrap().contains("at most 200"),
+            "{body}"
+        );
+        let (status, _) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"at": centre(&first), "code": "7".repeat(64)}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn unknown_field_errors_do_not_name_the_project_field() {
+        let (_dir, _path, app, first) = setup().await;
+        let (status, body) = op(
+            &app,
+            "add_control",
+            first["revision"].as_str().unwrap(),
+            json!({"nope": 1}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let error = body["error"].as_str().unwrap();
+        assert!(error.contains("nope") && error.contains("`at`"), "{error}");
+        assert!(!error.contains("project"), "{error}");
+        let (_, body) = op(
+            &app,
+            "remove_control",
+            first["revision"].as_str().unwrap(),
+            json!({"nope": 1}),
+        )
+        .await;
+        assert!(
+            !body["error"].as_str().unwrap().contains("project"),
+            "{body}"
+        );
+    }
+
+    #[test]
+    fn project_is_stripped_from_expected_field_lists() {
+        use crate::editor::api::without_project_field;
+        for (raw, want) in [
+            (
+                "unknown field `x`, expected one of `project`, `at`, `code`",
+                "unknown field `x`, expected one of `at`, `code`",
+            ),
+            (
+                "unknown field `x`, expected `project` or `code`",
+                "unknown field `x`, expected `code`",
+            ),
+            (
+                "unknown field `x`, expected one of `at`, `code`, `project`",
+                "unknown field `x`, expected one of `at`, `code`",
+            ),
+            ("missing field `at`", "missing field `at`"),
+        ] {
+            assert_eq!(without_project_field(raw), want);
+        }
     }
 
     #[test]
