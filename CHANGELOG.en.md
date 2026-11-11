@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-11
+
 ### Changed
 
 - freemapper-core 0.16.1. The shared placement cases use the renderer's number box (0.8083747 x height x digits) and pass without exceptions.

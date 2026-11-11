@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.11.1] - 2026-11-11
+
 ### Geändert
 
 - freemapper-core 0.16.1. Die gemeinsamen Platzierungsfälle nutzen das Nummernfeld des Renderers (0,8083747 × Höhe × Ziffern) und laufen ohne Ausnahmen durch.
