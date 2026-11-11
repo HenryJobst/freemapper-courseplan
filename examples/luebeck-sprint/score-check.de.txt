@@ -1,0 +1,50 @@
+$ freemapper-courseplan check luebeck-score.courseplan.toml --lang de
+Veranstaltung:
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+Bahn Score 22:
+  Warnung Bahn Score 22: Die Score-Bahn Score 22 hat ein Zeitlimit von 22 Minuten. Üblich sind 30 bis 90 Minuten (wkb2026.score.limit_penalty, BOF B12.5)
+0 Fehler, 4 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note 'Die beiden Posten liegen etwa 430 m auseinander, kein Läufer sieht beide zugleich.' --lang de
+Befund wkb2026.score.code_ambiguity bei Posten 61, 91 akzeptiert
+
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note 'Die beiden Posten liegen etwa 400 m auseinander, kein Läufer sieht beide zugleich.' --lang de
+Befund wkb2026.score.code_ambiguity bei Posten 64, 94 akzeptiert
+
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note 'Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beide zugleich.' --lang de
+Befund wkb2026.score.code_ambiguity bei Posten 62, 92 akzeptiert
+
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'Die Karte bietet 28 brauchbare Stellen. Ab 30 Minuten trifft der Entwurf die Bänder nicht mehr, deshalb nimmt das Beispiel 22 Minuten.' --lang de
+Befund wkb2026.score.limit_penalty bei Bahn Score 22 akzeptiert
+
+$ freemapper-courseplan check luebeck-score.courseplan.toml --lang de
+0 Fehler, 0 Warnungen, 0 Hinweise; 5 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check luebeck-score.courseplan.toml --all --lang de
+akzeptiert:
+  Hinweis Bahn A, Strecke 36–37: Die Strecken am Posten 37 bilden einen Winkel von 85°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    Begründung: Training: Der Winkel von 85° am letzten Posten ist gewollt.
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Die beiden Posten liegen etwa 430 m auseinander, kein Läufer sieht beide zugleich.
+    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Die beiden Posten liegen etwa 400 m auseinander, kein Läufer sieht beide zugleich.
+    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 22 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beide zugleich.
+    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+  Warnung Bahn Score 22: Die Score-Bahn Score 22 hat ein Zeitlimit von 22 Minuten. Üblich sind 30 bis 90 Minuten (wkb2026.score.limit_penalty, BOF B12.5)
+    Begründung: Die Karte bietet 28 brauchbare Stellen. Ab 30 Minuten trifft der Entwurf die Bänder nicht mehr, deshalb nimmt das Beispiel 22 Minuten.
+    Zur Prüfregel: BOF B12.5 nennt meist eine Stunde, mindestens 45 Minuten. Der Bereich von 30 bis 90 Minuten ist weiter, weil das Limit frei wählbar ist. Die Strafe je Minute soll nicht unter dem höchsten Postenwert liegen.
+übersprungen:
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 5 akzeptiert, 5 übersprungen
+

@@ -167,6 +167,38 @@ fn course_of(project: &Path, name: &str) -> Value {
 }
 
 #[test]
+fn info_names_controls_points_and_limit_of_a_score_course() {
+    let (_dir, project) = with_score_course();
+    let o = run("en", &["info", project.to_str().unwrap()]);
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    let text = out(&o);
+    assert!(text.contains("score course Sc: 3 controls, "), "{text}");
+    assert!(text.contains("points, time limit 45 minutes"), "{text}");
+    assert!(!text.contains("not supported yet"), "{text}");
+}
+
+/// The Luebeck score example (examples/luebeck-sprint/README.en.md) stays inside the bands and free of findings.
+#[test]
+fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
+    let project = repo_root().join("examples/luebeck-sprint/luebeck-score.courseplan.toml");
+    let p = project.to_str().unwrap();
+    let o = run("en", &["score", "length", p, "Score 22"]);
+    assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
+    assert!(
+        out(&o).contains("both runners are inside the bands"),
+        "{}",
+        out(&o)
+    );
+    let o = run("en", &["check", p]);
+    assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
+    assert!(
+        out(&o).contains("0 errors, 0 warnings, 0 hints; 5 accepted"),
+        "{}",
+        out(&o)
+    );
+}
+
+#[test]
 fn score_course_round_trips_through_cli() {
     let (_dir, project) = luebeck();
     let p = project.to_str().unwrap();

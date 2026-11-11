@@ -660,6 +660,24 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     let scale = doc.georef.scale_denominator;
     for course in &event.courses {
         let name = || FluentValue::from(course.name.clone());
+        if let CourseKind::Score {
+            time_limit_min,
+            controls,
+            ..
+        } = &course.kind
+        {
+            let points: u32 = controls.iter().map(|c| c.value).sum();
+            line(
+                "cli-info-course-score",
+                &[
+                    ("name", name()),
+                    ("controls", n(controls.len())),
+                    ("points", FluentValue::from(points)),
+                    ("limit", FluentValue::from(*time_limit_min)),
+                ],
+            );
+            continue;
+        }
         if !matches!(course.kind, CourseKind::Individual { .. }) {
             let kind = match course.kind {
                 CourseKind::Individual { .. } => "word-kind-individual",

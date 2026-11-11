@@ -389,6 +389,10 @@ cli-arg-class-set-no-starters = Die erwartete Starterzahl entfernen
 ## Bahnbefehle
 
 cli-info-course = Bahn { $name }: { $controls } Posten, { $km } km, Anstieg { $climb } m
+cli-info-course-score = Score-Bahn { $name }: { $controls ->
+    [one] 1 Posten
+   *[other] { $controls } Posten
+}, { $points } Punkte, Zeitlimit { $limit } Minuten
 cli-info-course-unmeasured = Bahn { $name }: { $kind }, Länge noch nicht unterstützt
 word-decimal-point = ,
 word-taped = abgeflaggt

@@ -392,6 +392,10 @@ cli-info-course = course { $name }: { $controls ->
     [one] 1 control
    *[other] { $controls } controls
 }, { $km } km, climb { $climb } m
+cli-info-course-score = score course { $name }: { $controls ->
+    [one] 1 control
+   *[other] { $controls } controls
+}, { $points } points, time limit { $limit } minutes
 cli-info-course-unmeasured = course { $name }: { $kind }, length not supported yet
 word-decimal-point = .
 word-taped = taped
