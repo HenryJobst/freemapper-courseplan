@@ -51,6 +51,7 @@ error-model-unknown-key-in = Unbekannter Schlüssel { $key } in { $table }
 
 error-project-read = { $path } lässt sich nicht lesen: { $source }
 error-project-write = { $path } lässt sich nicht schreiben: { $source }
+error-project-changed = { $path } hat sich geändert, seit es gelesen wurde. Es wurde nichts geschrieben
 error-project-already-exists = { $path } gibt es schon. Wähle eine andere Projektdatei oder lösche die vorhandene
 error-project-parse = { $path } lässt sich nicht einlesen: { $message }
 error-project-serialise = { $path } lässt sich nicht erzeugen: { $message }
@@ -704,6 +705,7 @@ mcp-error-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .
 mcp-error-not-xml = { $path } ist keine XML-Datei. Die Exportdatei endet auf .xml
 mcp-error-project-parse = { $path } ist keine gültige Projektdatei. Das erste Problem liegt in Zeile { $line }, Spalte { $column }
 mcp-error-project-parse-nopos = { $path } ist keine gültige Projektdatei
+mcp-error-project-changed = { $path } hat sich auf der Platte geändert, nachdem es gelesen wurde. Es wurde nichts geschrieben. Lies das Projekt neu und wiederhole die Änderung
 mcp-error-map-invalid = { $path } ist keine gültige OOM-Karte
 mcp-error-no-home = Dieses System hat keinen Home-Ordner. Gib einen absoluten Pfad an
 mcp-error-kind-needs-at = { $kind } ist ein einzelner Punkt. Gib at an und lass points weg

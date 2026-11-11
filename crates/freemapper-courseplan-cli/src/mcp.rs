@@ -435,6 +435,10 @@ fn resolve_map(lang: &Lang, path: &str) -> Result<PathBuf, String> {
 fn project_error(lang: &Lang, error: ProjectError) -> String {
     let (path, message) = match error {
         ProjectError::Parse { path, message } => (path, message),
+        ProjectError::ChangedMeanwhile { path } => {
+            let path = FluentValue::from(path.display().to_string());
+            return text(lang, "mcp-error-project-changed", &[("path", path)]);
+        }
         // The detail lists keys, codes and names from the file: only for a courseplan project.
         ProjectError::Invalid { ref path, .. } if !is_courseplan_project(path) => {
             let path = FluentValue::from(path.display().to_string());

@@ -51,6 +51,7 @@ error-model-unknown-key-in = unknown key { $key } in { $table }
 
 error-project-read = cannot read { $path }: { $source }
 error-project-write = cannot write { $path }: { $source }
+error-project-changed = { $path } changed since it was read; nothing was written
 error-project-already-exists = { $path } already exists; choose another project file or remove it
 error-project-parse = cannot parse { $path }: { $message }
 error-project-serialise = cannot serialise { $path }: { $message }
@@ -709,6 +710,7 @@ mcp-error-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
 mcp-error-not-xml = { $path } is not an XML file; the export file ends in .xml
 mcp-error-project-parse = { $path } is not a valid project file; the first problem is at line { $line }, column { $column }
 mcp-error-project-parse-nopos = { $path } is not a valid project file
+mcp-error-project-changed = { $path } changed on disk after it was read, so nothing was written. Read the project again and repeat the change
 mcp-error-map-invalid = { $path } is not a valid OOM map
 mcp-error-no-home = this system has no home folder; use an absolute path
 mcp-error-kind-needs-at = a { $kind } is a single point; give at and leave out points

@@ -45,8 +45,9 @@ The manual's sync chapter and the plan 2026-11-10-ppen-sync hold the details; th
 - Purple Pen open during a sync: its later save drops what the sync added, and the next sync deletes those objects
   from the project without a conflict. The manual says to close the event first.
 - Work is linear in the file size, except the pairing of many unmatched objects on both sides, which stays quadratic.
-- The project file is not re-read before it is saved (a lost update if another tool wrote it meanwhile). Every
-  command works this way; parked for the M4 editor plan.
+- ~~The project file is not re-read before it is saved.~~ Closed by [ADR 0044](0044-save-refuses-a-changed-project-file.md):
+  `save` re-reads the file and refuses when it changed. A sync that already wrote the `.ppen` and then meets a changed
+  project file reports a partial write; running `sync` again finishes the job.
 - Core's id guard drops all event ids when one code or name contradicts the base, so a sync that swaps two codes and
   renames a course is refused. `PatchOptions::ids_first` is proposed to freemapper-print *(not agreed)*.
 - The editor's conflict panel comes with the M4 editor plan and stores a decision through the MCP path.

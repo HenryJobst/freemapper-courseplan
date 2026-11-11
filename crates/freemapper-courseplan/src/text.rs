@@ -216,6 +216,11 @@ impl Localize for ProjectError {
                 "error-project-write",
                 &[("path", v(path.display())), ("source", v(source))],
             ),
+            ProjectError::ChangedMeanwhile { path } => text(
+                lang,
+                "error-project-changed",
+                &[("path", v(path.display()))],
+            ),
             ProjectError::AlreadyExists { path } => text(
                 lang,
                 "error-project-already-exists",
@@ -1411,6 +1416,7 @@ mod tests {
                 source: io(),
             },
             ProjectError::AlreadyExists { path: path() },
+            ProjectError::ChangedMeanwhile { path: path() },
             ProjectError::Parse {
                 path: path(),
                 message: "cannot parse ev/x.toml: TOML parse error at line 3".into(),
