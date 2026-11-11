@@ -106,3 +106,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0060](0060-score-settings-links-and-code-value.md) | Score settings, mandatory links and the value in the code | Accepted | 2026-11-11 |
 | [0061](0061-cost-surface-and-alternative-routes.md) | Cost surface: raster, speed classes and alternative routes | Accepted | 2026-11-11 |
 | [0062](0062-score-candidates-and-points.md) | Score courses: control candidates and points | Accepted | 2026-11-11 |
+| [0063](0063-score-points-and-codes.md) | Score courses: point values and codes | Accepted | 2026-11-11 |
