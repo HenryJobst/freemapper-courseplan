@@ -12,21 +12,19 @@ evaluation sheet. ADR 0033 limited the IOF XML export to individual courses. The
   `CourseControl` for start, each control with `Score` (the value) and finish. It has no `Length` and no leg lengths,
   because the order is free. Time limit, penalty and links go into the course's `Extensions`, as
   `fcp:ScoreCourse timeLimitMin penaltyPerMin` with one `fcp:Link a b` per pair, namespace
-  `urn:freemapper-courseplan:score:1`. The schema allows foreign elements there, other programs ignore them, and the
+  `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1`. The schema allows foreign elements there, other programs ignore them, and the
   output still validates. The penalty is the resolved one, default included, so a reader needs no rule. Links are not
   a `CourseControl` `Type`: the enumeration has no fitting value and a wrong one would mislead result software.
-- **Tie rule** *(user)*. "Equal points: the faster runner wins" and the disqualification for a skipped link stand on
-  the sheet. The file carries the links, not the tie rule, which the schema cannot hold.
 - **CSV** *(Claude's call)*. `code,value,x_mm,y_mm`, header row, ordered by code (numbers by value), positions in map
   millimetres at map scale with y down, two decimals with a dot, `\n`, UTF-8.
-- **Sheet** *(Claude's call)*. Markdown, because it reads as plain text and prints through any viewer. It names course,
+- **Sheet** *(Claude's call; tie rule and disqualification: user)*. Markdown, because it reads as plain text and prints through any viewer. It names course,
   event, limit, penalty (and whether it is the default), the tie rule, the points in all, the links with the rule, and
-  one row per control. English and German through Fluent. No empty columns for results.
+  one row per control. The tie rule stays off the file, which the schema cannot hold. English and German through Fluent.
 - **CLI and MCP** *(Claude's call)*. `export --csv FILE` and `--sheet FILE` with `--course NAME`; tools
   `export_score_csv` and `export_score_sheet` with `project`, `course`, `path`. Both call `export_score_file` (ADR 0059).
-  A course that is missing or not a score course is refused with one sentence. An existing file is replaced
+  `--course` without `--csv` or `--sheet` is refused. A course that is missing or not a score course is refused with one sentence. Files are written in the order CSV, sheet, IOF XML, Purple Pen, so a later failure leaves the earlier files. An existing file is replaced
   atomically, like the other exports. The editor menu does not offer them yet.
-- **Purple Pen** *(Claude's call, design §5.5)*. The `.ppen` export and sync still skip score courses and say so.
 ## Consequences
-- The IOF XML export is as untried in OE as before; AGENTS.md and the changelog say so.
-- Individual output is byte for byte unchanged; the snapshot test passes without edits.
+- The extension is not tried in OE or any other reader. A strict reader may ignore it; the `Score` values are
+  standard. The `.ppen` export and sync still skip score courses and say so (design §5.5). Individual output is
+  byte for byte unchanged.

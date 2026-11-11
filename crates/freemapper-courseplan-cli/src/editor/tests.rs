@@ -2913,6 +2913,60 @@ mod exchange {
     }
 
     #[tokio::test]
+    async fn iof_xml_download_with_a_score_course_has_the_values_and_validates() {
+        use freemapper_courseplan_model::{ControlCode, CourseKind, ScoreControl};
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let mut file = freemapper_courseplan_model::ProjectFile::load(&path).unwrap();
+        let mut score = file.event.courses[0].clone();
+        score.name = "Sc".to_owned();
+        score.kind = CourseKind::Score {
+            time_limit_min: 45,
+            penalty_per_min: Some(4),
+            controls: vec![ScoreControl {
+                code: ControlCode("31".to_owned()),
+                value: 1,
+            }],
+            links: vec![],
+        };
+        file.event.courses.push(score);
+        file.save().unwrap();
+        let app = router_for(&path);
+        let got = call(
+            &app,
+            "GET",
+            "/tok/api/export/iof-xml",
+            None,
+            "x/y",
+            Vec::new(),
+        )
+        .await;
+        assert_eq!(got.status, StatusCode::OK);
+        assert_eq!(got.headers["x-courseplan-courses"], "2");
+        let xml = String::from_utf8(got.body).unwrap();
+        assert!(xml.contains("<Score>1</Score>"), "{xml}");
+        assert!(xml.contains("penaltyPerMin=\"4\""), "{xml}");
+        let file = dir.path().join("score.xml");
+        std::fs::write(&file, &xml).unwrap();
+        let schema = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/fixtures/iof-xml/IOF.xsd"
+        );
+        match std::process::Command::new("xmllint")
+            .args(["--noout", "--schema", schema])
+            .arg(&file)
+            .output()
+        {
+            Ok(out) => assert!(
+                out.status.success(),
+                "{}",
+                String::from_utf8_lossy(&out.stderr)
+            ),
+            Err(_) => eprintln!("note: xmllint not on PATH, schema validation skipped"),
+        }
+    }
+
+    #[tokio::test]
     async fn ppen_to_linked_equals_cli_export() {
         let a = tempfile::tempdir().unwrap();
         let b = tempfile::tempdir().unwrap();

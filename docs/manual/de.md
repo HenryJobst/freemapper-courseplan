@@ -909,7 +909,7 @@ Was du wissen solltest:
 
 - Mannschafts- und Staffelbahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
   ihrer Art.
-- Eine Score-Bahn steht mit dem Wert jedes Postens in `CourseControl/Score`. Für das Zeitlimit, den Abzug je angefangene Minute und die Pflichtverbindungen hat das Schema kein Element. Die Bahn trägt sie deshalb in einem `Extensions`-Element im Namensraum `urn:freemapper-courseplan:score:1` (`ScoreCourse` mit `timeLimitMin`, `penaltyPerMin` und je Paar ein `Link`). Der Abzug ist der aufgelöste, der Standard eingeschlossen. Programme, die den Namensraum nicht kennen, übergehen ihn. Die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, steht nicht in der Datei, sondern auf dem Auswertungsbogen (siehe Score-Bahnen).
+- Eine Score-Bahn steht mit dem Wert jedes Postens in `CourseControl/Score`. Für das Zeitlimit, den Abzug je angefangene Minute und die Pflichtverbindungen hat das Schema kein Element. Die Bahn trägt sie deshalb in einem `Extensions`-Element im Namensraum `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` mit `timeLimitMin`, `penaltyPerMin` und je Paar ein `Link`). Der Abzug ist der aufgelöste, der Standard eingeschlossen. Programme, die den Namensraum nicht kennen, übergehen ihn. Die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, steht nicht in der Datei, sondern auf dem Auswertungsbogen (siehe Score-Bahnen).
 - Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
   unberührt.
 - Ist die Karte georeferenziert, tragen Start, Posten und Ziel Breite und Länge mit sechs Nachkommastellen. Fehlt die

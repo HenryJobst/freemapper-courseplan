@@ -1581,7 +1581,7 @@ score-sheet-penalty = Penalty: { $points ->
 score-sheet-penalty-default = Penalty: { $points ->
     [one] 1 point
    *[other] { $points } points
-} for each started minute over the limit. The course sets no value, so this is the default.
+} for each started minute over the limit. The course sets no penalty, so this is the default.
 score-sheet-tie = Equal points: the faster runner wins.
 score-sheet-total = Points in all: { $points } on { $count ->
     [one] 1 control
@@ -1595,4 +1595,4 @@ score-sheet-col-second = Second control
 score-sheet-controls-heading = Controls
 score-sheet-col-code = Code
 score-sheet-col-value = Value
-score-sheet-no-course = The course { $course } is not a score course, so there is no sheet.
+export-course-unused = --course applies only with --csv or --sheet; --iof-xml and --ppen take no course

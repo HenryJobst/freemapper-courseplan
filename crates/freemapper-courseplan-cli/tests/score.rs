@@ -705,3 +705,22 @@ fn iof_xml_and_ppen_export_with_a_score_course() {
     );
     assert!(!stdout.contains("IOF XML"), "{stdout}");
 }
+
+#[test]
+fn course_without_csv_or_sheet_is_refused() {
+    let (dir, project) = with_score_course();
+    let target = dir.path().join("o.xml");
+    let o = run(
+        "en",
+        &[
+            "export",
+            project.to_str().unwrap(),
+            "--course",
+            "Sc",
+            "--iof-xml",
+            target.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(o.status.code(), Some(2), "{}", err(&o));
+    assert!(!target.exists());
+}

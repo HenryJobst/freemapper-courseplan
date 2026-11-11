@@ -1569,14 +1569,14 @@ score-sheet-time-limit = Zeitlimit: { $minutes ->
     [one] 1 Minute
    *[other] { $minutes } Minuten
 }
-score-sheet-penalty = Strafe: { $points ->
+score-sheet-penalty = Abzug: { $points ->
     [one] 1 Punkt
    *[other] { $points } Punkte
 } für jede angefangene Minute über dem Limit
-score-sheet-penalty-default = Strafe: { $points ->
+score-sheet-penalty-default = Abzug: { $points ->
     [one] 1 Punkt
    *[other] { $points } Punkte
-} für jede angefangene Minute über dem Limit. Die Bahn legt keinen Wert fest, das ist der Standard.
+} für jede angefangene Minute über dem Limit. Die Bahn legt keinen Abzug fest, das ist der Standard.
 score-sheet-tie = Bei gleicher Punktzahl gewinnt, wer schneller ist.
 score-sheet-total = Punkte insgesamt: { $points } auf { $count ->
     [one] 1 Posten
@@ -1584,10 +1584,10 @@ score-sheet-total = Punkte insgesamt: { $points } auf { $count ->
 }
 score-sheet-links-heading = Pflichtverbindungen
 score-sheet-no-links = Diese Bahn hat keine Pflichtverbindungen.
-score-sheet-links-rule = Eine Verbindung sind zwei Posten, die ein Läufer direkt nacheinander anläuft, in beliebiger Reihenfolge. Wer eine Verbindung nicht direkt läuft, wird disqualifiziert.
+score-sheet-links-rule = Eine Verbindung sind zwei Posten, die direkt nacheinander angelaufen werden müssen, in beliebiger Reihenfolge. Wer eine Verbindung nicht direkt läuft, wird disqualifiziert.
 score-sheet-col-first = Erster Posten
 score-sheet-col-second = Zweiter Posten
 score-sheet-controls-heading = Posten
 score-sheet-col-code = Code
 score-sheet-col-value = Wert
-score-sheet-no-course = Die Bahn { $course } ist keine Score-Bahn, deshalb gibt es keinen Bogen.
+export-course-unused = --course gilt nur mit --csv oder --sheet; für --iof-xml und --ppen gibt es keine Bahnauswahl

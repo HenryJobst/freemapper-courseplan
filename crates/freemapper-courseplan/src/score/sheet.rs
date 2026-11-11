@@ -57,6 +57,13 @@ fn mm(value: f64) -> String {
     if s == "-0.00" { "0.00".to_owned() } else { s }
 }
 
+/// Text for a Markdown table cell or line: `|` escaped, line breaks turned into blanks.
+fn md(text: &str) -> String {
+    text.replace('\\', "\\\\")
+        .replace('|', "\\|")
+        .replace(['\r', '\n'], " ")
+}
+
 fn csv_field(field: &str) -> String {
     if field.contains([',', '"', '\n', '\r']) {
         format!("\"{}\"", field.replace('"', "\"\""))
@@ -99,16 +106,13 @@ pub fn score_csv(event: &Event, course: &str) -> Result<String, ScoreError> {
 /// The evaluation sheet of the score course `course` as Markdown in `lang`: the time limit, the penalty
 /// per started minute (the stored one or the default), the tie rule, the mandatory links with the rule
 /// that a runner who does not run a link directly is disqualified, and a table with code and value of every
-/// control. A course the event does not have, or one that is no score course, gives a short note instead
-/// of a sheet; callers check with [`score_csv`] or the course kind first.
-pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> String {
-    let Ok(found) = find(event, course) else {
-        return text(
-            lang,
-            "score-sheet-no-course",
-            &[("course", FluentValue::from(course.to_owned()))],
-        );
-    };
+/// control. Names are escaped for the Markdown table: `|` and line breaks.
+///
+/// # Errors
+/// [`ScoreError::UnknownCourse`] or [`ScoreError::NotAScoreCourse`]. A link that names a control the course
+/// does not hold is written as it stands; the project file refuses such a link on load.
+pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> Result<String, ScoreError> {
+    let found = find(event, course)?;
     let t = |id: &str, args: &[(&str, FluentValue)]| text(lang, id, args);
     let n = |v: u32| FluentValue::from(i64::from(v));
     let penalty = score_penalty(
@@ -129,7 +133,7 @@ pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> String {
         "# {}",
         t(
             "score-sheet-title",
-            &[("course", FluentValue::from(course.to_owned()))]
+            &[("course", FluentValue::from(md(course)))]
         )
     ));
     line(String::new());
@@ -137,7 +141,7 @@ pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> String {
         "- {}",
         t(
             "score-sheet-event",
-            &[("title", FluentValue::from(event.event.title.clone()))]
+            &[("title", FluentValue::from(md(&event.event.title)))]
         )
     ));
     line(format!(
@@ -179,7 +183,7 @@ pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> String {
         ));
         line("|---|---|".to_owned());
         for link in found.links {
-            line(format!("| {} | {} |", link.a.0, link.b.0));
+            line(format!("| {} | {} |", md(&link.a.0), md(&link.b.0)));
         }
     }
     line(String::new());
@@ -192,9 +196,9 @@ pub fn evaluation_sheet(event: &Event, course: &str, lang: &Lang) -> String {
     ));
     line("|---|---|".to_owned());
     for c in codes {
-        line(format!("| {} | {} |", c.code.0, c.value));
+        line(format!("| {} | {} |", md(&c.code.0), c.value));
     }
-    out
+    Ok(out)
 }
 
 #[cfg(test)]
@@ -313,7 +317,7 @@ mod tests {
 
     #[test]
     fn sheet_names_tie_rule_and_links_in_en_and_de() {
-        let en = evaluation_sheet(&event(), "Score", &Lang::english());
+        let en = evaluation_sheet(&event(), "Score", &Lang::english()).unwrap();
         for needle in [
             "Evaluation sheet for Score",
             "Time limit: 45 minutes",
@@ -326,11 +330,12 @@ mod tests {
             assert!(en.contains(needle), "{needle}\n{en}");
         }
         let de_lang = crate::text::parse_lang_arg("de").unwrap();
-        let de = evaluation_sheet(&event(), "Score", &de_lang);
+        let de = evaluation_sheet(&event(), "Score", &de_lang).unwrap();
         for needle in [
             "Auswertungsbogen für Score",
             "Zeitlimit: 45 Minuten",
             "Bei gleicher Punktzahl gewinnt, wer schneller ist.",
+            "Abzug: 7 Punkte",
             "wird disqualifiziert",
             "| 33 | 41 |",
         ] {
@@ -346,13 +351,54 @@ mod tests {
             *penalty_per_min = None;
             links.clear();
         }
-        let text = evaluation_sheet(&e, "Score", &Lang::english());
+        let text = evaluation_sheet(&e, "Score", &Lang::english()).unwrap();
         assert!(
             text.contains(
-                "5 points for each started minute over the limit. The course sets no value"
+                "5 points for each started minute over the limit. The course sets no penalty"
             ),
             "{text}"
         );
         assert!(text.contains("no mandatory links"));
+    }
+
+    #[test]
+    fn sheet_refuses_missing_and_other_courses() {
+        let en = Lang::english();
+        assert_eq!(
+            evaluation_sheet(&event(), "Nope", &en),
+            Err(ScoreError::UnknownCourse("Nope".to_owned()))
+        );
+        assert_eq!(
+            evaluation_sheet(&event(), "Indiv", &en),
+            Err(ScoreError::NotAScoreCourse("Indiv".to_owned()))
+        );
+    }
+
+    #[test]
+    fn sheet_escapes_pipes_and_line_breaks() {
+        let mut e = event();
+        e.courses[0].name = "A|B\nC".to_owned();
+        e.event.title = "x|y".to_owned();
+        let sheet = evaluation_sheet(&e, "A|B\nC", &Lang::english()).unwrap();
+        assert!(sheet.contains("# Evaluation sheet for A\\|B C"), "{sheet}");
+        assert!(sheet.contains("Event: x\\|y"), "{sheet}");
+    }
+
+    #[test]
+    fn a_link_to_a_control_outside_the_course_does_not_panic() {
+        let mut e = event();
+        if let CourseKind::Score { links, .. } = &mut e.courses[0].kind {
+            links.push(ScoreLink {
+                a: ControlCode("99".to_owned()),
+                b: ControlCode("33".to_owned()),
+            });
+        }
+        // The model refuses such a link on load; the writers keep what they are given.
+        assert!(
+            evaluation_sheet(&e, "Score", &Lang::english())
+                .unwrap()
+                .contains("| 99 | 33 |")
+        );
+        assert!(!score_csv(&e, "Score").unwrap().contains("99"));
     }
 }

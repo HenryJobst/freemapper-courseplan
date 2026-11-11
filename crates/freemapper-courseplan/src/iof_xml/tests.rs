@@ -869,3 +869,20 @@ fn individual_output_is_unchanged() {
         .unwrap();
     assert!(both.contains(first));
 }
+
+#[test]
+fn a_link_to_a_control_outside_the_course_is_written_as_it_stands() {
+    // The project file refuses such a link on load; the writer does not check links and does not panic.
+    let mut e = event();
+    let mut sc = score_course("Score");
+    if let CourseKind::Score { links, .. } = &mut sc.kind {
+        links.push(freemapper_courseplan_model::ScoreLink {
+            a: ControlCode("99".to_owned()),
+            b: ControlCode("31".to_owned()),
+        });
+    }
+    e.courses = vec![sc];
+    let xml = export(&e);
+    assert!(xml.contains("<fcp:Link a=\"99\" b=\"31\"/>"), "{xml}");
+    assert_valid(&xml);
+}

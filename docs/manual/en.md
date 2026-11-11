@@ -865,7 +865,7 @@ does nothing and exits with code 2.
 Things to know:
 
 - Team and relay courses are not written. The program names each skipped course with its kind.
-- A score course is written with the value of each control in `CourseControl/Score`. The schema has no element for the time limit, the penalty per started minute or the mandatory links, so the course carries them in an `Extensions` element in the namespace `urn:freemapper-courseplan:score:1` (`ScoreCourse` with `timeLimitMin`, `penaltyPerMin` and one `Link` per pair). The penalty is the resolved one, the default included. Programs that do not know the namespace ignore it. The rule that the faster runner wins on equal points is not part of the file; it stands on the evaluation sheet (see Score courses).
+- A score course is written with the value of each control in `CourseControl/Score`. The schema has no element for the time limit, the penalty per started minute or the mandatory links, so the course carries them in an `Extensions` element in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` with `timeLimitMin`, `penaltyPerMin` and one `Link` per pair). The penalty is the resolved one, the default included. Programs that do not know the namespace ignore it. The rule that the faster runner wins on equal points is not part of the file; it stands on the evaluation sheet (see Score courses).
 - If the target is the project file or the map, `export` stops with an error and leaves both untouched.
 - If the map is georeferenced, start, controls and finish carry latitude and longitude with six decimals. Without
   georeferencing, or with a coordinate system the program does not support, the file has map positions only, and

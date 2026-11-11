@@ -15,7 +15,7 @@ use freemapper_courseplan::ppen_export::{
 };
 use freemapper_courseplan::score::{ScoreError, evaluation_sheet, score_csv};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
-use freemapper_courseplan_model::{ProjectError, ProjectFile, write_atomic};
+use freemapper_courseplan_model::{CourseKind, ProjectError, ProjectFile, write_atomic};
 
 use crate::edit_cmd::{Failure, map_load_error};
 use crate::import_cmd::{ReadFileError, read_course_file};
@@ -154,10 +154,20 @@ pub(crate) fn export_score_file(
     }
     // The CSV rules decide whether the course exists, is a score course and names known controls.
     let csv = score_csv(&file.event, course).map_err(ExportError::Score)?;
-    let controls = csv.lines().count().saturating_sub(1);
+    let controls = file
+        .event
+        .courses
+        .iter()
+        .find(|c| c.name == course)
+        .map_or(0, |c| match &c.kind {
+            CourseKind::Score { controls, .. } => controls.len(),
+            _ => 0,
+        });
     let body = match kind {
         ScoreFile::Csv => csv,
-        ScoreFile::Sheet => evaluation_sheet(&file.event, course, lang),
+        ScoreFile::Sheet => {
+            evaluation_sheet(&file.event, course, lang).map_err(ExportError::Score)?
+        }
     };
     write_atomic(target, &body).map_err(ExportError::Project)?;
     Ok(controls)
@@ -379,7 +389,8 @@ pub(crate) struct ScoreTargets {
     pub(crate) course: Option<String>,
 }
 
-/// The `export` command.
+/// The `export` command. The files come in this order: CSV, sheet, IOF XML, Purple Pen. A later failure
+/// leaves the files written before it.
 pub(crate) fn export(
     lang: &Lang,
     project: &Path,
@@ -391,8 +402,12 @@ pub(crate) fn export(
     if iof_xml.is_none() && ppen.is_none() && score.csv.is_none() && score.sheet.is_none() {
         return Err(Failure::Usage(text(lang, "export-nothing-to-do", &[])));
     }
-    if (score.csv.is_some() || score.sheet.is_some()) && score.course.is_none() {
+    let wants_score = score.csv.is_some() || score.sheet.is_some();
+    if wants_score && score.course.is_none() {
         return Err(Failure::Usage(text(lang, "export-needs-course", &[])));
+    }
+    if !wants_score && score.course.is_some() {
+        return Err(Failure::Usage(text(lang, "export-course-unused", &[])));
     }
     let failed = |e: ExportError| {
         Failure::Error(e.message(

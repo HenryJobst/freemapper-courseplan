@@ -28,6 +28,7 @@ Tell the person these limits before you start:
   sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Lübeck map (release build). A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
+- The score extension in the IOF XML (time limit, penalty, links, in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1`) is not tried in OE or any other reader; a strict reader may ignore it. The `Score` values are standard.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in
   Purple Pen 4.0 (checked once by the author).
 - Purple Pen must be closed for the event before a `sync`, and opened again afterwards. Otherwise Purple Pen may

@@ -28,7 +28,7 @@ mod tests;
 
 const NAMESPACE: &str = "http://www.orienteering.org/datastandard/3.0";
 /// Namespace of the score data the schema has no element for (time limit, penalty, mandatory links).
-pub const SCORE_NAMESPACE: &str = "urn:freemapper-courseplan:score:1";
+pub const SCORE_NAMESPACE: &str = "https://github.com/HenryJobst/freemapper-courseplan/ns/score/1";
 const CREATOR: &str = "freemapper-courseplan";
 
 /// The written file and the courses it leaves out.
