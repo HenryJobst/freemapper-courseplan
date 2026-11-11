@@ -10,7 +10,7 @@
 //! Findings and skip reasons are plain data with a Fluent message id and arguments; the CLI and
 //! the MCP server localize them. Terms follow `docs/glossary.md`.
 
-mod codes;
+pub(crate) mod codes;
 mod context;
 mod distance;
 mod geometry;
