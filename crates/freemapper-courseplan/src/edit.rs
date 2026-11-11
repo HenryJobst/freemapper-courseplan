@@ -100,6 +100,11 @@ pub enum EditError {
     /// A rule category must not be empty; clear it instead.
     #[error("the rule category of class {class} is empty; give a category or clear it")]
     BlankRuleCategory { class: String },
+    /// A control description symbol that cannot go in its column (unknown, or another column's symbol).
+    #[error(
+        "symbol {id} cannot be used in column {column} of a control description; pick a symbol that column offers"
+    )]
+    BadSymbol { column: char, id: String },
     /// The rule profile or an overlay cannot be loaded.
     #[error(transparent)]
     Rules(#[from] RulesError),
@@ -495,16 +500,58 @@ pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<RemovedCo
     })
 }
 
-/// Replaces the description of a control.
+/// Replaces the description of a control. Each symbol that differs from the control's current one must
+/// exist for its column, by the rules of the Purple Pen export (`ppen_columns`: D takes D, E takes E or D,
+/// and so on). Ids already in the file and left as they are stay unchecked, so an old project still loads and
+/// edits.
 pub fn describe_control(
     event: &mut Event,
     code: &ControlCode,
     description: ControlDescription,
 ) -> Result<(), EditError> {
     apply(event, |e| {
-        control_mut(e, code)?.description = description;
+        let control = control_mut(e, code)?;
+        check_symbols(control, &description)?;
+        control.description = description;
         Ok(())
     })
+}
+
+/// Refuses the first changed symbol that the export would leave out of its column.
+fn check_symbols(control: &Control, new: &ControlDescription) -> Result<(), EditError> {
+    let old = &control.description;
+    let pairs = [
+        ('C', &old.c, &new.c),
+        ('D', &old.d, &new.d),
+        ('E', &old.e, &new.e),
+        ('F', &old.f, &new.f),
+        ('G', &old.g, &new.g),
+        ('H', &old.h, &new.h),
+    ];
+    for (i, (column, before, after)) in pairs.into_iter().enumerate() {
+        let Some(id) = after else { continue };
+        if before == after {
+            continue;
+        }
+        // The column alone, in Purple Pen's current standard: the symbol must survive the mapping.
+        let mut probe = ControlDescription::default();
+        match i {
+            0 => probe.c = Some(id.clone()),
+            1 => probe.d = Some(id.clone()),
+            2 => probe.e = Some(id.clone()),
+            3 => probe.f = Some(id.clone()),
+            4 => probe.g = Some(id.clone()),
+            _ => probe.h = Some(id.clone()),
+        }
+        let mapped = crate::ppen_export::ppen_columns(&probe, "2018", control.kind);
+        if mapped.columns[i].is_none() {
+            return Err(EditError::BadSymbol {
+                column,
+                id: id.clone(),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Sets or clears the default number placement of a control.

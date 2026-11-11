@@ -239,6 +239,67 @@ fn describe_and_central_number_edit_the_control() {
     assert_eq!(e.controls[0].number, None);
 }
 
+fn described(c: &str, d: &str, e: &str, f: &str, g: &str) -> ControlDescription {
+    let some = |s: &str| (!s.is_empty()).then(|| s.to_owned());
+    ControlDescription {
+        c: some(c),
+        d: some(d),
+        e: some(e),
+        f: some(f),
+        g: some(g),
+        h: None,
+    }
+}
+
+#[test]
+fn describe_refuses_symbols_that_do_not_fit_their_column() {
+    let mut e = event();
+    let before = e.clone();
+    // A G symbol in D, an unknown id, a D-only column D symbol in G, a bend in D.
+    for (column, d) in [
+        ('D', described("", "12.1N", "", "", "")),
+        ('D', described("", "zzz", "", "", "")),
+        ('G', described("", "", "", "", "1.3")),
+        ('D', described("", "11.1", "", "", "")),
+        ('C', described("1.3", "", "", "", "")),
+    ] {
+        match describe_control(&mut e, &code("31"), d) {
+            Err(EditError::BadSymbol { column: c, .. }) => assert_eq!(c, column),
+            other => panic!("{other:?}"),
+        }
+        assert_eq!(e, before);
+    }
+}
+
+#[test]
+fn describe_accepts_what_the_export_accepts() {
+    let mut e = event();
+    for d in [
+        described("0.1N", "5.2", "", "11.1", "12.1N"),
+        // E takes D symbols and its own.
+        described("", "1.3", "1.3", "10.1", ""),
+        described("", "1.3", "8.1", "", "12.14"),
+    ] {
+        describe_control(&mut e, &code("31"), d.clone()).unwrap();
+        assert_eq!(e.controls[0].description, d);
+    }
+}
+
+#[test]
+fn describe_leaves_untouched_ids_alone() {
+    let mut e = event();
+    // An id written by hand or by an older version stays, as long as the edit does not change that column.
+    e.controls[0].description = described("", "zzz", "", "", "");
+    let d = described("0.1N", "zzz", "", "", "");
+    describe_control(&mut e, &code("31"), d.clone()).unwrap();
+    assert_eq!(e.controls[0].description, d);
+    let changed = described("0.1N", "yyy", "", "", "");
+    assert!(matches!(
+        describe_control(&mut e, &code("31"), changed),
+        Err(EditError::BadSymbol { column: 'D', .. })
+    ));
+}
+
 #[test]
 fn set_course_controls_keeps_data_per_visit() {
     let mut e = event();

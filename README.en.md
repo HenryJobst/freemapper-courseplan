@@ -19,9 +19,8 @@ Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
 `freemapper-text` for the program texts, `freemapper-omap` for reading the map, `freemapper-course` for reading
 Purple Pen files and `freemapper-web` for the editor's local server. The programs use them in a fixed version
-(courseplan: 0.11.0) instead of copying the code. The
-number placement and the description symbol tables come from there, so courseplan and freemapper-print place numbers
-the same way.
+(courseplan: 0.14.0) instead of copying the code. The number placement and the description symbol tables come from
+there, so courseplan and freemapper-print place numbers the same way.
 
 Planned for the first version:
 
@@ -37,8 +36,8 @@ Planned for the first version:
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
-  special objects, with undo and redo; control descriptions, findings and the real map follow), the command line or
-  an AI assistant (MCP).
+  special objects and control descriptions, with undo and redo; findings, export and sync and the real map follow),
+  the command line or an AI assistant (MCP).
 
 After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
 tours for the people who put out the controls, and AI support that judges courses and makes proposals.
@@ -124,15 +123,16 @@ project. The AI assistant has the tools `sync_ppen` and `resolve_sync_conflict`.
 with the editor. See chapter 9 of the [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) and ADR 0040.
 
 `freemapper-courseplan edit <project>` starts the editor and shows the event in the browser: on the left the tree of
-courses, categories, controls and special objects, in the centre the selected course with circles, legs and numbers,
-on the right the properties. You place, move and delete controls, build courses and categories, bend and tape legs,
-drag or place control numbers and draw special objects with the mouse or the keyboard; Ctrl+Z and Ctrl+Shift+Z undo
-and redo steps. Every change is saved at once through the same operations as the command line and the AI assistant.
-You see outside changes in the browser after about two seconds; if the file changed under the editor, it refuses
-your change and loads the new state. The columns C to H of the control descriptions, the findings panel, the menu
-for export, import and sync and the real map are still missing: descriptions you edit with the command line or the
-assistant, and the map is a placeholder (grid and frame) until freemapper-render supplies it. The server listens on `127.0.0.1` only and needs an access token in the address. See chapter 4 of the
-[user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042, 0043, 0047, 0048 and 0049.
+courses, categories, controls and special objects, in the centre the selected course with circles, legs and numbers, on
+the right the properties. You place, move and delete controls, build courses and categories, bend and tape legs, drag
+or place control numbers, pick the description symbols of columns C to H and draw special objects with the mouse or the
+keyboard; Ctrl+Z and Ctrl+Shift+Z undo and redo steps. Every change is saved at once through the same operations as the
+command line and the AI assistant. You see outside changes in the browser after about two seconds; if the file changed
+under the editor, it refuses your change and loads the new state. The findings panel, the menu for export, import and
+sync and the real map are still missing: you run `check`, `export` and `sync` on the command line, and the map is a
+placeholder (grid and frame) until freemapper-render supplies it. The server listens on `127.0.0.1` only and needs an
+access token in the address. See chapter 4 of the [user manual](docs/manual/en.md#4-the-editor-preview) and ADR 0042,
+0043, 0047, 0048, 0049 and 0051.
 
 The repository also holds the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md), the
 [glossary](docs/glossary.md), the [architecture decisions](docs/adr/README.md) and a

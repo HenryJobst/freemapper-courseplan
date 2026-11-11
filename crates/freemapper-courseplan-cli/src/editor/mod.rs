@@ -29,6 +29,7 @@ mod api;
 mod history;
 mod map_view;
 mod overlay;
+mod symbols;
 #[cfg(test)]
 mod tests;
 
@@ -97,6 +98,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
         .route(&format!("{prefix}/api/map/near"), get(map_near))
+        .route(&format!("{prefix}/api/symbols"), get(api_symbols))
         .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
         .route(&format!("{prefix}/api/undo"), post(api_undo))
         .route(&format!("{prefix}/api/redo"), post(api_redo))
@@ -530,6 +532,23 @@ async fn map_near(State(state): State<Shared>, RawQuery(query): RawQuery) -> Res
         axum::Json(crate::mcp::features_near_json(&entry.index, at, r, None)).into_response()
     })
     .await
+}
+
+/// `GET api/symbols?column=C..H`: the description symbols of one column (ADR 0051). Only the column letter
+/// is read from the query.
+async fn api_symbols(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let index = query
+        .as_deref()
+        .and_then(|q| q.strip_prefix("column="))
+        .and_then(symbols::column_index);
+    match index {
+        Some(index) => axum::Json(symbols::symbols_json(index, &lang)).into_response(),
+        None => plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-symbols-bad-request", &[]),
+        ),
+    }
 }
 
 async fn quit(State(stop): State<Arc<Notify>>) -> Response {

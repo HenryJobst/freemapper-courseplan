@@ -160,6 +160,16 @@ body {
 .field-error { margin: 0.1rem 0 0.4rem; color: var(--warn-line); font-weight: 600; }
 #prop-delete { font: inherit; margin: 0.5rem 0; }
 .pane h3 { margin: 0.75rem 0 0.25rem; font-size: 0.9rem; }
+.pick-column { margin: 0.2rem 0; }
+.pick-column summary { cursor: pointer; }
+.pick-value { opacity: 0.75; font-variant-numeric: tabular-nums; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.25rem; max-height: 16rem; overflow: auto; padding: 0.25rem 0; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; font: inherit; font-size: 0.78rem; padding: 0.2rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; text-align: center; }
+.pick[aria-selected="true"] { border: 2px solid var(--fg); font-weight: 600; }
+.pick:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+.pick-icon { width: 2.2rem; height: 2.2rem; }
+.pick-mark { font-size: 0.7rem; opacity: 0.8; }
+.pane h4 { margin: 0.5rem 0 0.2rem; font-size: 0.85rem; }
 .near { margin: 0; padding-left: 1.1rem; }
 
 dialog { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; max-width: 32rem; }

@@ -107,6 +107,7 @@ error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund
 error-edit-start-window-zero = Das Startfenster muss mindestens 1 Minute lang sein
 error-edit-too-many-bends = Eine Strecke der Bahn { $course } darf höchstens { $limit } Knickpunkte haben
 error-edit-blank-rule-category = Die Regelkategorie der Kategorie { $name } ist leer; gib eine an oder entferne sie
+error-edit-bad-symbol = Das Symbol { $id } passt nicht in Spalte { $column } einer Kontrollbeschreibung; wähle ein Symbol, das diese Spalte anbietet
 
 ## OOM-Karten lesen (OmapError)
 
@@ -1109,3 +1110,12 @@ editor-status-draft-short = Zu wenige Punkte für diese Art. Füge weitere hinzu
 editor-status-special-added = Sonderobjekt hinzugefügt.
 editor-status-special-deleted = Sonderobjekt gelöscht.
 editor-status-special-courses = Bahnen des Sonderobjekts geändert.
+editor-symbols-bad-request = Die Spalte muss ein Buchstabe von C bis H sein.
+editor-desc-heading = Postenbeschreibung
+editor-desc-hint = Pfeiltasten bewegen, Enter wählt ein Symbol, Ziffern und Punkt springen zu einer Nummer.
+editor-desc-none = Kein Symbol
+editor-desc-loading = Symbole werden geladen.
+editor-desc-failed = Die Symbole konnten nicht geladen werden.
+editor-desc-selected = gewählt
+editor-desc-current = aktueller Wert:
+editor-status-described = Beschreibung geändert.

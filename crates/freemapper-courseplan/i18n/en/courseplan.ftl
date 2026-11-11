@@ -107,6 +107,7 @@ error-edit-accepted-not-found = there is no accepted finding of rule { $name } a
 error-edit-start-window-zero = the start window must be at least 1 minute
 error-edit-too-many-bends = a leg of course { $course } may have at most { $limit } bends
 error-edit-blank-rule-category = the rule category of class { $name } is empty; give a category or clear it
+error-edit-bad-symbol = symbol { $id } cannot be used in column { $column } of a control description; pick a symbol that column offers
 
 ## Reading OOM maps (OmapError)
 
@@ -1114,3 +1115,12 @@ editor-status-draft-short = Too few points for this kind. Add more.
 editor-status-special-added = Special object added.
 editor-status-special-deleted = Special object deleted.
 editor-status-special-courses = Courses of the special object changed.
+editor-symbols-bad-request = The column must be one letter from C to H.
+editor-desc-heading = Control description
+editor-desc-hint = Arrow keys move, Enter picks a symbol, digits and dots jump to a number.
+editor-desc-none = No symbol
+editor-desc-loading = Loading symbols.
+editor-desc-failed = The symbols could not be loaded.
+editor-desc-selected = selected
+editor-desc-current = current value:
+editor-status-described = Description changed.
