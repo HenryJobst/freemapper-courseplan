@@ -113,7 +113,7 @@ dort an.
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
 zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Exportieren und Importieren findest du im
-Menü „Veranstaltung“. Das Abgleichen ist noch ausgegraut und folgt in einer späteren Version.
+Menü „Veranstaltung“, ebenso das Abgleichen mit Purple Pen.
 
 ### Starten
 
@@ -298,7 +298,7 @@ Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus 
 
 ### Exportieren und Importieren
 
-Das Menü „Veranstaltung“ hat drei Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
+Das Menü „Veranstaltung“ hat vier Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
 verknüpfte Purple-Pen-Datei des Projekts.
 
 - **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzelbahnen, benannt nach der
@@ -319,8 +319,8 @@ verknüpfte Purple-Pen-Datei des Projekts.
   Purple Pen“ gleichen sofort ab und nehmen überall diese Seite. „Abgleichen“ ist möglich, wenn kein Konflikt offen
   ist (ADR 0054).
 
-Das Schreiben in die verknüpfte Datei, der Import und der Abgleich leeren den Rückgängig-Verlauf, weil sie mehr als einen Schritt
-ändern.
+Das Schreiben in die verknüpfte Datei und der Import leeren den Rückgängig-Verlauf, ebenso ein Abgleich, der Dateien
+geschrieben hat, weil sie mehr als einen Schritt ändern. Ein Abgleich, der nichts schrieb, lässt ihn bestehen.
 
 ### Rückgängig und Wiederholen
 

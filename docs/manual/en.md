@@ -108,7 +108,7 @@ there.
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
 bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
-It runs the check as you work and shows its findings. Export and import are in the Event menu. Sync is greyed out and follows in a later version.
+It runs the check as you work and shows its findings. Export, import and sync with Purple Pen are in the Event menu.
 
 ### Starting it
 
@@ -284,7 +284,7 @@ Half a second after each change the editor runs the same check as `check` and sh
 
 ### Export and import
 
-The Event menu has three entries. The browser never names a file; the editor writes only the project's own linked
+The Event menu has four entries. The browser never names a file; the editor writes only the project's own linked
 Purple Pen file.
 
 - **Export IOF XML (download).** The browser saves the IOF XML of the individual courses, named after the project
@@ -303,7 +303,7 @@ Purple Pen file.
   conflict has "Keep courseplan" and "Take Purple Pen"; "All courseplan" and "All Purple Pen" sync at once with that
   side everywhere. "Sync" is on when no conflict is open (ADR 0054).
 
-Writing to the linked file, importing and syncing clear the undo history, because they change more than one step.
+Writing to the linked file and importing clear the undo history, and so does a sync that wrote files, because they change more than one step. A sync that wrote nothing keeps it.
 
 ### Undo and redo
 

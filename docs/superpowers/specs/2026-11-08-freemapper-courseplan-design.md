@@ -483,9 +483,17 @@ Paths are relative to the project file. The editor keeps comments it did not cre
   - **Built (stage 4 of the M4 plan, ADR 0051):** pickers for the description columns C to H in the properties,
     with icons and texts from freemapper-core's symbol database, keyboard and type-ahead, direction variants, a
     "No symbol" entry and one undo step per pick (`GET api/symbols?column=`).
-  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 5 findings panel,
-    export and import, sync panel with conflicts; stage 6 the real map from `freemapper-render`; stage 7 manual
-    and release 0.10.0. The release waits for stage 6.
+  - **Built (stage 5 of the M4 plan, ADR 0052, 0053, 0054):** findings panel, export and import, sync panel. `GET
+    api/check` returns the check report, cached on revision and map stamp, and the page asks 500 ms after every
+    state load. Findings show in the selection panel, as rings and dashed lines on the map, in the status bar
+    counts and in a drawer with accepted findings and skipped rules; "Accept..." takes a note of 1 to 200
+    characters. The Event menu exports IOF XML (download) and Purple Pen files (to the linked file or as a
+    download) and imports a Purple Pen file from an upload; the browser names no file, only `sources.ppen` is
+    written *(user, ADR 0005)*. `POST api/sync` runs the CLI sync; the panel lists changes and conflicts, stores
+    each choice through `resolve_sync_conflict`, and warns to close the event in Purple Pen first *(user)*. Writing
+    files clears the undo history.
+  - **Not built yet, by stage of the plan (`docs/superpowers/plans/2026-11-11-editor-m4.md`):** stage 6 the real map
+    from `freemapper-render`; stage 7 manual and release 0.10.0. The release waits for stage 6.
 
 ## 6. AI support
 
@@ -530,7 +538,8 @@ Paths are relative to the project file. The editor keeps comments it did not cre
    Purple Pen, freemapper-print and OE.
 5. **M4** Browser editor, with the map display from the shared renderer's browser backend (§5.1).
    Under way: stage 1 (read-only preview with a placeholder map), stage 2 (editing controls, save guard,
-   undo), stage 3 (courses, bends, numbers, special objects) and stage 4 (control descriptions) are built; see §5.8.
+   undo), stage 3 (courses, bends, numbers, special objects), stage 4 (control descriptions) and stage 5 (findings,
+   export and import, sync) are built; see §5.8.
 6. **Later** in the order of §2: route analysis, team, relay, score, control-placer tours, AI checker and
    proposals, shared data model crate.
 
@@ -546,8 +555,7 @@ The builder may start the editor earlier if placing controls through the CLI tur
 
 - **`.ppen` import against real events** (§5.5): tested with three core fixtures on generated maps; a real file
   on the Lübeck map is still open.
-- **`sync` follow-ups** (§5.5a): the editor's conflict panel comes with M4 (stage 5 of the plan; not built, the
-  editor of stage 1 only shows a note when the linked `.ppen` changed). `PatchOptions::ids_first` is proposed to
+- **`sync` follow-ups** (§5.5a): the editor's conflict panel is built (stage 5 of the plan, ADR 0054). `PatchOptions::ids_first` is proposed to
   freemapper-print and not yet agreed; without it a sync that swaps two codes and renames a course is refused
   (ADR 0040).
 - **`.ppen` export in Purple Pen 4.0** (§5.5): the export is tested by reading it back with the core reader and
