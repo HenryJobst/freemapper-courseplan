@@ -132,10 +132,10 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Editor | editor | Die Bahnlegung im Browser: `freemapper-courseplan edit` startet einen lokalen Server, der eine eingebettete Seite und eine JSON-Schnittstelle anbietet. Links der Inhalt der Veranstaltung, in der Mitte die Karte, rechts Eigenschaften und Befunde. Jede Änderung geht durch dieselben Operationen wie CLI und MCP und wird sofort in der Projektdatei gespeichert (ADR 0042). | `editor`, `editor::run` |
 | Stand | revision | Fingerabdruck der Projektdatei (FNV-1a über ihre Bytes, 16 Hexziffern). Jede ändernde Anfrage nennt den Stand, den die Seite zuletzt gesehen hat; weicht er von der Datei ab, wird nichts geschrieben. | `Revision` |
 | Rückgängig-Verlauf | undo history | Die letzten Änderungen des Editors als Schritte aus Dateitext vorher und nachher. Rückgängig schreibt den alten Text nur, solange die Datei noch dem neuen entspricht. | `UndoHistory` |
-| Kartenansicht | map view | Das, was der Editor in der Mitte zeigt: ein Kartenausschnitt als SVG in Seitenmillimetern samt Abbildung von Kartenmillimetern auf die Seite. Hinter einer kleinen Schnittstelle, damit der gemeinsame Renderer die Platzhalterkarte ablösen kann. | `MapView` |
+| Kartenansicht | map view | Das, was der Editor in der Mitte zeigt: ein Kartenausschnitt als SVG in Seitenmillimetern samt Abbildung von Kartenmillimetern auf die Seite. Hinter einer kleinen Schnittstelle, damit der gemeinsame Renderer die Platzhalterkarte ablösen konnte. Er tut es mit `RenderMap` (ADR 0056). | `MapView` |
 | Bahnüberlagerung | course overlay | Die Bahnsymbole (Kreise, Start, Ziel, Querungsstellen, Strecken, Nummernfelder, Sonderobjekte) in Kartenmillimetern, vom Server berechnet und von der Seite nur gezeichnet. | `CourseOverlay` |
 | Auswahl | selection | Was im Editor markiert ist: eine Bahn, eine Kategorie, ein Posten, eine Querungsstelle oder ein Sonderobjekt. Die Eigenschaften rechts gelten für sie. | `Selection` |
-| Platzhalterkarte | placeholder map | Kartenansicht ohne Karteninhalt: Umriss der Kartenausdehnung, ein Raster von 10 mm und ein Hinweis in der Mitte. Sie steht, bis der gemeinsame Renderer die echte Karte liefert. | `PlaceholderMap` |
+| Platzhalterkarte | placeholder map | Kartenansicht ohne Karteninhalt: Umriss der Kartenausdehnung, ein Raster von 10 mm und ein Hinweis in der Mitte. Sie ist nur noch für Modultests da; der Editor zeigt die echte Karte. | `PlaceholderMap` |
 
 ## Später / later
 
