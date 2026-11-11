@@ -95,3 +95,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0049](0049-special-objects-in-the-editor.md) | Editor: special objects, no move operation, redraw | Accepted | 2026-11-11 |
 | [0050](0050-edits-keep-references-and-refuse-bad-text.md) | Edits keep accepted legs and sync decisions; bend limits; no control characters | Accepted | 2026-11-11 |
 | [0051](0051-description-pickers-use-core-symbol-ids.md) | Description pickers list the symbols from core | Accepted | 2026-11-11 |
+| [0052](0052-editor-findings-panel.md) | Editor: findings come from api/check | Accepted | 2026-11-11 |

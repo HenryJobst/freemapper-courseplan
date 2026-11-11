@@ -36,13 +36,14 @@
       <svg id="map-svg" tabindex="0" role="application" data-label="editor-pane-map" xmlns="http://www.w3.org/2000/svg">
         <g id="layer-map"></g>
         <g id="layer-overlay"></g>
+        <g id="layer-findings" aria-hidden="true"></g>
       </svg>
     </section>
     <aside class="pane" id="pane-props" tabindex="0" data-label="editor-pane-props">
       <h2 data-text="editor-props-heading"></h2>
       <div id="props"></div>
-      <h2 data-text="editor-findings-heading"></h2>
-      <p class="hint" data-text="editor-findings-empty"></p>
+      <h2 id="findings-heading" data-text="editor-findings-heading"></h2>
+      <div id="findings" tabindex="-1" aria-labelledby="findings-heading"></div>
     </aside>
   </main>
   <header class="menubar">
@@ -82,8 +83,33 @@
       </div>
     </form>
   </dialog>
+  <dialog id="accept-dialog" aria-labelledby="accept-title">
+    <form id="accept-form" method="dialog">
+      <h2 id="accept-title" data-text="editor-accept-title"></h2>
+      <p id="accept-finding"></p>
+      <p><label for="accept-input" data-text="editor-accept-label"></label></p>
+      <p><input id="accept-input" type="text" autocomplete="off"></p>
+      <p class="field-error" id="accept-error" role="alert" data-text="editor-error-accept-note" hidden></p>
+      <div class="dialog-buttons">
+        <button type="submit" id="accept-ok" data-text="editor-accept-ok"></button>
+        <button type="button" id="accept-cancel" data-text="editor-cancel"></button>
+      </div>
+    </form>
+  </dialog>
+  <section class="drawer" id="findings-drawer" aria-labelledby="drawer-title" tabindex="-1" hidden>
+    <div class="drawer-head">
+      <h2 id="drawer-title" data-text="editor-drawer-title"></h2>
+      <button type="button" id="drawer-close" data-text="editor-drawer-close"></button>
+    </div>
+    <div id="drawer-body" tabindex="-1"></div>
+  </section>
   <footer class="status" id="status">
     <span id="status-message" role="status" aria-live="polite"></span>
+    <button type="button" class="field" id="status-findings" aria-expanded="false" aria-controls="findings-drawer" data-title="editor-findings-open">
+      <span class="count" id="count-error"></span>
+      <span class="count" id="count-warning"></span>
+      <span class="count" id="count-hint"></span>
+    </button>
     <span class="field"><span class="name" data-text="editor-status-map"></span> <span id="status-map"></span></span>
     <span class="field"><span class="name" data-text="editor-status-scale"></span> <span id="status-scale"></span></span>
     <span class="field"><span class="name" data-text="editor-status-kind"></span> <span id="status-kind"></span></span>

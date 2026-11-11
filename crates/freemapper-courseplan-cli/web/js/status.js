@@ -46,3 +46,24 @@ export function showBanner(text) {
 export function clearBanner() {
   banner.replaceChildren();
 }
+
+// The severities in the order they are listed, with the glyph that tells them apart without colour.
+export const SEVERITIES = ["error", "warning", "hint"];
+export const SEVERITY_ICON = { error: "\u2716", warning: "\u25B2", hint: "\u2139" };
+const COUNT_LABEL = { error: "editor-findings-errors", warning: "editor-findings-warnings", hint: "editor-findings-hints" };
+
+// The counts of the check in the status bar: a glyph, the word and the number for each severity.
+// `summary` is the check's summary ({ errors, warnings, hints }) or null while there is none.
+export function setFindings(summary) {
+  const counts = { error: summary?.errors, warning: summary?.warnings, hint: summary?.hints };
+  for (const severity of SEVERITIES) {
+    const box = document.getElementById(`count-${severity}`);
+    box.className = `count sev-${severity}`;
+    const icon = document.createElement("span");
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = SEVERITY_ICON[severity];
+    const words = document.createElement("span");
+    words.textContent = ` ${t(COUNT_LABEL[severity])}: ${counts[severity] ?? "\u2013"}`;
+    box.replaceChildren(icon, words);
+  }
+}

@@ -2117,4 +2117,112 @@ mod ops {
             }
         }
     }
+
+    /// A copy of the numbered project with a second control 1 mm (10 m) from the first on the same course.
+    async fn check_of(app: &axum::Router) -> (StatusCode, Value) {
+        send(app, "GET", "/tok/api/check", None, json!({})).await
+    }
+
+    fn crowded_project(dir: &std::path::Path) -> std::path::PathBuf {
+        let path = numbered_project(dir);
+        let server = crate::mcp::CoursePlanServer::new(Lang::english());
+        server
+            .call_json(
+                &path,
+                "add_control",
+                json!({"at": {"x": 90.0, "y": 60.0}, "code": "32"}),
+            )
+            .unwrap();
+        server
+            .call_json(
+                &path,
+                "move_control",
+                json!({"code": "31", "at": {"x": 91.0, "y": 60.0}}),
+            )
+            .unwrap();
+        server
+            .call_json(
+                &path,
+                "set_course_controls",
+                json!({"name": "A", "codes": ["31", "32"]}),
+            )
+            .unwrap();
+        path
+    }
+
+    #[tokio::test]
+    async fn check_route_equals_mcp_check() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = crowded_project(dir.path());
+        let app = router_for(&path);
+        let (status, mut routed) = check_of(&app).await;
+        assert_eq!(status, StatusCode::OK, "{routed}");
+        let server = crate::mcp::CoursePlanServer::new(Lang::english());
+        let direct = server.call_json(&path, "check", json!({})).unwrap();
+        assert_eq!(routed["revision"], state(&app).await["revision"]);
+        routed.as_object_mut().unwrap().remove("revision");
+        assert_eq!(routed, direct);
+        assert!(
+            routed["summary"]["errors"].as_u64().unwrap() >= 1,
+            "{}",
+            routed["summary"]
+        );
+        // Asked again, the same answer comes from the cache.
+        let (_, again) = check_of(&app).await;
+        assert_eq!(again["findings"], routed["findings"]);
+    }
+
+    #[tokio::test]
+    async fn check_of_a_stale_map_reads_the_new_map() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = crowded_project(dir.path());
+        let app = router_for(&path);
+        let (status, first) = check_of(&app).await;
+        assert_eq!(status, StatusCode::OK);
+        let map = dir.path().join("map.omap");
+        let good = std::fs::read(&map).unwrap();
+        std::fs::write(&map, b"not a map").unwrap();
+        let (status, _) = check_of(&app).await;
+        assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
+        std::fs::write(&map, good).unwrap();
+        let (status, again) = check_of(&app).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(again, first);
+    }
+
+    #[tokio::test]
+    async fn check_follows_an_accepted_finding() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = crowded_project(dir.path());
+        let app = router_for(&path);
+        let (_, first) = check_of(&app).await;
+        let finding = first["findings"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|f| f["severity"] == "error")
+            .unwrap()
+            .clone();
+        let loc = &finding["location"];
+        let mut args = json!({"rule": finding["rule"], "note": "on purpose"});
+        match loc["kind"].as_str().unwrap() {
+            "controls" => args["controls"] = loc["codes"].clone(),
+            kind => panic!("unexpected kind {kind}: {loc}"),
+        }
+        let (status, done) = op(
+            &app,
+            "accept_finding",
+            first["revision"].as_str().unwrap(),
+            args,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{done}");
+        let (_, after) = check_of(&app).await;
+        assert_ne!(after["revision"], first["revision"]);
+        assert_eq!(after["accepted"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            after["summary"]["errors"].as_u64().unwrap() + 1,
+            first["summary"]["errors"].as_u64().unwrap()
+        );
+    }
 }

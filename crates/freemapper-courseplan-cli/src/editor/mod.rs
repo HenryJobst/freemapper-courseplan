@@ -62,6 +62,8 @@ pub(crate) struct EditorState {
     pub history: history::UndoHistory,
     /// The MCP tools, which are the editor's operations.
     pub server: CoursePlanServer,
+    /// The last check result, keyed by the project revision and the map stamp it was made from.
+    pub checked: Option<(String, Arc<serde_json::Value>)>,
 }
 
 impl EditorState {
@@ -76,6 +78,7 @@ impl EditorState {
             map: MapCache::new(note),
             history: history::UndoHistory::default(),
             server: CoursePlanServer::new(lang.clone()),
+            checked: None,
             lang,
         }
     }
@@ -94,6 +97,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/state"), get(api_state))
         .route(&format!("{prefix}/api/revision"), get(api_revision))
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
+        .route(&format!("{prefix}/api/check"), get(api_check))
         .route(&format!("{prefix}/api/number-at"), get(api_number_at))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
@@ -293,6 +297,56 @@ async fn api_redo(State(state): State<Shared>, headers: HeaderMap) -> Response {
 async fn api_revision(State(state): State<Shared>) -> Response {
     let loaded = refreshed(&state).await;
     blocking_response(move || axum::Json(api::revision_json(&loaded)).into_response()).await
+}
+
+/// `GET api/check`: the result of the MCP tool `check` plus `revision`. The result is cached on the project
+/// revision and the map stamp, so repeated polls cost nothing; a changed map file is read again (ADR 0052).
+async fn api_check(State(state): State<Shared>) -> Response {
+    let loaded = refreshed(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    let key = format!("{}/{}", loaded.revision.0, entry.stamp.token());
+    let lang = {
+        let guard = state.lock().await;
+        if let Some((cached, value)) = &guard.checked
+            && *cached == key
+        {
+            return axum::Json(value.as_ref()).into_response();
+        }
+        guard.lang.clone()
+    };
+    let work = {
+        let loaded = loaded.clone();
+        move || -> Result<serde_json::Value, String> {
+            let file = loaded.file.as_ref().map_err(Clone::clone)?;
+            let event = &file.event;
+            let rules = freemapper_courseplan::rules::load_rule_set(
+                &event.event.rule_profile,
+                &event.event.rule_overlays,
+            )
+            .map_err(|e| api::tidy(&e.localize(&lang), &[]))?;
+            let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+            let report =
+                freemapper_courseplan::check::check_event_as(event, &entry.doc, kind, &rules);
+            let mut value = crate::mcp::report_json(&rules, event, &report, &lang);
+            value["revision"] = serde_json::json!(loaded.revision.0);
+            Ok(value)
+        }
+    };
+    match blocking(work).await {
+        Some(Ok(value)) => {
+            let value = Arc::new(value);
+            state.lock().await.checked = Some((key, value.clone()));
+            axum::Json(value.as_ref()).into_response()
+        }
+        Some(Err(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+        None => plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal error".to_owned(),
+        ),
+    }
 }
 
 /// `GET api/number-at?course&index&x&y`: direction and gap of a number whose box is centred on a point.

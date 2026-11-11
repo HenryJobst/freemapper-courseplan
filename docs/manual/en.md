@@ -108,7 +108,7 @@ there.
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
 bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
-The area for findings is empty, and the menu items for export, import and sync are greyed out. Both follow in later versions.
+It runs the check as you work and shows its findings. The menu items for export, import and sync are greyed out and follow in later versions.
 
 ### Starting it
 
@@ -138,8 +138,8 @@ One editor belongs to one project. To open a second project, start a second edit
   control numbers on top. A number box with a dashed outline was placed automatically; the project stores no position
   for it yet.
 - On the right are the properties of the selection, for example name, length and climb of a course, or code, kind,
-  position and description of a control. For a control the list also names the map objects within 3 mm. The area for
-  findings is still empty.
+  position and description of a control. For a control the list also names the map objects within 3 mm. Below them
+  are the findings of the selection.
 - The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
   Messages appear there too.
 
@@ -230,7 +230,7 @@ the project stores no position for it yet.
   With "also replace placed numbers" everything is computed again, except the numbers set on the control for all
   courses.
 
-One drag is one step for undo. The editor does not yet warn about a gap outside the rule range; `check` reports it.
+One drag is one step for undo. A gap outside the rule range gets a warning sign at the number box (see "Findings").
 
 ### Control descriptions
 
@@ -267,6 +267,20 @@ The list comes from freemapper-core, so every symbol you can pick can also be wr
   belongs to all courses. Start and finish have no course list.
 - **Delete.** "Delete special object" or the Delete key removes the object; undo brings it back.
 - **No move.** The editor cannot move a special object. Delete it and draw it again (ADR 0049).
+
+### Findings
+
+Half a second after each change the editor runs the same check as `check` and shows the result.
+
+- The status bar counts errors, warnings and hints of the whole event. Each count has a sign (cross, triangle, "i") as
+  well as a colour. A click on the counts opens the drawer: all open findings, the accepted ones with their notes, and
+  under "Not checked" the rules that did not run, with the reason.
+- The panel on the right lists the findings of the selected control, leg or course. A click on a finding selects its
+  place and fits the map to it.
+- On the map a ring marks each control with a finding and a thick dashed line each leg. A warning sign at the number
+  box means a gap outside the rule range. The signs differ by severity in shape too.
+- "Accept..." asks for a note of up to 200 characters and stores the exception in the project file. The finding then
+  moves to "Accepted" with its note, and "Remove acceptance" brings it back. Both are one step for undo.
 
 ### Undo and redo
 

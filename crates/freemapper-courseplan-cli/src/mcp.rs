@@ -293,7 +293,12 @@ fn finding_json(rules: &RuleSet, finding: &Finding, lang: &Lang) -> Value {
 
 /// The result of `check`: summary, findings, accepted findings with their notes and skipped
 /// rules, each with machine fields and the text in the server's language.
-fn report_json(rules: &RuleSet, event: &Event, report: &CheckReport, lang: &Lang) -> Value {
+pub(crate) fn report_json(
+    rules: &RuleSet,
+    event: &Event,
+    report: &CheckReport,
+    lang: &Lang,
+) -> Value {
     use freemapper_courseplan::rules::Severity;
     let accepted: Vec<Value> = report
         .accepted

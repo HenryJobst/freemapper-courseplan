@@ -112,8 +112,8 @@ dort an.
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Bereich für Befunde ist leer,
-und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch ausgegraut. Beides folgt in späteren Versionen.
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Die Menüpunkte zum Exportieren, Importieren
+und Abgleichen sind noch ausgegraut und folgen in späteren Versionen.
 
 ### Starten
 
@@ -143,8 +143,8 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
   Postennummern darüber. Nummernfelder mit gestrichelter Linie hat das Programm automatisch platziert; für sie ist
   noch keine Lage im Projekt gespeichert.
 - Rechts stehen die Eigenschaften der Auswahl, etwa Name, Länge und Anstieg einer Bahn oder Code, Art, Position und
-  Beschreibung eines Postens. Bei einem Posten nennt die Liste auch die Kartenobjekte im Umkreis von 3 mm. Der
-  Bereich für Befunde ist noch leer.
+  Beschreibung eines Postens. Bei einem Posten nennt die Liste auch die Kartenobjekte im Umkreis von 3 mm. Darunter
+  stehen die Befunde der Auswahl.
 - Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
   Meldungen erscheinen dort ebenfalls.
 
@@ -239,8 +239,8 @@ automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
   stehen. Mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle Bahnen gesetzten
   bleiben.
 
-Ein Ziehen ist ein Schritt für Rückgängig. Eine Warnung zu einem Abstand außerhalb des Regelbereichs zeigt der Editor
-noch nicht; `check` meldet ihn.
+Ein Ziehen ist ein Schritt für Rückgängig. Liegt der Abstand der Nummer außerhalb des Regelbereichs, steht am Nummernfeld ein
+Warnzeichen (siehe „Befunde“).
 
 ### Postenbeschreibungen
 
@@ -279,6 +279,22 @@ schreiben (ADR 0051).
   gehört es zu allen Bahnen. Start und Ziel haben keine Bahnliste.
 - **Löschen.** „Sonderobjekt löschen“ oder die Entf-Taste entfernt das Objekt, Rückgängig holt es zurück.
 - **Kein Verschieben.** Der Editor kann ein Sonderobjekt nicht verschieben. Lösche es und zeichne es neu (ADR 0049).
+
+### Befunde
+
+Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus wie `check` und zeigt das Ergebnis.
+
+- Die Statusleiste zählt Fehler, Warnungen und Hinweise der ganzen Veranstaltung. Jede Zahl hat ein Zeichen (Kreuz,
+  Dreieck, „i“) und eine Farbe. Ein Klick auf die Zahlen öffnet die Schublade: alle offenen Befunde, die akzeptierten
+  mit ihren Begründungen und unter „Nicht geprüft“ die Regeln, die nicht liefen, mit dem Grund.
+- Das Feld rechts listet die Befunde des gewählten Postens, der Strecke oder der Bahn. Ein Klick auf einen Befund wählt
+  seine Stelle und zeigt sie in der Karte.
+- In der Karte markiert ein Ring jeden Posten mit einem Befund und eine dicke gestrichelte Linie jede Strecke. Ein
+  Warnzeichen am Nummernfeld heißt: Der Abstand liegt außerhalb des Regelbereichs. Die Zeichen unterscheiden sich auch
+  in der Form nach Schwere.
+- „Akzeptieren…“ fragt nach einer Begründung von höchstens 200 Zeichen und speichert die Ausnahme in der
+  Projektdatei. Der Befund steht dann unter „Hier akzeptiert“ mit seiner Begründung, und „Akzeptanz zurücknehmen“
+  holt ihn zurück. Beides ist ein Schritt für Rückgängig.
 
 ### Rückgängig und Wiederholen
 
