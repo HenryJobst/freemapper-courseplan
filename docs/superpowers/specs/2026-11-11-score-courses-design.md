@@ -61,8 +61,9 @@ numbers through unstated assumptions; a changed project file without the setter 
 
 ### 4.1 Travel time (first part of the route analysis) *(user: simple start; Claude's call: details)*
 
-A cost surface over the map: a speed per map symbol, impassable symbols blocked, special objects of the event
-(out of bounds, dangerous area, forbidden route) blocked. No elevation. The surface is a raster at a resolution
+A cost surface over the map: a speed per map symbol, impassable symbols blocked, out-of-bounds and dangerous
+areas of the event blocked. A forbidden route is a line, not an area: sites within about 4 m of it are rejected,
+but a route may cross it, as `check` treats it for legs and links (ADR 0068, *(Claude's call)*). No elevation. The surface is a raster at a resolution
 the builder chooses (a few metres on the ground). The builder decides how paths are searched.
 
 The surface returns for two points: the fastest route and up to a few clearly different alternatives, each with
