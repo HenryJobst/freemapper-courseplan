@@ -27,7 +27,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 ### Changed
 
 - Saving a project file now refuses when the file changed since the command read it (CLI, MCP tools and editor alike). Nothing is written, and the CLI exits with code 1 and prints `<file> changed since it was read; nothing was written`. Run the command again. This closes the lost-update limit of the sync (ADR 0044, 0040).
-- The shared building blocks come from freemapper-core v0.14.1. The editor draws the map with `freemapper-render` and uses its list of description symbol ids (`description_symbols::ids`) and the drawings and texts of the symbols (`render`); the rest of the program does not change. The lock file pins `crc32fast` 1.5.3 and `flate2` 1.1.10 because newer releases were younger than two weeks (ADR 0006, 0056); do not run a plain `cargo update`.
+- The shared building blocks come from freemapper-core v0.14.1. The editor draws the map with `freemapper-render` and uses its list of description symbol ids (`description_symbols::ids`) and the drawings and texts of the symbols (`render`); the rest of the program does not change. The lock file pins `crc32fast` 1.5.3 and `flate2` 1.1.10 because newer releases were younger than two weeks (ADR 0006, 0056).
 - Tests: every test run now reads four maps from freemapper (schoolyard 1:1000, sprint 1:4000, a map from freemapper 0.9.0 and one with an unknown map kind) and compares map kind, title, sheet objects, base area and map extent with the expected values from `freemapper-contract` (ADR 0041). If freemapper changes a tag or a key of `freemapper.toml`, these tests fail.
 
 ### Fixed
