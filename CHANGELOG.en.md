@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-11
+
 ### Added
 
 - The Lübeck example has a score course in a second project file, `luebeck-score.courseplan.toml`: 9 controls, 25 points, 15 minutes, from `score draft`, with its transcript, check output, IOF XML, CSV list and evaluation sheet in English and German. A draft at 45 minutes fails because the free codes run out (30 controls at the highest value 5, 54 at 9), not because the map is small; the README says so.

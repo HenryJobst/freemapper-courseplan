@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.13.0] - 2026-11-11
+
 ### Hinzugefügt
 
 - Das Lübecker Beispiel hat in einer zweiten Projektdatei, `luebeck-score.courseplan.toml`, eine Score-Bahn: 9 Posten, 25 Punkte, 15 Minuten, aus `score draft`, mit Transkript, Ausgabe von `check`, IOF-XML, CSV-Liste und Auswertungsbogen auf Deutsch und Englisch. Ein Entwurf mit 45 Minuten scheitert, weil die freien Codes ausgehen (30 Posten beim höchsten Wert 5, 54 bei 9), nicht weil die Karte klein ist; die README sagt das.
