@@ -205,6 +205,22 @@ pub(super) struct ControlRef {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetControlCode {
+    pub(super) project: String,
+    pub(super) from: Code,
+    pub(super) to: Code,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RenameCourse {
+    pub(super) project: String,
+    pub(super) from: Name,
+    pub(super) to: Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct DescribeControl {
     pub(super) project: String,
     pub(super) code: Code,

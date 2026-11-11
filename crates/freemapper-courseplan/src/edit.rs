@@ -28,6 +28,9 @@ pub enum EditError {
     /// Another special object already has this id.
     #[error("special object {0} already exists")]
     IdTaken(String),
+    /// Another course already has this name.
+    #[error("course {0} already exists")]
+    NameTaken(String),
     /// A point lies outside the map.
     #[error(
         "point ({:.1}, {:.1}) is outside the map, which spans ({:.1}, {:.1}) to ({:.1}, {:.1})",
@@ -909,6 +912,37 @@ pub fn set_rule_profile(
         Ok(())
     })?;
     Ok(set)
+}
+
+/// Changes the code of a control, and with it every place that names the control (see
+/// [`rename_control`]). The new code must be free and valid; the same code is no change.
+pub fn change_code(
+    event: &mut Event,
+    from: &ControlCode,
+    to: &ControlCode,
+) -> Result<(), EditError> {
+    apply(event, |e| {
+        control_mut(e, from)?;
+        if from != to && e.controls.iter().any(|c| &c.code == to) {
+            return Err(EditError::CodeTaken(to.clone()));
+        }
+        rename_control(e, from, to);
+        Ok(())
+    })
+}
+
+/// Changes the name of a course, and with it every place that names the course (see
+/// [`rename_course`]). The new name must be free, not empty, without white space at its ends and
+/// within the length limit; the same name is no change.
+pub fn change_course_name(event: &mut Event, from: &str, to: &str) -> Result<(), EditError> {
+    apply(event, |e| {
+        course_mut(e, from)?;
+        if from != to && e.courses.iter().any(|c| c.name == to) {
+            return Err(EditError::NameTaken(to.to_owned()));
+        }
+        rename_course(e, from, to);
+        Ok(())
+    })
 }
 
 /// Renames a control everywhere the project names it: the control, the stops of courses of every kind,

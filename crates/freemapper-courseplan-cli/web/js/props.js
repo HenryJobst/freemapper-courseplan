@@ -1,5 +1,5 @@
 // Properties of the selection. Values are put in with textContent or an input's value only.
-// A control's position is editable; its code and kind are shown as they are.
+// A control's position and code and a course's name are editable; the kind is shown as it is.
 
 import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
@@ -22,11 +22,65 @@ function specialPosition(s) {
   return s.map_mm ?? s.points?.[0] ?? s.polygon?.[0] ?? null;
 }
 
-function courseRows(list, state, name) {
+const MAX_CODE_CHARS = 64;
+const MAX_NAME_CHARS = 200;
+
+// Whether a code or name is fit to commit: not empty, no white space at its ends, within the limit, and not
+// the text of another entry. The server checks the same and has the last word.
+export function nameProblem(text, limit, others) {
+  if (text === "" || text.trim() !== text) return true;
+  return [...text].length > limit || others.includes(text);
+}
+
+// A text field for the code of a control or the name of a course. A refused text shows `errorId`'s message at
+// the field; a good one different from `value` is passed to commit(text). Returns the message element.
+function nameField(list, { id, labelId, value, limit, others, errorId, commit }) {
+  const term = document.createElement("dt");
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = t(labelId);
+  term.append(label);
+  const detail = document.createElement("dd");
+  const input = document.createElement("input");
+  input.id = id;
+  input.type = "text";
+  input.autocomplete = "off";
+  input.value = value;
+  detail.append(input);
+  list.append(term, detail);
+  const error = document.createElement("p");
+  error.id = `${id}-error`;
+  error.className = "field-error";
+  error.hidden = true;
+  error.textContent = t(errorId);
+  input.setAttribute("aria-describedby", error.id);
+  input.addEventListener("input", () => {
+    input.dataset.dirty = "1";
+  });
+  input.addEventListener("change", () => {
+    delete input.dataset.dirty;
+    const bad = nameProblem(input.value, limit, others);
+    input.setAttribute("aria-invalid", String(bad));
+    error.hidden = !bad;
+    if (!bad && input.value !== value) commit(input.value);
+  });
+  return error;
+}
+
+function courseRows(host, list, state, name, actions) {
   const course = state.event.courses.find((c) => c.name === name);
   if (!course) return;
   const info = state.courses.find((c) => c.name === name);
-  row(list, "editor-prop-name", course.name);
+  const error = nameField(list, {
+    id: "prop-name",
+    labelId: "editor-prop-name",
+    value: course.name,
+    limit: MAX_NAME_CHARS,
+    others: state.event.courses.map((c) => c.name).filter((n) => n !== name),
+    errorId: "editor-error-course-name",
+    commit: (to) => actions.renameCourse(name, to),
+  });
+  host.append(list, error);
   row(list, "editor-prop-kind", t("editor-kind-course"));
   row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
   row(list, "editor-prop-climb", course.climb_m == null ? null : `${course.climb_m} m`);
@@ -107,7 +161,15 @@ function positionFields(list, control, actions) {
 function controlRows(host, list, state, code, actions) {
   const control = state.event.controls.find((c) => String(c.code) === String(code));
   if (!control) return;
-  row(list, "editor-prop-code", control.code);
+  const codeError = nameField(list, {
+    id: "prop-code",
+    labelId: "editor-prop-code",
+    value: String(control.code),
+    limit: MAX_CODE_CHARS,
+    others: state.event.controls.map((c) => String(c.code)).filter((c) => c !== String(code)),
+    errorId: "editor-error-code",
+    commit: (to) => actions.changeCode(String(control.code), to),
+  });
   row(list, "editor-prop-kind", kindLabel(control.kind ?? "control"));
   const error = positionFields(list, control, actions);
   // A crossing point has no control description.
@@ -120,7 +182,7 @@ function controlRows(host, list, state, code, actions) {
     .filter((c) => c.controls.some((x) => String(x.code) === String(code)))
     .map((c) => c.name);
   row(list, "editor-prop-used-in", users.join(", "));
-  host.append(list, error);
+  host.append(list, codeError, error);
   const remove = document.createElement("button");
   remove.type = "button";
   remove.id = "prop-delete";
@@ -194,7 +256,7 @@ export function show(host, state, selection, overlay, actions) {
   const list = document.createElement("dl");
   list.className = "props";
   switch (selection.kind) {
-    case "course": courseRows(list, state, selection.id); break;
+    case "course": courseRows(host, list, state, selection.id, actions); break;
     case "control": controlRows(host, list, state, selection.id, actions); break;
     case "special": specialRows(list, state, selection.id); break;
     case "class": classRows(list, state, selection.id); break;
@@ -208,7 +270,7 @@ export function show(host, state, selection, overlay, actions) {
     }
     default: break;
   }
-  if (selection.kind !== "control") host.append(list);
+  if (selection.kind !== "control" && selection.kind !== "course") host.append(list);
   if (focused) host.querySelector(`#${focused}`)?.focus();
   if (selection.kind === "course" && overlay?.numbers.some((n) => n.source === "auto")) {
     const note = document.createElement("p");

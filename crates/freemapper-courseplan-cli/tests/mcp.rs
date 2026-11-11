@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 36] = [
+const TOOLS: [&str; 38] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -15,6 +15,8 @@ const TOOLS: [&str; 36] = [
     "add_control",
     "move_control",
     "remove_control",
+    "set_control_code",
+    "rename_course",
     "describe_control",
     "set_control_number",
     "add_special",
@@ -1656,4 +1658,74 @@ fn tool_list_has_sync_tools_in_both_languages() {
         .find(|t| t["name"] == "sync_ppen")
         .unwrap();
     assert!(tool["description"].as_str().unwrap().contains("Abgleich"));
+}
+
+#[test]
+fn set_control_code_tool() {
+    let (_dir, map, project) = workspace();
+    let mut session = Session::start();
+    session.ok("init_event", json!({ "map": map, "project": project }));
+    let extent = session.ok("map_extent", json!({ "project": project }))["extent"].clone();
+    let p = |fx, fy| point(&extent, fx, fy);
+    for (kind, id, fx) in [("start", "S1", 0.4), ("finish", "F1", 0.6)] {
+        session.ok(
+            "add_special",
+            json!({ "project": project, "kind": kind, "id": id, "at": p(fx, fx) }),
+        );
+    }
+    for (code, fx) in [("31", 0.45), ("32", 0.55)] {
+        session.ok(
+            "add_control",
+            json!({ "project": project, "at": p(fx, 0.5), "code": code }),
+        );
+    }
+    session.ok("add_class", json!({ "project": project, "name": "H10" }));
+    session.ok(
+        "add_course",
+        json!({
+            "project": project, "name": "A", "start": "S1", "finish": "F1",
+            "controls": ["31", "32"], "classes": ["H10"]
+        }),
+    );
+
+    let changed = session.ok(
+        "set_control_code",
+        json!({ "project": project, "from": 32, "to": "K7" }),
+    );
+    assert_eq!(changed["code"], "K7");
+    let info = session.ok("event_info", json!({ "project": project }));
+    assert_eq!(
+        info["courses"][0]["controls"],
+        json!(["31", "K7"]),
+        "{info}"
+    );
+
+    let before = std::fs::read(&project).unwrap();
+    for args in [
+        json!({ "project": project, "from": "K7", "to": 31 }),
+        json!({ "project": project, "from": "99", "to": "98" }),
+        json!({ "project": project, "from": "31", "to": "" }),
+        json!({ "project": project, "from": "31", "to": "x".repeat(65) }),
+    ] {
+        let (error, text) = session.call("set_control_code", args.clone());
+        assert!(error, "{args}: {text}");
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+
+    let renamed = session.ok(
+        "rename_course",
+        json!({ "project": project, "from": "A", "to": "Lang" }),
+    );
+    assert_eq!(renamed["name"], "Lang");
+    let info = session.ok("event_info", json!({ "project": project }));
+    assert_eq!(info["courses"][0]["name"], "Lang", "{info}");
+    session.ok(
+        "add_course",
+        json!({ "project": project, "name": "B", "start": "S1", "finish": "F1" }),
+    );
+    let (error, text) = session.call(
+        "rename_course",
+        json!({ "project": project, "from": "B", "to": "Lang" }),
+    );
+    assert!(error && text.contains("Lang"), "{text}");
 }

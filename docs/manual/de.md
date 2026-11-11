@@ -163,8 +163,12 @@ nennt den Grund.
   den Posten, dessen Mittelpunkt dem Mauszeiger am nächsten liegt, solange der Zeiger höchstens den Kreisradius plus
   die Linienbreite entfernt ist. Rechts zeigen die Eigenschaften ihn an.
 - **Setzen.** Wähle „Posten setzen“ und klicke auf die Karte. Der Editor legt an dieser Stelle einen Posten an. Den
-  Code eines Postens kannst du im Editor vorerst nicht ändern. Codes dürfen bis zu 64 Zeichen lang sein, Namen und
-  Notizen bis zu 200.
+  Code des gewählten Postens änderst du im Feld „Kennzahl“ der Eigenschaften; die Bahnen und akzeptierten Befunde,
+  die den Posten nennen, ziehen mit. Dasselbe leistet `freemapper-courseplan control code halle.courseplan.toml 31
+  K7`. Der Editor lehnt einen Code ab, der leer ist, Leerzeichen am Anfang oder Ende hat, länger als 64 Zeichen
+  ist oder einem anderen Posten gehört. Namen und Notizen dürfen bis zu 200 Zeichen lang sein. Eine Bahn benennst du
+  um, indem du im Feld „Name“ ihrer Eigenschaften den Namen änderst, oder mit `freemapper-courseplan course rename
+  halle.courseplan.toml A Lang`.
 - **Querungsstelle setzen.** „Querungsstelle setzen“ arbeitet genauso, legt aber einen Posten der Art
   „Querungsstelle“ an. Er bekommt den nächsten freien Code, teilt die Nummerierung mit den übrigen Posten und steht im
   Baum mit „(Querungsstelle)“. Auf der Karte erscheint er als zwei Bögen ohne Kreis. Die Eigenschaften zeigen Code, Art

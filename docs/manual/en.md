@@ -156,8 +156,12 @@ a position outside the map, the file stays as it was and a message says why.
 - **Select.** With the "Select" tool, click a control in the map or in the tree. A click selects the control whose
   centre is nearest to the pointer, as long as the pointer is within the circle's radius plus the line width. The
   properties on the right show it.
-- **Place.** Choose "Place control" and click on the map. The editor adds a control at that point. The code of a
-  control is read-only in the editor for now. Codes may have up to 64 characters; names and notes, up to 200.
+- **Place.** Choose "Place control" and click on the map. The editor adds a control at that point. To change the
+  code of the selected control, edit the "Code" field in the properties; the courses and accepted findings that
+  name the control follow. The same works with `freemapper-courseplan control code hall.courseplan.toml 31 K7`.
+  The editor refuses a code that is empty, has spaces at its ends, is longer than 64 characters or belongs to
+  another control. Names and notes may have up to 200 characters. To rename the selected course, edit the "Name"
+  field in its properties, or run `freemapper-courseplan course rename hall.courseplan.toml A Long`.
 - **Place crossing point.** "Place crossing point" works the same way but adds a control of the kind "Crossing
   point". It takes the next free code, shares the numbering with the other controls and appears in the tree with
   "(Crossing point)". On the map it is drawn as two arcs without a circle. Its properties show code, kind and

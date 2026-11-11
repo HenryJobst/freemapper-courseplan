@@ -49,6 +49,12 @@ pub enum ControlCmd {
         #[arg(long, value_name = "X,Y", allow_hyphen_values = true)]
         at: String,
     },
+    /// Change the code of a control
+    Code {
+        project: PathBuf,
+        from: String,
+        to: String,
+    },
     /// Remove a control
     Remove { project: PathBuf, code: String },
     /// Set the description symbols of a control
@@ -200,6 +206,12 @@ pub enum CourseCmd {
         /// Codes in running order, separated by commas
         codes: String,
     },
+    /// Rename a course
+    Rename {
+        project: PathBuf,
+        from: String,
+        to: String,
+    },
     /// Remove a course
     Remove { project: PathBuf, name: String },
     /// Set the bends and the marked-route flag of one leg
@@ -305,9 +317,9 @@ impl SpecialKind {
 
 /// Arguments that hold codes, ids or names, or lists of them. Their values lose surrounding white
 /// space, each list item on its own, so `--controls "31, 32"` means 31 and 32.
-const TRIMMED: [&str; 13] = [
+const TRIMMED: [&str; 15] = [
     "code", "id", "name", "start", "finish", "controls", "classes", "courses", "rule", "course",
-    "leg", "base", "overlay",
+    "leg", "base", "overlay", "from", "to",
 ];
 
 fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
@@ -512,6 +524,21 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
                 lang,
                 "cli-edit-control-moved",
                 &[("code", v(code)), ("x", v(x)), ("y", v(y))],
+            );
+        }
+        ControlCmd::Code { project, from, to } => {
+            let mut file = load(lang, &project)?;
+            edit::change_code(
+                &mut file.event,
+                &ControlCode(from.clone()),
+                &ControlCode(to.clone()),
+            )
+            .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(
+                lang,
+                "cli-edit-control-code-changed",
+                &[("from", v(from)), ("to", v(to))],
             );
         }
         ControlCmd::Remove { project, code } => {
@@ -915,6 +942,16 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 &[("name", v(name)), ("codes", v(shown))],
             );
             say_cleared(lang, &cleared);
+        }
+        CourseCmd::Rename { project, from, to } => {
+            let mut file = load(lang, &project)?;
+            edit::change_course_name(&mut file.event, &from, &to).map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            say(
+                lang,
+                "cli-edit-course-renamed",
+                &[("from", v(from)), ("to", v(to))],
+            );
         }
         CourseCmd::Remove { project, name } => {
             let mut file = load(lang, &project)?;

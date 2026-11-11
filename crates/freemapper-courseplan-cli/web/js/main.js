@@ -199,6 +199,20 @@ async function moveControl(code, x, y) {
   if (done) status.say("editor-status-moved");
 }
 
+async function changeCode(from, to) {
+  const done = await runOp("set_control_code", { from, to });
+  if (!done) return;
+  status.say("editor-status-code-changed");
+  await selectKey(`control:${to}`);
+}
+
+async function renameCourse(from, to) {
+  const done = await runOp("rename_course", { from, to });
+  if (!done) return;
+  status.say("editor-status-course-renamed");
+  await selectKey(`course:${to}`);
+}
+
 async function placeControl(at, crossing) {
   const body = { at: { x: mmValue(at[0]), y: mmValue(at[1]) } };
   if (crossing) body.crossing_point = true;
@@ -261,7 +275,7 @@ document.getElementById("confirm-yes").addEventListener("click", () => {
   deleteControl(confirmDialog.dataset.code);
 });
 
-const propActions = { move: moveControl, remove: requestDelete };
+const propActions = { move: moveControl, remove: requestDelete, changeCode, renameCourse };
 
 function updateHistoryButtons() {
   const u = state.data?.undo;

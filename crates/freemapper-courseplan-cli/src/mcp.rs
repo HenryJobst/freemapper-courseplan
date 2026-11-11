@@ -739,6 +739,22 @@ impl CoursePlanServer {
         reply(self.remove_control_op(req))
     }
 
+    #[tool(description = "Change the code of a control")]
+    async fn set_control_code(
+        &self,
+        Parameters(req): Parameters<SetControlCode>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_control_code_op(req))
+    }
+
+    #[tool(description = "Rename a course")]
+    async fn rename_course(
+        &self,
+        Parameters(req): Parameters<RenameCourse>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.rename_course_op(req))
+    }
+
     #[tool(description = "Describe a control")]
     async fn describe_control(
         &self,
@@ -1073,6 +1089,26 @@ impl CoursePlanServer {
             )
             .map_err(|e| self.refused(e))?;
             Ok(json!({ "code": req.code.0 }))
+        })
+    }
+
+    fn set_control_code_op(&self, req: SetControlCode) -> Answer {
+        self.edit(&req.project, |file| {
+            edit::change_code(
+                &mut file.event,
+                &ControlCode(req.from.0.clone()),
+                &ControlCode(req.to.0.clone()),
+            )
+            .map_err(|e| self.refused(e))?;
+            Ok(json!({ "from": req.from.0, "code": req.to.0 }))
+        })
+    }
+
+    fn rename_course_op(&self, req: RenameCourse) -> Answer {
+        self.edit(&req.project, |file| {
+            edit::change_course_name(&mut file.event, &req.from.0, &req.to.0)
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({ "from": req.from.0, "name": req.to.0 }))
         })
     }
 
@@ -1685,6 +1721,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "add_control",
     "move_control",
     "remove_control",
+    "set_control_code",
     "describe_control",
     "set_control_number",
     "add_special",
@@ -1695,6 +1732,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "remove_class",
     "add_course",
     "remove_course",
+    "rename_course",
     "set_course_controls",
     "set_leg",
     "set_course_details",
@@ -1786,6 +1824,8 @@ impl CoursePlanServer {
             "add_control" => run!(AddControl, add_control_op),
             "move_control" => run!(MoveControl, move_control_op),
             "remove_control" => run!(ControlRef, remove_control_op),
+            "set_control_code" => run!(SetControlCode, set_control_code_op),
+            "rename_course" => run!(RenameCourse, rename_course_op),
             "describe_control" => run!(DescribeControl, describe_control_op),
             "set_control_number" => run!(SetControlNumber, set_control_number_op),
             "add_special" => run!(AddSpecial, add_special_op),
@@ -2273,7 +2313,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 36);
+            assert_eq!(tools.len(), 38);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

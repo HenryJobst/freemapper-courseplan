@@ -1100,3 +1100,120 @@ fn rule_profile_is_validated_before_it_is_set() {
     set_rule_profile(&mut e, "wkb-2026", &[]).unwrap();
     assert!(e.event.rule_overlays.is_empty());
 }
+
+// ---------------------------------------------------------------------------------------------
+// Changing a code, renaming a course
+
+#[test]
+fn change_code_follows_into_courses_and_accepted_findings() {
+    let mut e = event();
+    let mut a = acceptance("wkb2026.distance.min", &["31", "32"], "on purpose");
+    a.legs = vec![];
+    e.accepted_findings.push(a);
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef {
+            course: "A".to_owned(),
+            after: 1,
+            from: "31".to_owned(),
+            to: "32".to_owned(),
+        }],
+        note: "n".to_owned(),
+    });
+    change_code(&mut e, &code("32"), &code("77")).unwrap();
+    assert_eq!(codes_of(&e, "A"), ["31", "77"]);
+    assert_eq!(codes_of(&e, "B"), ["33", "77"]);
+    assert!(e.controls.iter().any(|c| c.code == code("77")));
+    assert!(!e.controls.iter().any(|c| c.code == code("32")));
+    assert_eq!(e.accepted_findings[0].controls, [code("31"), code("77")]);
+    assert_eq!(e.accepted_findings[1].legs[0].to, "77");
+    assert_eq!(e.accepted_findings[1].legs[0].from, "31");
+}
+
+#[test]
+fn change_code_to_a_taken_code_is_refused_byte_identical() {
+    let mut e = event();
+    let before = e.clone();
+    assert_eq!(
+        change_code(&mut e, &code("31"), &code("32")),
+        Err(EditError::CodeTaken(code("32")))
+    );
+    assert_eq!(e, before);
+    assert!(matches!(
+        change_code(&mut e, &code("99"), &code("98")),
+        Err(EditError::NotFound {
+            what: "control",
+            ..
+        })
+    ));
+    for bad in ["", " 40", "40 ", &"x".repeat(65)] {
+        assert!(
+            matches!(
+                change_code(&mut e, &code("31"), &code(bad)),
+                Err(EditError::Invalid(_))
+            ),
+            "{bad:?}"
+        );
+    }
+    assert_eq!(e, before);
+    // The same code is no change.
+    change_code(&mut e, &code("31"), &code("31")).unwrap();
+    assert_eq!(e, before);
+}
+
+#[test]
+fn rename_course_follows_into_specials_and_findings() {
+    let mut e = event();
+    e.specials.push(water(&["A", "B"]));
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: Some("A".to_owned()),
+        legs: vec![],
+        note: "n".to_owned(),
+    });
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef::at("A", 1)],
+        note: "n".to_owned(),
+    });
+    change_course_name(&mut e, "A", "Lang").unwrap();
+    assert_eq!(e.courses[0].name, "Lang");
+    assert_eq!(e.courses[0].classes, ["H21"]);
+    match &e.specials[2] {
+        SpecialObject::Water { courses, .. } => assert_eq!(courses, &["Lang", "B"]),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(e.accepted_findings[0].course.as_deref(), Some("Lang"));
+    assert_eq!(e.accepted_findings[1].legs[0].course, "Lang");
+}
+
+#[test]
+fn rename_course_refuses_taken_missing_blank_and_long_names() {
+    let mut e = event();
+    let before = e.clone();
+    assert_eq!(
+        change_course_name(&mut e, "A", "B"),
+        Err(EditError::NameTaken("B".to_owned()))
+    );
+    assert!(matches!(
+        change_course_name(&mut e, "Z", "Y"),
+        Err(EditError::NotFound { what: "course", .. })
+    ));
+    for bad in ["", " X", "X ", &"x".repeat(201)] {
+        assert!(
+            matches!(
+                change_course_name(&mut e, "A", bad),
+                Err(EditError::Invalid(_))
+            ),
+            "{bad:?}"
+        );
+    }
+    assert_eq!(e, before);
+    change_course_name(&mut e, "A", "A").unwrap();
+    assert_eq!(e, before);
+}

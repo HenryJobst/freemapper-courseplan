@@ -802,6 +802,7 @@ impl Localize for EditError {
             ),
             EditError::CodeTaken(code) => text(lang, "error-edit-code-taken", &[("code", v(code))]),
             EditError::IdTaken(id) => text(lang, "error-edit-id-taken", &[("id", v(id))]),
+            EditError::NameTaken(name) => text(lang, "error-edit-name-taken", &[("name", v(name))]),
             EditError::OutsideMap { at, min, max } => text(
                 lang,
                 "error-edit-outside-map",
@@ -1501,6 +1502,7 @@ mod tests {
             EditError::Invalid(model_errors()),
             EditError::CodeTaken(code("31")),
             EditError::IdTaken(s("w1")),
+            EditError::NameTaken(s("A")),
             EditError::OutsideMap { at, min, max },
             EditError::InUse {
                 id: s("31"),
