@@ -81,8 +81,8 @@ Postennummern platzieren. `freemapper-courseplan info <Projekt>` zeigt, was im P
 Bahn; `list` und `map` berichten über Einzelheiten und Karte, und `--json` gibt dieselbe Antwort wie die MCP-Werkzeuge. Dasselbe kann ein KI-Assistent über den MCP-Server `freemapper-courseplan mcp` für dich tun; wie du ihn
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten), und [`AGENTS.md`](AGENTS.md) sagt dem
 Assistenten, wie er das Programm selbst installiert und benutzt. Die Projektdatei ist
-TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts-, Staffel- und Score-Bahnen kann das Programm noch nicht
-bearbeiten oder messen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
+TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Score-Bahnen bearbeitest du mit `score` und `course add --kind score`; Mannschafts- und Staffelbahnen kann das Programm
+noch nicht bearbeiten, und gemessen werden nur Einzelbahnen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzelbahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
@@ -93,7 +93,7 @@ Ausnahmen, zu denen kein Befund mehr passt, und die übersprungenen Prüfregeln.
 tragen Startfenster, Regelkategorien und erwartete Starter nach, die manche Prüfungen brauchen. Das Handbuch erklärt
 es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründen), und der KI-Assistent hat dafür die
 Werkzeuge `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`, `set_start_window` und
-`set_class`. Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht, und die Routenanalyse
+`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht, und die Routenanalyse
 fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
 
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzelbahnen als IOF-XML 3.0 für die

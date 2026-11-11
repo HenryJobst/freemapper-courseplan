@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- Editing score courses on the command line, over MCP and in the editor's operations: `course add --kind score --time-limit N`, `score controls`, `score value`, `score link add|remove`, `score settings` and `score course set`, with the tools `add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`, `set_score_settings` and `set_score_course_details`. The code decides a control's value, so a different value is refused. `rename`, `remove`, classes and print scale work on score courses; legs, bends and numbers stay with individual courses (ADR 0067).
 - Score courses: the project has a `[score]` table with the value range, runner profiles and seed, and a score course can name mandatory links between two controls. Loading a project refuses links to unknown controls, duplicate links and branching chains (ADR 0060).
 - `check` now checks score courses: value in the code, codes, ring and order of the controls, length, time limit, penalty, mandatory links and mix. Team and relay courses stay skipped (ADR 0066).
 

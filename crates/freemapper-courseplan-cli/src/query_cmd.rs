@@ -130,7 +130,12 @@ pub fn map(lang: &Lang, cmd: MapCmd) -> Outcome {
 /// Runs one MCP tool on the project and returns its JSON, with `"ok": true` as the MCP result has it.
 /// The project is loaded once first, so a missing or broken file is reported as every other command
 /// reports it; the MCP tool's own message is redacted for the assistant.
-fn run_tool(lang: &Lang, project: &Path, tool: &str, args: Value) -> Result<Value, Failure> {
+pub(crate) fn run_tool(
+    lang: &Lang,
+    project: &Path,
+    tool: &str,
+    args: Value,
+) -> Result<Value, Failure> {
     load(lang, project)?;
     let absolute = std::path::absolute(project)
         .map_err(|e| Failure::Error(format!("{}: {e}", project.display())))?;
@@ -149,7 +154,7 @@ fn run_tool(lang: &Lang, project: &Path, tool: &str, args: Value) -> Result<Valu
     }
 }
 
-fn print_json(value: &Value) -> Outcome {
+pub(crate) fn print_json(value: &Value) -> Outcome {
     println!(
         "{}",
         serde_json::to_string_pretty(value).unwrap_or_default()

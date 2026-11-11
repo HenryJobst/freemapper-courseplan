@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Score-Bahnen bearbeiten, in der Kommandozeile, über MCP und in den Operationen des Editors: `course add --kind score --time-limit N`, `score controls`, `score value`, `score link add|remove`, `score settings` und `score course set`, dazu die Werkzeuge `add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`, `set_score_settings` und `set_score_course_details`. Der Code bestimmt den Wert eines Postens, ein abweichender Wert wird abgelehnt. `rename`, `remove`, Kategorien und Druckmaßstab gelten auch für Score-Bahnen; Strecken, Knicke und Nummern bleiben bei Einzelbahnen (ADR 0067).
 - Score-Bahnen: Das Projekt kennt jetzt den Abschnitt `[score]` mit Wertebereich, Läuferprofilen und Seed, und eine Score-Bahn kann Pflichtverbindungen zwischen zwei Posten nennen. Die Prüfung der Projektdatei lehnt unbekannte Posten, doppelte Verbindungen und verzweigte Ketten ab (ADR 0060).
 - `check` prüft jetzt Score-Bahnen: Wert im Code, Codes, Ring und Reihenfolge der Posten, Länge, Zeitlimit, Strafe, Pflichtverbindungen und Mischung. Mannschafts- und Staffelbahnen bleiben übersprungen (ADR 0066).
 

@@ -46,6 +46,7 @@ use crate::omap::OmapError;
 use crate::ppen_export::{ExportNote, PpenExportError};
 use crate::ppen_import::{ImportNote, PpenImportError};
 use crate::rules::RulesError;
+use crate::score::ScoreError;
 use crate::sync::SyncError;
 use crate::sync::apply::SyncNote;
 
@@ -936,6 +937,102 @@ impl Localize for EditError {
                 &[("column", v(column)), ("id", v(id))],
             ),
             EditError::Rules(e) => e.localize(lang),
+            EditError::ScoreCourse { course } => {
+                text(lang, "error-edit-score-course", &[("course", v(course))])
+            }
+            EditError::NotScoreCourse { course } => text(
+                lang,
+                "error-edit-not-score-course",
+                &[("course", v(course))],
+            ),
+            EditError::ValueDisagreesWithCode {
+                code,
+                value,
+                expected,
+            } => text(
+                lang,
+                "error-edit-value-disagrees",
+                &[
+                    ("code", v(code)),
+                    ("value", v(value)),
+                    ("expected", v(expected)),
+                ],
+            ),
+            EditError::CodeCarriesNoValue(code) => text(
+                lang,
+                "error-edit-code-carries-no-value",
+                &[("code", v(code))],
+            ),
+            EditError::DuplicateScoreControl(code) => text(
+                lang,
+                "error-edit-duplicate-score-control",
+                &[("code", v(code))],
+            ),
+            EditError::BadTimeLimit => text(lang, "error-edit-bad-time-limit", &[]),
+            EditError::Score(e) => e.localize(lang),
+        }
+    }
+}
+
+impl Localize for ScoreError {
+    fn localize(&self, lang: &Lang) -> String {
+        let t = |id: &str, args: &[(&str, FluentValue<'static>)]| text(lang, id, args);
+        match self {
+            ScoreError::Unreachable { from, to } => t(
+                "error-score-unreachable",
+                &[
+                    ("from_x", v(from.x)),
+                    ("from_y", v(from.y)),
+                    ("to_x", v(to.x)),
+                    ("to_y", v(to.y)),
+                ],
+            ),
+            ScoreError::StartUnreachable { at } => t(
+                "error-score-start-unreachable",
+                &[("x", v(at.x)), ("y", v(at.y))],
+            ),
+            ScoreError::FinishUnreachable { at } => t(
+                "error-score-finish-unreachable",
+                &[("x", v(at.x)), ("y", v(at.y))],
+            ),
+            ScoreError::MapEmpty => t("error-score-map-empty", &[]),
+            ScoreError::BadRouteSetting { name, value } => t(
+                "error-score-bad-route-setting",
+                &[("name", v(name)), ("value", v(value))],
+            ),
+            ScoreError::GridTooLarge { cells, limit } => t(
+                "error-score-grid-too-large",
+                &[("cells", v(cells)), ("limit", v(limit))],
+            ),
+            ScoreError::CodeSpaceExhausted { limit } => {
+                t("error-score-code-space-exhausted", &[("limit", v(limit))])
+            }
+            ScoreError::ValueSpaceExhausted { value, limit } => t(
+                "error-score-value-space-exhausted",
+                &[("value", v(value)), ("limit", v(limit))],
+            ),
+            ScoreError::BadValue { value, value_max } => t(
+                "error-score-bad-value",
+                &[("value", v(value)), ("value_max", v(value_max))],
+            ),
+            ScoreError::PositionsMismatch { values, coords } => t(
+                "error-score-positions-mismatch",
+                &[("values", v(values)), ("coords", v(coords))],
+            ),
+            ScoreError::LinkDoesNotFit { a, b } => {
+                t("error-score-link-does-not-fit", &[("a", v(a)), ("b", v(b))])
+            }
+            ScoreError::BadLink { a, b } => t("error-score-bad-link", &[("a", v(a)), ("b", v(b))]),
+            ScoreError::LinkEndNotACandidate { link } => {
+                t("error-score-link-end-not-candidate", &[("link", v(link))])
+            }
+            ScoreError::LinksNotAChain { control } => {
+                t("error-score-links-not-a-chain", &[("control", v(control))])
+            }
+            ScoreError::LinkTourNotFound { a, b } => t(
+                "error-score-link-tour-not-found",
+                &[("a", v(a)), ("b", v(b))],
+            ),
         }
     }
 }
@@ -1007,6 +1104,19 @@ mod tests {
             "code",
             "name",
             "id",
+            "good",
+            "very_good",
+            "mix_hard",
+            "seed",
+            "value_max",
+            "cells",
+            "link",
+            "values",
+            "coords",
+            "from_x",
+            "from_y",
+            "to_x",
+            "to_y",
             "error",
             "excess",
             "expected",
@@ -1596,6 +1706,20 @@ mod tests {
                 courses: vec![s("A"), s("B")],
             },
             EditError::NotSupported { course: s("T") },
+            EditError::ScoreCourse { course: s("S") },
+            EditError::NotScoreCourse { course: s("A") },
+            EditError::ValueDisagreesWithCode {
+                code: code("33"),
+                value: 5,
+                expected: 3,
+            },
+            EditError::CodeCarriesNoValue(code("A1")),
+            EditError::DuplicateScoreControl(code("31")),
+            EditError::BadTimeLimit,
+            EditError::Score(ScoreError::BadValue {
+                value: 7,
+                value_max: 5,
+            }),
             EditError::BadIndex {
                 course: s("A"),
                 index: 9,
@@ -1640,9 +1764,45 @@ mod tests {
             },
             EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
+        let p = |x, y| MapPoint { x, y };
+        for e in [
+            ScoreError::Unreachable {
+                from: p(1.25, -3.0),
+                to: p(0.0, 7.5),
+            },
+            ScoreError::StartUnreachable { at: p(1.25, -3.0) },
+            ScoreError::FinishUnreachable { at: p(100.0, 80.5) },
+            ScoreError::MapEmpty,
+            ScoreError::BadRouteSetting {
+                name: "overlap",
+                value: 1.5,
+            },
+            ScoreError::GridTooLarge {
+                cells: 9_000_000,
+                limit: 4_000_000,
+            },
+            ScoreError::CodeSpaceExhausted { limit: 35 },
+            ScoreError::ValueSpaceExhausted { value: 3, limit: 7 },
+            ScoreError::BadValue {
+                value: 7,
+                value_max: 5,
+            },
+            ScoreError::PositionsMismatch {
+                values: 3,
+                coords: 4,
+            },
+            ScoreError::LinkDoesNotFit { a: 1, b: 2 },
+            ScoreError::BadLink { a: 1, b: 1 },
+            ScoreError::LinkEndNotACandidate { link: 0 },
+            ScoreError::LinksNotAChain { control: 3 },
+            ScoreError::LinkTourNotFound { a: 1, b: 2 },
+        ] {
+            check(&e);
+        }
         for what in [
             "control",
             "course",
+            "link",
             "special object",
             "class",
             "control or special object",

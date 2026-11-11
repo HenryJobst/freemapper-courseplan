@@ -1847,6 +1847,80 @@ mod ops {
         assert!(!dir_has_tmp(&path));
     }
 
+    #[tokio::test]
+    async fn editor_dispatch_runs_the_new_ops_and_undo_restores() {
+        let (_dir, path, app, first) = setup().await;
+        let at = centre(&first);
+        let mut revision = first["revision"].as_str().unwrap().to_owned();
+        let mut states = vec![std::fs::read(&path).unwrap()];
+        let steps: Vec<(&str, Value)> = vec![
+            (
+                "add_special",
+                json!({"kind": "start", "id": "S1", "at": at}),
+            ),
+            (
+                "add_special",
+                json!({"kind": "finish", "id": "F1", "at": at}),
+            ),
+            ("add_control", json!({"at": at, "code": 31})),
+            ("add_control", json!({"at": at, "code": 32})),
+            (
+                "add_score_course",
+                json!({"name": "Sc", "start": "S1", "finish": "F1", "time_limit_min": 45}),
+            ),
+            (
+                "set_score_controls",
+                json!({"name": "Sc", "controls": [{"code": 31}, {"code": "32", "value": 2}]}),
+            ),
+            (
+                "set_control_value",
+                json!({"name": "Sc", "code": 31, "value": 1}),
+            ),
+            ("add_score_link", json!({"name": "Sc", "a": 31, "b": 32})),
+            ("remove_score_link", json!({"name": "Sc", "a": 32, "b": 31})),
+            ("set_score_settings", json!({"seed": 5})),
+            (
+                "set_score_course_details",
+                json!({"name": "Sc", "penalty_per_min": 3}),
+            ),
+        ];
+        for (tool, body) in steps {
+            let (status, answer) = op(&app, tool, &revision, body).await;
+            assert_eq!(status, StatusCode::OK, "{tool}: {answer}");
+            revision = answer["revision"].as_str().unwrap().to_owned();
+            // An op that changes nothing (the value its code already gives) records no step.
+            let now = std::fs::read(&path).unwrap();
+            if states.last() != Some(&now) {
+                states.push(now);
+            }
+        }
+        let text = String::from_utf8(states.last().unwrap().clone()).unwrap();
+        assert!(
+            text.contains("kind = \"score\"") && text.contains("penalty_per_min = 3"),
+            "{text}"
+        );
+        assert!(text.contains("seed = 5"), "{text}");
+        // A refused op leaves the file and the history alone.
+        let (status, refused) = op(
+            &app,
+            "set_control_value",
+            &revision,
+            json!({"name": "Sc", "code": 32, "value": 4}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+        assert_eq!(&std::fs::read(&path).unwrap(), states.last().unwrap());
+        // Undo walks back through every step to the bytes before the first one.
+        for want in states.iter().rev().skip(1) {
+            let (status, undone) = history(&app, "undo", Some(&revision)).await;
+            assert_eq!(status, StatusCode::OK, "{undone}");
+            revision = undone["revision"].as_str().unwrap().to_owned();
+            assert_eq!(&std::fs::read(&path).unwrap(), want);
+        }
+        let (status, _) = history(&app, "undo", Some(&revision)).await;
+        assert_eq!(status, StatusCode::CONFLICT);
+    }
+
     fn dir_has_tmp(path: &std::path::Path) -> bool {
         std::fs::read_dir(path.parent().unwrap())
             .unwrap()

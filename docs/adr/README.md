@@ -110,3 +110,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0064](0064-score-round-trips.md) | Score courses: round trips and length analysis | Accepted | 2026-11-11 |
 | [0065](0065-score-draft.md) | Score courses: the draft | Accepted | 2026-11-11 |
 | [0066](0066-score-checks.md) | Score courses: the checks | Accepted | 2026-11-11 |
+| [0067](0067-score-editing-ops.md) | Score courses: editing operations | Accepted | 2026-11-11 |

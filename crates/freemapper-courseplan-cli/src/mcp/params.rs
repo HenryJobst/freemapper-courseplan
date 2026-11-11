@@ -465,3 +465,68 @@ pub(super) struct SetStartWindow {
     pub(super) minutes: Option<u32>,
     pub(super) no_start_window: Option<bool>,
 }
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct AddScoreCourse {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) start: Name,
+    pub(super) finish: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) penalty_per_min: Option<u32>,
+}
+
+/// One control of a score course: its code and, if the code does not give it, its value.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreControlParam {
+    pub(super) code: Code,
+    pub(super) value: Option<u32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreControls {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) controls: Vec<ScoreControlParam>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetControlValue {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) code: Code,
+    pub(super) value: u32,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreLinkParams {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) a: Code,
+    pub(super) b: Code,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreSettings {
+    pub(super) project: String,
+    pub(super) value_max: Option<u8>,
+    pub(super) good_pace_s_per_km: Option<u32>,
+    pub(super) very_good_pace_s_per_km: Option<u32>,
+    pub(super) mix_hard_percent: Option<u8>,
+    pub(super) seed: Option<u32>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SetScoreCourseDetails {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: Option<u32>,
+    pub(super) penalty_per_min: Option<u32>,
+}

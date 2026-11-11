@@ -182,10 +182,18 @@ pub enum ClassCmd {
 
 #[derive(Subcommand)]
 pub enum CourseCmd {
-    /// Add an individual course
+    /// Add an individual or a score course
     Add {
         project: PathBuf,
         name: String,
+        #[arg(long, value_enum, default_value = "individual")]
+        kind: CourseKindArg,
+        #[arg(long, value_name = "MIN")]
+        time_limit: Option<String>,
+        #[arg(long, value_name = "N")]
+        penalty: Option<String>,
+        #[arg(long)]
+        json: bool,
         #[arg(long, value_name = "ID")]
         start: String,
         #[arg(long, value_name = "ID")]
@@ -287,6 +295,13 @@ pub enum CourseCmd {
     },
 }
 
+/// The kinds of `course add`, named as on the command line.
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum CourseKindArg {
+    Individual,
+    Score,
+}
+
 /// The kinds of `special add`, named as on the command line.
 #[derive(Clone, Copy, ValueEnum)]
 pub enum SpecialKind {
@@ -317,9 +332,9 @@ impl SpecialKind {
 
 /// Arguments that hold codes, ids or names, or lists of them. Their values lose surrounding white
 /// space, each list item on its own, so `--controls "31, 32"` means 31 and 32.
-const TRIMMED: [&str; 15] = [
+const TRIMMED: [&str; 18] = [
     "code", "id", "name", "start", "finish", "controls", "classes", "courses", "rule", "course",
-    "leg", "base", "overlay", "from", "to",
+    "leg", "base", "overlay", "from", "to", "a", "b", "codes",
 ];
 
 fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
@@ -327,8 +342,8 @@ fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
 }
 
 /// The command groups whose texts [`localize_groups`] sets.
-pub const GROUPS: [&str; 8] = [
-    "control", "special", "class", "course", "finding", "event", "list", "map",
+pub const GROUPS: [&str; 9] = [
+    "control", "special", "class", "course", "score", "finding", "event", "list", "map",
 ];
 
 /// Sets the catalog texts on the command groups and everything below them, and the trimming
@@ -337,35 +352,55 @@ pub fn localize_groups(root: clap::Command, lang: &Lang) -> clap::Command {
     let mut root = root;
     for group in GROUPS {
         root = root.mut_subcommand(group, |g| {
-            let subs: Vec<String> = g
-                .get_subcommands()
-                .map(|s| s.get_name().to_owned())
-                .collect();
-            let mut g = g.about(text(lang, &format!("cli-help-{group}"), &[]));
-            for sub in subs {
-                let path = format!("{group}-{sub}");
-                g = g.mut_subcommand(&sub, |s| {
-                    s.about(text(lang, &format!("cli-help-{path}"), &[]))
-                        .mut_args(|a| {
-                            let a = if TRIMMED.contains(&a.get_id().as_str()) {
-                                a.value_parser(trimmed)
-                            } else {
-                                a
-                            };
-                            let id = match a.get_id().as_str() {
-                                "project" => "cli-arg-info-project".to_owned(),
-                                "code" if path != "control-add" => "cli-arg-edit-code".to_owned(),
-                                "name" if group == "course" => "cli-arg-edit-course".to_owned(),
-                                name => format!("cli-arg-{path}-{}", name.replace('_', "-")),
-                            };
-                            a.help(text(lang, &id, &[]))
-                        })
-                });
-            }
-            g
+            let g = g.about(text(lang, &format!("cli-help-{group}"), &[]));
+            localize_subcommands(g, lang, group, group)
         });
     }
     root
+}
+
+/// Sets the catalog texts on the subcommands of `parent`, whose path in the catalog is `path`
+/// (`score-link`), and recurses into groups of the second level.
+fn localize_subcommands(
+    parent: clap::Command,
+    lang: &Lang,
+    group: &str,
+    path: &str,
+) -> clap::Command {
+    let subs: Vec<String> = parent
+        .get_subcommands()
+        .map(|s| s.get_name().to_owned())
+        .collect();
+    let mut parent = parent;
+    for sub in subs {
+        let path = format!("{path}-{sub}");
+        parent = parent.mut_subcommand(&sub, |s| {
+            let s = s
+                .about(text(lang, &format!("cli-help-{path}"), &[]))
+                .mut_args(|a| {
+                    let a = if TRIMMED.contains(&a.get_id().as_str()) {
+                        a.value_parser(trimmed)
+                    } else {
+                        a
+                    };
+                    let id = match a.get_id().as_str() {
+                        "project" => "cli-arg-info-project".to_owned(),
+                        "code" if path != "control-add" => "cli-arg-edit-code".to_owned(),
+                        "name" if group == "course" || group == "score" => {
+                            "cli-arg-edit-course".to_owned()
+                        }
+                        "json" if group == "score" => "cli-arg-score-json".to_owned(),
+                        "a" | "b" if group == "score" => {
+                            format!("cli-arg-score-link-{}", a.get_id())
+                        }
+                        name => format!("cli-arg-{path}-{}", name.replace('_', "-")),
+                    };
+                    a.help(text(lang, &id, &[]))
+                });
+            localize_subcommands(s, lang, group, &path)
+        });
+    }
+    parent
 }
 
 fn v(value: impl Into<String>) -> FluentValue<'static> {
@@ -895,6 +930,10 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
         CourseCmd::Add {
             project,
             name,
+            kind: CourseKindArg::Score,
+            time_limit,
+            penalty,
+            json,
             start,
             finish,
             controls,
@@ -902,6 +941,56 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             climb,
             print_scale,
         } => {
+            if !controls.is_empty()
+                || !classes.is_empty()
+                || climb.is_some()
+                || print_scale.is_some()
+            {
+                return Err(Failure::Usage(text(
+                    lang,
+                    "cli-course-add-individual-only",
+                    &[],
+                )));
+            }
+            let Some(time_limit) = time_limit else {
+                return Err(Failure::Usage(text(
+                    lang,
+                    "cli-course-add-needs-time-limit",
+                    &[],
+                )));
+            };
+            let time_limit = parse_count(lang, &time_limit)?;
+            let penalty = penalty.map(|p| parse_count(lang, &p)).transpose()?;
+            crate::score_cmd::add_course(
+                lang,
+                crate::score_cmd::NewScoreCourse {
+                    project,
+                    name,
+                    start,
+                    finish,
+                    time_limit,
+                    penalty,
+                },
+                json,
+            )?;
+        }
+        CourseCmd::Add {
+            project,
+            name,
+            time_limit,
+            penalty,
+            json,
+            start,
+            finish,
+            controls,
+            classes,
+            climb,
+            print_scale,
+            ..
+        } => {
+            if time_limit.is_some() || penalty.is_some() || json {
+                return Err(Failure::Usage(text(lang, "cli-course-add-score-only", &[])));
+            }
             let climb_m = climb.map(|c| parse_count(lang, &c)).transpose()?;
             let planned_print_scale = print_scale.map(|c| parse_count(lang, &c)).transpose()?;
             let controls: Vec<CourseControl> =

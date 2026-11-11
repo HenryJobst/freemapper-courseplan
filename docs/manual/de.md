@@ -117,9 +117,49 @@ dort an.
   liegt, etwa bei einer von Hand gesetzten Nummer mit 6 mm.
 - Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
-- Bisher lassen sich nur Einzelbahnen bearbeiten und messen. Bei Mannschafts-, Staffel- und Score-Bahnen sagt das
-  Programm das.
+- Einzel- und Score-Bahnen lassen sich bearbeiten (siehe Score-Bahnen unten), gemessen werden nur Einzelbahnen.
+  Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten; das Programm sagt das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat, und `list controls|courses|specials|classes <Projekt>` führt die Einzelheiten auf; `map extent <Projekt>` und `map near <Projekt> --at X,Y --radius MM` berichten über die Karte. Alle nehmen `--json`.
+
+### Score-Bahnen
+
+Auf einer Score-Bahn besuchen die Läufer die Posten in beliebiger Reihenfolge innerhalb eines Zeitlimits. Jeder
+Posten zählt Punkte, und jede angefangene Minute über dem Limit kostet Punkte. Diese Befehle bauen eine solche
+Bahn; `check` prüft sie (Abschnitt 8).
+
+```sh
+freemapper-courseplan course add halle.courseplan.toml Score45 --kind score --start S1 --finish F1 --time-limit 45
+freemapper-courseplan score controls halle.courseplan.toml Score45 31,32,43,54
+freemapper-courseplan score link add halle.courseplan.toml Score45 31 54
+freemapper-courseplan score settings halle.courseplan.toml --value-max 5 --good-pace 4:10
+freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
+```
+
+- Der Code trägt den Wert: die zweite Ziffer eines zweistelligen Codes, die letzte eines längeren. 43 zählt also
+  3 Punkte, 54 zählt 4. `score controls` liest den Wert aus dem Code. Ein Wert, den du nach `=` schreibst, etwa
+  `43=3`, muss dazu passen; weicht er ab, lehnt das Programm ab und rät, den Code zu ändern. `score value` folgt
+  derselben Regel und repariert deshalb nur einen Wert in der Datei, der nicht mehr zu seinem Code passt. Ein Code
+  ohne Wert, etwa `A1`, braucht einen: `A1=2`.
+- Die Werte reichen von 1 bis zum höchsten Wert der Veranstaltung, standardmäßig 5, höchstens 9
+  (`score settings --value-max`).
+- Ohne `--penalty` ist der Abzug je angefangene Minute der höchste Postenwert der Bahn, mindestens der höchste Wert
+  der Veranstaltung, damit sich eine Minute zu viel nie lohnt. Er folgt den Posten, solange du keinen eigenen Wert
+  gesetzt hast; `score course set --penalty` legt ihn fest.
+- Eine Verbindung nennt zwei Posten, die der Läufer direkt nacheinander anlaufen muss, in beliebiger Richtung. Wer
+  das nicht tut, wird disqualifiziert. Ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen
+  Ring schließen. Ein Posten mit Verbindung bleibt in der Bahn, bis du die Verbindung entfernst
+  (`score link remove`).
+- `score settings` schreibt den Abschnitt `[score]` der Veranstaltung: Wertebereich, die Pace eines guten und eines
+  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), den Anteil schwerer Posten und den Startwert.
+- Jeder dieser Befehle nimmt `--json` und gibt aus, was das gleichnamige MCP-Werkzeug antwortet
+  (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
+  `set_score_settings`, `set_score_course_details`). Der Editor führt dieselben Operationen aus, und Rückgängig
+  nimmt jede zurück.
+- Knicke, Strecken, Postennummern und `course controls` gehören zu Einzelbahnen; eine Score-Bahn lehnt sie ab.
+  Kategorien, Druckmaßstab, `course rename` und `course remove` gelten für beide. Mannschafts- und Staffelbahnen
+  lassen sich noch nicht bearbeiten.
+- Der Export schreibt nur Einzelbahnen und nennt die ausgelassenen Score-Bahnen. Die Editor-Seite zeichnet
+  Score-Bahnen noch nicht. Vorschläge für Postenplätze und ein fertiger Entwurf folgen.
 
 ## 4. Der Editor
 

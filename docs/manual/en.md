@@ -112,9 +112,45 @@ there.
   set by hand at 6 mm.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
   flag. The assistant gets a list of these legs.
-- Only individual courses can be edited and measured so far. For team, relay and score courses the program
-  says so.
+- Individual and score courses can be edited (see Score courses below), and only individual courses are measured.
+  Team and relay courses cannot be edited yet; the program says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did, and `list controls|courses|specials|classes <project>` lists the details; `map extent <project>` and `map near <project> --at X,Y --radius MM` report the map. All of them take `--json`.
+
+### Score courses
+
+On a score course the runners visit the controls in any order within a time limit. Each control is worth points,
+and every started minute over the limit costs points. These commands build such a course; `check` tests it
+(section 8).
+
+```sh
+freemapper-courseplan course add hall.courseplan.toml Score45 --kind score --start S1 --finish F1 --time-limit 45
+freemapper-courseplan score controls hall.courseplan.toml Score45 31,32,43,54
+freemapper-courseplan score link add hall.courseplan.toml Score45 31 54
+freemapper-courseplan score settings hall.courseplan.toml --value-max 5 --good-pace 4:10
+freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
+```
+
+- The code carries the value: the second digit of a two-digit code, the last digit of a longer one. So 43 is worth
+  3 points and 54 is worth 4. `score controls` reads the value from the code. A value you write after `=`, as in
+  `43=3`, has to match it; if it differs, the program refuses and says to change the code. `score value` follows the
+  same rule, so it only repairs a value in the file that no longer matches its code. A code that carries no value,
+  such as `A1`, needs one: `A1=2`.
+- Values run from 1 to the highest value of the event, 5 by default and at most 9 (`score settings --value-max`).
+- Without `--penalty` the penalty per started minute is the highest control value of the course, at least the
+  highest value of the event, so a minute over never pays off. It follows the controls as long as you have not set
+  your own; `score course set --penalty` fixes it.
+- A link names two controls that the runner has to visit directly one after the other, in either direction. A runner
+  who does not is disqualified. A control takes at most two links, and links may not close a ring. A control with a
+  link stays in the course until you remove the link (`score link remove`).
+- `score settings` writes the `[score]` table of the event: value range, the paces of a good and a very good runner
+  (seconds per kilometre, or `4:10`), the share of hard controls and the seed.
+- Each of these commands takes `--json` and prints what the MCP tool of the same name answers
+  (`add_score_course`, `set_score_controls`, `set_control_value`, `add_score_link`, `remove_score_link`,
+  `set_score_settings`, `set_score_course_details`). The editor runs the same operations, and undo takes each back.
+- Bends, legs, control numbers and `course controls` belong to individual courses; a score course refuses them.
+  Classes, print scale, `course rename` and `course remove` work on both. Team and relay courses cannot be edited yet.
+- Export writes individual courses only and lists the score courses it skipped. The editor page does not draw score
+  courses yet. Suggestions for control sites and a complete draft follow.
 
 ## 4. The editor
 

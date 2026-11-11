@@ -8,6 +8,7 @@ mod export_cmd;
 mod import_cmd;
 mod mcp;
 mod query_cmd;
+mod score_cmd;
 mod sync_cmd;
 
 use std::ffi::OsString;
@@ -27,6 +28,7 @@ use freemapper_courseplan::text::{
 };
 use freemapper_courseplan_model::{ControlKind, CourseKind, ProjectFile};
 use query_cmd::{ListCmd, MapCmd};
+use score_cmd::ScoreCmd;
 
 // The help texts come from the Fluent catalog, not from doc comments: `localized_command` sets
 // `about` and `help` on the command that `Cli::command()` derives, once the language is known.
@@ -119,6 +121,11 @@ enum Command {
     Course {
         #[command(subcommand)]
         action: CourseCmd,
+    },
+    /// Edit score courses: controls with values, mandatory links, settings
+    Score {
+        #[command(subcommand)]
+        action: ScoreCmd,
     },
     /// Check the courses against the rule profile
     Check {
@@ -471,6 +478,7 @@ fn main() -> ExitCode {
         Command::Special { action } => edit_cmd::special(&lang, action),
         Command::Class { action } => edit_cmd::class(&lang, action),
         Command::Course { action } => edit_cmd::course(&lang, action),
+        Command::Score { action } => score_cmd::score(&lang, action),
         Command::Export {
             project,
             iof_xml,
@@ -710,6 +718,7 @@ mod tests {
         ("main.rs", include_str!("main.rs")),
         ("edit_cmd.rs", include_str!("edit_cmd.rs")),
         ("query_cmd.rs", include_str!("query_cmd.rs")),
+        ("score_cmd.rs", include_str!("score_cmd.rs")),
         ("editor/mod.rs", include_str!("editor/mod.rs")),
         ("editor/map_view.rs", include_str!("editor/map_view.rs")),
         ("editor/render_map.rs", include_str!("editor/render_map.rs")),

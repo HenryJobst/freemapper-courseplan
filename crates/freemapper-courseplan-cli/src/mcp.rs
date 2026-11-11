@@ -106,6 +106,21 @@ fn dropped_json(dropped: &[freemapper_courseplan_model::LegRef]) -> Value {
     )
 }
 
+/// The answer of the link tools: the two controls and all links the course has now.
+fn link_answer(event: &Event, course: &str, a: &ControlCode, b: &ControlCode) -> Value {
+    let links: Vec<Value> = event
+        .courses
+        .iter()
+        .filter(|c| c.name == course)
+        .flat_map(|c| match &c.kind {
+            CourseKind::Score { links, .. } => links.as_slice(),
+            _ => &[],
+        })
+        .map(|l| json!({ "a": l.a.0, "b": l.b.0 }))
+        .collect();
+    json!({ "name": course, "a": a.0, "b": b.0, "links": links })
+}
+
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
@@ -176,6 +191,25 @@ fn course_json(event: &Event, course: &Course, map_scale: u32, lang: &Lang) -> A
         out["control_count"] = json!(control_numbers(event, course).iter().flatten().count());
         out["numbers_set"] = json!(controls.iter().filter(|c| c.number.is_some()).count());
         out["length_km"] = json!(round(length / 1000.0, 3));
+    }
+    if let CourseKind::Score {
+        time_limit_min,
+        penalty_per_min,
+        controls,
+        links,
+    } = &course.kind
+    {
+        out["controls"] = json!(controls.iter().map(|c| &c.code.0).collect::<Vec<_>>());
+        out["control_count"] = json!(controls.len());
+        out["score"] = json!({
+            "time_limit_min": time_limit_min,
+            "penalty_per_min": penalty_per_min,
+            "controls": controls
+                .iter()
+                .map(|c| json!({ "code": c.code.0, "value": c.value }))
+                .collect::<Vec<_>>(),
+            "links": links.iter().map(|l| json!({ "a": l.a.0, "b": l.b.0 })).collect::<Vec<_>>(),
+        });
     }
     Ok(out)
 }
@@ -875,6 +909,62 @@ impl CoursePlanServer {
         reply(self.set_course_details_op(req))
     }
 
+    #[tool(description = "Add a score course")]
+    async fn add_score_course(
+        &self,
+        Parameters(req): Parameters<AddScoreCourse>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_score_course_op(req))
+    }
+
+    #[tool(description = "Replace the controls of a score course")]
+    async fn set_score_controls(
+        &self,
+        Parameters(req): Parameters<SetScoreControls>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_score_controls_op(req))
+    }
+
+    #[tool(description = "Set the value of a control of a score course")]
+    async fn set_control_value(
+        &self,
+        Parameters(req): Parameters<SetControlValue>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_control_value_op(req))
+    }
+
+    #[tool(description = "Add a mandatory link to a score course")]
+    async fn add_score_link(
+        &self,
+        Parameters(req): Parameters<ScoreLinkParams>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.add_score_link_op(req))
+    }
+
+    #[tool(description = "Remove a mandatory link from a score course")]
+    async fn remove_score_link(
+        &self,
+        Parameters(req): Parameters<ScoreLinkParams>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.remove_score_link_op(req))
+    }
+
+    #[tool(description = "Change the score settings of the event")]
+    async fn set_score_settings(
+        &self,
+        Parameters(req): Parameters<SetScoreSettings>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_score_settings_op(req))
+    }
+
+    #[tool(description = "Change the time limit or the penalty of a score course")]
+    async fn set_score_course_details(
+        &self,
+        Parameters(req): Parameters<SetScoreCourseDetails>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_score_course_details_op(req))
+    }
+
     #[tool(description = "Place the control numbers of a course")]
     async fn place_numbers(
         &self,
@@ -1469,6 +1559,115 @@ impl CoursePlanServer {
         })
     }
 
+    fn add_score_course_op(&self, req: AddScoreCourse) -> Answer {
+        self.edit(&req.project, |file| {
+            let penalty = edit::add_score_course(
+                &mut file.event,
+                &req.name.0,
+                &req.start.0,
+                &req.finish.0,
+                req.time_limit_min,
+                req.penalty_per_min,
+            )
+            .map_err(|e| self.refused(e))?;
+            Ok(json!({
+                "name": req.name.0,
+                "time_limit_min": req.time_limit_min,
+                "penalty_per_min": penalty,
+            }))
+        })
+    }
+
+    fn set_score_controls_op(&self, req: SetScoreControls) -> Answer {
+        self.edit(&req.project, |file| {
+            let controls: Vec<edit::ScoreControlInput> = req
+                .controls
+                .into_iter()
+                .filter(|c| !c.code.0.is_empty())
+                .map(|c| edit::ScoreControlInput {
+                    code: ControlCode(c.code.0),
+                    value: c.value,
+                })
+                .collect();
+            let stored = edit::set_score_controls(&mut file.event, &req.name.0, &controls)
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({
+                "name": req.name.0,
+                "controls": stored
+                    .controls
+                    .iter()
+                    .map(|c| json!({ "code": c.code.0, "value": c.value }))
+                    .collect::<Vec<_>>(),
+                "penalty_per_min": stored.penalty_per_min,
+            }))
+        })
+    }
+
+    fn set_control_value_op(&self, req: SetControlValue) -> Answer {
+        self.edit(&req.project, |file| {
+            let code = ControlCode(req.code.0);
+            edit::set_control_value(&mut file.event, &req.name.0, &code, req.value)
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({ "name": req.name.0, "code": code.0, "value": req.value }))
+        })
+    }
+
+    fn add_score_link_op(&self, req: ScoreLinkParams) -> Answer {
+        self.edit(&req.project, |file| {
+            let (a, b) = (ControlCode(req.a.0), ControlCode(req.b.0));
+            edit::add_score_link(&mut file.event, &req.name.0, &a, &b)
+                .map_err(|e| self.refused(e))?;
+            Ok(link_answer(&file.event, &req.name.0, &a, &b))
+        })
+    }
+
+    fn remove_score_link_op(&self, req: ScoreLinkParams) -> Answer {
+        self.edit(&req.project, |file| {
+            let (a, b) = (ControlCode(req.a.0), ControlCode(req.b.0));
+            edit::remove_score_link(&mut file.event, &req.name.0, &a, &b)
+                .map_err(|e| self.refused(e))?;
+            Ok(link_answer(&file.event, &req.name.0, &a, &b))
+        })
+    }
+
+    fn set_score_settings_op(&self, req: SetScoreSettings) -> Answer {
+        self.edit(&req.project, |file| {
+            let change = edit::ScoreSettingsChange {
+                value_max: req.value_max,
+                good_pace_s_per_km: req.good_pace_s_per_km,
+                very_good_pace_s_per_km: req.very_good_pace_s_per_km,
+                mix_hard_percent: req.mix_hard_percent,
+                seed: req.seed,
+            };
+            if change.is_empty() {
+                return Err(text(&self.lang, "mcp-error-no-score-settings-change", &[]));
+            }
+            let settings =
+                edit::set_score_settings(&mut file.event, &change).map_err(|e| self.refused(e))?;
+            Ok(serde_json::to_value(settings).unwrap_or(Value::Null))
+        })
+    }
+
+    fn set_score_course_details_op(&self, req: SetScoreCourseDetails) -> Answer {
+        self.edit(&req.project, |file| {
+            if req.time_limit_min.is_none() && req.penalty_per_min.is_none() {
+                return Err(text(&self.lang, "mcp-error-no-score-course-change", &[]));
+            }
+            let (limit, penalty) = edit::set_score_course_details(
+                &mut file.event,
+                &req.name.0,
+                req.time_limit_min,
+                req.penalty_per_min,
+            )
+            .map_err(|e| self.refused(e))?;
+            Ok(json!({
+                "name": req.name.0,
+                "time_limit_min": limit,
+                "penalty_per_min": penalty,
+            }))
+        })
+    }
+
     fn place_numbers_op(&self, req: PlaceNumbers) -> Answer {
         self.edit(&req.project, |file| {
             let doc = self.read_map(file)?;
@@ -1769,6 +1968,13 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "set_course_controls",
     "set_leg",
     "set_course_details",
+    "add_score_course",
+    "set_score_controls",
+    "set_control_value",
+    "add_score_link",
+    "remove_score_link",
+    "set_score_settings",
+    "set_score_course_details",
     "place_numbers",
     "set_course_number",
     "accept_finding",
@@ -1872,6 +2078,13 @@ impl CoursePlanServer {
             "set_course_controls" => run!(SetCourseControls, set_course_controls_op),
             "set_leg" => run!(SetLeg, set_leg_op),
             "set_course_details" => run!(SetCourseDetails, set_course_details_op),
+            "add_score_course" => run!(AddScoreCourse, add_score_course_op),
+            "set_score_controls" => run!(SetScoreControls, set_score_controls_op),
+            "set_control_value" => run!(SetControlValue, set_control_value_op),
+            "add_score_link" => run!(ScoreLinkParams, add_score_link_op),
+            "remove_score_link" => run!(ScoreLinkParams, remove_score_link_op),
+            "set_score_settings" => run!(SetScoreSettings, set_score_settings_op),
+            "set_score_course_details" => run!(SetScoreCourseDetails, set_score_course_details_op),
             "place_numbers" => run!(PlaceNumbers, place_numbers_op),
             "set_course_number" => run!(SetCourseNumber, set_course_number_op),
             "map_features_near" => run!(FeaturesNear, map_features_near_op),
@@ -2347,7 +2560,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 38);
+            assert_eq!(tools.len(), 45);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

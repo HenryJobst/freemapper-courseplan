@@ -82,7 +82,7 @@ placed. `freemapper-courseplan info <project>` shows what the project holds, inc
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up, and [`AGENTS.md`](AGENTS.md) tells the assistant
 how to install and use the program itself. The project file is TOML, and
-you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. The program cannot edit or measure team, relay or score courses yet. It cannot print
+you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. Score courses are edited with `score` and `course add --kind score`; the program cannot edit team or relay courses yet, and it measures only individual courses. It cannot print
 courses either, and it does not read forest maps.
 
 `freemapper-courseplan check <project>` checks the individual courses against a rule profile, each finding with
@@ -94,7 +94,7 @@ exceptions that match no finding any more and the skipped rules. `event start-wi
 window, rule categories and expected starters that some checks need. Chapter 8 of the
 [user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions) explains it, and the AI
 assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
-`set_start_window` and `set_class` for it. The program does not check team, relay or score courses yet, and the
+`set_start_window` and `set_class` for it. The program does not check team or relay courses yet, and the
 route analysis is missing, so it reports a straight leg through an out-of-bounds area only as a warning.
 
 `freemapper-courseplan export <project> --iof-xml <file>` writes the individual courses as IOF XML 3.0 for result
