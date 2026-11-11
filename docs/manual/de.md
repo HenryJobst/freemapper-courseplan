@@ -104,6 +104,78 @@ dort an.
   Programm das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat.
 
+## 4. Der Editor (Vorschau)
+
+Der Editor zeigt die Veranstaltung im Browser. In dieser Vorschau ist er nur lesend: Du kannst Bahnen, Posten und
+Sonderobjekte ansehen, aber nichts ändern. Geändert wird weiter mit der Kommandozeile oder dem KI-Assistenten. Die
+Werkzeugleiste und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch ausgegraut.
+
+### Starten
+
+```sh
+freemapper-courseplan edit luebeck-sprint.courseplan.toml
+```
+
+Der Befehl lädt das Projekt, öffnet den Browser und gibt die Adresse in einer einzigen Zeile aus, etwa
+`http://127.0.0.1:47123/3f9c…/`. Ist die Projektdatei kaputt, nennt er die Datei und endet mit Exit-Code 1, ohne
+etwas auszugeben. Er läuft, bis du Strg+C drückst oder im Menü „Veranstaltung“ den Punkt „Editor schließen“ wählst.
+Beide Wege beenden ihn mit Exit-Code 0.
+
+- `--port N` wählt den Port. Ohne die Angabe nimmt das Programm einen freien. Ist der Port belegt, meldet es das und
+  endet mit Exit-Code 1.
+- `--no-browser` öffnet den Browser nicht. Du öffnest die ausgegebene Adresse selbst. Lässt sich der Browser nicht
+  starten, schreibt das Programm einen Hinweis und läuft weiter.
+- Die Sprache der Seite folgt der Sprache des Programms (`--lang de`, `FREEMAPPER_LANG` oder die Spracheinstellung
+  des Systems). Die Seite hat keinen Sprachschalter; zum Wechseln startest du den Editor neu.
+
+Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du einen zweiten Editor.
+
+### Was die Seite zeigt
+
+- Links steht der Baum der Veranstaltung mit den Gruppen Bahnen, Kategorien, Posten und Sonderobjekte. „Alle Posten“
+  zeigt jeden Posten mit seinem Code.
+- In der Mitte steht die Karte. Wählst du eine Bahn, zeichnet der Editor ihre Kreise, Startdreieck, Ziel, Strecken und
+  Postennummern darüber. Nummernfelder mit gestrichelter Linie hat das Programm automatisch platziert; für sie ist
+  noch keine Lage im Projekt gespeichert.
+- Rechts stehen die Eigenschaften der Auswahl, etwa Name, Länge und Anstieg einer Bahn oder Code, Art, Position und
+  Beschreibung eines Postens. Der Bereich für Befunde ist noch leer.
+- Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
+  Meldungen erscheinen dort ebenfalls.
+
+Die Karte ist in dieser Vorschau ein Platzhalter: ein Rahmen um die Kartenausdehnung, ein Gitter im Abstand von 10 mm
+und ein Hinweistext. Kreise, Strecken und Nummern liegen an der richtigen Stelle der Karte, aber darunter ist noch
+kein Karteninhalt zu sehen. Den liefert später freemapper-render.
+
+### Tastatur und Maus
+
+- Im Baum wählst du mit den Pfeiltasten, Pos1 und Ende einen Eintrag und bestätigst mit Eingabe.
+- Hat die Karte den Fokus, verschieben die Pfeiltasten die Ansicht. `+` und `-` zoomen, `0` passt die Karte in das
+  Fenster ein. Mit der Maus verschiebst du die Ansicht, indem du auf leerer Fläche ziehst, und zoomst mit dem
+  Mausrad.
+- Mit der Tabulatortaste springst du vom Baum zur Karte, zu den Eigenschaften und zum Menü.
+
+### Änderungen von außen
+
+Ändert ein anderes Programm die Projektdatei, zum Beispiel `freemapper-courseplan control move` im Terminal oder der
+KI-Assistent, lädt die Seite sie nach etwa zwei Sekunden neu und meldet das in der Statusleiste. Ein Tab im
+Hintergrund fragt nicht nach, bis du ihn wieder öffnest. Ändert sich die Karte, lädt die Seite sie neu. Ändert sich
+die verknüpfte `.ppen`, steht in der Statusleiste ein Hinweis.
+
+### Datenschutz und Sicherheit
+
+- Der Server hört nur auf `127.0.0.1`. Andere Rechner im Netz erreichen ihn nicht.
+- Die Adresse enthält ein zufälliges Zugriffszeichen (32 Hexziffern). Wer die vollständige Adresse kennt, kann auf
+  deinem Rechner die Veranstaltung ansehen. Gib die Adresse deshalb nicht weiter.
+- Das Zugriffszeichen steht auch in der Prozessliste, solange das Programm es dem Browser übergibt. Auf einem Rechner,
+  den sich mehrere Leute teilen, kann ein anderer Benutzer es dort lesen. Starte den Editor dort mit `--no-browser`
+  und öffne die Adresse selbst, oder arbeite an einem eigenen Rechner.
+- Die Seite lädt nichts aus dem Netz. Der Server liest nur die Projektdatei, die Karte und die verknüpfte `.ppen`.
+  Dateinamen nimmt er vom Browser nicht an.
+- Schreibende Anfragen prüft der Server zusätzlich auf Herkunft und Inhaltstyp, damit eine fremde Webseite im selben
+  Browser nichts auslösen kann. Die Vorschau ändert die Projektdatei nicht.
+
+Die Entscheidungen dazu stehen in ADR 0042, 0045 und 0046.
+
 ## 8. Prüfen: Hinweise lesen, Ausnahmen begründen
 
 `check` legt jede Einzelbahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was

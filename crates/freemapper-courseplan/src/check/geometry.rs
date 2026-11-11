@@ -20,7 +20,7 @@ fn between(a: &MapPoint, b: &MapPoint, t: f64) -> MapPoint {
 
 /// The part of a polyline that is drawn when its ends start and stop at circles: `cut` map mm
 /// along the line are left out at either end. Empty when nothing is left.
-pub(crate) fn drawn_part(points: &[MapPoint], cut: f64) -> Vec<MapPoint> {
+pub fn drawn_part(points: &[MapPoint], cut: f64) -> Vec<MapPoint> {
     let length: f64 = points.windows(2).map(|w| distance(&w[0], &w[1])).sum();
     let (from, to) = (cut, length - cut);
     if points.len() < 2 || to <= from {

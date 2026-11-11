@@ -193,7 +193,7 @@ fn number_rect(
 
 /// Centre of the number box of a control at `at`, in map mm at `map_scale`, for the placement the
 /// check and the overprint use (direction, gap, digit count of `number`).
-pub(crate) fn number_centre(
+pub fn number_centre(
     at: &MapPoint,
     placement: &NumberPlacement,
     number: u32,

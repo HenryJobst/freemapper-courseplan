@@ -85,3 +85,8 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0039](0039-iof-xml-positions-from-the-map-georeferencing.md) | IOF XML positions come from the map georeferencing | Accepted | 2026-11-10 |
 | [0040](0040-ppen-sync-three-way-merge-on-the-purple-pen-view.md) | The Purple Pen sync is a three-way merge on the Purple Pen view | Accepted | 2026-11-10 |
 | [0041](0041-reader-tests-against-the-suite-contract.md) | Reader tests against the suite contract | Accepted | 2026-11-10 |
+| [0042](0042-editor-server-and-security.md) | Editor server: one process per project, a shared shell, and guarded requests | Accepted | 2026-11-11 |
+| [0045](0045-editor-front-end.md) | Editor front end: plain modules, one SVG, texts from the server | Accepted | 2026-11-11 |
+| [0046](0046-editor-overlay-and-map-view.md) | Editor: course symbols from the server, map behind a view interface | Accepted | 2026-11-11 |
+
+Numbers 0043 and 0044 are reserved for the editor's operations and save guard (stage 2 of the editor plan).

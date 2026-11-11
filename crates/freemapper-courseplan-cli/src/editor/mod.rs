@@ -1,0 +1,438 @@
+//! The `edit` command: a local web server for the course editor (ADR 0042, ADR 0005).
+//!
+//! The shell around the routes (127.0.0.1 binding, token, Host and Origin checks, security headers) is
+//! `freemapper-web`; this module brings the editor's own routes and the embedded page.
+
+use std::collections::BTreeMap;
+use std::io::Write as _;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
+use axum::Router;
+use axum::extract::{Path, RawQuery, State};
+use axum::http::{StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use axum::routing::{get, post};
+use freemapper_courseplan::text::{FluentValue, Lang, Localize, TEXTS, text};
+use freemapper_courseplan_model::ProjectFile;
+use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
+use rust_embed::RustEmbed;
+use tokio::sync::{Mutex, Notify};
+
+use api::Loaded;
+use map_view::{FileStamp, MapCache, MapResult, MapViewError, PageRect, load_map};
+
+mod api;
+mod map_view;
+mod overlay;
+#[cfg(test)]
+mod tests;
+
+/// The page and its scripts and styles, compiled into the binary (`debug-embed`, so tests see the same set).
+#[derive(RustEmbed)]
+#[folder = "web/"]
+pub(crate) struct Assets;
+
+/// Scripts, styles, images and connections only from the page's own origin; inline styles stay allowed
+/// because the renderer's SVG carries `style` attributes (ADR 0042).
+const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; \
+                   img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; \
+                   form-action 'none'";
+
+/// What the routes share. One project per process. The lock guards only these fields and is never held
+/// across an await or a blocking call: reading, hashing and parsing files runs on the blocking pool.
+pub(crate) struct EditorState {
+    /// The project file, as a canonical path.
+    pub project: PathBuf,
+    /// The project file as last read; `api/state` and `api/revision` refresh it, the map routes only use it.
+    pub loaded: Arc<Loaded>,
+    /// Length and modification time of the project file when `loaded` was read: an unchanged stamp means
+    /// the file is not read or hashed again.
+    pub stamp: Option<FileStamp>,
+    /// The language of the page's texts: the process language.
+    pub lang: Lang,
+    /// The map built from the project's map file.
+    pub map: MapCache,
+}
+
+impl EditorState {
+    pub(crate) fn new(project: PathBuf, lang: Lang) -> Self {
+        let note = text(&lang, "editor-map-placeholder", &[]);
+        let stamp = FileStamp::of(&project).ok();
+        let loaded = Arc::new(Loaded::read(&project, &lang));
+        Self {
+            project,
+            loaded,
+            stamp,
+            lang,
+            map: MapCache::new(note),
+        }
+    }
+}
+
+pub(crate) type Shared = Arc<Mutex<EditorState>>;
+
+/// The editor's routes below `prefix` (`/{token}`). `stop` ends the server (`POST api/quit`); it is not part
+/// of the locked state, so quitting never waits for other work.
+pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
+    Router::new()
+        .route(&format!("{prefix}/"), get(index))
+        .route(&format!("{prefix}/assets/{{*path}}"), get(asset))
+        .route(&format!("{prefix}/api/texts"), get(texts))
+        .route(&format!("{prefix}/api/state"), get(api_state))
+        .route(&format!("{prefix}/api/revision"), get(api_revision))
+        .route(&format!("{prefix}/api/overlay"), get(api_overlay))
+        .route(&format!("{prefix}/api/map/view"), get(map_info))
+        .route(&format!("{prefix}/api/map.svg"), get(map_svg))
+        .route(&format!("{prefix}/api/quit"), post(quit).with_state(stop))
+        .with_state(state)
+}
+
+async fn index() -> Response {
+    embedded::<Assets>("index.html")
+}
+
+async fn asset(Path(path): Path<String>) -> Response {
+    embedded::<Assets>(&path)
+}
+
+/// Every `editor-*` message in the process language, for the page to put into its elements.
+async fn texts(State(state): State<Shared>) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let texts: BTreeMap<String, String> = TEXTS
+        .message_ids("en")
+        .into_iter()
+        .filter(|id| id.starts_with("editor-"))
+        .map(|id| {
+            let message = text(&lang, &id, &[]);
+            (id, message)
+        })
+        .collect();
+    axum::Json(serde_json::json!({ "lang": lang.code(), "texts": texts })).into_response()
+}
+
+fn plain(status: StatusCode, message: String) -> Response {
+    (status, message).into_response()
+}
+
+/// Runs blocking work (files, parsing, rendering) on the blocking pool.
+async fn blocking<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static) -> Option<T> {
+    tokio::task::spawn_blocking(work).await.ok()
+}
+
+async fn blocking_response(work: impl FnOnce() -> Response + Send + 'static) -> Response {
+    blocking(work).await.unwrap_or_else(|| {
+        plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal error".to_owned(),
+        )
+    })
+}
+
+/// The project as last read; the file is not touched.
+async fn current(state: &Shared) -> Arc<Loaded> {
+    state.lock().await.loaded.clone()
+}
+
+/// The project, read again first when the file's stamp changed and its bytes hash differently.
+async fn refreshed(state: &Shared) -> Arc<Loaded> {
+    let (project, lang, prev, prev_stamp) = {
+        let guard = state.lock().await;
+        (
+            guard.project.clone(),
+            guard.lang.clone(),
+            guard.loaded.clone(),
+            guard.stamp,
+        )
+    };
+    let before = prev.clone();
+    let result = blocking(move || {
+        let stamp = FileStamp::of(&project).ok();
+        if stamp == prev_stamp {
+            return (stamp, None);
+        }
+        (stamp, Loaded::changed_since(&prev, &project, &lang))
+    })
+    .await;
+    let Some((stamp, changed)) = result else {
+        return before;
+    };
+    let mut guard = state.lock().await;
+    guard.stamp = stamp;
+    if let Some(loaded) = changed {
+        guard.loaded = Arc::new(loaded);
+    }
+    guard.loaded.clone()
+}
+
+/// The map of a readable project through the cache, or the project's error.
+async fn map_of(state: &Shared, loaded: &Loaded) -> MapResult {
+    match &loaded.file {
+        Ok(file) => load_map(state, file.map_path()).await,
+        Err(e) => Err(e.clone()),
+    }
+}
+
+async fn api_state(State(state): State<Shared>) -> Response {
+    let loaded = refreshed(&state).await;
+    let map = map_of(&state, &loaded).await;
+    blocking_response(move || {
+        let map = map.as_ref().map(|m| &**m).map_err(String::as_str);
+        axum::Json(api::state_json(&loaded, map)).into_response()
+    })
+    .await
+}
+
+async fn api_revision(State(state): State<Shared>) -> Response {
+    let loaded = refreshed(&state).await;
+    blocking_response(move || axum::Json(api::revision_json(&loaded)).into_response()).await
+}
+
+/// The course symbols in map mm; `?course=NAME` for one course, no parameter for all controls.
+async fn api_overlay(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let Ok(course) = api::overlay_query(query.as_deref()) else {
+        return plain(
+            StatusCode::BAD_REQUEST,
+            text(&lang, "editor-map-bad-request", &[]),
+        );
+    };
+    let loaded = current(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    blocking_response(move || overlay_response(&loaded, &entry, course.as_deref(), &lang)).await
+}
+
+fn overlay_response(
+    loaded: &Loaded,
+    entry: &map_view::MapEntry,
+    course: Option<&str>,
+    lang: &Lang,
+) -> Response {
+    let Ok(file) = &loaded.file else {
+        return plain(StatusCode::INTERNAL_SERVER_ERROR, String::new());
+    };
+    let scale = entry.doc.georef.scale_denominator;
+    let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+    let event = &file.event;
+    let gaps = match course.and_then(|name| event.courses.iter().find(|c| c.name == name)) {
+        Some(found) => match freemapper_courseplan::rules::load_rule_set(
+            &event.event.rule_profile,
+            &event.event.rule_overlays,
+        ) {
+            Ok(rules) => freemapper_courseplan::numbers::gap_range(
+                &rules,
+                kind,
+                event.event.discipline,
+                freemapper_courseplan::rules::print_scale_of(found, scale),
+            ),
+            Err(e) => {
+                return plain(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    api::tidy(&e.localize(lang), &[]),
+                );
+            }
+        },
+        None => freemapper_courseplan::numbers::GapRange::DEFAULT,
+    };
+    match overlay::overlay(event, course, &entry.index, scale, kind, gaps) {
+        Ok(overlay) => axum::Json(overlay).into_response(),
+        // A score, team or relay course (or one naming something the event lacks) is not a missing
+        // resource: the page says why nothing is drawn.
+        Err(
+            e @ (freemapper_courseplan::course::CourseError::NotSupported { .. }
+            | freemapper_courseplan::course::CourseError::UnknownReference { .. }),
+        ) => plain(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            api::tidy(&e.localize(lang), &[]),
+        ),
+        Err(e) => plain(StatusCode::NOT_FOUND, api::tidy(&e.localize(lang), &[])),
+    }
+}
+
+async fn map_info(State(state): State<Shared>) -> Response {
+    let loaded = current(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    let (b, m) = (entry.view.page_box(), entry.view.mapping());
+    axum::Json(serde_json::json!({
+        "page_box": [b.x0, b.y0, b.x1, b.y1],
+        "mapping": { "k": m.k, "dx": m.dx, "dy": m.dy },
+        "placeholder": entry.view.is_placeholder(),
+    }))
+    .into_response()
+}
+
+/// The query of `api/map.svg`. A repeated or unknown parameter, or a value that is not a number, is refused.
+#[derive(Default)]
+struct SvgQuery {
+    x0: Option<f64>,
+    y0: Option<f64>,
+    x1: Option<f64>,
+    y1: Option<f64>,
+    zoom: Option<f64>,
+}
+
+impl SvgQuery {
+    fn parse(raw: &str) -> Option<Self> {
+        let mut q = SvgQuery::default();
+        for pair in raw.split('&').filter(|p| !p.is_empty()) {
+            let (key, value) = pair.split_once('=')?;
+            let slot = match key {
+                "x0" => &mut q.x0,
+                "y0" => &mut q.y0,
+                "x1" => &mut q.x1,
+                "y1" => &mut q.y1,
+                "zoom" => &mut q.zoom,
+                _ => return None,
+            };
+            if slot.replace(value.parse().ok()?).is_some() {
+                return None;
+            }
+        }
+        Some(q)
+    }
+}
+
+/// Coordinates beyond this are not a page.
+const MAX_COORDINATE: f64 = 1.0e7;
+/// Largest accepted zoom (pixels per mm).
+const MAX_ZOOM: f64 = 1000.0;
+
+fn parse_rect(q: &SvgQuery) -> Option<(PageRect, f64)> {
+    let rect = PageRect {
+        x0: q.x0?,
+        y0: q.y0?,
+        x1: q.x1?,
+        y1: q.y1?,
+    };
+    let zoom = q.zoom.unwrap_or(1.0);
+    let coordinates = [rect.x0, rect.y0, rect.x1, rect.y1];
+    let ok = coordinates
+        .iter()
+        .all(|v| v.is_finite() && v.abs() <= MAX_COORDINATE)
+        && rect.x1 > rect.x0
+        && rect.y1 > rect.y0
+        && zoom.is_finite()
+        && zoom > 0.0
+        && zoom <= MAX_ZOOM;
+    ok.then_some((rect, zoom))
+}
+
+async fn map_svg(State(state): State<Shared>, RawQuery(query): RawQuery) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let bad = |lang: &Lang| {
+        plain(
+            StatusCode::BAD_REQUEST,
+            text(lang, "editor-map-bad-request", &[]),
+        )
+    };
+    let Some((rect, zoom)) = query
+        .and_then(|raw| SvgQuery::parse(&raw))
+        .and_then(|q| parse_rect(&q))
+    else {
+        return bad(&lang);
+    };
+    let loaded = current(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    blocking_response(move || match entry.view.svg_for(rect, zoom) {
+        Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
+        Err(MapViewError::TooLarge) => bad(&lang),
+        Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    })
+    .await
+}
+
+async fn quit(State(stop): State<Arc<Notify>>) -> Response {
+    stop.notify_one();
+    axum::Json(serde_json::json!({ "ok": true })).into_response()
+}
+
+/// After the first stop signal, open connections get this long to finish; then the process exits. Every
+/// write is atomic, so nothing is half-written.
+const GRACE: Duration = Duration::from_secs(2);
+
+/// Loads the project, serves the editor until Ctrl+C or `POST api/quit`, and prints the address as the only
+/// line on stdout.
+pub fn run(lang: Lang, project: PathBuf, port: u16, open: bool) -> Result<(), String> {
+    ProjectFile::load(&project).map_err(|e| e.localize(&lang))?;
+    let project = std::fs::canonicalize(&project).map_err(|e| e.to_string())?;
+    let failed =
+        |id: &str, reason: String| text(&lang, id, &[("reason", FluentValue::from(reason))]);
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .map_err(|e| failed("cli-edit-runtime-failed", e.to_string()))?;
+    let outcome = runtime.block_on(async {
+        let options = ServeOptions {
+            port,
+            strict_post: true,
+            ..ServeOptions::new(CSP)
+        };
+        let server_lang = lang.clone();
+        let stop = Arc::new(Notify::new());
+        let router_stop = stop.clone();
+        let server = serve(
+            move |prefix, _shutdown| {
+                let state = EditorState::new(project, server_lang);
+                router(prefix, Arc::new(Mutex::new(state)), router_stop)
+            },
+            options,
+        )
+        .await
+        .map_err(|e| match e {
+            WebError::Bind { port, source } => text(
+                &lang,
+                "cli-edit-bind-failed",
+                &[
+                    ("port", FluentValue::from(port)),
+                    ("reason", FluentValue::from(source.to_string())),
+                ],
+            ),
+            other => failed("cli-edit-runtime-failed", other.to_string()),
+        })?;
+        // A closed stdout must not stop the editor.
+        let _ = writeln!(std::io::stdout(), "{}", server.url);
+        if open && let Err(e) = open_browser(&server.url) {
+            eprintln!("{}", failed("cli-edit-browser-failed", e.to_string()));
+        }
+        eprintln!("{}", text(&lang, "cli-edit-stop-hint", &[]));
+        let shutdown = server.shutdown();
+        let stopping = Arc::new(Notify::new());
+        let signalled = stopping.clone();
+        tokio::spawn(async move {
+            tokio::select! {
+                () = async {
+                    if tokio::signal::ctrl_c().await.is_err() {
+                        std::future::pending::<()>().await;
+                    }
+                } => {}
+                () = stop.notified() => {}
+            }
+            shutdown.notify_one();
+            signalled.notify_one();
+        });
+        let grace = async {
+            stopping.notified().await;
+            tokio::time::sleep(GRACE).await;
+        };
+        tokio::select! {
+            result = server.finished() => {
+                result.map_err(|e| failed("cli-edit-server-failed", e.to_string()))
+            }
+            () = grace => Ok(()),
+        }
+    });
+    // A map still being parsed on the blocking pool must not hold the process back either.
+    runtime.shutdown_timeout(Duration::from_millis(200));
+    outcome
+}

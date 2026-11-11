@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Editor-Vorschau: `freemapper-courseplan edit <Projekt>` zeigt die Veranstaltung im Browser (ADR 0042, 0045, 0046). Links steht der Baum aus Bahnen, Kategorien, Posten und Sonderobjekten. In der Mitte zeigt die Ansicht die gewählte Bahn mit Kreisen, Strecken und Nummern über einer Platzhalterkarte, rechts stehen die Eigenschaften (nur lesen). Die Statusleiste steht unten. Bearbeiten lässt sich noch nichts. Die echte Karte folgt mit freemapper-render.
+
 ### Geändert
 
 - Die gemeinsamen Bausteine kommen aus freemapper-core v0.10.0. Am Programm ändert sich dadurch nichts.
