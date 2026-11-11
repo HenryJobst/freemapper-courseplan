@@ -17,7 +17,7 @@ Befund wkb2026.score.code_ambiguity bei Posten 64, 94 akzeptiert
 $ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note 'Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beide zugleich.' --lang de
 Befund wkb2026.score.code_ambiguity bei Posten 62, 92 akzeptiert
 
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'Die Karte bietet 28 brauchbare Stellen. Ab 30 Minuten trifft der Entwurf die Bänder nicht mehr, deshalb nimmt das Beispiel 22 Minuten.' --lang de
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'Auf dieser kleinen Karte trifft der Entwurf die Bänder erst bei 22 Minuten. Ab 25 Minuten verfehlt er sie.' --lang de
 Befund wkb2026.score.limit_penalty bei Bahn Score 22 akzeptiert
 
 $ freemapper-courseplan check luebeck-score.courseplan.toml --lang de
@@ -38,7 +38,7 @@ akzeptiert:
     Begründung: Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beide zugleich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
   Warnung Bahn Score 22: Die Score-Bahn Score 22 hat ein Zeitlimit von 22 Minuten. Üblich sind 30 bis 90 Minuten (wkb2026.score.limit_penalty, BOF B12.5)
-    Begründung: Die Karte bietet 28 brauchbare Stellen. Ab 30 Minuten trifft der Entwurf die Bänder nicht mehr, deshalb nimmt das Beispiel 22 Minuten.
+    Begründung: Auf dieser kleinen Karte trifft der Entwurf die Bänder erst bei 22 Minuten. Ab 25 Minuten verfehlt er sie.
     Zur Prüfregel: BOF B12.5 nennt meist eine Stunde, mindestens 45 Minuten. Der Bereich von 30 bis 90 Minuten ist weiter, weil das Limit frei wählbar ist. Die Strafe je Minute soll nicht unter dem höchsten Postenwert liegen.
 übersprungen:
   wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es

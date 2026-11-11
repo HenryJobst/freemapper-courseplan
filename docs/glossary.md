@@ -35,6 +35,11 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Pflichtverbindung | mandatory link | Paar von Posten einer Score-Bahn, das direkt nacheinander angelaufen werden muss, in beliebiger Richtung. Wer es nicht tut, wird disqualifiziert. Verbindungen bilden Ketten: an einem Posten treffen höchstens zwei. | `ScoreLink` |
 | Läuferprofil | runner profile | Pace eines guten (Standard 4:10 min/km) und eines sehr guten Läufers (3:45), mit der Punktequote bzw. Zeitquote, die jeder auf der Bahn erreichen soll. Einstellungen in `[score]`. | `ScoreSettings` |
 | Offensichtliche Reihenfolge | obvious order | Eine Score-Bahn, deren Posten im Ring um Start und Ziel stehen oder auf der äußeren Hülle liegen und sich fast ebenso kurz vom jeweils nächsten Posten aus ablaufen lassen. `check` meldet sie, weil sie dem Läufer die Wahl nimmt (ADR 0066). | `check::score` |
+| Kandidat | candidate | Stelle, an der ein Posten einer Score-Bahn stehen könnte: Lage, Symbolcode des Kartenobjekts, Routenwahl, Schwierigkeit und Laufzeit vom Start. `score suggest` ordnet sie (ADR 0062). | `Candidate` |
+| Routenwahl | route choice | Zahl von 0 bis 1: wie viele der Strecken von einem Kandidaten zu anderen und zum Start mehrere ähnlich schnelle Routen bieten. | `Candidate::route_choice` |
+| Entwurf | draft | Vorschlag einer Score-Bahn aus Kandidaten mit Werten und Codes, der die Längenbänder beider Läuferprofile trifft. `score draft` schreibt ihn nur mit `--apply` (ADR 0065). | `Draft` |
+| Längenband | length band | Bereich in Prozent, in den die Punktequote des guten Läufers (Standard 87 bis 93) und die Zeitquote des sehr guten Läufers (95 bis 100) fallen sollen; Einstellung in `[score]` (ADR 0064, 0065). | `ScoreSettings::good_band_percent` |
+| Auswertungsbogen | evaluation sheet | Markdown-Text zu einer Score-Bahn mit Zeitlimit, Abzug, Gleichstandsregel, Pflichtverbindungen und Postenwerten. `export --sheet` schreibt ihn (ADR 0070). | `score::sheet::evaluation_sheet` |
 | Bahnposten | course control | Ein Posten in einer Bahn, mit eigener Nummernlage und eigenen Knickpunkten der folgenden Strecke. | `CourseControl` |
 | geplanter Druckmaßstab | planned print scale | Maßstab, für den die Bahn gelegt wird. Grundlage für maßstabsabhängige Prüfungen; für freemapper-print nur ein Vorgabewert. | `planned_print_scale` |
 | Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenbereich, Erste-Hilfe-Stelle, Verpflegungsstelle. | `SpecialObject` |
@@ -147,7 +152,7 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Deutsch | English | Definition | Code |
 |---|---|---|---|
 | Routenanalyse | route analysis | Berechnung der schnellsten und alternativer Routen je Strecke aus Kostenfläche und Höhenmodell. | `route_analysis` |
-| Kostenfläche | cost surface | Laufzeit je Fläche, abgeleitet aus den Kartensymbolen und der Steigung. | `CostSurface` |
+| Kostenfläche | cost surface | Laufzeit je Fläche, abgeleitet aus den Kartensymbolen und der Steigung. Die Score-Bahnen rechnen mit einem Raster der Kartensymbole ohne Höhenmodell. | `CostSurface` |
 | Laufgeschwindigkeit | symbol speed | Geschwindigkeitsfaktor eines Kartensymbols in der Kostenfläche. | `symbol_speed` |
 | Postensetzer | control placer | Helfer, der Posten ausbringt oder einsammelt. | `ControlPlacer` |
 | Tour | control-placer tour | Geordnete Postenliste eines Postensetzers mit Start- und Endpunkt; gedruckt von freemapper-print. | `Tour` |
@@ -158,5 +163,5 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 |---|---|---|---|
 | MCP-Server | MCP server | Teil des Programms, der KI-Assistenten über das Model Context Protocol auf stdin und stdout Werkzeuge zum Lesen und Ändern eines Projekts anbietet. Das Programm selbst enthält keine KI (ADR 0016). | `mcp::CoursePlanServer` |
 | Werkzeug | tool | Eine Funktion des MCP-Servers mit englischem Namen, zum Beispiel `add_control`. Beschreibung und Parametertexte stehen im Katalog. | `#[tool]` |
-| IOF-XML-Export | IOF XML export | Schreibt die Einzelbahnen einer Veranstaltung als IOF-XML-3.0-`CourseData` für Auswertungssoftware wie OE: Posten mit Kartenposition, Bahnen mit Postenfolge, Streckenlängen und Nummernlage, Zuordnung der Bahnen zu Kategorien. Andere Bahnarten werden übersprungen und genannt. | `iof_xml::export_iof_xml` |
+| IOF-XML-Export | IOF XML export | Schreibt die Einzel- und Score-Bahnen einer Veranstaltung als IOF-XML-3.0-`CourseData` für Auswertungssoftware wie OE: Posten mit Kartenposition, Bahnen mit Postenfolge, Streckenlängen und Nummernlage, Zuordnung der Bahnen zu Kategorien; eine Score-Bahn trägt den Wert je Posten und in einem Erweiterungselement Zeitlimit, Abzug und Verbindungen. Mannschafts- und Staffelbahnen werden übersprungen und genannt. | `iof_xml::export_iof_xml` |
 | Vertrag der Suite | suite contract | Was freemapper in Karte und `freemapper.toml` schreibt und worauf sich freemapper-courseplan verlässt: die Tags `freemapper:source=sheet` und `base`, die Kartenteile „peripheral information“ und `base`, die Schlüssel `map_kind` und `title`. Festgehalten in `freemapper-contract` (freemapper-core, dort ADR 0018) und hier in jedem Testlauf geprüft (ADR 0041). | `contract_*` (Tests) |

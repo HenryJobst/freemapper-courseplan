@@ -21,6 +21,10 @@ courses from a `.ppen`; its PDF then replaces this sketch.
 - `course-data.xml`: the course as IOF XML 3.0, made by `export` (see below)
 - `luebeck-sprint.ppen`: the course as a Purple Pen event, made by `export --ppen` (see below)
 - `preview.jpg`, `make-preview.py`: the sketch and its script
+- `luebeck-score.courseplan.toml`: a copy of the project with a score course (see below)
+- `score-transcript.en.txt`, `score-transcript.de.txt`: the commands that added it, with their output
+- `score-check.en.txt`, `score-check.de.txt`: checking the score course, with four accepted warnings
+- `score-course-data.xml`, `score-22.csv`, `score-22.sheet.md`, `score-22.sheet.de.md`: the score course as IOF XML, control list and evaluation sheet
 
 ## How the course was set
 
@@ -116,6 +120,54 @@ $ freemapper-courseplan export luebeck-sprint.courseplan.toml --ppen luebeck-spr
 ```
 
 The file does not exist yet, so `export` writes it from scratch and records it in the project as `sources.ppen`. A test compares the file with a fresh export. Another reads it back and exports onto it a second time, with the same bytes. **The file has not been opened in Purple Pen 4.0.** If you have Purple Pen 4.0, please open it and report whether it loads and whether controls, course and numbers sit in the right place. The description texts are English because the example was made with the English interface.
+
+## Score course
+
+`luebeck-score.courseplan.toml` is a copy of the project above. It adds a start `S-score` and a finish `F-score` and
+one score course, "Score 22", with 28 controls worth 82 points and a time limit of 22 minutes. The sprint project,
+its Purple Pen event and its IOF XML stay as they were. The copy exists because the start `S1` of the sprint course
+lies inside a building outline. There `score suggest` and `score draft` stop with the message that the start cannot
+be reached, and a score course needs a start and a finish outside buildings. I did not move `S1`; the two new
+objects stand on open map at `-60,-3.6` and `-30,10.2`, found with `map near`.
+
+```sh
+cp luebeck-sprint.courseplan.toml luebeck-score.courseplan.toml
+freemapper-courseplan special add luebeck-score.courseplan.toml --kind start --id S-score --at -60,-3.6
+freemapper-courseplan special add luebeck-score.courseplan.toml --kind finish --id F-score --at -30,10.2
+freemapper-courseplan score suggest luebeck-score.courseplan.toml --start S-score --finish F-score --limit 8
+freemapper-courseplan score draft luebeck-score.courseplan.toml "Score 22" --time-limit 22 --start S-score --finish F-score --apply
+freemapper-courseplan check luebeck-score.courseplan.toml
+freemapper-courseplan export luebeck-score.courseplan.toml --iof-xml score-course-data.xml
+freemapper-courseplan export luebeck-score.courseplan.toml --csv score-22.csv --course "Score 22"
+freemapper-courseplan export luebeck-score.courseplan.toml --sheet score-22.sheet.md --course "Score 22"
+```
+
+`score-transcript.en.txt` has every command with its output, `score draft` included.
+
+**The draft misses the bands at 45 minutes.** I tried 45 first, the usual limit. The draft fails: the good runner
+takes all 28 controls, 100 percent of the points against a band of 87 to 93, and the very good runner is back after
+55 percent of the limit instead of 95 to 100. The map is small, 1 km by 0.8 km, and the message says the map offers too
+few suitable sites for this limit, and the closest attempt has 28 controls. Limits from 25 minutes up miss the bands too
+(tried at 25, 28, 30, 35 and 45). At 22 minutes the draft succeeds in about 8 seconds: the good runner scores 74 of 82
+points (90.2 percent), the very good runner takes every control and finishes after 99.1 percent of the limit. The
+example uses 22 minutes, and a test (`luebeck_score_example_meets_its_bands_and_check_is_quiet`) keeps it there.
+
+`check` on this project gives no error and four warnings, which the project file accepts with a reason each:
+
+- The limit of 22 minutes is below the 30 to 90 minutes that `wkb2026.score.limit_penalty` calls usual. The draft
+  misses the bands from 25 minutes up.
+- Three pairs of codes look alike turned upside down or differ only by 6 and 9 (61 and 91, 64 and 94, 62 and 92).
+  The draft put each pair 400 to 710 m apart. The accepted note says so; it does not make the codes distinguishable.
+
+`score-check.en.txt` shows the run. The numbers `info` prints for the score course are its controls, points and
+limit; it does not measure a length in kilometres.
+
+Limits of this example. The routes behind the draft come from a raster of the map symbols without elevation, and the
+runner paces (4:10 and 3:45 minutes per kilometre) are a first version. The sites sit where the program found them, and
+I have not looked at each one on the map; before you use them, look at every position. The IOF XML carries the time
+limit, penalty and links in an extension element that has not been tried in OE. `createTime` in
+`score-course-data.xml` is the time of the run that made it, so a rerun changes that line only. The file validates
+against the IOF schema. The sheet comes in English and German (`--lang de`).
 
 ## Making the sketch again
 

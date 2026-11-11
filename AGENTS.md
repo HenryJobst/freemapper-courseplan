@@ -21,13 +21,15 @@ objects near a position. Give it positions in map millimetres, or work them out 
 Tell the person these limits before you start:
 
 - Only sprint and schoolyard maps work. Forest maps (ISOM) are refused. The map must be an `.omap` or `.xmap`.
-- Individual and score courses can be edited and checked; only individual courses are measured. Team and relay
-  courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
+- Individual and score courses can be edited and checked. `info` gives a length for individual courses only; a
+  score course is measured with `score length`. Team and relay courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
   `score draft` and `score length` read the map and search routes, so they take seconds: about 1 s on a small
-  sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Lübeck map (release build). A draft
+  sprint map, about 6 s for `score suggest` and 8 s for `score draft` on the Lübeck map (release build, an idle machine; a draft that misses the bands can take twice as long). A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
+  A draft can miss the length bands, for example when the map offers few usable sites for a long limit. The command
+  then exits with 1 and names each missed band; try a shorter limit and tell the person what happened.
 - The score extension in the IOF XML (time limit, penalty, links, in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1`) is not tried in OE or any other reader; a strict reader may ignore it. The `Score` values are standard.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in
   Purple Pen 4.0 (checked once by the author).
@@ -36,7 +38,8 @@ Tell the person these limits before you start:
 - The editor draws score courses with their mandatory links and has a Score panel for suggest, draft and length;
   candidates and drafts stay in the page until accepted or applied. The editor draws the real map, but a map
   larger than one A3 sheet at map scale is clipped to its middle part; courses outside it stay on the overlay.
-- There is no print preview and no printing of courses yet; printing waits for freemapper-print.
+- The editor has a read-only print preview of a course, but the program does not print courses yet; printing waits
+  for freemapper-print.
 - The route analysis is missing, so a straight leg through an out-of-bounds area is only a warning.
 - OCAD is not needed and not tested.
 - `check` tests distances, angles and codes, not whether a control stands at the right feature. The person looks
@@ -105,7 +108,7 @@ setting.
 
 If you can run commands on the person's computer (Claude Code, Codex and similar), use the command line. Each call
 is a blocking command, and you can chain a whole course into one shell call, so it takes few turns; through MCP
-every step is a tool turn that re-reads the whole context, and the schemas of about 40 tools sit in that context
+every step is a tool turn that re-reads the whole context, and the schemas of about 50 tools sit in that context
 as well. Use MCP only when you cannot run commands (see the next section).
 
 `freemapper-courseplan --help` lists the commands, `freemapper-courseplan <command> --help` their switches and
@@ -126,7 +129,7 @@ freemapper-courseplan check hall.courseplan.toml
 | Command group | Purpose |
 |---|---|
 | `init <MAP>` | Makes the project file (`--project`, `--title`, `--ppen` to start from a Purple Pen event). |
-| `info <PROJECT>` | Summary of the project: counts, and per course controls, length and climb. |
+| `info <PROJECT>` | Summary of the project: counts, and per course controls, length and climb (a score course: controls, points, time limit). |
 | `list controls\|courses\|specials\|classes` | The details as a table; `--json` gives the MCP answer. |
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
@@ -158,7 +161,7 @@ stay open or when it was refused. Everything else exits with 0 on success.
 with an access token on one line and blocks until Ctrl+C or "Close editor" in the page. A person has to look at
 the page; you cannot work in it. If you start it for the person, run it in the background (or with
 `--no-browser` and pass on the address) and stop it when they are done; a foreground call would sit there until
-your command timeout. No other command is a long-running one, so no timeout needs changing.
+your command timeout. No other command is a long-running one (the score commands take seconds), so no timeout needs changing.
 
 Workflow:
 
@@ -294,7 +297,7 @@ Rules:
   The person may commit it to git.
 - After a sync, the base copy next to the project file, for example `event.courseplan.ppen-base`: commit it
   together with the project file.
-- Files you export: the `.xml` for result software and the `.ppen` for Purple Pen.
+- Files you export: the `.xml` for result software and the `.ppen` for Purple Pen. A score course also exports as a CSV control list and a Markdown evaluation sheet.
 - The `.omap` and `freemapper.toml` stay untouched; courseplan only reads them.
 
 ## What to tell the person
@@ -323,6 +326,13 @@ Texts as the English catalog has them:
   `course controls` belong to individual courses. Use the score commands for a score course.
 - `control <code> carries the value <n> in its code, not <m>; change the code instead`: a score control's value is
   the one its code carries. Pick another code (second digit is the value), or drop the value.
+- `the start at (x, y) cannot be reached: it lies in a blocked area` (the finish reads alike): `score suggest`,
+  `score draft` and `score length` need a start and finish outside buildings and blocked areas. Add a new start or
+  finish with `special add` at a free position (`map near` shows what lies there); do not move the person's own.
+- `The good runner scores 100 percent of all points ...` or `The very good runner ...` (`score draft`, exit 1): the
+  draft misses a length band and names the miss. The last line gives a hint, such as a shorter limit or too few
+  suitable sites. Try another limit and tell the person which band was missed; never present such a draft as a
+  success.
 - `<path> has no link to a Purple Pen file. Link it first with export --ppen FILE or import --ppen FILE`: link
   the project before `sync`.
 - `<path> changed while the sync ran, probably because Purple Pen saved it. Nothing was written. Run sync again`:

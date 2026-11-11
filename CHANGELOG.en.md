@@ -8,6 +8,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- The Lübeck example has a score course in a second project file, `luebeck-score.courseplan.toml`: 28 controls, 82 points, 22 minutes, from `score draft`, with its transcript, check output, IOF XML, CSV list and evaluation sheet in English and German. A draft at 45 minutes misses the bands on this small map; the README says so.
+- `info` names controls, points and time limit of a score course. It used to say that the length was not supported.
 - Score courses in the exports. The IOF XML now holds score courses with the value of each control in `CourseControl/Score`; time limit, penalty and mandatory links sit in an `Extensions` element, because the schema has no place for them. New `export --csv FILE --course NAME` writes code, value and position of the controls, and `export --sheet FILE --course NAME` writes an evaluation sheet with the time limit, the penalty, the rule that the faster runner wins on equal points and the rule that a runner who skips a link is disqualified (tools `export_score_csv`, `export_score_sheet`). The Purple Pen export still skips score courses and says so. The IOF XML has not been tried in OE (ADR 0070).
 - The editor draws score courses and has a Score panel: a suggestion with candidate markers and their values, "Accept" for a single candidate, a draft with a length report, "Apply" and a progress line while the program computes. Mandatory links appear as dashed lines between their controls. Candidates and drafts are not saved until you accept or apply them. A long run no longer stops the editor from noticing changes to the file (ADR 0069).
 - `score suggest`, `score draft` and `score length` (tools `score_suggest`, `score_draft`, `score_length`): ranked control sites from the map, a draft of a score course whose length meets the bands of both runner profiles, and the length analysis of an existing course. Only `draft --apply` writes; it creates the course or replaces the controls of a score course, and the editor can undo it. A draft that misses a band exits with 1 and names each miss and a hint. Sites stay 4 m away from forbidden routes (ADR 0068).
@@ -17,6 +19,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Changed
 
+- The tool descriptions of `check` and `export_iof_xml` no longer say that score courses are not checked or written. README, manual, glossary, design and AGENTS.md describe score courses as built.
 - Internal: the map kind, the sidecar reader and the object class now come from `freemapper-core` v0.19.0 (`freemapper-contract`) instead of local copies. Names and output stay the same.
 
 ## [0.12.0] - 2026-11-11

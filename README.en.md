@@ -34,13 +34,15 @@ Planned for the first version:
 - exchange with Purple Pen (`.ppen`) in both directions, so you can use both programs side by side (import and
   export and sync are usable now: `import`, `export --ppen` and `sync`; Purple Pen 4.0 opens the export);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
+- score courses with point values carried by the control code, a time limit, a penalty and mandatory links, with
+  suggested control sites, a draft that meets the length bands, checks and export (`score`, usable now);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
   special objects and control descriptions, findings of the check, export, import and sync with Purple Pen, with undo and
   redo and a print preview; on the real map),
   the command line or an AI assistant (MCP).
 
-After that come a route analysis, team orienteering with mandatory and free controls, relays, score courses,
+After that come a route analysis, team orienteering with mandatory and free controls, relays,
 tours for the people who put out the controls, and AI support that judges courses and makes proposals.
 
 The program needs no OCAD and runs on macOS, Linux and Windows.
@@ -49,7 +51,7 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Sketch of a sprint course in Lübeck's old town"></a>
 
-A sprint course with seven controls in Lübeck's old town, set with the command line only. The image is a sketch:
+A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a score course with 28 controls. The image is a sketch:
 the map comes from freemapper-print, the course is drawn on top. Commands, project file and output are in
 [`examples/luebeck-sprint`](examples/luebeck-sprint/); [`examples/README.en.md`](examples/README.en.md) lists all
 examples.
@@ -82,8 +84,23 @@ placed. `freemapper-courseplan info <project>` shows what the project holds, inc
 An AI assistant can do the same for you through the MCP server `freemapper-courseplan mcp`; chapter 3 of the
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up, and [`AGENTS.md`](AGENTS.md) tells the assistant
 how to install and use the program itself. The project file is TOML, and
-you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. Score courses are edited with `score` and `course add --kind score`; the program cannot edit team or relay courses yet, and it measures only individual courses. It cannot print
+you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. The program cannot edit team or relay courses yet. It cannot print
 courses either, and it does not read forest maps.
+
+A score course has controls with points, a time limit and a penalty per minute over it, and optionally mandatory
+links that the runner has to run directly after each other. The code carries the value: control 43 is worth 3
+points. `course add --kind score` makes the course, and `score controls`, `score value`, `score link`, `score
+settings` and `score course set` edit it. `score suggest` ranks control sites on the map by route choice,
+`score draft` picks controls, values and codes so that a good runner scores about 90 percent of the points and a
+very good runner just reaches all of them within the limit, and `score length` re-measures a course after you
+changed it. The draft writes nothing until you add `--apply`. Eight rules of `check` read score courses (value and
+code, alike codes, ring and obvious order, length bands, limit and penalty, links, mix of hard controls), the editor
+has a Score panel, and `export --csv` and `export --sheet` write the control list and the evaluation sheet. Routes
+come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
+length bands as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
+`score_draft`, `score_length` and the tools for editing. Chapter 3 of the
+[user manual](docs/manual/en.md#score-courses) explains it, the Lübeck example holds a finished course, and the
+decisions are in ADR 0060 to 0070.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with
 severity, place, rule and source. The built-in profile is `wkb-2026` (competition rules 2026) and the overlay
@@ -97,12 +114,12 @@ assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `s
 `set_start_window` and `set_class` for it. The program does not check team or relay courses yet, and the
 route analysis is missing, so it reports a straight leg through an out-of-bounds area only as a warning.
 
-`freemapper-courseplan export <project> --iof-xml <file>` writes the individual courses as IOF XML 3.0 for result
+`freemapper-courseplan export <project> --iof-xml <file>` writes the individual and score courses as IOF XML 3.0 for result
 software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads
 back through the IOF reader of freemapper-course (freemapper-print's); a finished example is
 [`course-data.xml`](examples/luebeck-sprint/course-data.xml). An import into OE, Purple Pen or Condes has not been
 tested, because nobody on the project has OE. Reports from people with OE are welcome. If the map is georeferenced, the start, controls and finish also carry
-latitude and longitude (ADR 0039). Taped legs are not written yet, and team, relay and score courses are skipped. Chapter 10 of the
+latitude and longitude (ADR 0039). Taped legs are not written yet, and team and relay courses are skipped. A score course carries its time limit, penalty and links in an extension element of its own. Chapter 10 of the
 [user manual](docs/manual/en.md#10-handing-on-iof-xml-for-oe) has the details.
 
 `freemapper-courseplan init <map> --ppen <file>` and `freemapper-courseplan import <project> --ppen <file>`
@@ -112,7 +129,7 @@ score courses or gaps, the program names in a note. `import` replaces a project 
 `--replace`; classes and accepted findings stay. Chapter 9 of the
 [user manual](docs/manual/en.md#9-exchanging-with-purple-pen) explains it.
 
-`freemapper-courseplan export <project> --ppen <file>` writes the individual courses as a Purple Pen event; the AI
+`freemapper-courseplan export <project> --ppen <file>` writes the individual courses as a Purple Pen event (score courses are left out, with a note); the AI
 assistant has the tool `export_ppen`. It changes an existing file in place and leaves alone what the project does not
 know, such as circle gaps or map exchange; with `--new` it writes the file from scratch. It never deletes anything and
 reports what is in the file but not in the project. The writer is `freemapper-course` in freemapper-core. The example

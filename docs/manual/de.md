@@ -117,7 +117,8 @@ dort an.
   liegt, etwa bei einer von Hand gesetzten Nummer mit 6 mm.
 - Ändert sich die Reihenfolge einer Bahn, verliert jede Strecke, die jetzt zu einem anderen Bahnpunkt führt, ihre
   Knickpunkte und ihre Abflaggung. Der Assistent bekommt eine Liste dieser Strecken.
-- Einzel- und Score-Bahnen lassen sich bearbeiten (siehe Score-Bahnen unten), gemessen werden nur Einzelbahnen.
+- Einzel- und Score-Bahnen lassen sich bearbeiten (siehe Score-Bahnen unten). `info` nennt die Länge von
+  Einzelbahnen; bei einer Score-Bahn nennt es Posten, Punkte und Zeitlimit, und `score length` misst sie.
   Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten; das Programm sagt das.
 - Die Projektdatei ist einfaches TOML. `freemapper-courseplan info <Projekt>` zeigt, was der Assistent getan hat, und `list controls|courses|specials|classes <Projekt>` führt die Einzelheiten auf; `map extent <Projekt>` und `map near <Projekt> --at X,Y --radius MM` berichten über die Karte. Alle nehmen `--json`.
 
@@ -576,7 +577,7 @@ Die Entscheidungen dazu stehen in ADR 0042, 0045 und 0046.
 
 ## 8. Prüfen: Hinweise lesen, Ausnahmen begründen
 
-`check` legt jede Einzelbahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was
+`check` legt jede Einzel- und Score-Bahn neben die Regeln, nach denen die Veranstaltung gelten soll, und sagt dir, was
 auffällt. Es ändert nichts an der Projektdatei. Du entscheidest, ob du die Bahn änderst oder den Befund als gewollte
 Ausnahme begründest.
 
@@ -590,8 +591,8 @@ Läuft die Bahn an einem Posten fast geradeaus, also mit einem Winkel über 170�
 einen Hinweis (`wkb2026.leg.straight_angle_hint`). Der Posten ändert die Laufrichtung dann kaum, und hinter dem
 Kreis ist kein Platz für die Nummer.
 
-Mannschafts-, Staffel- und Score-Bahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
-geprüft wurde.
+Mannschafts- und Staffelbahnen prüft das Programm noch nicht. Für jede meldet es einmal, dass sie nicht
+geprüft wurde. Für Score-Bahnen gibt es eigene Regeln (siehe Score-Bahnen unten).
 
 ### Eine Zeile lesen
 
@@ -651,6 +652,37 @@ Häufige Gründe:
 
 Eine übersprungene Prüfregel hat nicht geprüft. Ein leeres Ergebnis heißt deshalb nicht, dass alles besteht. Lies
 die Liste einmal durch, bevor du dich darauf verlässt.
+
+### Score-Bahnen
+
+`check` prüft auch Score-Bahnen. Die Regeln für Einzelbahnen (Winkel, Postenabstände entlang der Strecken) gelten für
+sie nicht; acht eigene Regeln lesen die Postenmenge, das Limit und die Verbindungen. Alle Kennungen beginnen mit
+`wkb2026.score.`:
+
+- `value_code` (Fehler): Der Wert eines Postens stimmt mit dem Wert überein, den sein Code trägt (Kapitel 3,
+  Score-Bahnen).
+- `code_ambiguity` (Warnung): Zwei Codes der Bahn sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch
+  6 und 9, etwa 61 und 91.
+- `ring` und `order` (Warnungen): Die Posten stehen nicht im Ring um Start und Ziel, und ihre Reihenfolge ist nicht
+  offensichtlich, zum Beispiel weil sie auf der äußeren Hülle liegen und die Tour zum jeweils nächsten Posten fast die
+  kürzeste ist. Beide Regeln gelten erst ab sechs Posten.
+- `length_bands` (Warnung): Auf der Kostenfläche der Karte holt der gute Läufer standardmäßig 87 bis 93 Prozent aller
+  Punkte, und der sehr gute Läufer läuft alle Posten an und ist nach 95 bis 100 Prozent des Limits im Ziel. Die
+  Bänder sind Einstellungen der Veranstaltung. Die Regel sucht Routen und braucht auf einer großen Karte einige
+  Sekunden. Ohne Kartenobjekte oder bei einer gescheiterten Suche wird sie mit Grund übersprungen.
+- `limit_penalty` (Warnung): Das Limit liegt zwischen 30 und 90 Minuten, und eine Minute darüber kostet mindestens
+  so viele Punkte wie der höchste Postenwert.
+- `link` (Fehler oder Warnung): Eine Verbindung braucht zwei verschiedene Posten der Bahn und darf nur einmal
+  vorkommen. Eine Luftlinie durch Sperrgebiet oder über einen verbotenen Weg ist eine Warnung, ebenso eine Verbindung
+  ohne zweite Route ähnlicher Länge. Für den zweiten Fall hat die Datei kein Merkmal; ist er gewollt, akzeptierst du
+  den Hinweis mit einer Begründung.
+- `mix` (Warnung): Der Anteil schwerer Posten passt auf 15 Punkte genau zur Einstellung `mix_hard_percent`. Die Regel
+  urteilt ab fünf Posten.
+
+Mehrere dieser Grenzen sind Vorschläge von freemapper-courseplan, keine Werte aus einer Quelle; die Quelle in der
+Zeile sagt, welche. Einen Befund an einem Postenpaar akzeptierst du mit `--controls`, einen an der ganzen Bahn mit
+`--course`, wie im Beispiel `examples/luebeck-sprint/score-check.de.txt`. Mannschafts- und Staffelbahnen bleiben
+ungeprüft.
 
 ### Eine Ausnahme begründen
 

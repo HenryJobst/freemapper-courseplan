@@ -370,4 +370,4 @@ note = "Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beid
 [[accepted_findings]]
 rule = "wkb2026.score.limit_penalty"
 course = "Score 22"
-note = "Die Karte bietet 28 brauchbare Stellen. Ab 30 Minuten trifft der Entwurf die Bänder nicht mehr, deshalb nimmt das Beispiel 22 Minuten."
+note = "Auf dieser kleinen Karte trifft der Entwurf die Bänder erst bei 22 Minuten. Ab 25 Minuten verfehlt er sie."

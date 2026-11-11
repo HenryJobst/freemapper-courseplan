@@ -17,7 +17,7 @@ accepted finding wkb2026.score.code_ambiguity at controls 64, 94
 $ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note 'The pair lies about 710 m apart, so no runner sees both at once.' --lang en
 accepted finding wkb2026.score.code_ambiguity at controls 62, 92
 
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'The map offers 28 usable sites. At 30 minutes or more the draft cannot meet the bands, so the example uses 22 minutes.' --lang en
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'On this small map the draft meets the bands only at 22 minutes. From 25 minutes up it misses them.' --lang en
 accepted finding wkb2026.score.limit_penalty at course Score 22
 
 $ freemapper-courseplan check luebeck-score.courseplan.toml --lang en
@@ -38,7 +38,7 @@ accepted:
     note: The pair lies about 710 m apart, so no runner sees both at once.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
   warning course Score 22: score course Score 22 has a time limit of 22 minutes. 30 to 90 minutes is usual (wkb2026.score.limit_penalty, BOF B12.5)
-    note: The map offers 28 usable sites. At 30 minutes or more the draft cannot meet the bands, so the example uses 22 minutes.
+    note: On this small map the draft meets the bands only at 22 minutes. From 25 minutes up it misses them.
     about the rule: BOF B12.5 says usually one hour, at least 45 minutes. The range of 30 to 90 minutes is wider because the limit is free to choose. The penalty per minute should not be below the highest control value.
 skipped:
   wkb2026.start.capacity, event: the event has no start window; event start-window sets it

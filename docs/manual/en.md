@@ -112,8 +112,9 @@ there.
   set by hand at 6 mm.
 - When the order of a course changes, every leg that now runs to another stop loses its bends and its taped
   flag. The assistant gets a list of these legs.
-- Individual and score courses can be edited (see Score courses below), and only individual courses are measured.
-  Team and relay courses cannot be edited yet; the program says so.
+- Individual and score courses can be edited (see Score courses below). `info` gives the length of individual
+  courses; for a score course it gives controls, points and time limit, and `score length` measures it. Team and
+  relay courses cannot be edited yet; the program says so.
 - The project file is plain TOML. `freemapper-courseplan info <project>` shows what the assistant did, and `list controls|courses|specials|classes <project>` lists the details; `map extent <project>` and `map near <project> --at X,Y --radius MM` report the map. All of them take `--json`.
 
 ### Score courses
@@ -547,7 +548,7 @@ The decisions behind this are in ADR 0042, 0045 and 0046.
 
 ## 8. Checking: reading findings, giving reasons for exceptions
 
-`check` holds every individual course against the rules the event is meant to follow and tells you what stands
+`check` holds every individual and score course against the rules the event is meant to follow and tells you what stands
 out. It changes nothing in the project file. You decide whether to change the course or to give a reason for the
 finding as an intended exception.
 
@@ -561,8 +562,8 @@ freemapper-courseplan check hall.courseplan.toml --all
 (`wkb2026.leg.straight_angle_hint`). The control then hardly changes the running direction, and there is no room
 for the number behind the circle.
 
-The program does not check team, relay and score courses yet. For each of them it reports once that it was not
-checked.
+The program does not check team and relay courses yet. For each of them it reports once that it was not
+checked. Score courses have rules of their own (see Score courses below).
 
 ### Reading a line
 
@@ -619,6 +620,34 @@ analysis can say whether it does.
 
 A skipped rule has not checked anything. An empty result therefore does not mean that everything passes. Read the
 list once before you rely on it.
+
+### Score courses
+
+`check` also tests score courses. It does not apply the rules for individual courses to them (angles, control
+distances along legs); eight rules of its own read the control set, the limit and the links. All carry the id
+prefix `wkb2026.score.`:
+
+- `value_code` (error): the value of a control matches the value its code carries (chapter 3, Score courses).
+- `code_ambiguity` (warning): two codes of the course look alike upside down or differ only by 6 and 9, such as 61
+  and 91.
+- `ring` and `order` (warnings): the controls do not stand in a ring round start and finish, and their order is not
+  obvious, for example because they lie on the outer hull and the nearest-control tour is almost the shortest.
+  Both look at courses from six controls on.
+- `length_bands` (warning): on the cost surface of the map the good runner scores 87 to 93 percent of all points
+  by default, and the very good runner takes every control and finishes after 95 to 100 percent of the limit. The
+  bands are settings of the event. The rule searches routes and takes a few seconds on a large map. Without map
+  objects, or if the search fails, it is skipped with the reason.
+- `limit_penalty` (warning): the limit lies between 30 and 90 minutes, and a minute over costs at least as many
+  points as the highest control value.
+- `link` (error or warning): a link needs two different controls of the course and may appear once. A straight line
+  across an out-of-bounds area or a forbidden route is a warning, and so is a link with no second route of similar
+  length. The file has no flag for the second case; if it is intended, accept the hint with a note.
+- `mix` (warning): the share of hard controls matches the setting `mix_hard_percent` within 15 points. It judges
+  from five controls on.
+
+Several of these limits are proposals of freemapper-courseplan, not values from a source; the source in the line
+says which. A finding at a pair of controls is accepted with `--controls`, one about the whole course with
+`--course`, as in the example `examples/luebeck-sprint/score-check.en.txt`. Team and relay courses stay unchecked.
 
 ### Giving a reason for an exception
 
