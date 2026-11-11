@@ -1,50 +1,13 @@
 $ freemapper-courseplan check luebeck-score.courseplan.toml --lang en
-event:
-  warning controls 61, 91: codes 61 and 91 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 64, 94: codes 64 and 94 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 62, 92: codes 62 and 92 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-course Score 22:
-  warning course Score 22: score course Score 22 has a time limit of 22 minutes. 30 to 90 minutes is usual (wkb2026.score.limit_penalty, BOF B12.5)
-0 errors, 4 warnings, 0 hints; 1 accepted, 5 skipped
+course Score 15:
+  warning course Score 15: score course Score 15 has a time limit of 15 minutes. 30 to 90 minutes is usual (wkb2026.score.limit_penalty, BOF B12.5)
+0 errors, 1 warning, 0 hints; 1 accepted, 5 skipped
 check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
 
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note 'The pair lies about 430 m apart, so no runner sees both at once.' --lang en
-accepted finding wkb2026.score.code_ambiguity at controls 61, 91
-
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note 'The pair lies about 400 m apart, so no runner sees both at once.' --lang en
-accepted finding wkb2026.score.code_ambiguity at controls 64, 94
-
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note 'The pair lies about 710 m apart, so no runner sees both at once.' --lang en
-accepted finding wkb2026.score.code_ambiguity at controls 62, 92
-
-$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 22' --note 'On this small map the draft meets the bands only at 22 minutes. From 25 minutes up it misses them.' --lang en
-accepted finding wkb2026.score.limit_penalty at course Score 22
+$ freemapper-courseplan finding accept luebeck-score.courseplan.toml wkb2026.score.limit_penalty --course 'Score 15' --note 'A draft for this small map meets the bands at 15 minutes. At 45 minutes the free codes run out first.' --lang en
+accepted finding wkb2026.score.limit_penalty at course Score 15
 
 $ freemapper-courseplan check luebeck-score.courseplan.toml --lang en
-0 errors, 0 warnings, 0 hints; 5 accepted, 5 skipped
+0 errors, 0 warnings, 0 hints; 2 accepted, 5 skipped
 check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
-
-$ freemapper-courseplan check luebeck-score.courseplan.toml --all --lang en
-accepted:
-  hint course A, leg 36–37: the legs at control 37 form an angle of 85°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
-    note: Training: Der Winkel von 85° am letzten Posten ist gewollt.
-  warning controls 61, 91: codes 61 and 91 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: The pair lies about 430 m apart, so no runner sees both at once.
-    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 64, 94: codes 64 and 94 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: The pair lies about 400 m apart, so no runner sees both at once.
-    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 62, 92: codes 62 and 92 in score course Score 22 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: The pair lies about 710 m apart, so no runner sees both at once.
-    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning course Score 22: score course Score 22 has a time limit of 22 minutes. 30 to 90 minutes is usual (wkb2026.score.limit_penalty, BOF B12.5)
-    note: On this small map the draft meets the bands only at 22 minutes. From 25 minutes up it misses them.
-    about the rule: BOF B12.5 says usually one hour, at least 45 minutes. The range of 30 to 90 minutes is wider because the limit is free to choose. The penalty per minute should not be below the highest control value.
-skipped:
-  wkb2026.start.capacity, event: the event has no start window; event start-window sets it
-  wkb2026.length.long, event: not checked at a training
-  wkb2026.length.middle, event: not checked at a training
-  wkb2026.length.ultralong, event: not checked at a training
-  wkb2026.difficulty.mix, event: not checked at a training
-0 errors, 0 warnings, 0 hints; 5 accepted, 5 skipped
 

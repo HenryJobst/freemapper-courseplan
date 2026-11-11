@@ -57,116 +57,40 @@ code = 37
 map_mm = [-88.2, 32.9]
 
 [[controls]]
-code = 74
-map_mm = [111.759, 45.479]
-
-[[controls]]
 code = 45
-map_mm = [75.239, -102.026]
-
-[[controls]]
-code = 91
-map_mm = [-100.193, 95.276]
-
-[[controls]]
-code = 52
-map_mm = [-97.318, -82.01]
-
-[[controls]]
-code = 83
-map_mm = [47.687, 101.813]
-
-[[controls]]
-code = 42
-map_mm = [28.649, -96.401]
-
-[[controls]]
-code = 72
-map_mm = [41.425, 29.202]
-
-[[controls]]
-code = 71
-map_mm = [-125.053, 59.099]
-
-[[controls]]
-code = 75
-map_mm = [124.994, -51.612]
-
-[[controls]]
-code = 94
-map_mm = [74.902, 85.422]
-
-[[controls]]
-code = 41
-map_mm = [-117.804, -83.277]
-
-[[controls]]
-code = 64
-map_mm = [79.522, -14.505]
-
-[[controls]]
-code = 62
-map_mm = [8.383, -42.583]
-
-[[controls]]
-code = 81
-map_mm = [0.117, 72.166]
-
-[[controls]]
-code = 51
-map_mm = [-93.304, -36.585]
-
-[[controls]]
-code = 82
-map_mm = [-70.012, 64.619]
-
-[[controls]]
-code = 85
-map_mm = [119.527, 6.177]
-
-[[controls]]
-code = 55
-map_mm = [112.864, -96.428]
-
-[[controls]]
-code = 44
-map_mm = [92.377, -50.791]
-
-[[controls]]
-code = 63
-map_mm = [56.302, 57.884]
-
-[[controls]]
-code = 43
-map_mm = [69.483, 20.231]
-
-[[controls]]
-code = 73
-map_mm = [-67.466, 90.84]
-
-[[controls]]
-code = 53
-map_mm = [81.698, 43.273]
-
-[[controls]]
-code = 65
-map_mm = [95.651, -77.48]
+map_mm = [125.349, -79.404]
 
 [[controls]]
 code = 54
-map_mm = [103.921, -16.53]
-
-[[controls]]
-code = 61
-map_mm = [-3.633, 50.049]
-
-[[controls]]
-code = 84
 map_mm = [97.718, 62.612]
 
 [[controls]]
-code = 92
-map_mm = [-119.459, 80.205]
+code = 52
+map_mm = [-100.193, 95.276]
+
+[[controls]]
+code = 43
+map_mm = [20.221, -81.489]
+
+[[controls]]
+code = 42
+map_mm = [-117.804, -83.277]
+
+[[controls]]
+code = 53
+map_mm = [65.732, -10.029]
+
+[[controls]]
+code = 51
+map_mm = [0.117, 72.166]
+
+[[controls]]
+code = 41
+map_mm = [-121.896, 12.525]
+
+[[controls]]
+code = 44
+map_mm = [119.527, 6.177]
 
 [[classes]]
 name = "Offen"
@@ -229,106 +153,14 @@ direction = 157.7
 gap_mm = 0.5
 
 [[courses]]
-name = "Score 22"
+name = "Score 15"
 start = "S-score"
 finish = "F-score"
 kind = "score"
-time_limit_min = 22
-
-[[courses.controls]]
-code = 74
-value = 4
+time_limit_min = 15
 
 [[courses.controls]]
 code = 45
-value = 5
-
-[[courses.controls]]
-code = 91
-value = 1
-
-[[courses.controls]]
-code = 52
-value = 2
-
-[[courses.controls]]
-code = 83
-value = 3
-
-[[courses.controls]]
-code = 42
-value = 2
-
-[[courses.controls]]
-code = 72
-value = 2
-
-[[courses.controls]]
-code = 71
-value = 1
-
-[[courses.controls]]
-code = 75
-value = 5
-
-[[courses.controls]]
-code = 94
-value = 4
-
-[[courses.controls]]
-code = 41
-value = 1
-
-[[courses.controls]]
-code = 64
-value = 4
-
-[[courses.controls]]
-code = 62
-value = 2
-
-[[courses.controls]]
-code = 81
-value = 1
-
-[[courses.controls]]
-code = 51
-value = 1
-
-[[courses.controls]]
-code = 82
-value = 2
-
-[[courses.controls]]
-code = 85
-value = 5
-
-[[courses.controls]]
-code = 55
-value = 5
-
-[[courses.controls]]
-code = 44
-value = 4
-
-[[courses.controls]]
-code = 63
-value = 3
-
-[[courses.controls]]
-code = 43
-value = 3
-
-[[courses.controls]]
-code = 73
-value = 3
-
-[[courses.controls]]
-code = 53
-value = 3
-
-[[courses.controls]]
-code = 65
 value = 5
 
 [[courses.controls]]
@@ -336,16 +168,32 @@ code = 54
 value = 4
 
 [[courses.controls]]
-code = 61
+code = 52
+value = 2
+
+[[courses.controls]]
+code = 43
+value = 3
+
+[[courses.controls]]
+code = 42
+value = 2
+
+[[courses.controls]]
+code = 53
+value = 3
+
+[[courses.controls]]
+code = 51
 value = 1
 
 [[courses.controls]]
-code = 84
-value = 4
+code = 41
+value = 1
 
 [[courses.controls]]
-code = 92
-value = 2
+code = 44
+value = 4
 
 [[accepted_findings]]
 rule = "wkb2026.leg.acute_angle_hint"
@@ -353,21 +201,6 @@ note = "Training: Der Winkel von 85° am letzten Posten ist gewollt."
 legs = [{ course = "A", after = 6, from = "36", to = "37" }]
 
 [[accepted_findings]]
-rule = "wkb2026.score.code_ambiguity"
-controls = [61, 91]
-note = "Die beiden Posten liegen etwa 430 m auseinander, kein Läufer sieht beide zugleich."
-
-[[accepted_findings]]
-rule = "wkb2026.score.code_ambiguity"
-controls = [64, 94]
-note = "Die beiden Posten liegen etwa 400 m auseinander, kein Läufer sieht beide zugleich."
-
-[[accepted_findings]]
-rule = "wkb2026.score.code_ambiguity"
-controls = [62, 92]
-note = "Die beiden Posten liegen etwa 710 m auseinander, kein Läufer sieht beide zugleich."
-
-[[accepted_findings]]
 rule = "wkb2026.score.limit_penalty"
-course = "Score 22"
-note = "Auf dieser kleinen Karte trifft der Entwurf die Bänder erst bei 22 Minuten. Ab 25 Minuten verfehlt er sie."
+course = "Score 15"
+note = "Ein Entwurf für diese kleine Karte trifft die Bänder bei 15 Minuten. Bei 45 Minuten gehen vorher die freien Codes aus."
