@@ -108,6 +108,13 @@ pub(crate) fn open_inputs(
     if same_file(target, project) || same_file(target, &map_path) {
         return Err(ExportError::Overwrites(target.to_path_buf()));
     }
+    let doc = read_oom(&file)?;
+    Ok((file, doc))
+}
+
+/// The map of `file`, which must be an OOM file.
+fn read_oom(file: &ProjectFile) -> Result<MapDocument, ExportError> {
+    let map_path = file.map_path();
     let is_oom = map_path
         .extension()
         .and_then(|e| e.to_str())
@@ -115,8 +122,39 @@ pub(crate) fn open_inputs(
     if !is_oom {
         return Err(ExportError::NotMap(map_path));
     }
-    let doc = read_map_file(&map_path).map_err(|e| ExportError::Map(map_path.clone(), e))?;
-    Ok((file, doc))
+    read_map_file(&map_path).map_err(|e| ExportError::Map(map_path.clone(), e))
+}
+
+/// The IOF XML text of `project`, made in memory: nothing is written and no target can be overwritten.
+pub(crate) fn iof_xml_text(
+    project: &Path,
+    created: &str,
+) -> Result<(String, ExportReport), ExportError> {
+    let file = ProjectFile::load(project).map_err(ExportError::Project)?;
+    let doc = read_oom(&file)?;
+    iof_xml_of(&file, &doc, created)
+}
+
+fn iof_xml_of(
+    file: &ProjectFile,
+    doc: &MapDocument,
+    created: &str,
+) -> Result<(String, ExportReport), ExportError> {
+    let grid = MapGrid::of(&doc.georef).ok();
+    let exported = export_iof_xml(
+        &file.event,
+        doc.georef.scale_denominator,
+        map_kind_for_file(doc, &file.map_path()),
+        grid.as_ref(),
+        created,
+    )
+    .map_err(ExportError::Course)?;
+    let report = ExportReport {
+        courses: file.event.courses.len() - exported.skipped.len(),
+        skipped: exported.skipped,
+        geo_positions: exported.geo_positions,
+    };
+    Ok((exported.xml, report))
 }
 
 /// Writes the individual courses of `project` to `target` as IOF XML 3.0. Nothing is written when
@@ -127,21 +165,43 @@ pub(crate) fn export_iof_xml_file(
     created: &str,
 ) -> Result<ExportReport, ExportError> {
     let (file, doc) = open_inputs(project, target)?;
-    let grid = MapGrid::of(&doc.georef).ok();
-    let exported = export_iof_xml(
+    let (xml, report) = iof_xml_of(&file, &doc, created)?;
+    write_atomic(target, &xml).map_err(ExportError::Project)?;
+    Ok(report)
+}
+
+/// A new Purple Pen event for `project`, made in memory: no ids of the project are used, nothing is
+/// written and the project and its link stay as they are. The map is named by its absolute path, so the
+/// file works wherever it is saved on this computer.
+pub(crate) fn ppen_download_text(
+    project: &Path,
+    lang: &Lang,
+    name: &str,
+) -> Result<(String, PpenReport), ExportError> {
+    let file = ProjectFile::load(project).map_err(ExportError::Project)?;
+    let doc = read_oom(&file)?;
+    let lang_code = lang.code();
+    let exported = export_ppen_as(
         &file.event,
-        doc.georef.scale_denominator,
+        &doc,
         map_kind_for_file(&doc, &file.map_path()),
-        grid.as_ref(),
-        created,
+        Target {
+            base: None,
+            linked: false,
+            map_path: file.map_path().display().to_string().replace('\\', "/"),
+            lang: &lang_code,
+            delete: Deletions::default(),
+        },
     )
-    .map_err(ExportError::Course)?;
-    write_atomic(target, &exported.xml).map_err(ExportError::Project)?;
-    Ok(ExportReport {
-        courses: file.event.courses.len() - exported.skipped.len(),
-        skipped: exported.skipped,
-        geo_positions: exported.geo_positions,
-    })
+    .map_err(|e| ExportError::Ppen(PathBuf::from(name), Box::new(e)))?;
+    let report = PpenReport {
+        courses: exported.courses,
+        notes: exported.notes,
+        patched: false,
+        ids_stored: 0,
+        linked_now: false,
+    };
+    Ok((exported.text, report))
 }
 
 /// What a `.ppen` export wrote.

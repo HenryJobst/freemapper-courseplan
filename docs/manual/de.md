@@ -112,8 +112,8 @@ dort an.
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Bereich für Befunde ist leer,
-und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch ausgegraut. Beides folgt in späteren Versionen.
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Editor führt die Prüfung beim Arbeiten aus und zeigt ihre Befunde. Exportieren und Importieren findest du im
+Menü „Veranstaltung“, ebenso das Abgleichen mit Purple Pen.
 
 ### Starten
 
@@ -143,8 +143,8 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
   Postennummern darüber. Nummernfelder mit gestrichelter Linie hat das Programm automatisch platziert; für sie ist
   noch keine Lage im Projekt gespeichert.
 - Rechts stehen die Eigenschaften der Auswahl, etwa Name, Länge und Anstieg einer Bahn oder Code, Art, Position und
-  Beschreibung eines Postens. Bei einem Posten nennt die Liste auch die Kartenobjekte im Umkreis von 3 mm. Der
-  Bereich für Befunde ist noch leer.
+  Beschreibung eines Postens. Bei einem Posten nennt die Liste auch die Kartenobjekte im Umkreis von 3 mm. Darunter
+  stehen die Befunde der Auswahl.
 - Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
   Meldungen erscheinen dort ebenfalls.
 
@@ -239,8 +239,8 @@ automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
   stehen. Mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle Bahnen gesetzten
   bleiben.
 
-Ein Ziehen ist ein Schritt für Rückgängig. Eine Warnung zu einem Abstand außerhalb des Regelbereichs zeigt der Editor
-noch nicht; `check` meldet ihn.
+Ein Ziehen ist ein Schritt für Rückgängig. Liegt der Abstand der Nummer außerhalb des Regelbereichs, steht am Nummernfeld ein
+Warnzeichen (siehe „Befunde“).
 
 ### Postenbeschreibungen
 
@@ -279,6 +279,48 @@ schreiben (ADR 0051).
   gehört es zu allen Bahnen. Start und Ziel haben keine Bahnliste.
 - **Löschen.** „Sonderobjekt löschen“ oder die Entf-Taste entfernt das Objekt, Rückgängig holt es zurück.
 - **Kein Verschieben.** Der Editor kann ein Sonderobjekt nicht verschieben. Lösche es und zeichne es neu (ADR 0049).
+
+### Befunde
+
+Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus wie `check` und zeigt das Ergebnis.
+
+- Die Statusleiste zählt Fehler, Warnungen und Hinweise der ganzen Veranstaltung. Jede Zahl hat ein Zeichen (Kreuz,
+  Dreieck, „i“) und eine Farbe. Ein Klick auf die Zahlen öffnet die Schublade: alle offenen Befunde, die akzeptierten
+  mit ihren Begründungen und unter „Nicht geprüft“ die Regeln, die nicht liefen, mit dem Grund.
+- Das Feld rechts listet die Befunde des gewählten Postens, der Strecke oder der Bahn. Ein Klick auf einen Befund wählt
+  seine Stelle und zeigt sie in der Karte.
+- In der Karte markiert ein Ring jeden Posten mit einem Befund und eine dicke gestrichelte Linie jede Strecke. Ein
+  Warnzeichen am Nummernfeld heißt: Der Abstand liegt außerhalb des Regelbereichs. Die Zeichen unterscheiden sich auch
+  in der Form nach Schwere.
+- „Akzeptieren…“ fragt nach einer Begründung von höchstens 200 Zeichen und speichert die Ausnahme in der
+  Projektdatei. Der Befund steht dann unter „Hier akzeptiert“ mit seiner Begründung, und „Akzeptanz zurücknehmen“
+  holt ihn zurück. Beides ist ein Schritt für Rückgängig.
+
+### Exportieren und Importieren
+
+Das Menü „Veranstaltung“ hat vier Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
+verknüpfte Purple-Pen-Datei des Projekts.
+
+- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzelbahnen, benannt nach der
+  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team-, Staffel- und Score-Bahnen) und sagt es, wenn die Karte
+  keine Georeferenz hat.
+- **Nach Purple Pen exportieren…** „In die verknüpfte Datei schreiben“ aktualisiert die Datei, die `sources.ppen`
+  nennt, nach den Regeln von `export --ppen`: Sie ändert nur, was das Projekt geändert hat, und speichert neue
+  Purple-Pen-IDs im Projekt. Ohne Verknüpfung ist die Schaltfläche aus. Der Befehl `export --ppen DATEI` legt eine
+  Datei an und verknüpft sie. „Neue Datei herunterladen“ speichert eine neue `.ppen`; im Projekt wird nichts
+  gespeichert. Ein Fenster listet die Hinweise.
+- **Purple-Pen-Datei importieren…** Du wählst eine `.ppen` auf deinem Rechner. Ein Projekt, das schon Posten, Bahnen
+  oder Sonderobjekte hat, wird abgelehnt, solange du „Ersetzen“ nicht ankreuzt; das ersetzt alle drei. Der Import
+  ändert die Verknüpfung `sources.ppen` nicht: Der Editor erfährt nie, wo die Datei liegt. Ein Fenster listet die
+  Hinweise. Dateien über 50 MiB werden abgelehnt (ADR 0053).
+- **Mit Purple Pen abgleichen…** Nimmt die Datei aus `sources.ppen`, wie `sync`. Schließe die Veranstaltung vorher
+  in Purple Pen; ein Hinweis sagt das und lässt sich für die Sitzung abschalten. Das Fenster listet Änderungen und
+  Konflikte. Jeder Konflikt hat „Courseplan behalten“ und „Purple Pen übernehmen“; „Alle Courseplan“ und „Alle
+  Purple Pen“ gleichen sofort ab und nehmen überall diese Seite. „Abgleichen“ ist möglich, wenn kein Konflikt offen
+  ist (ADR 0054).
+
+Das Schreiben in die verknüpfte Datei und der Import leeren den Rückgängig-Verlauf, ebenso ein Abgleich, der Dateien
+geschrieben hat, weil sie mehr als einen Schritt ändern. Ein Abgleich, der nichts schrieb, lässt ihn bestehen.
 
 ### Rückgängig und Wiederholen
 

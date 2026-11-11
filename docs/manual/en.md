@@ -108,7 +108,7 @@ there.
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
 bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
-The area for findings is empty, and the menu items for export, import and sync are greyed out. Both follow in later versions.
+It runs the check as you work and shows its findings. Export, import and sync with Purple Pen are in the Event menu.
 
 ### Starting it
 
@@ -138,8 +138,8 @@ One editor belongs to one project. To open a second project, start a second edit
   control numbers on top. A number box with a dashed outline was placed automatically; the project stores no position
   for it yet.
 - On the right are the properties of the selection, for example name, length and climb of a course, or code, kind,
-  position and description of a control. For a control the list also names the map objects within 3 mm. The area for
-  findings is still empty.
+  position and description of a control. For a control the list also names the map objects within 3 mm. Below them
+  are the findings of the selection.
 - The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
   Messages appear there too.
 
@@ -230,7 +230,7 @@ the project stores no position for it yet.
   With "also replace placed numbers" everything is computed again, except the numbers set on the control for all
   courses.
 
-One drag is one step for undo. The editor does not yet warn about a gap outside the rule range; `check` reports it.
+One drag is one step for undo. A gap outside the rule range gets a warning sign at the number box (see "Findings").
 
 ### Control descriptions
 
@@ -267,6 +267,43 @@ The list comes from freemapper-core, so every symbol you can pick can also be wr
   belongs to all courses. Start and finish have no course list.
 - **Delete.** "Delete special object" or the Delete key removes the object; undo brings it back.
 - **No move.** The editor cannot move a special object. Delete it and draw it again (ADR 0049).
+
+### Findings
+
+Half a second after each change the editor runs the same check as `check` and shows the result.
+
+- The status bar counts errors, warnings and hints of the whole event. Each count has a sign (cross, triangle, "i") as
+  well as a colour. A click on the counts opens the drawer: all open findings, the accepted ones with their notes, and
+  under "Not checked" the rules that did not run, with the reason.
+- The panel on the right lists the findings of the selected control, leg or course. A click on a finding selects its
+  place and fits the map to it.
+- On the map a ring marks each control with a finding and a thick dashed line each leg. A warning sign at the number
+  box means a gap outside the rule range. The signs differ by severity in shape too.
+- "Accept..." asks for a note of up to 200 characters and stores the exception in the project file. The finding then
+  moves to "Accepted" with its note, and "Remove acceptance" brings it back. Both are one step for undo.
+
+### Export and import
+
+The Event menu has four entries. The browser never names a file; the editor writes only the project's own linked
+Purple Pen file.
+
+- **Export IOF XML (download).** The browser saves the IOF XML of the individual courses, named after the project
+  file. A dialog lists courses that were left out (team, relay and score courses) and says so when the map has no
+  georeferencing.
+- **Export to Purple Pen...** "Write to the linked file" updates the file `sources.ppen` names, by the rules of
+  `export --ppen`: it patches what the project changed and stores new Purple Pen ids in the project. Without a link
+  the button is off. The command `export --ppen FILE` creates a file and links it. "Download a new file" saves a new
+  `.ppen`; nothing is stored in the project. A dialog lists the notes.
+- **Import Purple Pen file...** You choose a `.ppen` from your computer. A project that already has controls,
+  courses or special objects is refused unless you tick "Replace", which replaces all three. The import does not
+  change the link `sources.ppen`: the editor never learns where the file lives. A dialog lists the notes. Files
+  over 50 MiB are refused (ADR 0053).
+- **Sync with Purple Pen...** Uses the file `sources.ppen` names, like `sync`. Close the event in Purple Pen first;
+  a warning says so and can be silenced for the session. The panel lists the changes and the conflicts. Each
+  conflict has "Keep courseplan" and "Take Purple Pen"; "All courseplan" and "All Purple Pen" sync at once with that
+  side everywhere. "Sync" is on when no conflict is open (ADR 0054).
+
+Writing to the linked file and importing clear the undo history, and so does a sync that wrote files, because they change more than one step. A sync that wrote nothing keeps it.
 
 ### Undo and redo
 

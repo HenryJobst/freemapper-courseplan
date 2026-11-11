@@ -446,3 +446,77 @@ fn change_code_over_http() {
     );
     assert!(codes(&state(&editor)).contains(&"31".to_owned()));
 }
+
+/// A POST with the given headers and body; the status of the answer.
+fn post_raw(editor: &Editor, path: &str, headers: &[(&str, &str)], body: &[u8]) -> u16 {
+    let mut stream = TcpStream::connect(("127.0.0.1", editor.port)).unwrap();
+    let mut head = format!(
+        "POST {}{path} HTTP/1.1\r\nConnection: close\r\nHost: 127.0.0.1:{}\r\nContent-Length: {}\r\n",
+        editor.path,
+        editor.port,
+        body.len()
+    );
+    for (name, value) in headers {
+        head.push_str(&format!("{name}: {value}\r\n"));
+    }
+    head.push_str("\r\n");
+    stream.write_all(head.as_bytes()).unwrap();
+    // The server may answer before it has read a large body; a reset on the write is fine then.
+    let _ = stream.write_all(body);
+    let mut answer = String::new();
+    let _ = stream.read_to_string(&mut answer);
+    answer
+        .split(' ')
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0)
+}
+
+#[test]
+fn sync_route_inherits_the_guard() {
+    let editor = Editor::start();
+    let own = format!("http://127.0.0.1:{}", editor.port);
+    let project = editor._dir.path().join("event.courseplan.toml");
+    let before = std::fs::read(&project).unwrap();
+    let body = br#"{"dry_run":false,"take":"ours"}"#;
+    let json = ("Content-Type", "application/json");
+    assert_eq!(
+        post_raw(
+            &editor,
+            "api/sync",
+            &[("Origin", "http://evil.example"), json],
+            body
+        ),
+        403,
+        "foreign origin"
+    );
+    assert_eq!(
+        post_raw(&editor, "api/sync", &[json], body),
+        403,
+        "no origin"
+    );
+    for content_type in ["text/plain", "application/x-www-form-urlencoded"] {
+        let status = post_raw(
+            &editor,
+            "api/sync",
+            &[("Origin", &own), ("Content-Type", content_type)],
+            body,
+        );
+        assert!(
+            (400..500).contains(&status) && status != 404,
+            "{content_type}: {status}"
+        );
+    }
+    let big = vec![b' '; 2 * 1024 * 1024];
+    let status = post_raw(&editor, "api/sync", &[("Origin", &own), json], &big);
+    assert_eq!(status, 413, "oversized body");
+    // The project has no link: a well-formed call is refused with 422 and writes nothing.
+    let status = post_raw(
+        &editor,
+        "api/sync",
+        &[("Origin", &own), json, ("X-Courseplan-Revision", "x")],
+        br#"{"dry_run":true,"take":null}"#,
+    );
+    assert_eq!(status, 422);
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}

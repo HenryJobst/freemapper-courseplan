@@ -11,6 +11,9 @@ import * as course from "./course.js";
 import * as bends from "./bends.js";
 import * as numbers from "./numbers.js";
 import * as specials from "./specials.js";
+import * as findings from "./findings.js";
+import * as exchange from "./exchange.js";
+import * as sync from "./sync.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
@@ -40,6 +43,19 @@ let pollTimer = null;
 const svg = document.getElementById("map-svg");
 const propsHost = document.getElementById("props");
 overlay.attach(document.getElementById("layer-overlay"));
+const findingsLayer = document.getElementById("layer-findings");
+
+// The overlay and the finding markers are in map mm: both sit under the view's transform.
+function placeLayers() {
+  const transform = state.view.transform();
+  document.getElementById("layer-overlay").setAttribute("transform", transform);
+  findingsLayer.setAttribute("transform", transform);
+}
+
+// The rings, signs and dashed legs of the open findings over the drawn overlay.
+function drawMarkers() {
+  overlay.drawFindings(findingsLayer, state.overlay, findings.current()?.findings, state.course);
+}
 
 async function closeEditor() {
   try {
@@ -107,6 +123,8 @@ function renderTree() {
 
 function redraw() {
   overlay.draw(state.overlay, state.selection, state.course, extras());
+  drawMarkers();
+  findings.render();
   props.show(propsHost, state.data, state.selection, state.overlay, propActions);
   state.tree?.setCurrent(state.treeKey);
   loadNear();
@@ -549,6 +567,131 @@ async function describeControl(body, focusId) {
   redraw();
 }
 
+// --- Findings ----------------------------------------------------------------------------------------------------------
+// Accepting and withdrawing are operations like any other: one accept_finding or remove_accepted_finding, one
+// undo step. Clicking a finding selects its place and fits the map to it.
+
+async function acceptFinding(finding, note) {
+  const done = await runOp("accept_finding", findings.acceptBody(finding, note));
+  if (done) status.say("editor-status-accepted");
+}
+
+async function removeAcceptance(accepted) {
+  const done = await runOp("remove_accepted_finding", findings.removeBody(accepted));
+  if (done) status.say("editor-status-acceptance-removed");
+}
+
+// Fits the map to map-mm points, with room around them (at least 20 mm on a side).
+function fitPoints(points) {
+  if (!state.view || points.length === 0) return;
+  // A loop, not Math.max(...list): a very long list would overflow the argument limit.
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of points) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  const room = Math.max(20, 0.25 * Math.max(x1 - x0, y1 - y0));
+  const a = state.view.toPage([x0 - room, y0 - room]);
+  const b = state.view.toPage([x1 + room, y1 + room]);
+  state.view.fit([Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]);
+}
+
+function pointsOfCodes(codes) {
+  const o = state.overlay;
+  const known = [...(o?.controls ?? []), ...(o?.starts ?? []), ...(o?.finishes ?? [])];
+  return codes.map((code) => known.find((c) => String(c.code ?? c.id) === String(code))?.at).filter(Boolean);
+}
+
+async function locateFinding(finding) {
+  const loc = finding.location;
+  if (loc.kind === "event") {
+    await selectKey("event:settings");
+  } else if (loc.kind === "course") {
+    await selectKey(`course:${loc.course}`);
+    const o = state.overlay;
+    fitPoints([...(o?.controls ?? []), ...(o?.starts ?? []), ...(o?.finishes ?? [])].map((c) => c.at));
+  } else if (loc.kind === "leg" || loc.kind === "legs") {
+    if (state.course !== loc.course) await selectKey(`course:${loc.course}`);
+    const afters = loc.kind === "leg" ? [loc.after] : loc.afters;
+    const legs = afters.map(legOf).filter(Boolean);
+    if (legs.length === 0) return;
+    state.selection = legSelection(legs[0].after);
+    state.treeKey = `course:${state.course}`;
+    redraw();
+    fitPoints(legs.flatMap((l) => l.points));
+  } else {
+    const codes = loc.kind === "control" ? [loc.code] : loc.codes;
+    const first = codes.find((c) => controlOf(c));
+    if (first === undefined) return;
+    await selectKey(`control:${first}`);
+    fitPoints(pointsOfCodes(codes));
+  }
+  status.say("editor-status-located");
+}
+
+findings.bind({
+  selection: () => state.selection,
+  event: () => state.data?.event ?? null,
+  locate: locateFinding,
+  accept: acceptFinding,
+  remove: removeAcceptance,
+  changed: () => {
+    drawMarkers();
+  },
+});
+
+// Export and import (ADR 0053). They run like an operation: one at a time, and the page loads the project
+// again afterwards. `written` is called with the revision the server answered, also after a refusal.
+let writes = 0;
+async function exclusive(work) {
+  if (state.closed) return;
+  if (busy) {
+    dropped();
+    return;
+  }
+  busy = true;
+  writes += 1;
+  try {
+    await work();
+  } catch {
+    status.say("editor-status-lost");
+  } finally {
+    await idle();
+  }
+}
+
+async function exchangeWritten(revision) {
+  if (revision) state.revision = revision;
+  await loadState(false);
+  // Our own write, also to the linked file, is not an outside change.
+  const seen = await get("api/revision");
+  if (seen.ok) state.seen = seen.data;
+}
+
+exchange.bind({
+  revision: () => state.revision,
+  link: () => state.data?.link?.ppen ?? null,
+  hasContent: () => {
+    const event = state.data?.event;
+    return !!event && (event.controls.length > 0 || event.courses.length > 0 || (event.specials ?? []).length > 0);
+  },
+  exclusive,
+  written: exchangeWritten,
+});
+
+// Sync with Purple Pen (ADR 0054). It uses the same hooks: a real sync and a conflict choice run one at a time.
+sync.bind({
+  revision: () => state.revision,
+  link: () => state.data?.link?.ppen ?? null,
+  exclusive,
+  written: exchangeWritten,
+});
+
 const propActions = {
   describe: describeControl,
   rules: () => state.rules,
@@ -723,6 +866,8 @@ async function loadState(announce) {
     status.say(answer.ok && answer.data?.error ? answer.data.error : "editor-status-state-failed", answer.ok && !!answer.data?.error);
     return false;
   }
+  // The server leaves empty lists out of the event; the page counts on them.
+  for (const list of ["classes", "controls", "specials", "courses", "accepted_findings"]) answer.data.event[list] ??= [];
   state.data = answer.data;
   const m = answer.data.map;
   status.setMap(m.path, m.scale, m.kind);
@@ -747,6 +892,7 @@ async function loadState(announce) {
   await loadOverlay(state.course);
   keepLegSelection();
   redraw();
+  findings.schedule();
   if (announce) status.say("editor-status-reloaded");
   return true;
 }
@@ -770,13 +916,13 @@ async function loadMapInfo(fit) {
     state.view = createView(svg, info.mapping);
     state.mapLayer = bindMapLayer(document.getElementById("layer-map"), state.view);
     state.view.addEventListener("viewchange", () => {
-      document.getElementById("layer-overlay").setAttribute("transform", state.view.transform());
+      placeLayers();
     });
     bindMapInput();
     fit = true;
   }
   state.view.setMapping(info.mapping);
-  document.getElementById("layer-overlay").setAttribute("transform", state.view.transform());
+  placeLayers();
   state.pageBox = info.page_box;
   if (fit) state.view.fit(info.page_box);
 }
@@ -793,6 +939,7 @@ function setCircle(code, at) {
 
 function showOverlay() {
   overlay.draw(state.overlay, state.selection, state.course, extras());
+  drawMarkers();
 }
 
 // A bend being dragged, or null: { after, index (null until the line gave one), at (the segment to split),
@@ -1120,7 +1267,7 @@ function bindMapInput() {
       view.panBy(dx * (v.x1 - v.x0) * PAN_STEP, dy * (v.y1 - v.y0) * PAN_STEP);
     },
     help: () => helpDialog.showModal(),
-    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open,
+    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open || findings.dialogOpen() || exchange.dialogOpen() || sync.dialogOpen(),
   });
 }
 
@@ -1130,11 +1277,14 @@ let polling = false;
 const gestureActive = () => !!(drag || nudge || legDrag || numberDrag);
 
 async function poll() {
-  if (polling || document.hidden || state.closed || gestureActive()) return;
+  if (polling || document.hidden || state.closed || gestureActive() || busy) return;
   polling = true;
+  const epoch = writes;
   try {
     const answer = await get("api/revision");
-    if (!answer.ok) return;
+    // The server answers a poll queued behind our own export, import or sync with the new revision before the
+    // page has noted it: such an answer says nothing about outside changes.
+    if (!answer.ok || busy || epoch !== writes) return;
     const now = answer.data;
     const before = state.seen;
     state.seen = now;
@@ -1156,6 +1306,7 @@ async function poll() {
 
 try {
   await loadTexts();
+  status.setFindings(null);
   fillKinds();
   tools.bind();
   keys.fillHelp(document.getElementById("help-keys"));

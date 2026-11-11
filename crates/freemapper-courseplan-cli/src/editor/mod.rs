@@ -11,10 +11,12 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{Path, RawQuery, State};
+use axum::extract::rejection::BytesRejection;
+use axum::extract::{DefaultBodyLimit, Path, RawQuery, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
+use freemapper_courseplan::ppen_import::MAX_COURSE_FILE_BYTES;
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, TEXTS, text};
 use freemapper_courseplan_model::ProjectFile;
 use freemapper_web::{ServeOptions, WebError, embedded, open_browser, serve};
@@ -26,10 +28,12 @@ use api::Loaded;
 use map_view::{FileStamp, MapCache, MapResult, MapViewError, PageRect, load_map};
 
 mod api;
+mod exchange;
 mod history;
 mod map_view;
 mod overlay;
 mod symbols;
+mod sync_panel;
 #[cfg(test)]
 mod tests;
 
@@ -62,6 +66,8 @@ pub(crate) struct EditorState {
     pub history: history::UndoHistory,
     /// The MCP tools, which are the editor's operations.
     pub server: CoursePlanServer,
+    /// The last check result, keyed by the project revision and the map stamp it was made from.
+    pub checked: Option<(String, Arc<serde_json::Value>)>,
 }
 
 impl EditorState {
@@ -76,6 +82,7 @@ impl EditorState {
             map: MapCache::new(note),
             history: history::UndoHistory::default(),
             server: CoursePlanServer::new(lang.clone()),
+            checked: None,
             lang,
         }
     }
@@ -94,12 +101,21 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/state"), get(api_state))
         .route(&format!("{prefix}/api/revision"), get(api_revision))
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
+        .route(&format!("{prefix}/api/check"), get(api_check))
         .route(&format!("{prefix}/api/number-at"), get(api_number_at))
         .route(&format!("{prefix}/api/map/view"), get(map_info))
         .route(&format!("{prefix}/api/map.svg"), get(map_svg))
         .route(&format!("{prefix}/api/map/near"), get(map_near))
         .route(&format!("{prefix}/api/symbols"), get(api_symbols))
         .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
+        .route(&format!("{prefix}/api/export/iof-xml"), get(api_export_xml))
+        .route(&format!("{prefix}/api/export/ppen"), post(api_export_ppen))
+        .route(
+            &format!("{prefix}/api/import/ppen"),
+            // The shell limits bodies to 1 MiB; this inner layer wins for the upload (ADR 0053).
+            post(api_import_ppen).layer(DefaultBodyLimit::max(MAX_COURSE_FILE_BYTES)),
+        )
+        .route(&format!("{prefix}/api/sync"), post(api_sync))
         .route(&format!("{prefix}/api/undo"), post(api_undo))
         .route(&format!("{prefix}/api/redo"), post(api_redo))
         .route(&format!("{prefix}/api/quit"), post(quit).with_state(stop))
@@ -266,6 +282,97 @@ async fn api_op(
     .await
 }
 
+/// `GET api/export/iof-xml`: the IOF XML of the project as a download. The counts of courses and of those
+/// left out come in headers; the page words them.
+async fn api_export_xml(State(state): State<Shared>) -> Response {
+    let (project, lang) = {
+        let guard = state.lock().await;
+        (guard.project.clone(), guard.lang.clone())
+    };
+    blocking_response(move || match exchange::iof_xml(&project, &lang) {
+        Ok(download) => {
+            let disposition = format!("attachment; filename=\"{}\"", download.file_name);
+            let count = |n: usize| n.to_string();
+            (
+                [
+                    (header::CONTENT_TYPE, "application/xml".to_owned()),
+                    (header::CONTENT_DISPOSITION, disposition),
+                    (
+                        header::HeaderName::from_static("x-courseplan-courses"),
+                        count(download.report.courses),
+                    ),
+                    (
+                        header::HeaderName::from_static("x-courseplan-skipped"),
+                        count(download.report.skipped.len()),
+                    ),
+                    (
+                        header::HeaderName::from_static("x-courseplan-geo"),
+                        count(usize::from(download.report.geo_positions)),
+                    ),
+                ],
+                download.xml,
+            )
+                .into_response()
+        }
+        Err((status, body)) => (status, axum::Json(body)).into_response(),
+    })
+    .await
+}
+
+/// `POST api/export/ppen {"to": "linked" | "download"}`.
+async fn api_export_ppen(State(state): State<Shared>, headers: HeaderMap, body: Bytes) -> Response {
+    let revision = page_revision(&headers);
+    let to = serde_json::from_slice::<serde_json::Value>(&body)
+        .ok()
+        .and_then(|v| v.get("to").and_then(|t| t.as_str()).map(str::to_owned))
+        .unwrap_or_default();
+    serialized(state, move |st| {
+        exchange::export_ppen(st, &to, revision.as_deref())
+    })
+    .await
+}
+
+/// `POST api/import/ppen?replace=true|false`: the body is the Purple Pen file.
+async fn api_import_ppen(
+    State(state): State<Shared>,
+    RawQuery(query): RawQuery,
+    headers: HeaderMap,
+    body: Result<Bytes, BytesRejection>,
+) -> Response {
+    let lang = state.lock().await.lang.clone();
+    let refuse = |status: StatusCode, id: &str| {
+        (
+            status,
+            axum::Json(serde_json::json!({ "error": text(&lang, id, &[]) })),
+        )
+            .into_response()
+    };
+    let Some(replace) = exchange::import_query(query.as_deref()) else {
+        return refuse(StatusCode::BAD_REQUEST, "editor-import-bad-request");
+    };
+    let body = match body {
+        Ok(body) => body,
+        Err(rejection) if rejection.status() == StatusCode::PAYLOAD_TOO_LARGE => {
+            return refuse(StatusCode::PAYLOAD_TOO_LARGE, "editor-import-too-large");
+        }
+        Err(_) => return refuse(StatusCode::BAD_REQUEST, "editor-import-bad-request"),
+    };
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        exchange::import_ppen(st, revision.as_deref(), replace, &body)
+    })
+    .await
+}
+
+/// `POST api/sync {dry_run, take}`: syncs the project with its linked Purple Pen file (ADR 0054).
+async fn api_sync(State(state): State<Shared>, headers: HeaderMap, body: Bytes) -> Response {
+    let revision = page_revision(&headers);
+    serialized(state, move |st| {
+        sync_panel::sync(st, revision.as_deref(), &body)
+    })
+    .await
+}
+
 /// The revision the page names in `X-Courseplan-Revision`.
 fn page_revision(headers: &HeaderMap) -> Option<String> {
     headers
@@ -293,6 +400,56 @@ async fn api_redo(State(state): State<Shared>, headers: HeaderMap) -> Response {
 async fn api_revision(State(state): State<Shared>) -> Response {
     let loaded = refreshed(&state).await;
     blocking_response(move || axum::Json(api::revision_json(&loaded)).into_response()).await
+}
+
+/// `GET api/check`: the result of the MCP tool `check` plus `revision`. The result is cached on the project
+/// revision and the map stamp, so repeated polls cost nothing; a changed map file is read again (ADR 0052).
+async fn api_check(State(state): State<Shared>) -> Response {
+    let loaded = refreshed(&state).await;
+    let entry = match map_of(&state, &loaded).await {
+        Ok(entry) => entry,
+        Err(e) => return plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+    };
+    let key = format!("{}/{}", loaded.revision.0, entry.stamp.token());
+    let lang = {
+        let guard = state.lock().await;
+        if let Some((cached, value)) = &guard.checked
+            && *cached == key
+        {
+            return axum::Json(value.as_ref()).into_response();
+        }
+        guard.lang.clone()
+    };
+    let work = {
+        let loaded = loaded.clone();
+        move || -> Result<serde_json::Value, String> {
+            let file = loaded.file.as_ref().map_err(Clone::clone)?;
+            let event = &file.event;
+            let rules = freemapper_courseplan::rules::load_rule_set(
+                &event.event.rule_profile,
+                &event.event.rule_overlays,
+            )
+            .map_err(|e| api::tidy(&e.localize(&lang), &[]))?;
+            let kind = freemapper_courseplan::map::map_kind_for_file(&entry.doc, &file.map_path());
+            let report =
+                freemapper_courseplan::check::check_event_as(event, &entry.doc, kind, &rules);
+            let mut value = crate::mcp::report_json(&rules, event, &report, &lang);
+            value["revision"] = serde_json::json!(loaded.revision.0);
+            Ok(value)
+        }
+    };
+    match blocking(work).await {
+        Some(Ok(value)) => {
+            let value = Arc::new(value);
+            state.lock().await.checked = Some((key, value.clone()));
+            axum::Json(value.as_ref()).into_response()
+        }
+        Some(Err(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
+        None => plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal error".to_owned(),
+        ),
+    }
 }
 
 /// `GET api/number-at?course&index&x&y`: direction and gap of a number whose box is centred on a point.

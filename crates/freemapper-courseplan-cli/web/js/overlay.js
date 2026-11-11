@@ -263,3 +263,96 @@ export function draw(overlay, selection, course = null, extras = {}) {
     }
   }
 }
+
+// --- Findings on the map ---------------------------------------------------------------------------------------------
+// A ring around each control with a finding, a thick dashed line along each leg, and a small sign for the
+// severity at the place. The signs differ in shape (cross in a circle, triangle, letter i in a circle), so the
+// colour is not the only thing that tells them apart. A gap outside the rule range puts its sign at the
+// number box. The layer takes no pointer events: the map below stays clickable.
+
+const GAP_RULE = "wkb2026.number.gap";
+
+function sign(severity, at, size, width, parent) {
+  const group = el("g", { class: `finding-sign sev-${severity}`, "stroke-width": width, fill: "none" }, parent);
+  const [x, y] = at;
+  if (severity === "error") {
+    el("circle", { cx: x, cy: y, r: size }, group);
+    const d = size * 0.5;
+    el("path", { d: `M${x - d},${y - d}L${x + d},${y + d}M${x - d},${y + d}L${x + d},${y - d}` }, group);
+  } else if (severity === "warning") {
+    const h = size * 1.2;
+    el("path", { d: `M${x},${y - h}L${x + h},${y + h * 0.8}L${x - h},${y + h * 0.8}Z` }, group);
+    el("path", { d: `M${x},${y - h * 0.3}V${y + h * 0.25}M${x},${y + h * 0.5}V${y + h * 0.55}` }, group);
+  } else {
+    el("circle", { cx: x, cy: y, r: size }, group);
+    el("path", { d: `M${x},${y - size * 0.15}V${y + size * 0.5}M${x},${y - size * 0.5}V${y - size * 0.45}` }, group);
+  }
+  return group;
+}
+
+function middleOf(points) {
+  return points[Math.floor((points.length - 1) / 2)];
+}
+
+// Draws `findings` (the open ones of api/check) into `layer` over `overlay` (api/overlay of the drawn course, or
+// of all controls). `course` names the course drawn, or null.
+export function drawFindings(layer, overlay, findings, course) {
+  layer.replaceChildren();
+  if (!overlay || !findings?.length) return;
+  const r = overlay.sizes.circle_r;
+  const w = overlay.sizes.line * 1.2;
+  const crowd = new Map();
+  const next = (key) => {
+    const n = crowd.get(key) ?? 0;
+    crowd.set(key, n + 1);
+    return n;
+  };
+  const place = (code) =>
+    [...overlay.controls, ...overlay.starts, ...overlay.finishes].find((c) => String(c.code ?? c.id) === String(code));
+  const ring = (code, severity) => {
+    const c = place(code);
+    if (!c) return;
+    const n = next(`c:${code}`);
+    el("circle", { cx: c.at[0], cy: c.at[1], r: r * (1.7 + 0.3 * n), class: `finding-ring sev-${severity}`, "stroke-width": w, fill: "none" }, layer);
+    sign(severity, [c.at[0] + r * (1.9 + 0.3 * n), c.at[1] - r * (1.9 + 0.3 * n)], r * 0.75, w * 0.9, layer);
+  };
+  const onNumber = (box, severity) => {
+    const n = next(`n:${box.index}`);
+    el("rect", {
+      x: box.centre[0] - box.w / 2 - w, y: box.centre[1] - box.h / 2 - w, width: box.w + 2 * w, height: box.h + 2 * w,
+      class: `finding-ring sev-${severity}`, "stroke-width": w, fill: "none",
+    }, layer);
+    sign(severity, [box.centre[0] + box.w / 2 + r * (0.7 + 0.9 * n), box.centre[1] - box.h / 2 - r * 0.3], r * 0.75, w * 0.9, layer);
+  };
+  const leg = (after, severity) => {
+    const l = overlay.legs.find((x) => x.after === after);
+    if (!l) return;
+    const n = next(`l:${after}`);
+    // A leg shorter than the two circles has nothing left to draw: the marker then follows the whole leg.
+    const line = l.drawn.length > 1 ? l.drawn : l.points;
+    el("polyline", {
+      points: pointList(line), fill: "none", class: `finding-leg sev-${severity}`,
+      "stroke-width": overlay.sizes.line * 3, "stroke-dasharray": `${overlay.sizes.line * 5} ${overlay.sizes.line * 3}`,
+    }, layer);
+    const m = middleOf(line);
+    sign(severity, [m[0] + r * 0.9 * n, m[1] - r * 1.2], r * 0.75, w * 0.9, layer);
+  };
+  for (const f of findings) {
+    const loc = f.location;
+    const gap = f.rule === GAP_RULE;
+    if (loc.kind === "control" || loc.kind === "controls") {
+      for (const code of loc.kind === "control" ? [loc.code] : loc.codes) {
+        const box = gap ? overlay.numbers.find((n) => n.code === String(code)) : null;
+        if (box) onNumber(box, f.severity);
+        else ring(code, f.severity);
+      }
+    } else if ((loc.kind === "leg" || loc.kind === "legs") && loc.course === course) {
+      for (const after of loc.kind === "leg" ? [loc.after] : loc.afters) {
+        // The gap of an own number is reported at the leg that arrives at the control: its box has index after + 1.
+        const box = gap ? overlay.numbers.find((n) => n.index === after + 1) : null;
+        if (box) onNumber(box, f.severity);
+        else leg(after, f.severity);
+      }
+    }
+  }
+}

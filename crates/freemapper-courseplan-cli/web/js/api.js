@@ -23,3 +23,18 @@ export async function post(path, body = {}, revision = null) {
   if (revision) headers["X-Courseplan-Revision"] = revision;
   return answer(await fetch(path, { method: "POST", headers, body: JSON.stringify(body) }));
 }
+
+// A body that is not JSON: the answer is parsed like the others. `type` is the content type of the body; the server
+// accepts only application/json and application/octet-stream.
+export async function postBytes(path, bytes, revision = null) {
+  const headers = { "Content-Type": "application/octet-stream" };
+  if (revision) headers["X-Courseplan-Revision"] = revision;
+  return answer(await fetch(path, { method: "POST", headers, body: bytes }));
+}
+
+// A file to hand to the person: { ok, status, blob, headers } on success, or the parsed error answer.
+export async function getFile(path) {
+  const response = await fetch(path, { cache: "no-store" });
+  if (!response.ok) return answer(response);
+  return { ok: true, status: response.status, blob: await response.blob(), headers: response.headers };
+}

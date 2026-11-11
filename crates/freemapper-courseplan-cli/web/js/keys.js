@@ -61,6 +61,13 @@ export function bind(actions) {
     const mod = evt.ctrlKey || evt.metaKey;
     const key = evt.key;
     const inTree = evt.target instanceof Element && evt.target.closest("[role='tree']") !== null;
+    // A focused button or a finding list keeps its own keys: arrows move between its items, letters do nothing
+    // to the map. Escape, Ctrl/Cmd+Z and "?" still work there.
+    const onButton = evt.target instanceof Element && evt.target.closest("button, summary, a[href]") !== null;
+    const inList = evt.target instanceof Element && evt.target.closest("#findings, #findings-drawer") !== null;
+    if (!mod && key !== "Escape" && key !== "?" && ((inList && key.length === 1) || (inList && key in ARROWS) || (onButton && key in ARROWS))) {
+      return;
+    }
     let handled = true;
     if (mod && !evt.altKey) {
       const lower = key.toLowerCase();

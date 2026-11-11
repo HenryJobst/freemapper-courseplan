@@ -156,7 +156,7 @@ fn bring_in(
     doc: &MapDocument,
     kind: MapKind,
     bytes: &[u8],
-    link: PathBuf,
+    link: Option<PathBuf>,
     replace: bool,
     project: &Path,
 ) -> Result<ImportReport, ImportError> {
@@ -174,7 +174,9 @@ fn bring_in(
     event.controls = import.controls;
     event.specials = import.specials;
     event.courses = import.courses;
-    event.sources.ppen = Some(link);
+    if link.is_some() {
+        event.sources.ppen = link;
+    }
     Ok(report)
 }
 
@@ -190,7 +192,30 @@ pub(crate) fn import_ppen_file(
     let bytes = read_ppen_file(ppen)?;
     let link = link_for(project, ppen);
     let kind = map_kind_for_file(&doc, &file.map_path());
-    let report = bring_in(&mut file.event, &doc, kind, &bytes, link, replace, project)?;
+    let report = bring_in(
+        &mut file.event,
+        &doc,
+        kind,
+        &bytes,
+        Some(link),
+        replace,
+        project,
+    )?;
+    file.save().map_err(ImportError::Project)?;
+    Ok(report)
+}
+
+/// Takes over the Purple Pen event in `bytes` (an upload) into the event of `project` and saves the project
+/// file. As [`import_ppen_file`], except that `sources.ppen` stays as it is: the bytes have no path.
+pub(crate) fn import_ppen_bytes(
+    project: &Path,
+    bytes: &[u8],
+    replace: bool,
+) -> Result<ImportReport, ImportError> {
+    let mut file = ProjectFile::load(project).map_err(ImportError::Project)?;
+    let doc = read_oom(&file.map_path())?;
+    let kind = map_kind_for_file(&doc, &file.map_path());
+    let report = bring_in(&mut file.event, &doc, kind, bytes, None, replace, project)?;
     file.save().map_err(ImportError::Project)?;
     Ok(report)
 }
@@ -212,7 +237,7 @@ pub(crate) fn init_from_ppen(
         &doc,
         map_kind_for_file(&doc, map),
         &bytes,
-        link,
+        Some(link),
         false,
         project,
     )?;
