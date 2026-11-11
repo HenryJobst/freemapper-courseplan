@@ -9,7 +9,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 ### Added
 
 - Score courses: the project has a `[score]` table with the value range, runner profiles and seed, and a score course can name mandatory links between two controls. Loading a project refuses links to unknown controls, duplicate links and branching chains (ADR 0060).
-- `check` now checks score courses: the value in the code, codes that can be mixed up, controls in a ring, an obvious order, length bands for good and very good runners, time limit and penalty, mandatory links and the share of hard controls. Team and relay courses stay skipped (ADR 0066).
+- `check` now checks score courses: value in the code, codes, ring and order of the controls, length, time limit, penalty, mandatory links and mix. Team and relay courses stay skipped (ADR 0066).
 
 ### Changed
 

@@ -434,3 +434,43 @@ fn a_count_without_codes_is_never_a_draft() {
         }
     }
 }
+
+#[test]
+fn a_draft_raises_no_mix_finding_at_the_default_settings() {
+    use crate::check::testing as t;
+    use freemapper_courseplan_model::{CourseKind, ScoreControl};
+
+    let mut drafts = 0;
+    for cands in [grid(4), ring(12)] {
+        let Ok(d) = World::new(cands.clone(), ok_limit(&cands)).run() else {
+            continue;
+        };
+        drafts += 1;
+        let list: Vec<(&str, f64, f64)> = d
+            .controls
+            .iter()
+            .map(|c| (c.code.0.as_str(), c.at.x, c.at.y))
+            .collect();
+        let mut event = t::event(&list, vec![t::course("S", &[])]);
+        event.courses[0].kind = CourseKind::Score {
+            time_limit_min: 60,
+            penalty_per_min: 30,
+            controls: d
+                .controls
+                .iter()
+                .map(|c| ScoreControl {
+                    code: c.code.clone(),
+                    value: u32::from(c.value),
+                })
+                .collect(),
+            links: vec![],
+        };
+        let rule = t::with_values(
+            t::rule("t.score.mix", "score_mix", crate::rules::Severity::Warning),
+            "tolerance_percent = 15.0",
+        );
+        let report = t::report(&event, &t::map(4000, vec![]), vec![rule]);
+        assert!(report.findings.is_empty(), "{:?}", report.findings);
+    }
+    assert!(drafts >= 2, "only {drafts} fixtures give a draft");
+}

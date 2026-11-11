@@ -147,7 +147,7 @@ fn ring_measures(points: &[&MapPoint], centre: &MapPoint) -> (f64, f64) {
 /// start and finish, the largest gap between the bearings of neighbouring controls is below
 /// `max_gap_degrees` (the controls enclose the middle) and the distances to the middle vary by
 /// less than `max_radius_variation_percent` (standard deviation over mean). Such a set has one
-/// obvious way round. Needs at least six controls (BOF B12; the measure is this program's).
+/// obvious way round. Needs at least six controls (BOF B12.3 and B12.6.4; the measure is this program's).
 pub(super) fn ring(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -276,7 +276,7 @@ fn chain_lengths(points: &[&MapPoint], start: &MapPoint, finish: &MapPoint) -> (
 /// least `min_hull_percent` of the controls are corners of the convex hull of the controls (a
 /// loop round the edge), and running always to the nearest control from the start ends at most
 /// `max_chain_excess_percent` above the shortest order found by 2-opt. Needs at least six
-/// controls (BOF B12; the measures are this program's).
+/// controls (BOF B12.3 and B12.6.4; the measures are this program's).
 pub(super) fn obvious_order(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -554,7 +554,7 @@ pub(super) fn length_bands(
 
 /// `score_limit_and_penalty`: the time limit lies in `min_minutes` to `max_minutes` (30 to 90
 /// is usual), and the penalty per started minute is not below the highest control value of the
-/// course; otherwise a minute over the limit can pay off (IRF Rules of Rogaining).
+/// course; otherwise a minute over the limit can pay off (BOF B12.5).
 pub(super) fn limit_and_penalty(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
@@ -777,11 +777,11 @@ fn obstacles<'a>(ctx: &'a CheckContext<'_>, course: &ScoreCourseContext<'_>) -> 
         .collect()
 }
 
-/// Whether a control counts as hard for the mix: its value lies in the top two fifths of the
-/// range 1 to `value_max` (`value × 5 > value_max × 3`: 4 and 5 of 5, 6 to 9 of 9). The value
-/// follows effort and difficulty (ADR 0062, 0063), so it is what a course of the file offers.
+/// Whether a control counts as hard for the mix: its value lies in the top two fifths of the range
+/// 1 to `value_max` (`value × 5 > value_max × 3`: 4 and 5 of 5, 6 to 9 of 9). The draft's candidates carry a
+/// difficulty, a saved course does not, so the value stands in for it.
 fn is_hard(value: u32, value_max: u8) -> bool {
-    value * 5 > u32::from(value_max) * 3
+    u64::from(value) * 5 > u64::from(value_max) * 3
 }
 
 /// `score_mix`: the share of hard controls differs from `mix_hard_percent` of the score settings

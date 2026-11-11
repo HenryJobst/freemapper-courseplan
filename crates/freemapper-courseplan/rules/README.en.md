@@ -94,6 +94,8 @@ the findings that were accepted for it are reported again.
 | `score_link_valid` | Mandatory links of the score course |
 | `score_mix` | Share of hard score controls |
 
+The thresholds of the score rules (ring, order, mix) are proposals of this program, not values from a source.
+
 A rule with any other key is refused. A new key needs code in `src/check/` and an entry in
 `SCHEMA` in `src/rules.rs`.
 

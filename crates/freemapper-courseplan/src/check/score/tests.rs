@@ -254,6 +254,27 @@ fn length_bands_are_skipped_on_a_map_without_objects() {
 
 // score_limit_and_penalty
 
+#[test]
+fn a_limit_of_zero_does_not_panic() {
+    let mut e = wide_bands(five());
+    if let CourseKind::Score { time_limit_min, .. } = &mut e.courses[0].kind {
+        *time_limit_min = 0;
+    }
+    let r = run_rule_on(&e, &open_map(), "score_length_bands", "cell_metres = 4.0");
+    assert!(
+        ids(&r).contains(&"check-score-length-very-good-misses"),
+        "{:?} {:?}",
+        r.findings,
+        r.skipped
+    );
+    let r = run_rule(
+        &e,
+        "score_limit_and_penalty",
+        "min_minutes = 30.0, max_minutes = 90.0",
+    );
+    assert_eq!(ids(&r), ["check-score-limit-range"]);
+}
+
 const LIMIT: &str = "min_minutes = 30.0, max_minutes = 90.0";
 
 #[test]

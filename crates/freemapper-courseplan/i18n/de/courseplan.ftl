@@ -156,7 +156,6 @@ check-skip-print-scale = Keine Prüfregel dieser Art für den Druckmaßstab 1:{ 
 check-skip-course-kind = { $kind ->
         [team] Mannschaftsbahnen
         [relay] Staffelbahnen
-        [score] Score-Bahnen
        *[other] Bahnen der Art { $kind }
     } werden noch nicht geprüft
 check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
@@ -164,8 +163,8 @@ check-skip-class-not-mapped = Kategorie { $name } ist keiner Regelkategorie zuge
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
-check-skip-score-no-map = die Karte hat keine Objekte, daher lassen sich keine Laufzeiten berechnen
-check-skip-score-travel = Laufzeiten lassen sich nicht berechnen: { $error }
+check-skip-score-no-map = Die Karte hat keine Objekte, daher lassen sich keine Laufzeiten berechnen
+check-skip-score-travel = Laufzeiten lassen sich nicht berechnen. Der Fehlertext ist englisch: { $error }
 check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster; event start-window setzt es
 check-skip-starters-missing = Kategorien ohne erwartete Starterzahl: { $classes }; class set --starters setzt sie
 check-skip-length-no-reference = Keine Bahn gehört zur Kategorie { $category }, daher fehlt der Längentabelle die Bezugsbahn
@@ -230,24 +229,24 @@ check-difficulty-mix = Die Bahn mischt leichte Kategorien ({ $easy }) mit schwer
 check-nor-lkm = Die Bahn hat { $actual } Lkm ({ $length } km Länge, { $climb } m Anstieg) und liegt außerhalb der Empfehlung: { $rows }
 check-nor-lkm-row = { $categories }: Ziel-Lkm { $target }, erlaubt sind { $min } bis { $max } Lkm
 check-score-value-mismatch = Posten { $code } trägt im Code den Wert { $expected }, aber die Score-Bahn { $course } gibt ihm { $value } Punkte
-check-score-value-no-code = der Code { $code } trägt keinen Wert (ein Score-Code hat mindestens zwei Ziffern und endet nicht auf 0), aber die Score-Bahn { $course } gibt dem Posten { $value } Punkte
-check-score-code-alike = die Codes { $first } und { $second } der Score-Bahn { $course } sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9
-check-score-ring = die { $count } Posten der Score-Bahn { $course } stehen im Ring um Start und Ziel (größte Lücke { $gap } Grad, Abstände streuen um { $variation } Prozent), die Reihenfolge ist also offensichtlich
-check-score-obvious-order = die Posten der Score-Bahn { $course } haben eine offensichtliche Reihenfolge: { $hull } Prozent liegen auf der äußeren Hülle, und immer zum nächsten Posten zu laufen ist nur { $excess } Prozent länger als die kürzeste gefundene Reihenfolge
-check-score-length-good-below = auf der Score-Bahn { $course } holt die gute Läuferin { $percent } Prozent aller Punkte, unter dem Band von { $low } bis { $high } Prozent; die Bahn ist zu lang
-check-score-length-good-above = auf der Score-Bahn { $course } holt die gute Läuferin { $percent } Prozent aller Punkte, über dem Band von { $low } bis { $high } Prozent; die Bahn ist zu kurz
-check-score-length-very-good-misses = auf der Score-Bahn { $course } schafft der sehr gute Läufer nicht alle Posten im Limit; { $missing } Punkte bleiben außer Reichweite
-check-score-length-very-good-over = auf der Score-Bahn { $course } braucht der sehr gute Läufer { $percent } Prozent des Limits für alle Posten
-check-score-length-very-good-early = auf der Score-Bahn { $course } holt der sehr gute Läufer alle Posten und ist nach { $percent } Prozent des Limits im Ziel, vor dem Band von { $low } bis { $high } Prozent
-check-score-limit-range = die Score-Bahn { $course } hat ein Zeitlimit von { $limit } Minuten; üblich sind { $min } bis { $max } Minuten
-check-score-penalty-pays = die Score-Bahn { $course } zieht { $penalty } Punkte je Minute über dem Limit ab, weniger als ihr höchster Postenwert { $highest }; Überziehen kann sich also lohnen
-check-score-link-self = die Score-Bahn { $course } verbindet Posten { $code } mit sich selbst
-check-score-link-not-in-course = die Verbindung { $first }–{ $second } der Score-Bahn { $course } nennt Posten { $missing }, den die Bahn nicht hat
-check-score-link-duplicate = die Verbindung { $first }–{ $second } kommt in der Score-Bahn { $course } mehrfach vor
-check-score-link-out-of-bounds = die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert das Sperrgebiet { $id }
-check-score-link-forbidden-route = die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert den verbotenen Weg { $id }
-check-score-link-no-choice = die Verbindung { $first }–{ $second } in der Score-Bahn { $course } hat keine zweite Route ähnlicher Länge; bei Absicht den Befund mit Notiz akzeptieren
-check-score-mix = in der Score-Bahn { $course } sind { $hard } von { $count } Posten schwer ({ $actual } Prozent); die Einstellung verlangt { $wanted } Prozent bei { $tolerance } Punkten Toleranz
+check-score-value-no-code = Der Code { $code } trägt keinen Wert, denn ein Score-Code hat mindestens zwei Ziffern und endet nicht auf 0. Die Score-Bahn { $course } gibt dem Posten aber { $value } Punkte
+check-score-code-alike = Die Codes { $first } und { $second } der Score-Bahn { $course } sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9
+check-score-ring = Die { $count } Posten der Score-Bahn { $course } stehen im Ring um Start und Ziel. Die größte Lücke beträgt { $gap } Grad, die Abstände streuen um { $variation } Prozent, die Reihenfolge ist also offensichtlich
+check-score-obvious-order = Die Posten der Score-Bahn { $course } haben eine offensichtliche Reihenfolge. { $hull } Prozent liegen auf der äußeren Hülle, und jedes Mal zum nächsten Posten zu laufen ist nur { $excess } Prozent länger als die kürzeste gefundene Reihenfolge
+check-score-length-good-below = Auf der Score-Bahn { $course } holt der gute Läufer { $percent } Prozent aller Punkte, unter dem Band von { $low } bis { $high } Prozent. Die Bahn ist zu lang
+check-score-length-good-above = Auf der Score-Bahn { $course } holt der gute Läufer { $percent } Prozent aller Punkte, über dem Band von { $low } bis { $high } Prozent. Die Bahn ist zu kurz
+check-score-length-very-good-misses = Auf der Score-Bahn { $course } schafft der sehr gute Läufer nicht alle Posten im Limit. { $missing } Punkte bleiben außer Reichweite
+check-score-length-very-good-over = Auf der Score-Bahn { $course } braucht der sehr gute Läufer { $percent } Prozent des Limits für alle Posten
+check-score-length-very-good-early = Auf der Score-Bahn { $course } holt der sehr gute Läufer alle Posten und ist nach { $percent } Prozent des Limits im Ziel, vor dem Band von { $low } bis { $high } Prozent
+check-score-limit-range = Die Score-Bahn { $course } hat ein Zeitlimit von { $limit } Minuten. Üblich sind { $min } bis { $max } Minuten
+check-score-penalty-pays = Die Score-Bahn { $course } zieht { $penalty } Punkte je Minute über dem Limit ab, weniger als ihr höchster Postenwert von { $highest }. Überziehen kann sich lohnen
+check-score-link-self = Die Score-Bahn { $course } verbindet Posten { $code } mit sich selbst
+check-score-link-not-in-course = Die Verbindung { $first }–{ $second } der Score-Bahn { $course } nennt Posten { $missing }, den die Bahn nicht hat
+check-score-link-duplicate = Die Verbindung { $first }–{ $second } kommt in der Score-Bahn { $course } mehrfach vor
+check-score-link-out-of-bounds = Die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert das Sperrgebiet { $id }
+check-score-link-forbidden-route = Die Gerade der Verbindung { $first }–{ $second } in der Score-Bahn { $course } quert den verbotenen Weg { $id }
+check-score-link-no-choice = Die Verbindung { $first }–{ $second } in der Score-Bahn { $course } hat keine zweite Route ähnlicher Länge. Bei Absicht den Befund mit Notiz akzeptieren
+check-score-mix = In der Score-Bahn { $course } sind { $hard } von { $count } Posten schwer, also { $actual } Prozent. Die Einstellung verlangt { $wanted } Prozent bei { $tolerance } Punkten Toleranz
 check-source-claude = Vorschlag von freemapper-courseplan
 check-source-user = Entscheidung des Projektinhabers
 

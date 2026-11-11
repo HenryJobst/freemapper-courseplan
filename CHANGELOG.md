@@ -9,7 +9,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 ### Hinzugefügt
 
 - Score-Bahnen: Das Projekt kennt jetzt den Abschnitt `[score]` mit Wertebereich, Läuferprofilen und Seed, und eine Score-Bahn kann Pflichtverbindungen zwischen zwei Posten nennen. Die Prüfung der Projektdatei lehnt unbekannte Posten, doppelte Verbindungen und verzweigte Ketten ab (ADR 0060).
-- Score-Bahnen werden jetzt von `check` geprüft: Wert im Code, verwechselbare Codes, Posten im Ring, offensichtliche Reihenfolge, Längenbänder für gute und sehr gute Läufer, Zeitlimit und Strafe, Pflichtverbindungen und der Anteil schwerer Posten. Mannschafts- und Staffelbahnen bleiben übersprungen (ADR 0066).
+- `check` prüft jetzt Score-Bahnen: Wert im Code, Codes, Ring und Reihenfolge der Posten, Länge, Zeitlimit, Strafe, Pflichtverbindungen und Mischung. Mannschafts- und Staffelbahnen bleiben übersprungen (ADR 0066).
 
 ### Geändert
 

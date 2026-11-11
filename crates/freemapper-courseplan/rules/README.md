@@ -99,6 +99,8 @@ Schlüssel:
 | `score_link_valid` | Pflichtverbindungen der Score-Bahn |
 | `score_mix` | Anteil schwerer Score-Posten |
 
+Die Schwellen der Score-Regeln (Ring, Reihenfolge, Mischung) sind Vorschläge dieses Programms, keine Werte einer Quelle.
+
 Eine Regel mit einem anderen Schlüssel wird abgelehnt. Ein neuer Schlüssel braucht Code in
 `src/check/` und einen Eintrag in `SCHEMA` in `src/rules.rs`.
 
