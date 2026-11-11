@@ -473,3 +473,27 @@ fn a_course_whose_legs_cannot_be_built_is_skipped() {
         "Die Bahn nennt 99, das die Veranstaltung nicht definiert; sie wird nicht geprüft"
     );
 }
+
+#[test]
+fn a_non_standard_map_scale_is_noted_per_course() {
+    let event = sample_event();
+    let rules = rule_set(vec![(fake_rule(), "base")]);
+    let note = |scale: u32| {
+        let map = map(scale, vec![]);
+        run_checks(&CheckContext::new(&event, &map), &rules, FAKE)
+            .skipped
+            .into_iter()
+            .filter(|s| s.reason_id == NOTE_NON_STANDARD_SCALE)
+            .collect::<Vec<_>>()
+    };
+    assert!(note(4000).is_empty());
+    let notes = note(5000);
+    assert_eq!(notes.len(), 2, "one per course");
+    let en = notes[0].text(&crate::text::parse_lang_arg("en").unwrap());
+    let de = notes[0].text(&crate::text::parse_lang_arg("de").unwrap());
+    assert!(
+        en.contains("training only") && en.contains("1:5000"),
+        "{en}"
+    );
+    assert!(de.contains("nur fürs Training"), "{de}");
+}

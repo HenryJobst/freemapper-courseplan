@@ -6,6 +6,11 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- freemapper-core 0.16.1. The shared placement cases use the renderer's number box (0.8083747 x height x digits) and pass without exceptions.
+- At scales the standard does not foresee (a sprint map at 1:5000, for example), the course symbols keep their base size, as in freemapper-print (ADR 0058). The overlay, the print preview, the placement and the checks measure with the same factor; circles used to shrink to 4.8 mm there. The check notes on such maps that the course is only fit for training.
+
 ## [0.11.0] - 2026-11-11
 
 ### Added

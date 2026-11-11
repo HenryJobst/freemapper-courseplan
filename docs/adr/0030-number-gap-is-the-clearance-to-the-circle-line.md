@@ -37,6 +37,8 @@ placement, the checks, the overlay, the preview and the Purple Pen exchange all 
 positions are drawn about 0.4 mm differently (0.42 mm closer to or farther from the circle on each side, as the
 box is 0.83 mm wider); the stored direction and gap stay as they are.
 
+**Update 2026-11-11 (core v0.16.1):** the shared placement cases now use the same box, 0.8083747 x height x digits, and pass without exceptions. The factor from print mm to map mm is `numbers::course_factor` (ADR 0058), not `base_scale / map_scale`: at a non-standard scale the circle keeps its 6.0 mm.
+
 ## Consequences
 - A user who types `--gap 1` gets 1 mm of white between circle and number in every direction, and the box
   never covers the circle.

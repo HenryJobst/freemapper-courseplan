@@ -455,6 +455,9 @@ pub const SKIP_PRINT_SCALE: &str = "check-skip-print-scale";
 pub const SKIP_COURSE_KIND: &str = "check-skip-course-kind";
 /// Reason: the course names a start, finish or control the event lacks; argument `id`.
 pub const SKIP_COURSE_UNRESOLVED: &str = "check-skip-course-unresolved";
+/// Note: the map scale is not a standard scale of the map kind, so the course symbols keep their base size and
+/// the course is only for training (ADR 0058); arguments `kind`, `scale`, `base_scale`.
+pub const NOTE_NON_STANDARD_SCALE: &str = "check-note-non-standard-scale";
 /// Reason: a class of the course has no rule category; argument `name`.
 pub const SKIP_CLASS_NOT_MAPPED: &str = "check-skip-class-not-mapped";
 /// Reason: the course has no climb.

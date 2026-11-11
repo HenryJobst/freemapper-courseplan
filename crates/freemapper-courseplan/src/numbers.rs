@@ -14,7 +14,7 @@
 //! Conventions: map coordinates are millimetres with y down, so "north" on screen is -y. A
 //! direction is in degrees, 0 = east, counter-clockwise, hence 90 degrees points to -y (north).
 //! Overprint sizes are print millimetres at the base scale of the map kind and grow to map
-//! millimetres by `map_mm = print_mm * base_scale / map_scale`. Terms follow `docs/glossary.md`.
+//! millimetres by `map_mm = print_mm * course_factor(kind, map_scale)`. Terms follow `docs/glossary.md`.
 
 use freemapper_course::placement::{
     self, CourseNumbers, GAP_LIMITS_MM, NumberStop, Obstacle, ObstacleShape, Placement, Rect, Tier,
@@ -130,6 +130,34 @@ pub fn base_scale(kind: MapKind) -> u32 {
     }
 }
 
+/// The print-rules map kind that belongs to `kind`.
+fn print_kind(kind: MapKind) -> freemapper_printrules::scale::MapKind {
+    use freemapper_printrules::scale::MapKind as P;
+    match kind {
+        MapKind::Sprint => P::Sprint,
+        MapKind::Schoolyard => P::Schoolyard,
+        MapKind::Forest => P::Forest,
+    }
+}
+
+/// How much bigger the course symbols are in map mm on a map at `map_scale` than their print sizes of
+/// [`overprint_sizes`]: `freemapper_printrules::scale::course_symbols(kind, map_scale).1`, the factor
+/// freemapper-print draws with (core ADR 0018, ADR 0058). It is 1.0 at the base scale and at non-standard
+/// scale rows (a sprint map at 1:5000 keeps circles of 6.0 mm), so it is not `base_scale / map_scale`.
+/// A map without a scale (0) gets 1.0. The one place that decides the factor.
+pub fn course_factor(kind: MapKind, map_scale: u32) -> f64 {
+    if map_scale == 0 {
+        return 1.0;
+    }
+    freemapper_printrules::scale::course_symbols(print_kind(kind), map_scale).1
+}
+
+/// Whether the standard foresees a map of `kind` at `map_scale`; outside it the course symbols keep their
+/// base size and the course is only fit for training (ADR 0058).
+pub fn is_standard_scale(kind: MapKind, map_scale: u32) -> bool {
+    freemapper_printrules::scale::is_standard(print_kind(kind), map_scale)
+}
+
 /// Largest gap between circle and number that the CLI and the MCP server accept, in print mm.
 pub const MAX_GAP_MM: f64 = GAP_LIMITS_MM.1;
 
@@ -195,7 +223,7 @@ pub fn number_centre(
     kind: MapKind,
     map_scale: u32,
 ) -> MapPoint {
-    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let factor = course_factor(kind, map_scale);
     let sizes = overprint_sizes(kind);
     let (w, h) = box_size(&sizes, number);
     let r = number_box(
@@ -222,7 +250,7 @@ pub fn placement_from_centre(
     kind: MapKind,
     map_scale: u32,
 ) -> NumberPlacement {
-    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
+    let factor = course_factor(kind, map_scale);
     let sizes = overprint_sizes(kind);
     let found = freemapper_course::placement_from_offset(
         freemapper_course::model::Offset {
@@ -321,12 +349,37 @@ pub fn auto_place(
     gaps: GapRange,
     keep_existing: bool,
 ) -> Result<Vec<NumberPlacement>, CourseError> {
+    auto_place_with_factor(
+        event,
+        course,
+        map,
+        course_factor(kind, map_scale),
+        kind,
+        gaps,
+        keep_existing,
+    )
+}
+
+/// [`auto_place`] with the symbol factor given instead of derived from the map scale. The shared placement
+/// cases (`tests/placement_cases.rs`) fix the factor at `base_scale / map_scale` for every scale, which is
+/// plain geometry; the scale policy ([`course_factor`]) has its own tests.
+///
+/// # Errors
+/// As for [`course_legs`].
+pub fn auto_place_with_factor(
+    event: &Event,
+    course: &freemapper_courseplan_model::Course,
+    map: &MapIndex,
+    factor: f64,
+    kind: MapKind,
+    gaps: GapRange,
+    keep_existing: bool,
+) -> Result<Vec<NumberPlacement>, CourseError> {
     let legs = course_legs(event, course)?;
     let CourseKind::Individual { controls } = &course.kind else {
         return Ok(Vec::new());
     };
     let sizes = overprint_sizes(kind);
-    let factor = f64::from(base_scale(kind)) / f64::from(map_scale);
     let numbers = control_numbers(event, course);
 
     // Position of each course control; a control the event lacks cannot occur after course_legs.
@@ -1023,7 +1076,7 @@ mod tests {
 
     #[test]
     fn placement_scales_with_the_map_scale() {
-        // The neighbour-circle layout drawn at 1:5000 with all distances times 4000/5000 must
+        // The neighbour-circle layout drawn at 1:3000 with all distances times 4000/3000 must
         // give the same direction as at 1:4000 (sizes in map mm shrink by the same factor).
         let layout = |f: f64| {
             let d = 8.0 * f / 2f64.sqrt();
@@ -1046,13 +1099,44 @@ mod tests {
             e
         };
         let base = place(&layout(1.0), 4000);
-        let small = place(&layout(0.8), 5000);
+        let f = 4.0 / 3.0;
+        let small = place(&layout(f), 3000);
         assert_eq!(base[0].direction, small[0].direction);
-        // A box at 1:5000 is 0.8 times as high: east box starts at 0.8 * (3.175 + 0.5).
+        // A box at 1:3000 is 4/3 times as high: east box starts at 4/3 * (3.175 + 0.5).
         let sizes = overprint_sizes(MapKind::Sprint);
-        let r = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, 0.8);
-        assert!((r.min.0 - 0.8 * 3.675).abs() < 1e-9);
-        assert!(((r.max.1 - r.min.1) - 3.2).abs() < 1e-9);
+        let r = number_rect(&p(0.0, 0.0), 0.0, 1, 0.5, &sizes, f);
+        assert!((r.min.0 - f * 3.675).abs() < 1e-9);
+        assert!(((r.max.1 - r.min.1) - 4.0 * f).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_non_standard_scale_keeps_the_base_size() {
+        // Sprint at 1:5000 is no standard row: circles stay 6.0 mm, so the layout of 1:4000 (not scaled by
+        // 0.8) gives the same placement, and the factor is 1.0 (ADR 0058).
+        assert!(!is_standard_scale(MapKind::Sprint, 5000));
+        assert!(is_standard_scale(MapKind::Sprint, 4000));
+        assert_eq!(course_factor(MapKind::Sprint, 5000), 1.0);
+        assert_eq!(course_factor(MapKind::Sprint, 0), 1.0);
+        assert!((course_factor(MapKind::Sprint, 3000) - 4.0 / 3.0).abs() < 1e-12);
+        let sizes = overprint_sizes(MapKind::Sprint);
+        let (w, _) = number_box_mm(MapKind::Sprint, 1);
+        let r = number_rect(
+            &p(0.0, 0.0),
+            0.0,
+            1,
+            0.5,
+            &sizes,
+            course_factor(MapKind::Sprint, 5000),
+        );
+        assert!((r.min.0 - 3.675).abs() < 1e-9 && (r.max.0 - r.min.0 - w).abs() < 1e-9);
+    }
+
+    #[test]
+    fn the_number_box_is_the_renderers_digit_width() {
+        // freemapper-core's shared cases use 0.8083747 x height x digits (core v0.16.1).
+        let (w, h) = number_box_mm(MapKind::Sprint, 12);
+        assert!((w - 0.808_374_733_853_797_1 * 4.0 * 2.0).abs() < 1e-9);
+        assert_eq!(h, 4.0);
     }
 
     #[test]

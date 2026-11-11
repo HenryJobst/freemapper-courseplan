@@ -1,4 +1,4 @@
-//! Tests of the table checks. Maps are 1:10000, so 1 mm on the map is 10 m on the ground. Every
+//! Tests of the table checks. Maps are 1:10000 (not a standard scale; the note about it is dropped), so 1 mm on the map is 10 m on the ground. Every
 //! course runs from the start S1 at (0, 0) over one control on the x axis to the finish F1 at
 //! (100, 0); a course of `total` mm has its control at x = (total + 100) / 2.
 
@@ -91,8 +91,14 @@ fn nor_rule() -> Rule {
     r
 }
 
+/// The report without the note about a non-standard map scale, which these maps all raise.
+fn without_scale_note(mut r: CheckReport) -> CheckReport {
+    r.skipped.retain(|s| s.reason_id != NOTE_NON_STANDARD_SCALE);
+    r
+}
+
 fn run(event: &Event, rules: Vec<Rule>) -> CheckReport {
-    report(event, &map(10000, vec![]), rules)
+    without_scale_note(report(event, &map(10000, vec![]), rules))
 }
 
 fn at_course(name: &str) -> Location {
@@ -266,7 +272,7 @@ fn the_wkb_long_table_with_real_data() {
         let mut e = long(total, &[c("H-18")]);
         e.event.discipline = Discipline::Long;
         let m = map(10000, vec![]);
-        let r = run_checks(&CheckContext::new(&e, &m), &rules, CHECKS);
+        let r = without_scale_note(run_checks(&CheckContext::new(&e, &m), &rules, CHECKS));
         let found: Vec<_> = r
             .findings
             .iter()
@@ -340,7 +346,7 @@ fn the_wkb_difficulty_mix_with_real_data() {
         &[("A", 100.0, &[c("D-10"), c("H-20"), c("H-12b")])],
     );
     let m = map(10000, vec![]);
-    let r = run_checks(&CheckContext::new(&e, &m), &rules, CHECKS);
+    let r = without_scale_note(run_checks(&CheckContext::new(&e, &m), &rules, CHECKS));
     let found: Vec<_> = r
         .findings
         .iter()
@@ -474,7 +480,7 @@ fn a_sprint_is_skipped_by_the_real_nor_profile() {
     let mut e = nor_event(300.0, Some(150), &[c("H-12")]);
     e.event.discipline = Discipline::Sprint;
     let m = map(4000, vec![]);
-    let r = run_checks(&CheckContext::new(&e, &m), &rules, CHECKS);
+    let r = without_scale_note(run_checks(&CheckContext::new(&e, &m), &rules, CHECKS));
     let skips: Vec<_> = r
         .skipped
         .iter()
@@ -494,7 +500,7 @@ fn the_nor_long_table_with_real_data() {
     for (climb, outside) in [(90, false), (150, true)] {
         let e = nor_event(300.0, Some(climb), &[c("H-12")]);
         let m = map(10000, vec![]);
-        let r = run_checks(&CheckContext::new(&e, &m), &rules, CHECKS);
+        let r = without_scale_note(run_checks(&CheckContext::new(&e, &m), &rules, CHECKS));
         let found: Vec<_> = r
             .findings
             .iter()

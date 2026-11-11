@@ -14,7 +14,7 @@ read the project file again, so the server needs to hold the parsed state.
 - **The server computes the overlay, the page draws it** *(Claude's call)*. `GET api/overlay?course=NAME`
   returns the symbols of one course in map millimetres; without the parameter it returns all controls and special
   objects, with no legs and no numbers. The page does no geometry. Sizes are the print sizes of `numbers.rs`
-  grown by `base_scale / map_scale` (ADR 0030). A leg's drawn part is `check::drawn_part` with the circle radius,
+  grown by `numbers::course_factor` (ADR 0030, ADR 0058). A leg's drawn part is `check::drawn_part` with the circle radius,
   the cut the checks use. A number box is centred where `numbers::number_centre` puts it, which is the placement
   code of core (`number_offset::offset_from_placement`) at the same scale. A number without a stored placement is
   shown where `auto_place(keep_existing = true)` puts it and is marked `"source": "auto"`; the other sources are

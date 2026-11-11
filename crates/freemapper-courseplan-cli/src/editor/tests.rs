@@ -622,12 +622,13 @@ mod overlay {
                 gap_mm: 1.0,
             }),
         );
-        // At 1:2000 everything is 2 times larger.
+        // At 1:3000 everything is 4/3 times larger.
+        let f = 4.0 / 3.0;
         let (w, _) = freemapper_courseplan::numbers::number_box_mm(MapKind::Sprint, 1);
-        let n = &run(&e, Some("A"), 2000).numbers[0];
-        near_um(n.centre.x, 100.0 + 2.0 * (3.175 + 1.0 + w / 2.0));
-        near_um(n.w, 2.0 * w);
-        near(n.h, 8.0);
+        let n = &run(&e, Some("A"), 3000).numbers[0];
+        near_um(n.centre.x, 100.0 + f * (3.175 + 1.0 + w / 2.0));
+        near_um(n.w, f * w);
+        near_um(n.h, 4.0 * f);
     }
 
     #[test]

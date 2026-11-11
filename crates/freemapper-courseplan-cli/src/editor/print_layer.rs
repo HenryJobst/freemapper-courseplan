@@ -10,7 +10,8 @@ use freemapper_course::{
 };
 use freemapper_courseplan::course::{CourseError, course_legs};
 use freemapper_courseplan::map::{MapIndex, MapKind};
-use freemapper_courseplan::numbers::{GapRange, base_scale};
+use freemapper_courseplan::numbers::GapRange;
+pub(super) use freemapper_courseplan::numbers::course_factor;
 use freemapper_courseplan::omap::MapCoord;
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, SpecialObject,
@@ -33,16 +34,6 @@ pub(super) fn course_symbol_sizes(kind: MapKind) -> CourseSymbolSizes {
         MapKind::Forest => PrintKind::Forest,
     };
     course_symbols(kind, kind.base_scale()).0
-}
-
-/// How much bigger the course symbols are on a map at `map_scale` than at the base scale of `kind`: the editor
-/// shows the map at its own scale, so the symbols grow by `base_scale / map_scale`.
-pub(super) fn course_factor(kind: MapKind, map_scale: u32) -> f64 {
-    if map_scale == 0 {
-        // A map without a scale: draw the symbols at their base size, not at an infinite one.
-        return 1.0;
-    }
-    f64::from(base_scale(kind)) / f64::from(map_scale)
 }
 
 fn coord(p: &MapPoint) -> MapCoord {
@@ -695,6 +686,50 @@ mod tests {
         }
     }
 
+    /// Sprint at 1:5000 is no standard row: the sheet draws circles of 6.0 mm (diameter) there, so the overlay and
+    /// the renderer both have a radius of 3.0 map mm, not 3.0 * 4000 / 5000 (ADR 0058).
+    #[test]
+    fn a_non_standard_scale_keeps_the_circles_at_the_sheets_6_mm() {
+        let mut s = setup(|_| {});
+        s.kind = MapKind::Sprint;
+        s.scale = 5000;
+        let (sheet, factor) = course_symbols(PrintKind::Sprint, 5000);
+        assert_eq!((sheet.circle_diameter_mm, factor), (6.0, 1.0));
+        let mut out = Vec::new();
+        let name = s.event.courses[0].name.clone();
+        let o = compare(&s, &name, &mut out);
+        assert!(out.is_empty(), "{}", out.join("\n"));
+        assert!(
+            (o.sizes.circle_r - 3.0).abs() < 1e-9,
+            "{}",
+            o.sizes.circle_r
+        );
+        let drawn = course_overprint(
+            &s.event,
+            &name,
+            &s.index,
+            5000,
+            s.kind,
+            GapRange::DEFAULT,
+            s.map.mapping(),
+        )
+        .unwrap();
+        let radii = parts(&drawn, o.sizes.number_h).circles;
+        assert!(
+            radii.iter().any(|(_, r)| (r - 3.0).abs() < 1e-3),
+            "{radii:?}"
+        );
+        // 1:3000 is a standard row and grows by 4/3.
+        s.scale = 3000;
+        let mut out = Vec::new();
+        let o = compare(&s, &name, &mut out);
+        assert!(
+            (o.sizes.circle_r - 4.0).abs() < 1e-9,
+            "{}",
+            o.sizes.circle_r
+        );
+    }
+
     #[test]
     fn overlay_matches_renderer_overprint_with_bends_crossing_points_and_specials() {
         for (kind, scale) in CASES {
@@ -767,7 +802,10 @@ mod tests {
     #[test]
     fn a_map_without_scale_draws_at_base_size() {
         assert_eq!(course_factor(MapKind::Sprint, 0), 1.0);
-        assert_eq!(course_factor(MapKind::Sprint, 2000), 2.0);
+        assert!((course_factor(MapKind::Sprint, 3000) - 4.0 / 3.0).abs() < 1e-12);
+        // A non-standard row keeps the base size (ADR 0058), not 4000 / 5000 or 4000 / 2000.
+        assert_eq!(course_factor(MapKind::Sprint, 5000), 1.0);
+        assert_eq!(course_factor(MapKind::Sprint, 2000), 1.0);
     }
 
     #[test]

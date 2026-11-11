@@ -146,6 +146,12 @@ check-skip-map-kind = Die Prüfregel gilt nicht für { $kind ->
         [forest] Waldkarten
        *[other] Karten der Art { $kind }
     }
+check-note-non-standard-scale = 1:{ $scale } ist kein normgerechter Maßstab für { $kind ->
+        [sprint] Sprintkarten
+        [schoolyard] Schulhofkarten
+        [forest] Waldkarten
+       *[other] Karten der Art { $kind }
+    }. Die Bahnsymbole behalten ihre Größe im Maßstab 1:{ $base_scale }. Diese Bahn taugt nur fürs Training.
 check-skip-print-scale = Keine Prüfregel dieser Art für den Druckmaßstab 1:{ $scale }
 check-skip-course-kind = { $kind ->
         [team] Mannschaftsbahnen

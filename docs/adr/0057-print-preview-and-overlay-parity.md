@@ -22,11 +22,9 @@ promised a test that compares the editor's overlay with that drawing, and a read
   sizes from `freemapper_printrules::scale::course_symbols` (core v0.16.0, the `iof-print` profile: ISSprOM
   2019-2 section 4.7, ISOM 2017-2 section 3.7), the profile freemapper-print draws with. The copy of the
   values that v0.15.0 required is gone. A test keeps circle, line and number height equal to
-  `numbers::overprint_sizes`, which the checks use. The factor stays `base_scale / map_scale`, as for the
-  overlay and the checks: the editor shows the map at its own scale, and `course_symbols` would return the
-  table factor of the scale, which is 1.0 at a non-standard or missing row (sprint 1:5000, forest 1:20000) and
-  would split the preview from the overlay and the checks there. A map without a scale gets factor 1.0 instead of
-  infinity. The course colour is the IOF purple of `on_map`; courseplan's rule profiles carry none.
+  `numbers::overprint_sizes`, which the checks use. **Superseded by ADR 0058:** the factor was `base_scale / map_scale` at first; it is now
+  `numbers::course_factor`, the table factor of `course_symbols`, which is 1.0 at a non-standard or missing row
+  (sprint 1:5000, forest 1:20000). A map without a scale gets factor 1.0 instead of infinity. The course colour is the IOF purple of `on_map`; courseplan's rule profiles carry none.
 - **Toolbar toggle** *(Claude's call)*. "Print preview" (key P) works with a course selected. It hides the overlay
   and the finding markers and selects the select tool. **It is read-only** *(review of Task 20)*: the page refuses
   every write while it is on (`api.js` answers a POST with 423 without sending it), the tree, the properties
@@ -66,5 +64,7 @@ promised a test that compares the editor's overlay with that drawing, and a read
 - The preview is as fast as a map section plus the layer; a pan during the preview renders again.
 - The preview is read-only for real; a pending drag or draft ends when it is switched on.
 - Findings about legs measure the checks' cut, the page draws the overlay's (see above).
+
+**Update 2026-11-11 (core v0.16.1):** the parity test covers sprint 1:5000 against the sheet's 6.0 mm circles (ADR 0058).
 
 Source: browser editor plan M4, Task 20.
