@@ -21,7 +21,9 @@ const state = {
   view: null,
   mapLayer: null,
   seen: null,
+  closed: false,
 };
+let pollTimer = null;
 
 const svg = document.getElementById("map-svg");
 const propsHost = document.getElementById("props");
@@ -30,6 +32,12 @@ overlay.attach(document.getElementById("layer-overlay"));
 async function closeEditor() {
   try {
     const answer = await post("api/quit");
+    if (answer.ok) {
+      // The server is gone on purpose: stop asking it, so the message stays.
+      state.closed = true;
+      clearInterval(pollTimer);
+      document.getElementById("menu-close").disabled = true;
+    }
     status.say(answer.ok ? "editor-status-closed" : "editor-status-lost");
   } catch {
     status.say("editor-status-lost");
@@ -81,7 +89,9 @@ async function loadOverlay(course) {
   const answer = await get(`api/overlay${query}`);
   if (!answer.ok) {
     state.overlay = null;
-    status.say(answer.data, true);
+    // 422: a score, team or relay course. Nothing is drawn; the status says why.
+    if (answer.status === 422) status.say("editor-status-course-unsupported");
+    else status.say(answer.data, true);
     return false;
   }
   state.course = course;
@@ -146,7 +156,7 @@ async function loadState(announce) {
     state.selection = null;
     state.treeKey = "all";
   }
-  if (!(await loadOverlay(state.course))) status.say("editor-status-overlay-failed");
+  await loadOverlay(state.course);
   redraw();
   if (announce) status.say("editor-status-reloaded");
   return true;
@@ -197,12 +207,20 @@ function bindMapInput() {
     if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
     if (finished && !finished.moved) selectDrawn(finished.target);
   });
+  // A cancelled touch or a lost capture ends the drag like a release, without selecting anything.
+  const cancelDrag = () => {
+    drag = null;
+  };
+  svg.addEventListener("pointercancel", cancelDrag);
+  svg.addEventListener("lostpointercapture", cancelDrag);
   svg.addEventListener("pointerleave", () => status.setCursor(null));
   svg.addEventListener("wheel", (evt) => {
     evt.preventDefault();
     view.zoomBy(evt.deltaY < 0 ? 1.2 : 1 / 1.2, view.screenToPage(evt));
   }, { passive: false });
   svg.addEventListener("keydown", (evt) => {
+    // Ctrl/Cmd with +, - or 0 is the browser's zoom (WCAG 1.4.4), and Alt belongs to the browser as well.
+    if (evt.ctrlKey || evt.metaKey || evt.altKey) return;
     const v = view.visible();
     const stepX = (v.x1 - v.x0) * PAN_STEP;
     const stepY = (v.y1 - v.y0) * PAN_STEP;
@@ -230,7 +248,7 @@ function bindMapInput() {
 // Polling (plan D8): every two seconds while the page is visible, and at once when it gets the focus.
 let polling = false;
 async function poll() {
-  if (polling || document.hidden) return;
+  if (polling || document.hidden || state.closed) return;
   polling = true;
   try {
     const answer = await get("api/revision");
@@ -248,7 +266,7 @@ async function poll() {
     }
     if (now.ppen !== before.ppen && now.ppen !== "") status.say("editor-status-ppen-changed");
   } catch {
-    status.say("editor-status-lost");
+    if (!state.closed) status.say("editor-status-lost");
   } finally {
     polling = false;
   }
@@ -267,6 +285,6 @@ try {
   // Without texts the page stays as it is; the server console says why.
 }
 
-setInterval(poll, POLL_MS);
+pollTimer = setInterval(poll, POLL_MS);
 window.addEventListener("focus", poll);
 document.addEventListener("visibilitychange", poll);

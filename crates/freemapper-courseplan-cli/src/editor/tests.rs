@@ -12,12 +12,8 @@ use tower::ServiceExt;
 use super::{Assets, EditorState, router};
 
 fn app(lang: &Lang) -> axum::Router {
-    let state = EditorState::new(
-        "/p/event.courseplan.toml".into(),
-        lang.clone(),
-        Arc::new(Notify::new()),
-    );
-    router("/tok", Arc::new(Mutex::new(state)))
+    let state = EditorState::new("/p/event.courseplan.toml".into(), lang.clone());
+    router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
 }
 
 async fn get_json(lang: &Lang) -> serde_json::Value {
@@ -116,7 +112,26 @@ fn embedded_texts() -> Vec<(String, String)> {
 #[test]
 fn assets_have_no_inline_script_or_handler() {
     let mut pages = 0;
+    let mut scripts = 0;
     for (name, content) in embedded_texts() {
+        if name.ends_with(".js") {
+            // Scripts build the page with textContent, setAttribute and dataset only.
+            for banned in [
+                "innerHTML",
+                "outerHTML",
+                "insertAdjacentHTML",
+                "document.write",
+                "eval(",
+                "new Function",
+                "setAttribute(\"on",
+                "setAttribute('on",
+                "javascript:",
+            ] {
+                assert!(!content.contains(banned), "{name}: {banned}");
+            }
+            scripts += 1;
+            continue;
+        }
         if !name.ends_with(".html") {
             continue;
         }
@@ -137,7 +152,7 @@ fn assets_have_no_inline_script_or_handler() {
             );
         }
     }
-    assert!(pages > 0);
+    assert!(pages > 0 && scripts > 3);
 }
 
 #[test]
@@ -204,8 +219,11 @@ async fn page_and_assets_are_served_from_the_embedded_set() {
 
 mod map {
     use super::*;
-    use crate::editor::map_view::{MapCache, MapView, PageRect, PlaceholderMap};
+    use crate::editor::Shared;
+    use crate::editor::map_view::{MapView, PageRect, PlaceholderMap, load_map};
     use freemapper_courseplan_model::MapPoint;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
 
     fn placeholder() -> PlaceholderMap {
         PlaceholderMap::from_extent(
@@ -319,25 +337,131 @@ mod map {
         }
     }
 
-    #[test]
-    fn cache_rebuilds_when_the_map_changes() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("map.omap");
-        let source = std::fs::read(concat!(
+    fn forest_sample() -> Vec<u8> {
+        std::fs::read(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../tests/fixtures/maps/forest-sample.omap"
         ))
-        .unwrap();
+        .unwrap()
+    }
+
+    /// A shared state whose map parse counts itself and, when `pause` is set, takes that long.
+    fn counted(pause: Duration) -> (Shared, Arc<AtomicUsize>) {
+        let parses = Arc::new(AtomicUsize::new(0));
+        let seen = parses.clone();
+        let mut state = EditorState::new("/p/event.courseplan.toml".into(), Lang::english());
+        state.map.parse_hook = Some(Arc::new(move || {
+            seen.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(pause);
+        }));
+        (Arc::new(Mutex::new(state)), parses)
+    }
+
+    #[tokio::test]
+    async fn cache_rebuilds_when_the_map_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("map.omap");
+        let source = forest_sample();
         std::fs::write(&path, &source).unwrap();
-        let mut cache = MapCache::new("note".into());
-        let first = cache.get(&path).unwrap().stamp;
-        assert_eq!(cache.get(&path).unwrap().stamp, first);
+        let (state, parses) = counted(Duration::ZERO);
+        let first = load_map(&state, path.clone()).await.unwrap();
+        let again = load_map(&state, path.clone()).await.unwrap();
+        assert!(Arc::ptr_eq(&first, &again));
+        assert_eq!(parses.load(Ordering::SeqCst), 1);
         let mut changed = source;
         changed.extend_from_slice(b"\n\n");
         std::fs::write(&path, changed).unwrap();
-        let second = cache.get(&path).unwrap();
-        assert_ne!(second.stamp, first);
-        assert!(second.view.is_placeholder());
+        let second = load_map(&state, path).await.unwrap();
+        assert_ne!(second.stamp, first.stamp);
+        assert_eq!(parses.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn a_broken_map_is_parsed_once_and_its_error_has_no_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("broken.omap");
+        std::fs::write(&path, "<map><unclosed>").unwrap();
+        let (state, parses) = counted(Duration::ZERO);
+        let first = load_map(&state, path.clone()).await.err().unwrap();
+        let second = load_map(&state, path.clone()).await.err().unwrap();
+        assert_eq!(first, second);
+        assert_eq!(parses.load(Ordering::SeqCst), 1);
+        assert!(first.contains("broken.omap"), "{first}");
+        let folder = dir.path().to_string_lossy().into_owned();
+        assert!(!first.contains(&folder), "{first}");
+        assert!(first.chars().count() <= 501);
+    }
+
+    #[tokio::test]
+    async fn the_cache_key_includes_the_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let (a, b) = (dir.path().join("a.omap"), dir.path().join("b.omap"));
+        let source = forest_sample();
+        let time = std::time::SystemTime::now();
+        for path in [&a, &b] {
+            std::fs::write(path, &source).unwrap();
+            std::fs::File::options()
+                .write(true)
+                .open(path)
+                .unwrap()
+                .set_modified(time)
+                .unwrap();
+        }
+        let (state, parses) = counted(Duration::ZERO);
+        let first = load_map(&state, a).await.unwrap();
+        let second = load_map(&state, b).await.unwrap();
+        assert_eq!(first.stamp, second.stamp);
+        assert!(!Arc::ptr_eq(&first, &second));
+        assert_eq!(parses.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn quit_and_revision_answer_while_a_map_is_parsed() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = super::state::project(dir.path());
+        let started = Instant::now();
+        let stop = Arc::new(Notify::new());
+        let mut state = EditorState::new(path, Lang::english());
+        let parsing = Arc::new(AtomicUsize::new(0));
+        let seen = parsing.clone();
+        state.map.parse_hook = Some(Arc::new(move || {
+            seen.fetch_add(1, Ordering::SeqCst);
+            std::thread::sleep(Duration::from_millis(1500));
+        }));
+        let app = router("/tok", Arc::new(Mutex::new(state)), stop.clone());
+        let slow = tokio::spawn({
+            let app = app.clone();
+            async move {
+                app.oneshot(Request::get("/tok/api/state").body(Body::empty()).unwrap())
+                    .await
+                    .unwrap()
+                    .status()
+            }
+        });
+        while parsing.load(Ordering::SeqCst) == 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        let revision = app
+            .clone()
+            .oneshot(
+                Request::get("/tok/api/revision")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(revision.status(), StatusCode::OK);
+        let quit = app
+            .oneshot(Request::post("/tok/api/quit").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(quit.status(), StatusCode::OK);
+        assert!(started.elapsed() < Duration::from_millis(1000));
+        // quit stored its signal without waiting for the parse.
+        tokio::time::timeout(Duration::from_millis(100), stop.notified())
+            .await
+            .unwrap();
+        assert_eq!(slow.await.unwrap(), StatusCode::OK);
     }
 }
 
@@ -601,13 +725,77 @@ mod overlay {
         );
         assert!(r.is_err());
     }
+
+    #[test]
+    fn a_crossing_point_gets_no_number_but_counts_in_the_index() {
+        let mut e = event();
+        e.controls[0].kind = ControlKind::CrossingPoint;
+        e.courses[0].kind = CourseKind::Individual {
+            controls: vec![stop("31", None), stop("32", None)],
+        };
+        let o = run(&e, Some("A"), 4000);
+        assert_eq!(o.controls[0].kind, "crossing_point");
+        assert_eq!(o.controls[1].kind, "control");
+        assert_eq!(o.numbers.len(), 1);
+        assert_eq!(o.numbers[0].code, "32");
+        assert_eq!(o.numbers[0].index, 2);
+        assert_eq!(o.numbers[0].text, "1");
+    }
+
+    #[test]
+    fn a_taped_leg_follows_the_control_that_leaves() {
+        let mut e = event();
+        e.courses[0].kind = CourseKind::Individual {
+            controls: vec![
+                CourseControl {
+                    taped: true,
+                    ..stop("31", None)
+                },
+                stop("32", None),
+            ],
+        };
+        let o = run(&e, Some("A"), 4000);
+        let taped: Vec<bool> = o.legs.iter().map(|l| l.taped).collect();
+        assert_eq!(taped, [false, true, false]);
+    }
+
+    #[test]
+    fn the_json_has_the_keys_and_point_arrays_the_page_reads() {
+        let o = serde_json::to_value(run(&event(), Some("A"), 4000)).unwrap();
+        let mut keys: Vec<&str> = o.as_object().unwrap().keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "controls", "finishes", "legs", "numbers", "sizes", "specials", "starts"
+            ]
+        );
+        assert_eq!(o["sizes"]["circle_r"], 3.0);
+        assert_eq!(o["controls"][0]["code"], "31");
+        assert_eq!(o["controls"][0]["at"], serde_json::json!([0.0, -50.0]));
+        assert_eq!(o["starts"][0]["at"], serde_json::json!([0.0, 0.0]));
+        assert!(o["starts"][0]["angle_deg"].is_number());
+        assert!(o["legs"][0]["points"][0].is_array());
+        assert!(o["legs"][0]["drawn"][0].is_array());
+        assert!(o["legs"][0]["taped"].is_boolean() && o["legs"][0]["after"].is_number());
+        let number = &o["numbers"][0];
+        assert!(number["centre"].is_array() && number["text"].is_string());
+        assert!(number["w"].is_number() && number["h"].is_number());
+        assert_eq!(number["source"], "auto");
+        assert!(number["index"].is_number() && number["code"].is_string());
+        assert!(o["specials"].is_array());
+    }
 }
 
 mod state {
     use super::*;
     use freemapper_courseplan_model::{Event, EventMeta, FORMAT_VERSION, ProjectFile, Sources};
 
-    fn project(dir: &std::path::Path) -> std::path::PathBuf {
+    pub(super) fn project(dir: &std::path::Path) -> std::path::PathBuf {
+        project_with(dir, |_| {})
+    }
+
+    fn project_with(dir: &std::path::Path, change: impl FnOnce(&mut Event)) -> std::path::PathBuf {
         std::fs::copy(
             concat!(
                 env!("CARGO_MANIFEST_DIR"),
@@ -617,7 +805,7 @@ mod state {
         )
         .unwrap();
         let path = dir.join("event.courseplan.toml");
-        let event = Event {
+        let mut event = Event {
             format: FORMAT_VERSION,
             event: EventMeta {
                 title: "T".to_owned(),
@@ -638,13 +826,14 @@ mod state {
             accepted_findings: vec![],
             sync: None,
         };
+        change(&mut event);
         ProjectFile::create(&path, event).unwrap();
         path
     }
 
     fn router_for(path: &std::path::Path) -> axum::Router {
-        let state = EditorState::new(path.into(), Lang::english(), Arc::new(Notify::new()));
-        router("/tok", Arc::new(Mutex::new(state)))
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
     }
 
     async fn get(app: &axum::Router, uri: &str) -> (StatusCode, serde_json::Value) {
@@ -754,5 +943,133 @@ mod state {
             get(&app, "/tok/api/overlay?course=%zz").await.0,
             StatusCode::BAD_REQUEST
         );
+    }
+
+    async fn raw(
+        app: &axum::Router,
+        request: Request<Body>,
+    ) -> (StatusCode, axum::http::HeaderMap, String) {
+        let response = app.clone().oneshot(request).await.unwrap();
+        let (status, headers) = (response.status(), response.headers().clone());
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (
+            status,
+            headers,
+            String::from_utf8_lossy(&bytes).into_owned(),
+        )
+    }
+
+    #[tokio::test]
+    async fn a_team_course_gets_422_and_a_localized_message() {
+        use freemapper_courseplan_model::{Course, CourseKind, SpecialObject};
+        let dir = tempfile::tempdir().unwrap();
+        let path = project_with(dir.path(), |event| {
+            let at = freemapper_courseplan_model::MapPoint { x: 0.0, y: 0.0 };
+            event.specials = vec![
+                SpecialObject::Start {
+                    id: "S1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at.clone(),
+                },
+                SpecialObject::Finish {
+                    id: "F1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at,
+                },
+            ];
+            event.courses = vec![Course {
+                ppen_id: None,
+                name: "Team".to_owned(),
+                classes: vec![],
+                start: "S1".to_owned(),
+                finish: "F1".to_owned(),
+                start_bends: vec![],
+                start_taped: false,
+                print_area: None,
+                climb_m: None,
+                planned_print_scale: None,
+                kind: CourseKind::Team {
+                    team_size: 2,
+                    mandatory: vec![],
+                    free: vec![],
+                },
+            }];
+        });
+        let (status, _, body) = raw(
+            &router_for(&path),
+            Request::get("/tok/api/overlay?course=Team")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        assert!(!body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn map_svg_answers_200_with_the_svg_content_type() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&project(dir.path()));
+        let (status, headers, body) = raw(
+            &app,
+            Request::get("/tok/api/map.svg?x0=0&y0=0&x1=50&y1=50&zoom=2")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(headers["content-type"], "image/svg+xml");
+        assert!(body.starts_with("<svg"), "{body}");
+    }
+
+    #[tokio::test]
+    async fn a_project_file_over_the_limit_is_refused_with_a_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project(dir.path());
+        let mut bytes = std::fs::read(&path).unwrap();
+        bytes.resize(crate::editor::api::MAX_PROJECT_BYTES as usize + 1, b'#');
+        std::fs::write(&path, bytes).unwrap();
+        let (_, body) = get(&router_for(&path), "/tok/api/state").await;
+        let error = body["error"].as_str().unwrap();
+        assert!(
+            error.contains("event.courseplan.toml") && error.contains("16 MiB"),
+            "{error}"
+        );
+        assert!(!error.contains(dir.path().to_str().unwrap()), "{error}");
+    }
+
+    #[tokio::test]
+    async fn a_project_error_is_cut_short_and_names_only_the_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project(dir.path());
+        std::fs::write(&path, format!("format = {}\n", "[".repeat(5000))).unwrap();
+        let (_, body) = get(&router_for(&path), "/tok/api/state").await;
+        let error = body["error"].as_str().unwrap();
+        assert!(error.chars().count() <= 501, "{}", error.chars().count());
+        assert!(!error.contains(dir.path().to_str().unwrap()), "{error}");
+    }
+
+    #[tokio::test]
+    async fn an_unchanged_stamp_means_the_file_is_not_read_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = project(dir.path());
+        let app = router_for(&path);
+        let (_, first) = get(&app, "/tok/api/revision").await;
+        // Same length, same mtime, other bytes: only a re-read would notice.
+        let modified = std::fs::metadata(&path).unwrap().modified().unwrap();
+        let mut bytes = std::fs::read(&path).unwrap();
+        let last = bytes.len() - 1;
+        bytes[last] = if bytes[last] == b'#' { b' ' } else { b'#' };
+        std::fs::write(&path, bytes).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(modified)
+            .unwrap();
+        let (_, same) = get(&app, "/tok/api/revision").await;
+        assert_eq!(same["project"], first["project"]);
     }
 }

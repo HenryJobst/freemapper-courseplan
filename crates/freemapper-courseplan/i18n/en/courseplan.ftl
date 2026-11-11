@@ -921,3 +921,6 @@ editor-status-reloaded = The project file changed and was loaded again.
 editor-status-ppen-changed = The Purple Pen file changed. Sync?
 editor-status-state-failed = The project cannot be shown. The server console tells why.
 editor-status-overlay-failed = The course symbols could not be loaded.
+editor-status-course-unsupported = This kind of course (score, team or relay) cannot be shown in the editor yet.
+error-editor-map = cannot read the map { $file }: { $reason }
+error-editor-project-too-large = { $file } is larger than { $limit } MiB. The editor does not open project files that big.

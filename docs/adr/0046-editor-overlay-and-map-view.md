@@ -31,6 +31,13 @@ read the project file again, so the server needs to hold the parsed state.
   `GET api/state` and `GET api/revision` re-read the file when its bytes changed. The map routes and the overlay
   use the held state and read the project file no more. The page learns about outside changes from the
   `api/revision` poll (plan D8). A broken project file or map gives a state with only `revision` and `error`.
+- **Reading and caching** *(Claude's call, stage 1 review)*. The project file is read once per change: the bytes
+  are hashed and the same bytes are parsed. The poll compares the file's length and modification time first and
+  hashes only when they changed; a same-size replace within the timestamp resolution of the file system (FAT, some
+  network mounts) goes unnoticed until the next real change. Project files over 16 MiB are refused with a
+  message. The parsed map is cached with its failure, keyed by path and stamp, so a broken map is parsed once.
+  Error texts that reach the page are localized, name files without their folder and stop at 500 characters. An
+  overlay request for a score, team or relay course answers 422, and the page says so in the status bar.
 
 ## Consequences
 - Course symbols exist twice until the print preview layer arrives, here for editing and in the renderer for the

@@ -916,3 +916,6 @@ editor-status-reloaded = Die Projektdatei hat sich geändert und wurde neu gelad
 editor-status-ppen-changed = Die Purple-Pen-Datei hat sich geändert. Abgleichen?
 editor-status-state-failed = Das Projekt lässt sich nicht anzeigen. Die Serverkonsole nennt den Grund.
 editor-status-overlay-failed = Die Bahnsymbole ließen sich nicht laden.
+editor-status-course-unsupported = Diese Art von Bahn (Score-, Team- oder Staffelbahn) lässt sich im Editor noch nicht anzeigen.
+error-editor-map = Die Karte { $file } lässt sich nicht lesen: { $reason }
+error-editor-project-too-large = { $file } ist größer als { $limit } MiB. Der Editor öffnet keine so großen Projektdateien.

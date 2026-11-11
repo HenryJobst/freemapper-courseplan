@@ -122,6 +122,12 @@ impl ProjectFile {
             path: path.to_owned(),
             source,
         })?;
+        Self::from_text(path, &text)
+    }
+
+    /// Parses and validates project file `text` that was read from `path`. The editor uses this to parse
+    /// the very bytes it has hashed.
+    pub fn from_text(path: &Path, text: &str) -> Result<ProjectFile, ProjectError> {
         let parse_error = |message: String| ProjectError::Parse {
             path: path.to_owned(),
             message: format!("cannot parse {}: {message}", path.display()),

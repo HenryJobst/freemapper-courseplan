@@ -81,11 +81,24 @@ impl Editor {
 
     /// One request; the answer's status line, headers and body as text.
     fn request(&self, method: &str, path: &str, headers: &[(&str, &str)]) -> (u16, String, String) {
+        self.request_at(&format!("{}{path}", self.path), method, headers)
+    }
+
+    /// Like `request`, with the whole request path. A `Host` header in `headers` replaces the default.
+    fn request_at(
+        &self,
+        path: &str,
+        method: &str,
+        headers: &[(&str, &str)],
+    ) -> (u16, String, String) {
         let mut stream = TcpStream::connect(("127.0.0.1", self.port)).unwrap();
-        let mut head = format!(
-            "{method} {}{path} HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n",
-            self.path, self.port
-        );
+        let mut head = format!("{method} {path} HTTP/1.1\r\nConnection: close\r\n");
+        if !headers
+            .iter()
+            .any(|(name, _)| name.eq_ignore_ascii_case("host"))
+        {
+            head.push_str(&format!("Host: 127.0.0.1:{}\r\n", self.port));
+        }
         for (name, value) in headers {
             head.push_str(&format!("{name}: {value}\r\n"));
         }
@@ -194,9 +207,38 @@ fn quit_ends_the_process_with_0() {
 #[test]
 fn editor_routes_inherit_the_guard() {
     let mut editor = Editor::start();
-    let (status, _, _) =
-        editor.request("POST", "api/quit", &[("Content-Type", "application/json")]);
-    assert_eq!(status, 403);
+    let own = format!("http://127.0.0.1:{}", editor.port);
+    let json = ("Content-Type", "application/json");
+    let gets = [
+        "api/state",
+        "api/overlay",
+        "api/map.svg?x0=0&y0=0&x1=9&y1=9",
+        "api/revision",
+    ];
+    for route in gets {
+        let (status, _, _) = editor.request("GET", route, &[("Origin", "http://evil.example")]);
+        assert_eq!(status, 403, "{route}: foreign origin");
+        let (status, _, _) = editor.request("GET", route, &[("Host", "evil.example")]);
+        assert_eq!(status, 403, "{route}: foreign host");
+    }
+    let (status, _, _) = editor.request_at(&format!("/{}/api/state", "0".repeat(32)), "GET", &[]);
+    assert_eq!(status, 404, "wrong token");
+    let posts: [&[(&str, &str)]; 4] = [
+        &[json],
+        &[("Origin", "http://evil.example"), json],
+        &[
+            ("Origin", &own),
+            ("Content-Type", "application/x-www-form-urlencoded"),
+        ],
+        &[("Origin", &own), ("Content-Type", "text/plain")],
+    ];
+    for headers in posts {
+        let (status, _, _) = editor.request("POST", "api/quit", headers);
+        assert!(
+            (400..500).contains(&status) && status != 404,
+            "{headers:?}: {status}"
+        );
+    }
     std::thread::sleep(Duration::from_millis(200));
     assert!(
         editor.child.try_wait().unwrap().is_none(),
@@ -204,6 +246,49 @@ fn editor_routes_inherit_the_guard() {
     );
     let (status, _, _) = editor.request("GET", "api/texts", &[]);
     assert_eq!(status, 200);
+}
+
+/// Half a request on an open socket must not keep the editor alive (review I1).
+fn stalled_socket(editor: &Editor) -> TcpStream {
+    let mut stalled = TcpStream::connect(("127.0.0.1", editor.port)).unwrap();
+    write!(
+        stalled,
+        "GET {}api/state HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n",
+        editor.path, editor.port
+    )
+    .unwrap();
+    stalled.flush().unwrap();
+    std::thread::sleep(Duration::from_millis(100));
+    stalled
+}
+
+#[test]
+fn quit_ends_the_process_with_0_despite_a_stalled_connection() {
+    let mut editor = Editor::start();
+    let _stalled = stalled_socket(&editor);
+    let (status, _, _) = editor.request(
+        "POST",
+        "api/quit",
+        &[
+            ("Origin", &format!("http://127.0.0.1:{}", editor.port)),
+            ("Content-Type", "application/json"),
+        ],
+    );
+    assert_eq!(status, 200);
+    assert_eq!(editor.wait_exit().code(), Some(0));
+}
+
+#[cfg(unix)]
+#[test]
+fn ctrl_c_ends_the_process_with_0_despite_a_stalled_connection() {
+    let mut editor = Editor::start();
+    let _stalled = stalled_socket(&editor);
+    let status = Command::new("kill")
+        .args(["-INT", &editor.child.id().to_string()])
+        .status()
+        .unwrap();
+    assert!(status.success());
+    assert_eq!(editor.wait_exit().code(), Some(0));
 }
 
 #[test]

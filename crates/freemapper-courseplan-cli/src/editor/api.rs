@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 use freemapper_courseplan::course::{control_numbers, course_length_m};
 use freemapper_courseplan::map::map_kind_for_file;
 use freemapper_courseplan::sync::base::fnv1a64;
-use freemapper_courseplan::text::{Lang, Localize};
-use freemapper_courseplan_model::ProjectFile;
+use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
+use freemapper_courseplan_model::{ProjectError, ProjectFile};
 use serde_json::{Value, json};
 
-use super::map_view::{FileStamp, MapCache};
+use super::map_view::{FileStamp, MapEntry};
 use super::overlay::r3;
 
 /// The fingerprint of the project file (FNV-1a 64 over its bytes, 16 hex digits).
@@ -28,37 +28,123 @@ impl Revision {
     }
 }
 
+/// Largest project file the editor opens. Reading, hashing and parsing a bigger one would freeze the page.
+pub(crate) const MAX_PROJECT_BYTES: u64 = 16 * 1024 * 1024;
+/// Longest error text sent to the page, in characters.
+const MAX_MESSAGE_CHARS: usize = 500;
+
+/// Makes an error text fit for the page: each of `paths` shrinks to its file name, and the text is cut at
+/// [`MAX_MESSAGE_CHARS`] characters.
+pub(crate) fn tidy(message: &str, paths: &[&Path]) -> String {
+    let mut out = message.to_owned();
+    for path in paths {
+        let full = path.display().to_string();
+        if let Some(name) = path.file_name().and_then(|n| n.to_str())
+            && !full.is_empty()
+        {
+            out = out.replace(&full, name);
+        }
+    }
+    if out.chars().count() > MAX_MESSAGE_CHARS {
+        out = out.chars().take(MAX_MESSAGE_CHARS).collect();
+        out.push('…');
+    }
+    out
+}
+
+/// The file name of `path` for messages.
+pub(crate) fn file_name(path: &Path) -> String {
+    path.file_name().map_or_else(
+        || path.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    )
+}
+
 /// The project file at one revision: parsed, or the localized reason why it is not.
 pub(crate) struct Loaded {
     pub revision: Revision,
     pub file: Result<ProjectFile, String>,
 }
 
-impl Loaded {
-    /// Reads the file at `path`.
-    pub(crate) fn read(path: &Path, lang: &Lang) -> Loaded {
-        let revision =
-            std::fs::read(path).map_or_else(|_| Revision::missing(), |b| Revision::of(&b));
-        let file = ProjectFile::load(path).map_err(|e| e.localize(lang));
-        Loaded { revision, file }
-    }
+/// The bytes of the project file, or why there are none.
+enum Source {
+    Bytes(Vec<u8>),
+    TooLarge,
+    Unreadable(std::io::Error),
+}
 
-    /// Reads the file again when its bytes differ from the revision held. Returns whether it did.
-    pub(crate) fn refresh(&mut self, path: &Path, lang: &Lang) -> bool {
-        let now = std::fs::read(path).map_or_else(|_| Revision::missing(), |b| Revision::of(&b));
-        if now == self.revision {
-            return false;
+impl Source {
+    /// Reads the file once, at most [`MAX_PROJECT_BYTES`] + 1 bytes.
+    fn of(path: &Path) -> Source {
+        use std::io::Read as _;
+        let read = || -> std::io::Result<Vec<u8>> {
+            let mut bytes = Vec::new();
+            std::fs::File::open(path)?
+                .take(MAX_PROJECT_BYTES + 1)
+                .read_to_end(&mut bytes)?;
+            Ok(bytes)
+        };
+        match read() {
+            Ok(bytes) if bytes.len() as u64 > MAX_PROJECT_BYTES => Source::TooLarge,
+            Ok(bytes) => Source::Bytes(bytes),
+            Err(e) => Source::Unreadable(e),
         }
-        *self = Loaded::read(path, lang);
-        true
     }
 
-    /// The map file's path, when the project is readable.
-    pub(crate) fn map_path(&self) -> Result<PathBuf, String> {
-        self.file
-            .as_ref()
-            .map(ProjectFile::map_path)
-            .map_err(Clone::clone)
+    fn revision(&self) -> Revision {
+        match self {
+            Source::Bytes(bytes) => Revision::of(bytes),
+            Source::TooLarge => Revision("too-large".to_owned()),
+            Source::Unreadable(_) => Revision::missing(),
+        }
+    }
+}
+
+impl Loaded {
+    /// Reads the file at `path`: the bytes once, hashed and parsed as they are.
+    pub(crate) fn read(path: &Path, lang: &Lang) -> Loaded {
+        let source = Source::of(path);
+        let revision = source.revision();
+        Self::from_source(path, lang, source, revision)
+    }
+
+    /// Reads the file and returns the new state, or `None` when its bytes hash to the revision of `prev`.
+    pub(crate) fn changed_since(prev: &Loaded, path: &Path, lang: &Lang) -> Option<Loaded> {
+        let source = Source::of(path);
+        let revision = source.revision();
+        (revision != prev.revision).then(|| Self::from_source(path, lang, source, revision))
+    }
+
+    fn from_source(path: &Path, lang: &Lang, source: Source, revision: Revision) -> Loaded {
+        let file = match source {
+            Source::TooLarge => Err(text(
+                lang,
+                "error-editor-project-too-large",
+                &[
+                    ("file", FluentValue::from(file_name(path))),
+                    (
+                        "limit",
+                        FluentValue::from(MAX_PROJECT_BYTES / (1024 * 1024)),
+                    ),
+                ],
+            )),
+            Source::Unreadable(source) => Err(ProjectError::Read {
+                path: path.to_owned(),
+                source,
+            }
+            .localize(lang)),
+            Source::Bytes(bytes) => String::from_utf8(bytes)
+                .map_err(|e| ProjectError::Read {
+                    path: path.to_owned(),
+                    source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
+                })
+                .and_then(|text| ProjectFile::from_text(path, &text))
+                .map_err(|e| e.localize(lang)),
+        };
+        Loaded {
+            revision,
+            file: file.map_err(|message| tidy(&message, &[path])),
+        }
     }
 }
 
@@ -80,13 +166,13 @@ fn plain_dates(value: &mut Value) {
 }
 
 /// `GET api/state`. A broken project file or map gives only `revision` and `error`.
-pub(crate) fn state_json(loaded: &Loaded, map: &mut MapCache) -> Value {
-    let broken = |error: String| json!({ "revision": loaded.revision.0, "error": error });
+pub(crate) fn state_json(loaded: &Loaded, map: Result<&MapEntry, &str>) -> Value {
+    let broken = |error: &str| json!({ "revision": loaded.revision.0, "error": error });
     let file = match &loaded.file {
         Ok(file) => file,
-        Err(e) => return broken(e.clone()),
+        Err(e) => return broken(e),
     };
-    let entry = match map.get(&file.map_path()) {
+    let entry = match map {
         Ok(entry) => entry,
         Err(e) => return broken(e),
     };

@@ -5,14 +5,19 @@
 #![allow(dead_code)]
 
 use std::fmt::Write as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::SystemTime;
 
 use freemapper_courseplan::map::MapIndex;
 use freemapper_courseplan::omap::MapDocument;
 use freemapper_courseplan::omap::read::read_map_file;
+use freemapper_courseplan::text::{FluentValue, Lang, Localize, text};
 use freemapper_courseplan_model::MapPoint;
+use tokio::sync::OnceCell;
+
+use super::Shared;
+use super::api::{file_name, tidy};
 
 /// Margin around the extent in the placeholder's page box, in mm.
 const MARGIN_MM: f64 = 10.0;
@@ -224,11 +229,11 @@ impl FileStamp {
         )
     }
 
-    pub(crate) fn of(path: &Path) -> Result<Self, String> {
-        let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    pub(crate) fn of(path: &Path) -> std::io::Result<Self> {
+        let meta = std::fs::metadata(path)?;
         Ok(Self {
             len: meta.len(),
-            modified: meta.modified().map_err(|e| e.to_string())?,
+            modified: meta.modified()?,
         })
     }
 }
@@ -241,31 +246,112 @@ pub(crate) struct MapEntry {
     pub doc: Arc<MapDocument>,
 }
 
-/// The server's map cache: rebuilt when the map file's stamp changes.
+/// What a map file yields: the entry, or the localized reason why not. Failures are cached like successes.
+pub(crate) type MapResult = Result<Arc<MapEntry>, String>;
+
+/// Called on the blocking thread right before a map file is parsed (tests slow the parse down with it).
+pub(crate) type ParseHook = Arc<dyn Fn() + Send + Sync>;
+
+struct Slot {
+    path: PathBuf,
+    stamp: FileStamp,
+    cell: Arc<OnceCell<MapResult>>,
+}
+
+/// The server's map cache: one slot, keyed by the map file's path and stamp. Parsing happens outside the
+/// state lock (see [`load_map`]); concurrent requests for the same key wait on one parse.
 pub(crate) struct MapCache {
     note: String,
-    entry: Option<MapEntry>,
+    slot: Option<Slot>,
+    pub parse_hook: Option<ParseHook>,
 }
 
 impl MapCache {
     pub(crate) fn new(note: String) -> Self {
-        Self { note, entry: None }
+        Self {
+            note,
+            slot: None,
+            parse_hook: None,
+        }
     }
 
-    pub(crate) fn get(&mut self, map_path: &Path) -> Result<&MapEntry, String> {
-        let stamp = FileStamp::of(map_path)?;
-        if self.entry.as_ref().is_none_or(|e| e.stamp != stamp) {
-            let doc =
-                read_map_file(map_path).map_err(|e| format!("{}: {e}", map_path.display()))?;
-            let index = MapIndex::from_document(&doc);
-            let view = PlaceholderMap::new(&index, self.note.clone());
-            self.entry = Some(MapEntry {
-                stamp,
-                view: Arc::new(view),
-                index: Arc::new(index),
-                doc: Arc::new(doc),
-            });
+    /// The cell for this key; a new key replaces the old slot.
+    fn cell(&mut self, path: &Path, stamp: FileStamp) -> Arc<OnceCell<MapResult>> {
+        if let Some(slot) = &self.slot
+            && slot.path == path
+            && slot.stamp == stamp
+        {
+            return slot.cell.clone();
         }
-        Ok(self.entry.as_ref().expect("entry was just set"))
+        let cell = Arc::new(OnceCell::new());
+        self.slot = Some(Slot {
+            path: path.to_owned(),
+            stamp,
+            cell: cell.clone(),
+        });
+        cell
     }
+}
+
+/// Reads and indexes the map file. Errors are localized, without the absolute path.
+fn build(path: &Path, stamp: FileStamp, note: String, lang: &Lang) -> MapResult {
+    let doc = read_map_file(path).map_err(|e| {
+        let reason = e.localize(lang);
+        tidy(
+            &text(
+                lang,
+                "error-editor-map",
+                &[
+                    ("file", FluentValue::from(file_name(path))),
+                    ("reason", FluentValue::from(reason)),
+                ],
+            ),
+            &[path],
+        )
+    })?;
+    let index = MapIndex::from_document(&doc);
+    let view = PlaceholderMap::new(&index, note);
+    Ok(Arc::new(MapEntry {
+        stamp,
+        view: Arc::new(view),
+        index: Arc::new(index),
+        doc: Arc::new(doc),
+    }))
+}
+
+/// The map at `map_path` through the cache. The state lock is held only to find the cache cell; the parse
+/// runs on the blocking pool, so other requests (`quit`, `revision`) are not held up.
+pub(crate) async fn load_map(state: &Shared, map_path: PathBuf) -> MapResult {
+    let lang = state.lock().await.lang.clone();
+    let stamp = FileStamp::of(&map_path).map_err(|e| {
+        tidy(
+            &text(
+                &lang,
+                "error-editor-map",
+                &[
+                    ("file", FluentValue::from(file_name(&map_path))),
+                    ("reason", FluentValue::from(e.to_string())),
+                ],
+            ),
+            &[&map_path],
+        )
+    })?;
+    let (cell, note, hook) = {
+        let mut guard = state.lock().await;
+        let cell = guard.map.cell(&map_path, stamp);
+        let hook = guard.map.parse_hook.clone();
+        (cell, guard.map.note.clone(), hook)
+    };
+    cell.get_or_init(|| async move {
+        tokio::task::spawn_blocking(move || {
+            if let Some(hook) = hook {
+                hook();
+            }
+            build(&map_path, stamp, note, &lang)
+        })
+        .await
+        .unwrap_or_else(|e| Err(e.to_string()))
+    })
+    .await
+    .clone()
 }

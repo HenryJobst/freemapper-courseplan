@@ -32,8 +32,13 @@ embedded assets and the browser opener, and freemapper-print's editor will need 
     copy;
   - bodies are limited to 1 MiB.
 - The CSP is `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
-  connect-src 'self'; frame-ancestors 'none'`. Inline styles stay allowed because the renderer's SVG carries
-  `style` attributes. The page has no inline script and no inline handler; a test reads the embedded files.
+  connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'`. Inline styles stay allowed
+  because the renderer's SVG carries `style` attributes. The page has no inline script and no inline handler; a test reads the embedded files.
+- **Shutdown and blocking work** *(Claude's call, stage 1 review)*. `POST api/quit` does not take the state lock;
+  it notifies a signal that lives outside the locked state. After the first stop signal (Ctrl+C or "Close
+  editor") open connections get two seconds, then the process exits with code 0, so a half-sent request cannot
+  hold it. Every save is atomic, so nothing is half-written. Reading, hashing and parsing files and rendering run
+  on the blocking pool (plan D1); the lock guards only the held state and is never held across an await.
 
 ## Consequences
 - The editor depends on the core tag that holds `freemapper-web`, and so on axum 0.8.9, rust-embed 8.13.0 and
