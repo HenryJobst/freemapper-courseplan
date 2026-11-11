@@ -83,8 +83,10 @@ export function createView(svgRoot, mapping) {
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 // The map layer: one <image> of api/map.svg for the visible part plus 50 % margin on every side, requested
-// 150 ms after the view stops moving. The old image stays until the new one has loaded.
-export function bindMapLayer(group, view) {
+// 150 ms after the view stops moving, never while it moves. The old image stays until the new one has loaded.
+// The image is an <image> element, never inline SVG: the clip ids of one SVG would clash with the page's own.
+// When the server refuses the section (413), `onError` gets its localized text; a later success gets null.
+export function bindMapLayer(group, view, onError = () => {}) {
   let timer = null;
   let ticket = 0;
 
@@ -118,6 +120,17 @@ export function bindMapLayer(group, view) {
         return;
       }
       for (const old of [...group.children]) if (old !== image) old.remove();
+      onError(null);
+    });
+    image.addEventListener("error", async () => {
+      image.remove();
+      if (mine !== ticket) return;
+      try {
+        const answer = await fetch(url);
+        if (!answer.ok && mine === ticket) onError(await answer.text());
+      } catch {
+        // The server is gone; the poll reports that.
+      }
     });
     image.setAttribute("href", url);
     group.append(image);

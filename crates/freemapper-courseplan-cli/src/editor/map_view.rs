@@ -18,6 +18,7 @@ use tokio::sync::OnceCell;
 
 use super::Shared;
 use super::api::{file_name, tidy};
+use super::render_map::RenderMap;
 
 /// Margin around the extent in the placeholder's page box, in mm.
 const MARGIN_MM: f64 = 10.0;
@@ -261,15 +262,13 @@ struct Slot {
 /// The server's map cache: one slot, keyed by the map file's path and stamp. Parsing happens outside the
 /// state lock (see [`load_map`]); concurrent requests for the same key wait on one parse.
 pub(crate) struct MapCache {
-    note: String,
     slot: Option<Slot>,
     pub parse_hook: Option<ParseHook>,
 }
 
 impl MapCache {
-    pub(crate) fn new(note: String) -> Self {
+    pub(crate) fn new() -> Self {
         Self {
-            note,
             slot: None,
             parse_hook: None,
         }
@@ -294,7 +293,7 @@ impl MapCache {
 }
 
 /// Reads and indexes the map file. Errors are localized, without the absolute path.
-fn build(path: &Path, stamp: FileStamp, note: String, lang: &Lang) -> MapResult {
+fn build(path: &Path, stamp: FileStamp, lang: &Lang) -> MapResult {
     let doc = read_map_file(path).map_err(|e| {
         let reason = e.localize(lang);
         tidy(
@@ -310,7 +309,23 @@ fn build(path: &Path, stamp: FileStamp, note: String, lang: &Lang) -> MapResult 
         )
     })?;
     let index = MapIndex::from_document(&doc);
-    let view = PlaceholderMap::new(&index, note);
+    let view = RenderMap::new(&doc, &index).map_err(|e| {
+        let reason = match e {
+            MapViewError::TooLarge => "too large".to_owned(),
+            MapViewError::Render(reason) => reason,
+        };
+        tidy(
+            &text(
+                lang,
+                "error-editor-map",
+                &[
+                    ("file", FluentValue::from(file_name(path))),
+                    ("reason", FluentValue::from(reason)),
+                ],
+            ),
+            &[path],
+        )
+    })?;
     Ok(Arc::new(MapEntry {
         stamp,
         view: Arc::new(view),
@@ -336,18 +351,18 @@ pub(crate) async fn load_map(state: &Shared, map_path: PathBuf) -> MapResult {
             &[&map_path],
         )
     })?;
-    let (cell, note, hook) = {
+    let (cell, hook) = {
         let mut guard = state.lock().await;
         let cell = guard.map.cell(&map_path, stamp);
         let hook = guard.map.parse_hook.clone();
-        (cell, guard.map.note.clone(), hook)
+        (cell, hook)
     };
     cell.get_or_init(|| async move {
         tokio::task::spawn_blocking(move || {
             if let Some(hook) = hook {
                 hook();
             }
-            build(&map_path, stamp, note, &lang)
+            build(&map_path, stamp, &lang)
         })
         .await
         .unwrap_or_else(|e| Err(e.to_string()))

@@ -914,7 +914,13 @@ async function loadMapInfo(fit) {
   const info = answer.data;
   if (!state.view) {
     state.view = createView(svg, info.mapping);
-    state.mapLayer = bindMapLayer(document.getElementById("layer-map"), state.view);
+    let mapRefused = false;
+    state.mapLayer = bindMapLayer(document.getElementById("layer-map"), state.view, (text) => {
+      // The overlay stays; the status bar says why the map area is empty.
+      if (text) status.say(text, true);
+      else if (mapRefused) status.say("", true);
+      mapRefused = Boolean(text);
+    });
     state.view.addEventListener("viewchange", () => {
       placeLayers();
     });

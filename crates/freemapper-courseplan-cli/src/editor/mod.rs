@@ -32,6 +32,7 @@ mod exchange;
 mod history;
 mod map_view;
 mod overlay;
+mod render_map;
 mod symbols;
 mod sync_panel;
 #[cfg(test)]
@@ -72,14 +73,13 @@ pub(crate) struct EditorState {
 
 impl EditorState {
     pub(crate) fn new(project: PathBuf, lang: Lang) -> Self {
-        let note = text(&lang, "editor-map-placeholder", &[]);
         let stamp = FileStamp::of(&project).ok();
         let loaded = Arc::new(Loaded::read(&project, &lang));
         Self {
             project,
             loaded,
             stamp,
-            map: MapCache::new(note),
+            map: MapCache::new(),
             history: history::UndoHistory::default(),
             server: CoursePlanServer::new(lang.clone()),
             checked: None,
@@ -640,7 +640,10 @@ async fn map_svg(State(state): State<Shared>, RawQuery(query): RawQuery) -> Resp
     };
     blocking_response(move || match entry.view.svg_for(rect, zoom) {
         Ok(svg) => ([(header::CONTENT_TYPE, "image/svg+xml")], svg).into_response(),
-        Err(MapViewError::TooLarge) => bad(&lang),
+        Err(MapViewError::TooLarge) => plain(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            text(&lang, "editor-map-too-large", &[]),
+        ),
         Err(MapViewError::Render(e)) => plain(StatusCode::INTERNAL_SERVER_ERROR, e),
     })
     .await

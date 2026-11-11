@@ -1034,7 +1034,7 @@ mod state {
         std::fs::remove_file(&path).unwrap();
         let (status, body) = get(&app, "/tok/api/map/view").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(body["placeholder"], true);
+        assert_eq!(body["placeholder"], false);
     }
 
     #[tokio::test]
@@ -3209,5 +3209,210 @@ mod sync_panel {
         let want =
             freemapper_courseplan::text::text(&Lang::english(), "editor-export-link-refused", &[]);
         assert_eq!(got["error"], want);
+    }
+}
+
+mod render {
+    use super::*;
+    use crate::editor::map_view::{FileStamp, MapView, PageRect};
+    use crate::editor::render_map::RenderMap;
+    use freemapper_courseplan::map::{FeatureGeometry, MapIndex};
+    use freemapper_courseplan::omap::read::read_map_file;
+
+    fn luebeck_path() -> String {
+        format!(
+            "{}/../../tests/fixtures/maps/luebeck.omap",
+            env!("CARGO_MANIFEST_DIR")
+        )
+    }
+
+    fn luebeck() -> (freemapper_courseplan::omap::MapDocument, RenderMap) {
+        let doc = read_map_file(std::path::Path::new(&luebeck_path())).unwrap();
+        let map = RenderMap::new(&doc, &MapIndex::from_document(&doc)).unwrap();
+        (doc, map)
+    }
+
+    fn rect_of(map: &RenderMap) -> PageRect {
+        map.page_box()
+    }
+
+    #[test]
+    fn render_mapping_round_trips() {
+        let (_, map) = luebeck();
+        let m = map.mapping();
+        assert_eq!(m.k, 1.0);
+        for (x, y) in [(0.0, 0.0), (-12.25, 33.5), (234.5, -87.25)] {
+            let (px, py) = m.to_page(freemapper_courseplan_model::MapPoint { x, y });
+            let back = m.to_map(px, py);
+            assert!((back.x - x).abs() < 1e-9 && (back.y - y).abs() < 1e-9);
+        }
+    }
+
+    #[test]
+    fn render_overlay_aligns_with_map() {
+        let (doc, map) = luebeck();
+        let index = MapIndex::from_document(&doc);
+        let mut checked = 0;
+        for feature in index.features() {
+            let (FeatureGeometry::Line(points), Some(code)) =
+                (&feature.geometry, &feature.symbol_code)
+            else {
+                continue;
+            };
+            let p = &points[points.len() / 2];
+            let at = map.mapping().to_page(p.clone());
+            let hits = map.hit_at(at, 0.1);
+            assert!(
+                hits.iter().any(|h| &h.symbol_code == code),
+                "line symbol {code} at {p:?} is not under its own page position {at:?}: {hits:?}"
+            );
+            checked += 1;
+            if checked == 300 {
+                break;
+            }
+        }
+        assert!(checked >= 10, "only {checked} line objects");
+    }
+
+    #[test]
+    fn the_map_fits_the_page() {
+        let (_, map) = luebeck();
+        assert!(!map.is_clipped());
+    }
+
+    #[test]
+    fn page_box_holds_the_extent_with_a_margin() {
+        let (doc, map) = luebeck();
+        let (min, max) = MapIndex::from_document(&doc).extent().unwrap();
+        let (a, b) = (map.mapping().to_page(min), map.mapping().to_page(max));
+        let r = map.page_box();
+        assert!((a.0 - r.x0 - 10.0).abs() < 1e-6 && (a.1 - r.y0 - 10.0).abs() < 1e-6);
+        assert!((r.x1 - b.0 - 10.0).abs() < 1e-6 && (r.y1 - b.1 - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn same_view_same_svg() {
+        let (_, map) = luebeck();
+        let view = PageRect {
+            x0: 100.0,
+            y0: 160.0,
+            x1: 200.0,
+            y1: 240.0,
+        };
+        let a = map.svg_for(view, 4.0).unwrap();
+        let (_, other) = luebeck();
+        assert_eq!(a, other.svg_for(view, 4.0).unwrap());
+        assert!(a.contains("<path"), "no map content");
+        assert!(a.len() > 1000);
+    }
+
+    #[test]
+    fn map_svg_is_cached_per_view() {
+        let (_, map) = luebeck();
+        let view = rect_of(&map);
+        let first = map.svg_for(view, 1.0).unwrap();
+        assert_eq!(map.render_count(), 1);
+        assert_eq!(map.svg_for(view, 1.0).unwrap(), first);
+        assert_eq!(map.render_count(), 1);
+        map.svg_for(view, 2.0).unwrap();
+        assert_eq!(map.render_count(), 2);
+    }
+
+    #[test]
+    fn invalid_views_are_refused() {
+        let (_, map) = luebeck();
+        let bad = PageRect {
+            x0: 0.0,
+            y0: 0.0,
+            x1: f64::NAN,
+            y1: 10.0,
+        };
+        assert!(map.svg_for(bad, 1.0).is_err());
+        assert!(map.svg_for(rect_of(&map), 0.0).is_err());
+    }
+
+    /// Timing on a big map, for the ADR 0046 addendum (not run by default; use `--release`):
+    /// `MEASURE_MAP=/path/to/map.omap cargo test --release -p freemapper-courseplan-cli measure_render -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn measure_render() {
+        use std::time::Instant;
+        let path = std::env::var("MEASURE_MAP").expect("MEASURE_MAP");
+        let t = Instant::now();
+        let doc = read_map_file(std::path::Path::new(&path)).unwrap();
+        let parse = t.elapsed();
+        let t = Instant::now();
+        let map = RenderMap::new(&doc, &MapIndex::from_document(&doc)).unwrap();
+        let build = t.elapsed();
+        let b = map.page_box();
+        let t = Instant::now();
+        let whole = map.svg_for(b, 2.0);
+        let first = t.elapsed();
+        let (cx, cy) = ((b.x0 + b.x1) / 2.0, (b.y0 + b.y1) / 2.0);
+        let zoomed = PageRect {
+            x0: cx - 30.0,
+            y0: cy - 30.0,
+            x1: cx + 30.0,
+            y1: cy + 30.0,
+        };
+        let t = Instant::now();
+        let z = map.svg_for(zoomed, 20.0);
+        let zoom_time = t.elapsed();
+        eprintln!(
+            "MEASURE parse {parse:?} build_page {build:?} whole-page svg {first:?} ({:?} bytes) zoomed 60x60 mm at 20 px/mm {zoom_time:?} ({:?} bytes) clipped={}",
+            whole.as_ref().map(String::len),
+            z.as_ref().map(String::len),
+            map.is_clipped()
+        );
+    }
+
+    fn router_for(path: &std::path::Path) -> axum::Router {
+        let state = EditorState::new(path.into(), Lang::english());
+        router("/tok", Arc::new(Mutex::new(state)), Arc::new(Notify::new()))
+    }
+
+    async fn get(app: &axum::Router, uri: &str) -> (StatusCode, String) {
+        let response = app
+            .clone()
+            .oneshot(Request::get(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        let status = response.status();
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        (status, String::from_utf8_lossy(&bytes).into_owned())
+    }
+
+    #[tokio::test]
+    async fn oversized_view_is_413_with_message() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state::project_on(dir.path(), "luebeck.omap", |_| {});
+        let app = router_for(&path);
+        let (status, body) = get(&app, "/tok/api/map.svg?x0=0&y0=0&x1=300&y1=300&zoom=900").await;
+        assert_eq!(status, StatusCode::PAYLOAD_TOO_LARGE);
+        let want = freemapper_courseplan::text::text(&Lang::english(), "editor-map-too-large", &[]);
+        assert_eq!(body, want);
+        let de = freemapper_courseplan::text::text(
+            &freemapper_courseplan::text::parse_lang_arg("de").unwrap(),
+            "editor-map-too-large",
+            &[],
+        );
+        assert_ne!(de, want);
+        // The map info still answers: the page keeps the overlay.
+        let (status, info) = get(&app, "/tok/api/map/view").await;
+        assert_eq!(status, StatusCode::OK, "{info}");
+        assert!(info.contains("\"placeholder\":false"), "{info}");
+    }
+
+    #[tokio::test]
+    async fn a_view_inside_the_budget_is_an_svg() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = state::project_on(dir.path(), "luebeck.omap", |_| {});
+        let app = router_for(&path);
+        let (status, body) = get(&app, "/tok/api/map.svg?x0=50&y0=50&x1=150&y1=150&zoom=8").await;
+        assert_eq!(status, StatusCode::OK);
+        assert!(body.starts_with("<svg"));
+        let _ = FileStamp::of(&path);
     }
 }
