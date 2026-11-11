@@ -878,22 +878,35 @@ fn time_large_addition(controls: u32, courses: u32) -> std::time::Duration {
     elapsed
 }
 
-/// I2: classify and apply used to scan every field and every course per leg (88 s on 10,000 controls). The
-/// size fits a plain debug build; doubling it must stay far from quadratic.
+/// I2: classify and apply used to scan every field and every course per leg (88 s on 10,000 controls).
+///
+/// The test catches that blow-up by its growth, not by an absolute time: wall-clock time of a CPU-bound debug
+/// build scales with the load of the machine (3 to 12 times on a busy CI host), so a fixed limit is flaky.
+/// It measures three sizes n, 2n and 4n, takes the faster of two runs per size to drop outliers, and asserts
+/// t(4n) / t(n) < 10. Linear work gives about 4, quadratic work 16. (Thread CPU time would be steadier, but
+/// reading it needs `libc`, which this crate does not depend on.) The absolute bound is only a hang guard.
 #[test]
 fn a_large_purple_pen_addition_syncs_in_reasonable_time() {
-    let small = time_large_addition(1_500, 150);
-    let large = time_large_addition(3_000, 300);
+    let fastest = |controls: u32, courses: u32| {
+        (0..2)
+            .map(|_| time_large_addition(controls, courses))
+            .min()
+            .unwrap()
+    };
+    let (n1, n2, n4) = (
+        fastest(1_000, 100),
+        fastest(2_000, 200),
+        fastest(4_000, 400),
+    );
     assert!(
-        large < std::time::Duration::from_secs(25),
-        "sync took {large:?}"
+        n4 < std::time::Duration::from_secs(300),
+        "sync of the largest size took {n4:?}"
     );
     let floor = std::time::Duration::from_millis(200);
+    let ratio = n4.as_secs_f64() / n1.max(floor).as_secs_f64();
     assert!(
-        // Factor 5, not 3.5: linear work gives about 2, and a debug build on a loaded CI machine is noisy
-        // enough to push the ratio up; the 25 s bound above is what catches the old blow-up (88 s before I2).
-        large.as_secs_f64() < 5.0 * small.max(floor).as_secs_f64(),
-        "t(n) = {small:?}, t(2n) = {large:?}"
+        ratio < 10.0,
+        "t(n) = {n1:?}, t(2n) = {n2:?}, t(4n) = {n4:?}: t(4n) / t(n) = {ratio:.1}, quadratic would be 16"
     );
 }
 
