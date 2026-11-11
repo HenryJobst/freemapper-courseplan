@@ -1,8 +1,22 @@
 // Properties of the selection. Values are put in with textContent or an input's value only.
-// A control's position is editable; its code and kind are shown as they are.
+// A control's position and code and a course's name are editable; the kind is shown as it is.
 
 import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
+import { legLabel } from "./course.js";
+import * as numbers from "./numbers.js";
+import {
+  MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
+} from "./course.js";
+
+export { nameProblem };
+
+let wantFocus = null;
+
+// The element with this id gets the focus when the properties are built next (a moved stop keeps it).
+export function focusAfter(id) {
+  wantFocus = id;
+}
 
 const COLUMNS = ["c", "d", "e", "f", "g", "h"];
 
@@ -22,18 +36,65 @@ function specialPosition(s) {
   return s.map_mm ?? s.points?.[0] ?? s.polygon?.[0] ?? null;
 }
 
-function courseRows(list, state, name) {
+const MAX_CODE_CHARS = 64;
+
+// A text field for the code of a control or the name of a course. A refused text shows `errorId`'s message at
+// the field; a good one different from `value` is passed to commit(text). Returns the message element.
+function nameField(list, { id, labelId, value, limit, others, errorId, commit }) {
+  const term = document.createElement("dt");
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = t(labelId);
+  term.append(label);
+  const detail = document.createElement("dd");
+  const input = document.createElement("input");
+  input.id = id;
+  input.type = "text";
+  input.autocomplete = "off";
+  input.value = value;
+  detail.append(input);
+  list.append(term, detail);
+  const error = document.createElement("p");
+  error.id = `${id}-error`;
+  error.className = "field-error";
+  error.hidden = true;
+  error.textContent = t(errorId);
+  input.setAttribute("aria-describedby", error.id);
+  input.addEventListener("input", () => {
+    input.dataset.dirty = "1";
+  });
+  input.addEventListener("change", () => {
+    delete input.dataset.dirty;
+    const bad = nameProblem(input.value, limit, others);
+    input.setAttribute("aria-invalid", String(bad));
+    error.hidden = !bad;
+    if (!bad && input.value !== value) commit(input.value);
+  });
+  return error;
+}
+
+function courseRows(host, list, state, name, actions) {
   const course = state.event.courses.find((c) => c.name === name);
   if (!course) return;
   const info = state.courses.find((c) => c.name === name);
-  row(list, "editor-prop-name", course.name);
+  const error = nameField(list, {
+    id: "prop-name",
+    labelId: "editor-prop-name",
+    value: course.name,
+    limit: MAX_NAME_CHARS,
+    others: state.event.courses.map((c) => c.name).filter((n) => n !== name),
+    errorId: "editor-error-course-name",
+    commit: (to) => actions.renameCourse(name, to),
+  });
+  host.append(list, error);
   row(list, "editor-prop-kind", t("editor-kind-course"));
   row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
-  row(list, "editor-prop-climb", course.climb_m == null ? null : `${course.climb_m} m`);
   row(list, "editor-prop-start", course.start);
   row(list, "editor-prop-finish", course.finish);
-  row(list, "editor-prop-classes", (course.classes ?? []).join(", "));
-  row(list, "editor-prop-stops", course.controls.map((c) => c.code).join(" → "));
+  courseFields(list, state, course, actions);
+  stopList(host, course, actions);
+  numbers.panel(host, actions);
+  courseRemoveButton(host, course, actions);
 }
 
 // A decimal number in millimetres; a comma counts as the decimal separator. Null when it is not a number.
@@ -107,7 +168,15 @@ function positionFields(list, control, actions) {
 function controlRows(host, list, state, code, actions) {
   const control = state.event.controls.find((c) => String(c.code) === String(code));
   if (!control) return;
-  row(list, "editor-prop-code", control.code);
+  const codeError = nameField(list, {
+    id: "prop-code",
+    labelId: "editor-prop-code",
+    value: String(control.code),
+    limit: MAX_CODE_CHARS,
+    others: state.event.controls.map((c) => String(c.code)).filter((c) => c !== String(code)),
+    errorId: "editor-error-code",
+    commit: (to) => actions.changeCode(String(control.code), to),
+  });
   row(list, "editor-prop-kind", kindLabel(control.kind ?? "control"));
   const error = positionFields(list, control, actions);
   // A crossing point has no control description.
@@ -120,7 +189,7 @@ function controlRows(host, list, state, code, actions) {
     .filter((c) => c.controls.some((x) => String(x.code) === String(code)))
     .map((c) => c.name);
   row(list, "editor-prop-used-in", users.join(", "));
-  host.append(list, error);
+  host.append(list, codeError, error);
   const remove = document.createElement("button");
   remove.type = "button";
   remove.id = "prop-delete";
@@ -159,19 +228,83 @@ export function showNear(host, answer) {
   }
 }
 
-function specialRows(list, state, id) {
+// A selected leg or bend: the course and the leg, the number of bends and the taped box. The course length is
+// shown here too, because every bend changes it.
+function legRows(host, list, state, selection, overlay, actions) {
+  const leg = overlay?.legs.find((l) => l.after === selection.after);
+  if (!leg) return;
+  const info = state.courses.find((c) => c.name === selection.course);
+  row(list, "editor-prop-kind", t("editor-leg-word"));
+  row(list, "editor-prop-name", selection.course);
+  row(list, "editor-leg-word", legLabel(leg.after));
+  row(list, "editor-prop-bends", leg.bends.length);
+  if (selection.kind === "bend") row(list, "editor-prop-bend", `${selection.index + 1} / ${leg.bends.length}`);
+  row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
+  const term = document.createElement("dt");
+  const label = document.createElement("label");
+  label.htmlFor = "prop-taped";
+  label.textContent = t("editor-prop-taped");
+  term.append(label);
+  const detail = document.createElement("dd");
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.id = "prop-taped";
+  box.checked = leg.taped;
+  box.addEventListener("change", () => actions.setTaped(leg.after, box.checked));
+  detail.append(box);
+  list.append(term, detail);
+}
+
+// A selected special object: id, kind, position, the courses as check boxes (none ticked: all courses; start and
+// finish have no course list) and the delete button. No operation moves a special object, so the panel says to
+// delete and draw it again.
+function specialRows(host, list, state, id, actions) {
   const special = state.event.specials.find((s) => s.id === id);
   if (!special) return;
   row(list, "editor-prop-id", special.id);
   row(list, "editor-prop-kind", kindLabel(special.kind));
   const at = specialPosition(special);
   row(list, "editor-prop-position", at ? mm(at) : null);
-}
-
-function classRows(list, state, name) {
-  row(list, "editor-prop-name", name);
-  const courses = state.event.courses.filter((c) => (c.classes ?? []).includes(name)).map((c) => c.name);
-  row(list, "editor-prop-used-in", courses.join(", "));
+  const count = (special.points ?? special.polygon ?? []).length;
+  if (count > 1) row(list, "editor-prop-points", count);
+  host.append(list);
+  if (special.kind !== "start" && special.kind !== "finish") {
+    const ticked = special.courses ?? [];
+    const group = document.createElement("fieldset");
+    group.className = "courses";
+    const legend = document.createElement("legend");
+    legend.textContent = t("editor-prop-courses");
+    group.append(legend);
+    state.event.courses.forEach((course, i) => {
+      const label = document.createElement("label");
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.id = `prop-course-${i}`;
+      box.checked = ticked.includes(course.name);
+      box.addEventListener("change", () => {
+        const names = state.event.courses.map((c, k) => [c.name, k])
+          .filter(([, k]) => host.querySelector(`#prop-course-${k}`)?.checked)
+          .map(([name]) => name);
+        actions.setSpecialCourses(special.id, names);
+      });
+      label.append(box, ` ${course.name}`);
+      group.append(label);
+    });
+    const hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = t(ticked.length === 0 ? "editor-prop-courses-all" : "editor-prop-courses-some");
+    group.append(hint);
+    host.append(group);
+  }
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.id = "prop-delete";
+  remove.textContent = t("editor-prop-delete-special");
+  remove.addEventListener("click", () => actions.remove());
+  const note = document.createElement("p");
+  note.className = "hint";
+  note.textContent = t("editor-prop-special-no-move");
+  host.append(remove, note);
 }
 
 // Fills `host` for the selection { kind, id, course? }, or the empty hint without one.
@@ -182,7 +315,8 @@ export function show(host, state, selection, overlay, actions) {
   if (state && selection && host.dataset.key === key && host.contains(active) && active.dataset?.dirty) return;
   host.dataset.key = key;
   // Keep the focus in the field being edited: the page is rebuilt after each change.
-  const focused = host.contains(document.activeElement) ? document.activeElement.id : "";
+  const focused = wantFocus ?? (host.contains(document.activeElement) ? document.activeElement.id : "");
+  wantFocus = null;
   host.replaceChildren();
   if (!state || !selection) {
     const hint = document.createElement("p");
@@ -194,21 +328,27 @@ export function show(host, state, selection, overlay, actions) {
   const list = document.createElement("dl");
   list.className = "props";
   switch (selection.kind) {
-    case "course": courseRows(list, state, selection.id); break;
+    case "course": courseRows(host, list, state, selection.id, actions); break;
     case "control": controlRows(host, list, state, selection.id, actions); break;
-    case "special": specialRows(list, state, selection.id); break;
-    case "class": classRows(list, state, selection.id); break;
+    case "leg":
+    case "bend": legRows(host, list, state, selection, overlay, actions); break;
+    case "special": specialRows(host, list, state, selection.id, actions); break;
+    case "class": classPanel(host, list, state, selection.id, actions); break;
+    case "event": eventPanel(host, list, state, actions); break;
     case "number": {
       const n = overlay?.numbers.find((x) => String(x.index) === String(selection.id));
       if (n) {
         row(list, "editor-prop-code", n.code);
         row(list, "editor-prop-name", n.text);
+        row(list, "editor-prop-source", t(`editor-number-source-${n.source}`));
+        host.append(list);
+        numbers.panel(host, actions);
       }
       break;
     }
     default: break;
   }
-  if (selection.kind !== "control") host.append(list);
+  if (!["control", "course", "class", "event", "number", "special"].includes(selection.kind)) host.append(list);
   if (focused) host.querySelector(`#${focused}`)?.focus();
   if (selection.kind === "course" && overlay?.numbers.some((n) => n.source === "auto")) {
     const note = document.createElement("p");

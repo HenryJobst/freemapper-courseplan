@@ -49,6 +49,12 @@ pub enum ControlCmd {
         #[arg(long, value_name = "X,Y", allow_hyphen_values = true)]
         at: String,
     },
+    /// Change the code of a control
+    Code {
+        project: PathBuf,
+        from: String,
+        to: String,
+    },
     /// Remove a control
     Remove { project: PathBuf, code: String },
     /// Set the description symbols of a control
@@ -200,6 +206,12 @@ pub enum CourseCmd {
         /// Codes in running order, separated by commas
         codes: String,
     },
+    /// Rename a course
+    Rename {
+        project: PathBuf,
+        from: String,
+        to: String,
+    },
     /// Remove a course
     Remove { project: PathBuf, name: String },
     /// Set the bends and the marked-route flag of one leg
@@ -305,9 +317,9 @@ impl SpecialKind {
 
 /// Arguments that hold codes, ids or names, or lists of them. Their values lose surrounding white
 /// space, each list item on its own, so `--controls "31, 32"` means 31 and 32.
-const TRIMMED: [&str; 13] = [
+const TRIMMED: [&str; 15] = [
     "code", "id", "name", "start", "finish", "controls", "classes", "courses", "rule", "course",
-    "leg", "base", "overlay",
+    "leg", "base", "overlay", "from", "to",
 ];
 
 fn trimmed(value: &str) -> Result<String, std::convert::Infallible> {
@@ -514,6 +526,22 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
                 &[("code", v(code)), ("x", v(x)), ("y", v(y))],
             );
         }
+        ControlCmd::Code { project, from, to } => {
+            let mut file = load(lang, &project)?;
+            edit::change_code(
+                &mut file.event,
+                &ControlCode(from.clone()),
+                &ControlCode(to.clone()),
+            )
+            .map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            let id = if from == to {
+                "cli-edit-control-code-unchanged"
+            } else {
+                "cli-edit-control-code-changed"
+            };
+            say(lang, id, &[("from", v(from)), ("to", v(to))]);
+        }
         ControlCmd::Remove { project, code } => {
             let mut file = load(lang, &project)?;
             let removed = edit::remove_control(&mut file.event, &ControlCode(code.clone()))
@@ -530,6 +558,7 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
                 );
             }
             say_cleared(lang, &removed.cleared);
+            say_dropped(lang, &removed.dropped);
         }
         ControlCmd::Describe {
             project,
@@ -901,7 +930,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             let list = codes(list.split(',').map(|c| c.trim().to_owned()));
             let mut file = load(lang, &project)?;
             let sequence: Vec<ControlCode> = list.iter().cloned().map(ControlCode).collect();
-            let cleared = edit::set_course_controls(&mut file.event, &name, &sequence)
+            let stops = edit::set_course_controls(&mut file.event, &name, &sequence)
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             let shown = if list.is_empty() {
@@ -914,7 +943,19 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 "cli-edit-course-controls",
                 &[("name", v(name)), ("codes", v(shown))],
             );
-            say_cleared(lang, &cleared);
+            say_cleared(lang, &stops.cleared);
+            say_dropped(lang, &stops.dropped);
+        }
+        CourseCmd::Rename { project, from, to } => {
+            let mut file = load(lang, &project)?;
+            edit::change_course_name(&mut file.event, &from, &to).map_err(|e| refused(lang, e))?;
+            save(lang, &mut file)?;
+            let id = if from == to {
+                "cli-edit-course-unchanged"
+            } else {
+                "cli-edit-course-renamed"
+            };
+            say(lang, id, &[("from", v(from)), ("to", v(to))]);
         }
         CourseCmd::Remove { project, name } => {
             let mut file = load(lang, &project)?;
@@ -952,10 +993,17 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 .collect::<Result<Vec<_>, _>>()?;
             let count = bends.len();
             let mut file = load(lang, &project)?;
-            edit::set_leg(&mut file.event, &name, leg, bends, taped).map_err(|e| match e {
-                edit::EditError::BadIndex { .. } => bad_index(shown.unwrap_or(0)),
-                other => refused(lang, other),
-            })?;
+            let extent = if bends.is_empty() {
+                None
+            } else {
+                map_extent(lang, &file)?
+            };
+            edit::set_leg(&mut file.event, extent, &name, leg, bends, taped).map_err(
+                |e| match e {
+                    edit::EditError::BadIndex { .. } => bad_index(shown.unwrap_or(0)),
+                    other => refused(lang, other),
+                },
+            )?;
             save(lang, &mut file)?;
             let taped = text(
                 lang,
@@ -1142,6 +1190,21 @@ fn say_cleared(lang: &Lang, cleared: &[edit::ClearedLeg]) {
                 &[name, ("index", v(after.to_string()))],
             ),
         }
+    }
+}
+
+/// One line per accepted finding that an edit dropped because its leg no longer exists.
+fn say_dropped(lang: &Lang, dropped: &[freemapper_courseplan_model::LegRef]) {
+    for leg in dropped {
+        say(
+            lang,
+            "cli-edit-acceptance-dropped",
+            &[
+                ("name", v(leg.course.clone())),
+                ("from", v(leg.from.clone())),
+                ("to", v(leg.to.clone())),
+            ],
+        );
     }
 }
 

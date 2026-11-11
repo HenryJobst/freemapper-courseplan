@@ -7,10 +7,16 @@ import * as props from "./props.js";
 import * as status from "./status.js";
 import * as tools from "./tools.js";
 import * as keys from "./keys.js";
+import * as course from "./course.js";
+import * as bends from "./bends.js";
+import * as numbers from "./numbers.js";
+import * as specials from "./specials.js";
 
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
 const DRAG_PIXELS = 4;
+// A click within this many screen pixels of the last point of a drawing repeats it and adds nothing.
+const DUPLICATE_PIXELS = 3;
 
 // What the page holds. selection = { kind: "control"|"course"|"special"|"leg"|"number"|"bend"|"class", id, course?, index? }
 const state = {
@@ -25,6 +31,8 @@ const state = {
   seen: null,
   closed: false,
   revision: null,
+  // The answer of api/rules (profiles, overlays, categories), or null while unknown: the panels then take text.
+  rules: null,
 };
 const NEAR_RADIUS_MM = 3;
 let pollTimer = null;
@@ -54,8 +62,23 @@ function treeGroups() {
   const event = state.data.event;
   const crossing = t("editor-kind-crossing-point");
   return [
-    { id: "courses", label: t("editor-tree-courses"), items: event.courses.map((c) => ({ key: `course:${c.name}`, label: c.name })) },
-    { id: "classes", label: t("editor-tree-classes"), items: event.classes.map((c) => ({ key: `class:${c.name}`, label: c.name })) },
+    { id: "event", label: t("editor-tree-event"), items: [{ key: "event:settings", label: t("editor-tree-event-settings") }] },
+    {
+      id: "courses",
+      label: t("editor-tree-courses"),
+      items: [
+        ...event.courses.map((c) => ({ key: `course:${c.name}`, label: c.name })),
+        { key: "action:new-course", label: t("editor-tree-new-course") },
+      ],
+    },
+    {
+      id: "classes",
+      label: t("editor-tree-classes"),
+      items: [
+        ...event.classes.map((c) => ({ key: `class:${c.name}`, label: c.name })),
+        { key: "action:new-class", label: t("editor-tree-new-class") },
+      ],
+    },
     {
       id: "controls",
       label: t("editor-tree-controls"),
@@ -83,10 +106,20 @@ function renderTree() {
 }
 
 function redraw() {
-  overlay.draw(state.overlay, state.selection, state.course);
+  overlay.draw(state.overlay, state.selection, state.course, extras());
   props.show(propsHost, state.data, state.selection, state.overlay, propActions);
   state.tree?.setCurrent(state.treeKey);
   loadNear();
+}
+
+// The line or area being drawn with the special tool, or null: { kind, shape, points (map mm), cursor }.
+let draft = null;
+
+// Course mode: the controls the course does not visit are drawn faint and can be clicked; a chosen leg is thick.
+let pendingLeg = null;
+
+function extras() {
+  return { pool: tools.getTool() === "course" ? state.pool : [], pending: pendingLeg, draft };
 }
 
 function controlOf(code) {
@@ -199,6 +232,20 @@ async function moveControl(code, x, y) {
   if (done) status.say("editor-status-moved");
 }
 
+async function changeCode(from, to) {
+  const done = await runOp("set_control_code", { from, to });
+  if (!done) return;
+  status.say("editor-status-code-changed");
+  await selectKey(`control:${to}`);
+}
+
+async function renameCourse(from, to) {
+  const done = await runOp("rename_course", { from, to });
+  if (!done) return;
+  status.say("editor-status-course-renamed");
+  await selectKey(`course:${to}`);
+}
+
 async function placeControl(at, crossing) {
   const body = { at: { x: mmValue(at[0]), y: mmValue(at[1]) } };
   if (crossing) body.crossing_point = true;
@@ -210,6 +257,7 @@ async function placeControl(at, crossing) {
 
 const confirmDialog = document.getElementById("confirm-dialog");
 const helpDialog = document.getElementById("help-dialog");
+const nameDialog = document.getElementById("name-dialog");
 
 function coursesUsing(code) {
   return state.data.event.courses
@@ -246,6 +294,22 @@ function refreshConfirm() {
 // Deleting asks first when a course visits the control.
 function requestDelete() {
   const selected = state.selection;
+  if (draft) {
+    // While a line or an area is drawn, Delete takes back its last point.
+    draft.points.pop();
+    if (draft.points.length === 0) draft = null;
+    showOverlay();
+    draftHint();
+    return;
+  }
+  if (selected?.kind === "special" && !busy) {
+    removeSpecial(selected.id);
+    return;
+  }
+  if (selected?.kind === "bend") {
+    removeBend();
+    return;
+  }
   if (selected?.kind !== "control" || !controlOf(selected.id) || busy) return;
   if (!fillConfirm(selected.id)) {
     deleteControl(selected.id);
@@ -261,7 +325,238 @@ document.getElementById("confirm-yes").addEventListener("click", () => {
   deleteControl(confirmDialog.dataset.code);
 });
 
-const propActions = { move: moveControl, remove: requestDelete };
+// --- Special objects -------------------------------------------------------------------------------------------
+// Point kinds are placed by one click; lines and areas by clicks, finished with Enter or a double click. Each
+// finished object is one add_special, so one undo step. Nothing moves a special object: delete and draw again.
+
+const kindSelect = document.getElementById("special-kind");
+const idInput = document.getElementById("special-id");
+
+function takenIds() {
+  return state.data?.event.specials.map((s) => s.id) ?? [];
+}
+
+function proposeId() {
+  idInput.value = specials.nextId(kindSelect.value, takenIds());
+}
+
+function fillKinds() {
+  kindSelect.replaceChildren(...specials.KINDS.map((k) => {
+    const option = document.createElement("option");
+    option.value = k.kind;
+    option.textContent = overlay.kindLabel(k.kind);
+    return option;
+  }));
+}
+
+function draftHint() {
+  if (!draft) {
+    status.say("editor-status-special-tool");
+    return;
+  }
+  status.say(`${draft.points.length} ${t("editor-status-draft-points")}. ${t("editor-status-draft-hint")}`, true);
+}
+
+function dropDraft() {
+  if (!draft) return false;
+  draft = null;
+  showOverlay();
+  status.say("editor-status-draft-cancelled");
+  return true;
+}
+
+// Sends the object: the id in the toolbar is the one used; a refused id keeps the drawing.
+async function addSpecial(kind, points) {
+  const id = idInput.value;
+  if (course.nameProblem(id, course.MAX_NAME_CHARS, takenIds())) {
+    status.say("editor-error-special-id");
+    idInput.focus();
+    return;
+  }
+  const done = await runOp("add_special", specials.addBody(kind, id, points));
+  if (!done) return;
+  draft = null;
+  status.say("editor-status-special-added");
+  proposeId();
+  await selectKey(`special:${done.result.id}`);
+}
+
+function specialClick(at) {
+  const entry = specials.info(kindSelect.value);
+  if (entry.shape === "point") {
+    addSpecial(entry.kind, [at]);
+    return;
+  }
+  draft ??= { kind: entry.kind, shape: entry.shape, points: [], cursor: null };
+  // The second click of a double click lands on the point the first one set: it adds nothing.
+  const last = draft.points.at(-1);
+  if (last && Math.hypot(at[0] - last[0], at[1] - last[1]) < Math.max(DUPLICATE_PIXELS / state.view.scale, 0.01)) return;
+  draft.points.push(at);
+  showOverlay();
+  draftHint();
+}
+
+function finishDraft() {
+  if (!draft) return;
+  if (!specials.enough(draft.kind, draft.points)) {
+    status.say("editor-status-draft-short");
+    return;
+  }
+  addSpecial(draft.kind, draft.points);
+}
+
+async function removeSpecial(id) {
+  const done = await runOp("remove_special", { id });
+  if (!done) return;
+  status.say("editor-status-special-deleted");
+}
+
+async function setSpecialCourses(id, names) {
+  const done = await runOp("set_special_courses", specials.coursesBody(id, names));
+  if (done) status.say("editor-status-special-courses");
+}
+
+kindSelect.addEventListener("change", () => {
+  dropDraft();
+  proposeId();
+});
+
+// --- Courses and categories ------------------------------------------------------------------------------------
+
+async function newCourse() {
+  const specials = state.data.event.specials;
+  const starts = specials.filter((s) => s.kind === "start");
+  const finishes = specials.filter((s) => s.kind === "finish");
+  if (starts.length !== 1 || finishes.length !== 1) {
+    status.say("editor-status-need-start-finish");
+    return;
+  }
+  const name = await course.askName({
+    titleId: "editor-new-course-title",
+    labelId: "editor-new-course-label",
+    errorId: "editor-error-course-name",
+    others: state.data.event.courses.map((c) => c.name),
+  });
+  if (name === null) return;
+  const done = await runOp("add_course", { name, start: starts[0].id, finish: finishes[0].id });
+  if (!done) return;
+  status.say("editor-status-course-created");
+  await selectKey(`course:${name}`);
+}
+
+async function newClass() {
+  const name = await course.askName({
+    titleId: "editor-new-class-title",
+    labelId: "editor-new-class-label",
+    errorId: "editor-error-class-name",
+    others: state.data.event.classes.map((c) => c.name),
+  });
+  if (name === null) return;
+  const done = await runOp("add_class", { name });
+  if (!done) return;
+  status.say("editor-status-class-added");
+  await selectKey(`class:${name}`);
+}
+
+// One set_course_controls with the whole new list; `focusId` is the element to keep the focus on.
+async function setStops(name, codes, focusId) {
+  if (focusId) props.focusAfter(focusId);
+  const done = await runOp("set_course_controls", { name, codes });
+  if (!done) {
+    props.focusAfter(null);
+    return;
+  }
+  status.say(course.changedText(done.result.cleared_legs), true);
+}
+
+async function runAndSay(tool, body, messageId, after = null) {
+  const done = await runOp(tool, body);
+  if (!done) return;
+  status.say(messageId);
+  if (after) await after();
+}
+
+const setDetails = (name, body) => runAndSay("set_course_details", { name, ...body }, "editor-status-details-changed");
+const removeCourse = (name) => runAndSay("remove_course", { name }, "editor-status-course-deleted", () => selectKey("all"));
+const setClass = (name, body) => runAndSay("set_class", { name, ...body }, "editor-status-class-changed");
+const removeClass = (name) => runAndSay("remove_class", { name }, "editor-status-class-deleted", () => selectKey("all"));
+const setProfile = (base, overlays) => runAndSay("set_rule_profile", { base, overlays }, "editor-status-profile-changed");
+const setWindow = (minutes) =>
+  runAndSay("set_start_window", minutes === null ? { no_start_window: true } : { minutes }, "editor-status-window-changed");
+
+// One set_leg per gesture: the leg's whole bend list and its taped flag.
+async function setLeg(after, list, taped, messageId) {
+  const done = await runOp("set_leg", bends.legBody(state.course, after, list, taped));
+  if (done) status.say(messageId);
+  return done;
+}
+
+const legOf = (after) => state.overlay?.legs.find((l) => l.after === after);
+
+function setTaped(after, taped) {
+  const leg = legOf(after);
+  if (leg) setLeg(after, leg.bends, taped, "editor-status-taped-changed");
+}
+
+function removeBend() {
+  const selected = state.selection;
+  const leg = selected?.kind === "bend" ? legOf(selected.after) : null;
+  if (!leg || busy) return;
+  state.selection = { kind: "leg", id: String(leg.after), after: leg.after, course: state.course };
+  setLeg(leg.after, bends.withoutBend(leg.bends, selected.index), leg.taped, "editor-status-bend-removed");
+}
+
+// Drops a dragged number box: the server turns the centre into direction and gap, then one operation stores it.
+async function dropNumber(n, centre) {
+  if (busy || state.closed) return;
+  busy = true;
+  let found = null;
+  try {
+    const answer = await get(numbers.numberAtQuery(state.course, n, centre));
+    if (answer.ok) found = answer.data;
+    else status.showBanner(failure(answer));
+  } catch {
+    status.say("editor-status-lost");
+  } finally {
+    busy = false;
+  }
+  if (!found) {
+    await loadState(false);
+    return;
+  }
+  const { tool, body } = numbers.dropOperation(state.course, n, found, numbers.options.forAll);
+  const done = await runOp(tool, body);
+  if (!done) return;
+  // A number set for this course comes before the one on the control, so the box does not move.
+  const shadowed = numbers.options.forAll && n.source === "course";
+  const id = shadowed ? "editor-status-number-shadowed" : "editor-status-number-moved";
+  // A box dropped over the circle or very far away is stored with the nearest gap that is allowed.
+  status.say(found.clamped ? `${t(id)} ${t("editor-status-number-clamped")}` : id, !!found.clamped);
+}
+
+async function placeNumbers() {
+  if (!state.course) return;
+  const done = await runOp("place_numbers", numbers.placeBody(state.course, numbers.options.overwrite));
+  if (done) status.say(`${t("editor-status-numbers-placed")} ${done.result.placed}`, true);
+}
+
+const propActions = {
+  rules: () => state.rules,
+  placeNumbers,
+  move: moveControl,
+  remove: requestDelete,
+  changeCode,
+  renameCourse,
+  setStops,
+  setDetails,
+  removeCourse,
+  setClass,
+  removeClass,
+  setProfile,
+  setWindow,
+  setTaped,
+  setSpecialCourses,
+};
 
 function updateHistoryButtons() {
   const u = state.data?.undo;
@@ -289,6 +584,12 @@ async function loadOverlay(course) {
   }
   state.course = course;
   state.overlay = answer.data;
+  state.pool = [];
+  if (course) {
+    // The controls the course does not visit, for course mode.
+    const all = await get("api/overlay");
+    if (all.ok) state.pool = all.data.controls.filter((c) => !answer.data.controls.some((x) => x.code === c.code));
+  }
   return true;
 }
 
@@ -302,6 +603,14 @@ function overlayHas(kind, id) {
 async function selectKey(key) {
   const [kind, ...rest] = key.split(":");
   const id = rest.join(":");
+  if (kind === "action") {
+    // A list entry that starts a dialog; the selection stays as it is.
+    pendingLeg = null;
+    state.tree?.setCurrent(state.treeKey);
+    await (id === "new-course" ? newCourse() : newClass());
+    return;
+  }
+  pendingLeg = null;
   state.treeKey = key;
   if (key === "all") {
     state.selection = null;
@@ -309,8 +618,8 @@ async function selectKey(key) {
   } else if (kind === "course") {
     state.selection = { kind: "course", id };
     await loadOverlay(id);
-  } else if (kind === "class") {
-    state.selection = { kind: "class", id };
+  } else if (kind === "class" || kind === "event") {
+    state.selection = { kind, id };
   } else {
     state.selection = { kind, id };
     if (!overlayHas(kind, id)) await loadOverlay(null);
@@ -319,12 +628,12 @@ async function selectKey(key) {
 }
 
 // The control whose circle a map point (map mm) hits: within the circle's radius plus the line width.
-function hitControl(at) {
+function hitControl(at, extra = []) {
   const o = state.overlay;
   if (!o) return null;
   const reach = o.sizes.circle_r + o.sizes.line;
   let best = null;
-  for (const c of o.controls) {
+  for (const c of [...o.controls, ...extra]) {
     const d = Math.hypot(c.at[0] - at[0], c.at[1] - at[1]);
     if (d <= reach && (!best || d < best.d)) best = { code: c.code, d };
   }
@@ -335,6 +644,42 @@ function selectControl(code) {
   state.selection = { kind: "control", id: code };
   state.treeKey = `control:${code}`;
   redraw();
+}
+
+const BEND_HIT_PX = 7;
+
+// The leg selected, or null. A bend counts as its leg.
+function selectedLeg() {
+  const sel = state.selection;
+  return sel?.kind === "leg" || sel?.kind === "bend" ? legOf(sel.after) : null;
+}
+
+// What a press at a map point hits on the selected leg: { bend } (index), { line } (segment index) or null.
+function legTarget(at) {
+  const leg = selectedLeg();
+  if (!leg || !state.view) return null;
+  const bend = bends.bendNear(leg.bends, at, BEND_HIT_PX / state.view.scale);
+  if (bend !== null) return { leg, bend };
+  const near = bends.nearestSegment(leg.points, at);
+  return near && near.d <= LEG_HIT_PX / state.view.scale ? { leg, line: near.index } : null;
+}
+
+const legSelection = (after) => ({ kind: "leg", id: String(after), after, course: state.course });
+const bendSelection = (after, index) => ({ kind: "bend", id: `${after}:${index}`, after, index, course: state.course });
+
+// A click on a bend of the selected leg, or on any leg of the drawn course, selects it.
+function selectLegAt(at) {
+  const target = legTarget(at);
+  if (target?.bend != null) {
+    state.selection = bendSelection(target.leg.after, target.bend);
+  } else {
+    const after = hitLeg(at);
+    if (after === null) return false;
+    state.selection = legSelection(after);
+    status.say(`${t("editor-leg-word")} ${course.legLabel(after)}. ${t("editor-status-leg-selected")}`, true);
+  }
+  redraw();
+  return true;
 }
 
 // A click on a symbol selects it; the tree follows when the symbol is a control or a special object.
@@ -348,6 +693,8 @@ function selectDrawn(target, at) {
   const hit = hitControl(at);
   if (hit) {
     selectControl(hit);
+  } else if ((!node || node.dataset.kind === "leg" || node.dataset.kind === "bend") && selectLegAt(at)) {
+    // A bend or a leg of the course was hit.
   } else if (!node || node.dataset.kind === "leg" || node.dataset.kind === "control") {
     state.selection = null;
     state.treeKey = state.course ? `course:${state.course}` : "all";
@@ -376,6 +723,11 @@ async function loadState(announce) {
     state.selection = null;
     state.treeKey = "all";
   }
+  if (state.selection?.kind === "special" && !state.data.event.specials.some((s) => s.id === state.selection.id)) {
+    state.selection = null;
+    state.treeKey = state.course ? `course:${state.course}` : "all";
+  }
+  if (!idInput.value || takenIds().includes(idInput.value)) proposeId();
   if (state.selection?.kind === "control" && !controlOf(state.selection.id)) {
     state.selection = null;
     state.treeKey = state.course ? `course:${state.course}` : "all";
@@ -383,9 +735,21 @@ async function loadState(announce) {
   updateHistoryButtons();
   refreshConfirm();
   await loadOverlay(state.course);
+  keepLegSelection();
   redraw();
   if (announce) status.say("editor-status-reloaded");
   return true;
+}
+
+// A selected leg or bend stays only while the overlay still has it; a bend that is gone falls back to its leg.
+function keepLegSelection() {
+  const sel = state.selection;
+  if (sel?.kind !== "leg" && sel?.kind !== "bend") return;
+  const leg = sel.course === state.course ? legOf(sel.after) : null;
+  if (!leg) state.selection = null;
+  else if (sel.kind === "bend" && sel.index >= leg.bends.length) {
+    state.selection = { kind: "leg", id: String(sel.after), after: sel.after, course: sel.course };
+  }
 }
 
 async function loadMapInfo(fit) {
@@ -418,13 +782,66 @@ function setCircle(code, at) {
 }
 
 function showOverlay() {
-  overlay.draw(state.overlay, state.selection, state.course);
+  overlay.draw(state.overlay, state.selection, state.course, extras());
 }
 
+// A bend being dragged, or null: { after, index (null until the line gave one), at (the segment to split),
+// orig (the bends before), start (map mm under the pointer), moved }.
+let legDrag = null;
+
+// A number box being dragged in course mode, or null: { number (the overlay entry), start, orig (its centre),
+// moved }.
+let numberDrag = null;
+
 function cancelDrag() {
+  if (numberDrag?.moved) {
+    numberDrag.number.centre = numberDrag.orig;
+    showOverlay();
+  }
+  numberDrag = null;
   if (drag?.moved) setCircle(drag.code, drag.orig);
   if (drag?.moved) showOverlay();
   drag = null;
+  if (legDrag?.moved) {
+    const leg = legOf(legDrag.after);
+    if (leg) bends.setLegBends(leg, legDrag.orig);
+    state.selection = legSelection(legDrag.after);
+    redraw();
+  }
+  legDrag = null;
+}
+
+// The pointer moved with a bend in hand: insert it on the first move over a line, then follow the pointer.
+function dragBend(at) {
+  const leg = legOf(legDrag.after);
+  if (!leg) return;
+  if (!legDrag.moved) {
+    legDrag.moved = true;
+    if (legDrag.index === null) {
+      legDrag.index = legDrag.at;
+      legDrag.inserted = true;
+      bends.setLegBends(leg, bends.withInserted(leg.bends, legDrag.at, { x: at[0], y: at[1] }));
+    }
+    state.selection = bendSelection(legDrag.after, legDrag.index);
+  }
+  const origin = legDrag.inserted ? at : [legDrag.orig[legDrag.index].x + at[0] - legDrag.start[0], legDrag.orig[legDrag.index].y + at[1] - legDrag.start[1]];
+  bends.setLegBends(leg, bends.withMoved(leg.bends, legDrag.index, { x: origin[0], y: origin[1] }));
+  showOverlay();
+}
+
+// The drop: one set_leg, or nothing when the bend is back where it was.
+function dropBend() {
+  const done = legDrag;
+  legDrag = null;
+  const leg = legOf(done.after);
+  if (!leg) return;
+  const rounded = leg.bends.map((b) => ({ x: mmValue(b.x), y: mmValue(b.y) }));
+  if (!done.inserted && bends.sameBends(rounded, done.orig.map((b) => ({ x: mmValue(b.x), y: mmValue(b.y) })))) {
+    bends.setLegBends(leg, done.orig);
+    redraw();
+    return;
+  }
+  setLeg(done.after, rounded, leg.taped, done.inserted ? "editor-status-bend-added" : "editor-status-bend-moved");
 }
 
 function startNudge(dx, dy) {
@@ -448,6 +865,67 @@ async function commitNudge() {
   await moveControl(done.code, x, y);
 }
 
+// --- Course mode -------------------------------------------------------------------------------------------------
+// A click on a control appends it before the finish. A click on a leg chooses that leg; the next click on a
+// control inserts the control there. Esc drops the chosen leg.
+
+const LEG_HIT_PX = 8;
+
+// The `after` of the leg nearest to a map point within a few pixels, or null.
+function hitLeg(at) {
+  const reach = LEG_HIT_PX / state.view.scale;
+  let best = null;
+  for (const leg of state.overlay?.legs ?? []) {
+    for (let i = 1; i < leg.drawn.length; i++) {
+      const d = bends.distanceToSegment(at, leg.drawn[i - 1], leg.drawn[i]);
+      if (d <= reach && (!best || d < best.d)) best = { after: leg.after, d };
+    }
+  }
+  return best?.after ?? null;
+}
+
+function dropPendingLeg() {
+  if (pendingLeg === null) return false;
+  pendingLeg = null;
+  showOverlay();
+  status.say("editor-status-leg-cancelled");
+  return true;
+}
+
+async function courseClick(at) {
+  if (!state.course || !state.overlay) {
+    status.say("editor-status-pick-course");
+    return;
+  }
+  const code = hitControl(at, state.pool);
+  if (code) {
+    const stops = state.data.event.courses.find((c) => c.name === state.course).controls.map((c) => String(c.code));
+    const next = pendingLeg === null ? course.withAppended(stops, code) : course.withInsertedAt(stops, pendingLeg, code);
+    pendingLeg = null;
+    await setStops(state.course, next, null);
+    return;
+  }
+  const leg = hitLeg(at);
+  if (leg !== null) {
+    pendingLeg = leg;
+    showOverlay();
+    status.say(`${t("editor-leg-word")} ${course.legLabel(leg)}. ${t("editor-status-leg-picked")}`, true);
+  } else {
+    dropPendingLeg();
+  }
+}
+
+tools.onChange((name) => {
+  pendingLeg = null;
+  draft = null;
+  if (name === "special") {
+    proposeId();
+    status.say("editor-status-special-tool");
+  }
+  if (name === "course") status.say(state.course ? "editor-status-course-mode" : "editor-status-pick-course");
+  showOverlay();
+});
+
 function bindMapInput() {
   const view = state.view;
   // A press on the map: { id (the pointer), x, y (pixels), moved, target, at } or a control drag in `drag`.
@@ -460,10 +938,27 @@ function bindMapInput() {
     if (!evt.isPrimary || evt.button !== 0 || busy) return;
     const at = view.screenToMap(evt);
     const hit = tools.getTool() === "select" ? hitControl(at) : null;
+    if (tools.getTool() === "course" && state.overlay) {
+      const box = numbers.numberAt(state.overlay.numbers, at, 0);
+      if (box) numberDrag = { number: box, start: at, orig: [...box.centre], moved: false };
+    }
     press = { id: evt.pointerId, x: evt.clientX, y: evt.clientY, moved: false, target: evt.target, at };
     if (hit) {
       const c = state.overlay.controls.find((x) => x.code === hit);
       drag = { code: hit, start: at, orig: [...c.at], moved: false };
+    } else if (tools.getTool() === "select") {
+      const target = legTarget(at);
+      if (target) {
+        legDrag = {
+          after: target.leg.after,
+          index: target.bend ?? null,
+          at: target.line,
+          orig: target.leg.bends.map((b) => ({ ...b })),
+          start: at,
+          inserted: false,
+          moved: false,
+        };
+      }
     }
     try {
       svg.setPointerCapture(evt.pointerId);
@@ -474,11 +969,29 @@ function bindMapInput() {
   svg.addEventListener("pointermove", (evt) => {
     if (!evt.isPrimary) return;
     status.setCursor(view.screenToMap(evt));
+    if (draft) {
+      draft.cursor = view.screenToMap(evt);
+      showOverlay();
+    }
     if (!ours(evt)) return;
     const dx = evt.clientX - press.x;
     const dy = evt.clientY - press.y;
     if (!press.moved && Math.hypot(dx, dy) < DRAG_PIXELS) return;
     press.moved = true;
+    if (legDrag) {
+      dragBend(view.screenToMap(evt));
+      return;
+    }
+    if (numberDrag) {
+      const at = view.screenToMap(evt);
+      if (!numberDrag.moved) {
+        numberDrag.moved = true;
+        state.selection = { kind: "number", id: String(numberDrag.number.index), course: state.course, index: numberDrag.number.index };
+      }
+      numberDrag.number.centre = [numberDrag.orig[0] + at[0] - numberDrag.start[0], numberDrag.orig[1] + at[1] - numberDrag.start[1]];
+      showOverlay();
+      return;
+    }
     if (drag) {
       const at = view.screenToMap(evt);
       if (!drag.moved) {
@@ -498,8 +1011,29 @@ function bindMapInput() {
     if (!ours(evt)) return;
     const finished = press;
     const dragged = drag;
+    const bending = legDrag;
+    const carried = numberDrag;
     press = null;
     drag = null;
+    numberDrag = null;
+    if (carried) {
+      if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
+      if (carried.moved) {
+        dropNumber(carried.number, [carried.number.centre[0], carried.number.centre[1]]);
+      } else {
+        // A click on a number box selects it.
+        state.selection = { kind: "number", id: String(carried.number.index), course: state.course, index: carried.number.index };
+        redraw();
+        status.say("editor-status-number-selected");
+      }
+      return;
+    }
+    if (bending?.moved) {
+      if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
+      dropBend();
+      return;
+    }
+    legDrag = null;
     if (svg.hasPointerCapture(evt.pointerId)) svg.releasePointerCapture(evt.pointerId);
     if (!finished) return;
     if (dragged?.moved) {
@@ -515,7 +1049,9 @@ function bindMapInput() {
     }
     if (finished.moved) return;
     const tool = tools.getTool();
-    if (tool !== "select" && !hitControl(finished.at)) placeControl(finished.at, tool === "crossing");
+    if (tool === "course") courseClick(finished.at);
+    else if (tool === "special") specialClick(finished.at);
+    else if (tool !== "select" && !hitControl(finished.at)) placeControl(finished.at, tool === "crossing");
     else selectDrawn(finished.target, finished.at);
   });
   // A cancelled touch or a lost capture ends the press like a release, without selecting or moving anything.
@@ -523,6 +1059,8 @@ function bindMapInput() {
     cancelDrag();
     press = null;
   };
+  // A reload that waited for the gesture to end runs now.
+  svg.addEventListener("pointerup", () => setTimeout(poll, 300));
   svg.addEventListener("pointercancel", (evt) => {
     if (ours(evt)) abandon();
   });
@@ -530,6 +1068,10 @@ function bindMapInput() {
     if (ours(evt)) abandon();
   });
   svg.addEventListener("pointerleave", () => status.setCursor(null));
+  // A double click ends the drawing; its clicks added their point once (specialClick ignores a repeat).
+  svg.addEventListener("dblclick", () => {
+    if (draft) finishDraft();
+  });
   svg.addEventListener("wheel", (evt) => {
     evt.preventDefault();
     view.zoomBy(evt.deltaY < 0 ? 1.2 : 1 / 1.2, view.screenToPage(evt));
@@ -543,7 +1085,7 @@ function bindMapInput() {
     redo: () => history(true),
     remove: requestDelete,
     cancel: () => {
-      if (drag || nudge) {
+      if (drag || nudge || legDrag || numberDrag) {
         if (nudge) {
           setCircle(nudge.code, nudge.orig);
           nudge = null;
@@ -551,7 +1093,7 @@ function bindMapInput() {
         }
         cancelDrag();
         press = null;
-      } else {
+      } else if (!dropDraft() && !dropPendingLeg()) {
         tools.setTool("select");
       }
     },
@@ -559,6 +1101,8 @@ function bindMapInput() {
     nudge: startNudge,
     commitNudge,
     canNudge: () => state.selection?.kind === "control",
+    drafting: () => draft !== null,
+    finish: finishDraft,
     zoom: (f) => view.zoomBy(f),
     fit: () => view.fit(state.pageBox),
     pan: (dx, dy) => {
@@ -566,14 +1110,17 @@ function bindMapInput() {
       view.panBy(dx * (v.x1 - v.x0) * PAN_STEP, dy * (v.y1 - v.y0) * PAN_STEP);
     },
     help: () => helpDialog.showModal(),
-    dialogOpen: () => confirmDialog.open || helpDialog.open,
+    dialogOpen: () => confirmDialog.open || helpDialog.open || nameDialog.open,
   });
 }
 
 // Polling (plan D8): every two seconds while the page is visible, and at once when it gets the focus.
 let polling = false;
+// Whether a press holds map data of the loaded state: a reload would replace what the gesture moves.
+const gestureActive = () => !!(drag || nudge || legDrag || numberDrag);
+
 async function poll() {
-  if (polling || document.hidden || state.closed) return;
+  if (polling || document.hidden || state.closed || gestureActive()) return;
   polling = true;
   try {
     const answer = await get("api/revision");
@@ -599,9 +1146,12 @@ async function poll() {
 
 try {
   await loadTexts();
+  fillKinds();
   tools.bind();
   keys.fillHelp(document.getElementById("help-keys"));
   status.say("editor-status-ready");
+  const known = await get("api/rules");
+  if (known.ok && known.data?.profiles) state.rules = known.data;
   const first = await get("api/revision");
   state.seen = first.ok ? first.data : null;
   if (await loadState(false)) {

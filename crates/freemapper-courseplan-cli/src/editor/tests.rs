@@ -714,6 +714,78 @@ mod overlay {
     }
 
     #[test]
+    fn overlay_draws_every_special_kind() {
+        let mut e = event();
+        e.specials.truncate(2);
+        let pts = |v: &[(f64, f64)]| v.iter().map(|&(x, y)| p(x, y)).collect::<Vec<_>>();
+        e.specials.extend([
+            SpecialObject::MarkedRoute {
+                id: "marked-1".to_owned(),
+                ppen_id: None,
+                points: pts(&[(0.0, 10.0), (20.0, 10.0)]),
+                courses: vec![],
+            },
+            SpecialObject::OutOfBoundsArea {
+                id: "out-of-bounds-1".to_owned(),
+                ppen_id: None,
+                polygon: pts(&[(10.0, 10.0), (30.0, 10.0), (30.0, 30.0)]),
+                courses: vec![],
+            },
+            SpecialObject::ForbiddenRoute {
+                id: "forbidden-1".to_owned(),
+                ppen_id: None,
+                points: pts(&[(40.0, 40.0)]),
+                courses: vec![],
+            },
+            SpecialObject::ForbiddenRoute {
+                id: "forbidden-2".to_owned(),
+                ppen_id: None,
+                points: pts(&[(40.0, 0.0), (50.0, 5.0), (60.0, 0.0)]),
+                courses: vec!["A".to_owned()],
+            },
+            SpecialObject::DangerousArea {
+                id: "danger-1".to_owned(),
+                ppen_id: None,
+                polygon: pts(&[(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]),
+                courses: vec![],
+            },
+            SpecialObject::FirstAid {
+                id: "aid-1".to_owned(),
+                ppen_id: None,
+                map_mm: p(70.0, 70.0),
+                courses: vec![],
+            },
+            SpecialObject::Water {
+                id: "water-1".to_owned(),
+                ppen_id: None,
+                map_mm: p(80.0, 80.0),
+                courses: vec![],
+            },
+        ]);
+        for course in [Some("A"), None] {
+            let o = run(&e, course, 4000);
+            let drawn: Vec<(&str, &str, usize)> = o
+                .specials
+                .iter()
+                .map(|s| (s.id.as_str(), s.kind, s.points.len()))
+                .collect();
+            assert_eq!(
+                drawn,
+                [
+                    ("marked-1", "marked_route", 2),
+                    ("out-of-bounds-1", "out_of_bounds_area", 3),
+                    ("forbidden-1", "forbidden_route", 1),
+                    ("forbidden-2", "forbidden_route", 3),
+                    ("danger-1", "dangerous_area", 3),
+                    ("aid-1", "first_aid", 1),
+                    ("water-1", "water", 1),
+                ]
+            );
+            assert_eq!((o.starts.len(), o.finishes.len()), (1, 1));
+        }
+    }
+
+    #[test]
     fn unknown_course_is_an_error() {
         let r = overlay(
             &event(),
@@ -740,6 +812,35 @@ mod overlay {
         assert_eq!(o.numbers[0].code, "32");
         assert_eq!(o.numbers[0].index, 2);
         assert_eq!(o.numbers[0].text, "1");
+    }
+
+    #[test]
+    fn overlay_legs_list_their_bends_in_order() {
+        let mut e = event();
+        e.courses[0].start_bends = vec![p(1.0, -10.0)];
+        e.courses[0].kind = CourseKind::Individual {
+            controls: vec![
+                CourseControl {
+                    bends: vec![p(20.0, -50.0), p(50.123_456, 0.0)],
+                    ..stop("31", None)
+                },
+                stop("32", None),
+            ],
+        };
+        let o = run(&e, Some("A"), 4000);
+        let bends: Vec<Vec<(f64, f64)>> = o
+            .legs
+            .iter()
+            .map(|l| l.bends.iter().map(|b| (b.x, b.y)).collect())
+            .collect();
+        assert_eq!(
+            bends,
+            [
+                vec![(1.0, -10.0)],
+                vec![(20.0, -50.0), (50.123, 0.0)],
+                vec![]
+            ]
+        );
     }
 
     #[test]
@@ -943,6 +1044,225 @@ mod state {
             get(&app, "/tok/api/overlay?course=%zz").await.0,
             StatusCode::BAD_REQUEST
         );
+    }
+
+    /// A project with an individual course "A" through control 31 at (100, 100) on the sample map.
+    pub(super) fn numbered_project(dir: &std::path::Path) -> std::path::PathBuf {
+        use freemapper_courseplan_model::{
+            Control, ControlCode, ControlDescription, ControlKind, Course, CourseControl,
+            CourseKind, MapPoint, SpecialObject,
+        };
+        project_with(dir, |event| {
+            let at = |x, y| MapPoint { x, y };
+            event.specials = vec![
+                SpecialObject::Start {
+                    id: "S1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at(50.0, 50.0),
+                },
+                SpecialObject::Finish {
+                    id: "F1".to_owned(),
+                    ppen_id: None,
+                    map_mm: at(150.0, 150.0),
+                },
+            ];
+            event.controls = vec![Control {
+                ppen_id: None,
+                code: ControlCode("31".to_owned()),
+                kind: ControlKind::Control,
+                map_mm: at(100.0, 100.0),
+                description: ControlDescription::default(),
+                number: None,
+            }];
+            event.courses = vec![Course {
+                ppen_id: None,
+                name: "A".to_owned(),
+                classes: vec![],
+                start: "S1".to_owned(),
+                finish: "F1".to_owned(),
+                start_bends: vec![],
+                start_taped: false,
+                print_area: None,
+                climb_m: None,
+                planned_print_scale: None,
+                kind: CourseKind::Individual {
+                    controls: vec![CourseControl {
+                        code: ControlCode("31".to_owned()),
+                        number: None,
+                        bends: vec![],
+                        taped: false,
+                    }],
+                },
+            }];
+        })
+    }
+
+    #[tokio::test]
+    async fn number_at_inverts_the_overlay_box() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        // Whatever the overlay draws for the number is the point the server turns back into a placement.
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let number = &overlay["numbers"][0];
+        assert_eq!(number["index"], 1);
+        let (cx, cy) = (
+            number["centre"][0].as_f64().unwrap(),
+            number["centre"][1].as_f64().unwrap(),
+        );
+        let (status, found) = get(
+            &app,
+            &format!("/tok/api/number-at?course=A&index=1&x={cx}&y={cy}"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{found}");
+        let (direction, gap) = (
+            found["direction"].as_f64().unwrap(),
+            found["gap_mm"].as_f64().unwrap(),
+        );
+        assert!((0.0..360.0).contains(&direction), "{direction}");
+        // Store the answer and read the overlay again: the box lands on the same centre (the 0.01 degree
+        // and 0.01 mm rounding of the answer allows a few hundredths of a millimetre).
+        crate::mcp::CoursePlanServer::new(Lang::english())
+            .call_json(
+                &path,
+                "set_course_number",
+                serde_json::json!({ "name": "A", "after": 1, "direction": direction, "gap_mm": gap }),
+            )
+            .unwrap();
+        let app = router_for(&path);
+        let (_, again) = get(&app, "/tok/api/overlay?course=A").await;
+        assert_eq!(again["numbers"][0]["source"], "course");
+        for axis in [0, 1] {
+            let a = again["numbers"][0]["centre"][axis].as_f64().unwrap();
+            let b = number["centre"][axis].as_f64().unwrap();
+            assert!((a - b).abs() < 0.05, "{axis}: {a} vs {b}");
+        }
+    }
+
+    #[tokio::test]
+    async fn number_at_answers_direction_and_gap_for_a_drop_point() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let number = &overlay["numbers"][0];
+        let w = number["w"].as_f64().unwrap();
+        let sizes = &overlay["sizes"];
+        let outer = sizes["circle_r"].as_f64().unwrap() + sizes["line"].as_f64().unwrap() / 2.0;
+        // The box of a drop 1 map mm beyond the circle edge; the exact gap in print mm depends on the map
+        // kind (the library test pins 1.0 for the sprint case), so only direction and symmetry are checked.
+        let reach = outer + 1.0 + w / 2.0;
+        let (_, east) = get(
+            &app,
+            &format!(
+                "/tok/api/number-at?course=A&index=1&x={}&y=100",
+                100.0 + reach
+            ),
+        )
+        .await;
+        let (_, west) = get(
+            &app,
+            &format!(
+                "/tok/api/number-at?course=A&index=1&x={}&y=100",
+                100.0 - reach
+            ),
+        )
+        .await;
+        // Hand computation: the box edge is 1 map mm beyond the circle edge. The project's map is a forest
+        // map at 1:10000, the overprint sizes apply at 1:15000, so a print mm is 1.5 map mm: 1 / 1.5 = 0.67.
+        assert_eq!(east["direction"], 0.0);
+        assert_eq!(west["direction"], 180.0);
+        assert_eq!(east["gap_mm"], 0.67, "{east}");
+        assert_eq!(west["gap_mm"], 0.67, "{west}");
+        assert_eq!(east["clamped"], false);
+        // Directions run counter-clockwise from east on the printed map; a larger map y lies to the south.
+        let q = |x: f64, y: f64| format!("/tok/api/number-at?course=A&index=1&x={x}&y={y}");
+        let h = number["h"].as_f64().unwrap();
+        let (_, south) = get(&app, &q(100.0, 100.0 + outer + 2.0 + h / 2.0)).await;
+        assert_eq!(south["direction"], 270.0, "{south}");
+        assert_eq!(south["gap_mm"], 1.33, "{south}");
+        // The 0 and 360 wrap: 0.004 degrees counter-clockwise (rounds to 0.0) and clockwise (359.996 rounds
+        // to 360, which is 0).
+        let dy = reach * 0.004_f64.to_radians().tan();
+        let (_, above) = get(&app, &q(100.0 + reach, 100.0 - dy)).await;
+        let (_, below) = get(&app, &q(100.0 + reach, 100.0 + dy)).await;
+        assert_eq!(above["direction"], 0.0, "{above}");
+        assert_eq!(below["direction"], 0.0, "{below}");
+    }
+
+    #[tokio::test]
+    async fn number_at_keeps_the_gap_inside_the_stored_range() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let q = |x: f64| format!("/tok/api/number-at?course=A&index=1&x={x}&y=100");
+        // A box over the circle has a negative gap: the answer is the smallest storable gap, flagged.
+        let (status, over) = get(&app, &q(100.5)).await;
+        assert_eq!(status, StatusCode::OK, "{over}");
+        assert_eq!(over["gap_mm"], 0.01, "{over}");
+        assert_eq!(over["clamped"], true, "{over}");
+        // Far away: the largest storable gap.
+        let (_, far) = get(&app, &q(100.0 + 5000.0)).await;
+        assert_eq!(far["gap_mm"], 10.0, "{far}");
+        assert_eq!(far["clamped"], true, "{far}");
+        // A positive gap that rounds to 0.00 (0.004 mm beyond the circle edge) is raised to 0.01.
+        let (_, overlay) = get(&app, "/tok/api/overlay?course=A").await;
+        let sizes = &overlay["sizes"];
+        let outer = sizes["circle_r"].as_f64().unwrap() + sizes["line"].as_f64().unwrap() / 2.0;
+        let w = overlay["numbers"][0]["w"].as_f64().unwrap();
+        let (_, tiny) = get(&app, &q(100.0 + outer + 0.004 + w / 2.0)).await;
+        assert_eq!(tiny["gap_mm"], 0.01, "{tiny}");
+        assert_eq!(tiny["clamped"], true, "{tiny}");
+    }
+
+    #[tokio::test]
+    async fn rules_route_lists_profiles_overlays_and_categories_without_file_names() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        let (status, rules) = get(&app, "/tok/api/rules").await;
+        assert_eq!(status, StatusCode::OK, "{rules}");
+        assert_eq!(rules["profiles"], serde_json::json!([{ "id": "wkb-2026" }]));
+        assert_eq!(
+            rules["overlays"],
+            serde_json::json!([{ "id": "nor-bb-2021", "base": "wkb-2026" }])
+        );
+        let categories = rules["categories"]["wkb-2026"].as_array().unwrap();
+        assert!(categories.iter().any(|c| c == "HE"), "{rules}");
+        let text = rules.to_string();
+        assert!(!text.contains(".toml") && !text.contains('/'), "{text}");
+    }
+
+    #[tokio::test]
+    async fn number_at_unknown_course_is_404_and_bad_queries_are_400() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = router_for(&numbered_project(dir.path()));
+        for query in ["course=Nope&index=1&x=1&y=2", "course=A&index=2&x=1&y=2"] {
+            assert_eq!(
+                get(&app, &format!("/tok/api/number-at?{query}")).await.0,
+                StatusCode::NOT_FOUND,
+                "{query}"
+            );
+        }
+        for query in [
+            "",
+            "course=A&index=1&x=1",
+            "course=A&index=0&x=1&y=2",
+            "course=A&index=-1&x=1&y=2",
+            "course=A&index=1.5&x=1&y=2",
+            "course=A&index=1&x=NaN&y=2",
+            "course=A&index=1&x=inf&y=2",
+            "course=A&index=1&x=1e9&y=2",
+            "course=A&index=1&x=1&x=2&y=2",
+            "course=A&course=A&index=1&x=1&y=2",
+            "course=%zz&index=1&x=1&y=2",
+            "course=A&index=1&x=1&y=2&r=3",
+            "course=A&index=99999999999999999999&x=1&y=2",
+        ] {
+            assert_eq!(
+                get(&app, &format!("/tok/api/number-at?{query}")).await.0,
+                StatusCode::BAD_REQUEST,
+                "{query}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -1194,7 +1514,7 @@ mod history {
 }
 
 mod ops {
-    use super::state::project;
+    use super::state::{numbered_project, project};
     use super::*;
     use serde_json::{Value, json};
 
@@ -1362,6 +1682,44 @@ mod ops {
         assert_eq!(status, StatusCode::OK);
         let (status, _) = op(&app, "add_control", "0000000000000000", json!({"at": at})).await;
         assert_eq!(status, StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn a_bend_outside_the_map_or_too_many_bends_snap_back_as_422() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = numbered_project(dir.path());
+        let app = router_for(&path);
+        let first = state(&app).await;
+        let revision = first["revision"].as_str().unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        for bends in [
+            json!([{"x": 1.0e9, "y": 0.0}]),
+            json!([{"x": -1000.0, "y": 100.0}]),
+            Value::Array(vec![json!({"x": 90.0, "y": 60.0}); 201]),
+        ] {
+            let (status, body) = op(
+                &app,
+                "set_leg",
+                revision,
+                json!({"name": "A", "after": 1, "bends": bends}),
+            )
+            .await;
+            assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+            assert!(!body["error"].as_str().unwrap().is_empty());
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+            if bends.as_array().is_some_and(|b| b.len() == 201) {
+                assert!(body["error"].as_str().unwrap().contains("200"), "{body}");
+            }
+        }
+        // Inside the map and within the cap, the same operation is stored.
+        let (status, body) = op(
+            &app,
+            "set_leg",
+            revision,
+            json!({"name": "A", "after": 1, "bends": [{"x": 90.0, "y": 60.0}]}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{body}");
     }
 
     #[tokio::test]

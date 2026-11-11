@@ -106,9 +106,10 @@ there.
 
 ## 4. The editor (preview)
 
-The editor shows the event in the browser. You can place, move and delete controls and take each step back. Courses,
-bends, numbers, special objects and control descriptions still go through the command line or the AI assistant,
-and the editor shows them. The menu items for export, import and sync are greyed out.
+The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
+bend and tape legs, place control numbers, draw special objects and take each step back. Control descriptions still
+go through the command line or the AI assistant, and the editor shows them. The area for findings is empty, and the
+menu items for export, import and sync are greyed out. Both follow in later versions.
 
 ### Starting it
 
@@ -147,22 +148,22 @@ In this preview the map is a placeholder: a frame around the map extent, a 10 mm
 numbers sit at the right place on the map, but no map content is visible beneath them. freemapper-render will supply
 that later.
 
-### Placing, moving and deleting controls
+### Controls
 
-The toolbar has the tools "Select" and "Place control". Every change is saved at once, through the same operations
-as the command line and the AI assistant, so the same checks apply. If the program refuses a change, for example
-a position outside the map, the file stays as it was and a message says why.
+The toolbar has the tools "Select", "Place control", "Place crossing point" and "Special object". Every change is
+saved at once, through the same operations as the command line and the AI assistant, so the same checks apply. If
+the program refuses a change, for example a position outside the map, the file stays as it was and a message says
+why.
 
 - **Select.** With the "Select" tool, click a control in the map or in the tree. A click selects the control whose
   centre is nearest to the pointer, as long as the pointer is within the circle's radius plus the line width. The
   properties on the right show it.
-- **Place.** Choose "Place control" and click on the map. The editor adds a control at that point. The code of a
-  control is read-only in the editor for now. Codes may have up to 64 characters; names and notes, up to 200.
-- **Place crossing point.** "Place crossing point" works the same way but adds a control of the kind "Crossing
+- **Place.** Choose "Place control" and click on the map. The editor adds a control at that point.
+- **Place a crossing point.** "Place crossing point" works the same way but adds a control of the kind "Crossing
   point". It takes the next free code, shares the numbering with the other controls and appears in the tree with
   "(Crossing point)". On the map it is drawn as two arcs without a circle. Its properties show code, kind and
-  position, but no control description, since a crossing point has none. The editor cannot add it to a course yet;
-  that still goes through the command line or the AI assistant. Moving, deleting and undo work as for any control.
+  position, but no control description, since a crossing point has none. To add it to a course, use course mode
+  like for any control.
 - **Move.** Drag a circle, or type a new value into the fields X (mm) and Y (mm) in the properties. You may write
   a decimal comma or a decimal point, `12,5` or `12.5`. Anything else marks the field and shows a hint. While you
   drag, only the circle moves. Legs and numbers follow when you let go. Esc cancels the drag, and the control
@@ -170,11 +171,82 @@ a position outside the map, the file stays as it was and a message says why.
 - **Nudge.** With a control selected, the arrow keys move it by 0.1 mm, with Shift by 1 mm. The editor saves once
   when you release the key, so holding a key makes a single undo step. Without a selection, the arrow keys move the
   view.
+- **Change the code.** Edit the "Code" field in the properties. The courses and accepted findings that name the
+  control follow. The editor refuses a code that is empty, has spaces at its ends, is longer than 64 characters or
+  belongs to another control. On the command line the same is `freemapper-courseplan control code
+  hall.courseplan.toml 31 K7` (see "Changing a code or a name on the command line" below).
 - **Delete.** Press Delete or Backspace while the focus is on the map or the tree, or use "Delete control" in the
-  properties. In a field or on a button the keys do nothing. A control that no course
-  visits is deleted at once; undo takes it back. If courses visit the control, a dialog lists them and asks. The
-  focus is on "Cancel". "Delete" removes the control and takes it out of those courses. A stray Backspace
-  on a selected, unused control therefore deletes it without a question; undo brings it back.
+  properties. In a field or on a button the keys do nothing. A control that no course visits is deleted at once;
+  undo takes it back. If courses visit the control, a dialog lists them and asks. The focus is on "Cancel".
+  "Delete" removes the control and takes it out of those courses. A stray Backspace on a selected, unused control
+  therefore deletes it without a question; undo brings it back.
+
+### Courses and categories
+
+- **New course.** Choose "New course..." under "Courses" in the tree and type a name. The course gets the start and
+  the finish of the event. If the event has not exactly one start and one finish, the editor says so and adds
+  nothing. A name that is taken, empty or longer than 200 characters is refused in the dialog.
+- **Rename a course.** Edit the "Name" field in the properties of the course. Special objects and accepted findings
+  that name the course follow. On the command line use `freemapper-courseplan course rename hall.courseplan.toml A
+  Long`.
+- **Course mode.** Select a course, then choose "Course mode". The controls the course does not visit appear in
+  grey. A click on a control adds it before the finish. To insert a control inside the course, first click the leg
+  where it belongs, then the control. The chosen leg turns thick and blue, and the status bar says which one it is.
+  Esc drops the chosen leg; a second Esc leaves course mode. Course mode has no key.
+- **Stops.** The properties of a course list its stops. The buttons "Move up", "Move down" and "Remove" change the
+  order. With the focus on a row, Alt+Up and Alt+Down move the stop. Each change is one step for undo and saves the
+  whole list at once. If a change sends a leg to another stop, that leg loses its bends and tape. The status bar names
+  those legs.
+- **Course details.** Climb and planned print scale are fields in the properties; an empty field removes the value.
+  The check boxes assign the course to categories.
+- **Categories.** "New category..." adds one. Its properties hold the rule category and the expected starters; an
+  empty field removes the value. "Delete category" removes it. The editor refuses this while a course still uses
+  it, and says so above the map.
+- **Event.** "Event settings" in the tree shows the discipline, which you cannot change here, the rule profile with
+  its overlays, both as lists of the profiles the program knows, and the start window in minutes. An empty start
+  window removes it.
+
+### Legs and bends
+
+A leg is the line between two stops. Click it with the "Select" tool to choose it.
+
+- **Add a bend.** Drag the line of the chosen leg. A bend appears where you let go.
+- **Move or delete a bend.** Drag a bend to move it. A click on a bend chooses it, and Delete removes it.
+- **Tape a leg.** The "Taped" check box in the properties of the leg marks it as a taped leg.
+
+Each gesture is one step for undo, and the course length in the properties changes with it. A leg that a change to
+the stops sends to another stop loses its bends and tape.
+
+### Control numbers
+
+The number box of a control sits beside its circle. A dashed outline means the program placed it automatically and
+the project stores no position for it yet.
+
+- **Drag.** In course mode, drag a number box to another place. On release the editor turns the place into a
+  direction and a gap from the circle and stores both for this course.
+- **For all courses.** With "for all courses" ticked, the placement is stored on the control and applies to every
+  course that uses it. A placement the course already has for itself comes before the one on the control. The box
+  then snaps back, and the status bar says so.
+- **Place numbers.** "Place numbers" places the numbers of the course automatically and leaves placed numbers alone.
+  With "also replace placed numbers" everything is computed again, except the numbers set on the control for all
+  courses.
+
+One drag is one step for undo. The editor does not yet warn about a gap outside the rule range; `check` reports it.
+
+### Special objects
+
+- **Draw.** Choose "Special object", pick a kind (start, finish, first aid post, water point, marked route,
+  forbidden route, out-of-bounds area, dangerous area) and check the id in the toolbar. It is proposed as
+  `<kind>-<n>` and you may change it. A start, finish, first aid post or water point is placed by one click. A line
+  or an area is drawn by clicking its points and finished with Enter or a double click. Esc cancels, Delete takes
+  back the last point, and a dashed preview with dots shows the drawing. An area needs three points, a marked route
+  two. A forbidden route may have a single point, which is drawn as a cross. Each object is one step for undo.
+- **Signs on the map.** M marked route, a cross forbidden route, OB out-of-bounds area, ! dangerous area, plus first
+  aid, W water.
+- **Assign to courses.** In the properties of a selected object, tick the courses it belongs to. With none ticked it
+  belongs to all courses. Start and finish have no course list.
+- **Delete.** "Delete special object" or the Delete key removes the object; undo brings it back.
+- **No move.** The editor cannot move a special object. Delete it and draw it again (ADR 0049).
 
 ### Undo and redo
 
@@ -201,10 +273,13 @@ a shortcut.
 | --- | --- |
 | Ctrl/Cmd+Z | Undo |
 | Ctrl/Cmd+Shift+Z, Ctrl+Y | Redo |
-| Delete, Backspace | Delete the selected control |
-| Esc | Cancel the drag, or go back to the select tool |
+| Delete, Backspace | Delete the selected control, bend or special object; while drawing, the last point |
+| Esc | Cancel a drag or a drawing, drop the chosen leg, leave course mode or go back to the select tool |
+| Alt+Up, Alt+Down | Move the focused stop of a course |
+| Enter | Finish the line or area being drawn |
 | V | Select tool |
 | C | Place-control tool |
+| S | Special-object tool |
 | Arrow keys | Move the selected control by 0.1 mm (without a selection: move the view) |
 | Shift+arrow keys | Move the selected control by 1 mm |
 | `+`, `-` | Zoom in, zoom out (Ctrl or Cmd with these keys still zooms the browser) |
@@ -216,6 +291,18 @@ a shortcut.
 - In the tree, the arrow keys, Home and End move between entries and Enter selects.
 - With the mouse you move the view by dragging on empty space and zoom with the wheel.
 - Tab moves from the tree to the map, to the properties and to the menu.
+
+### Changing a code or a name on the command line
+
+```sh
+freemapper-courseplan control code hall.courseplan.toml 31 K7
+freemapper-courseplan course rename hall.courseplan.toml A Long
+```
+
+`control code` gives control 31 the code K7. `course rename` renames course A to Long. Courses, special objects and
+accepted findings that name the control or course follow. A code or name that is taken, empty, padded with spaces
+or too long is refused with a message, and the file stays as it was. The AI assistant has the tools
+`set_control_code` and `rename_course` for the same.
 
 ### Changed outside the editor
 

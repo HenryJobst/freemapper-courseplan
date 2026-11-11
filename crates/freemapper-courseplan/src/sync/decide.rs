@@ -86,7 +86,7 @@ pub struct Resolution {
 
 /// Percent-encodes `/`, `%`, `=`, `#` and `-` so a name fits into one key segment: `#` marks the visit of a
 /// number key and `-` joins the two ends of a leg key.
-fn escape(name: &str) -> String {
+pub(crate) fn escape(name: &str) -> String {
     let mut out = String::with_capacity(name.len());
     for c in name.chars() {
         match c {

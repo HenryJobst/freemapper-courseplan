@@ -35,8 +35,9 @@ Geplant ist für die erste Version:
   Export und Abgleich sind schon nutzbar: `import`, `export --ppen` und `sync`; Purple Pen 4.0 öffnet den Export);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
-- Bedienung über den Editor im Browser (`edit`, schon nutzbar: zeigt die Veranstaltung, Posten setzen, verschieben
-  und löschen geht, mit Rückgängig und Wiederholen), über die Kommandozeile oder über einen KI-Assistenten (MCP).
+- Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
+  Sonderobjekte, mit Rückgängig und Wiederholen; Postenbeschreibungen, Befunde und die echte Karte folgen), über die
+  Kommandozeile oder über einen KI-Assistenten (MCP).
 
 Danach kommen eine Routenanalyse, Mannschafts-OL mit Pflicht- und Wahlposten, Staffeln, Score-OL, Touren für die
 Postensetzer und eine KI-Unterstützung, die Bahnen beurteilt und Vorschläge macht.
@@ -125,14 +126,16 @@ Editor. Siehe Kapitel 9 des [Handbuchs](docs/manual/de.md#9-mit-purple-pen-abgle
 
 `freemapper-courseplan edit <Projekt>` startet den Editor und zeigt die Veranstaltung im Browser: links den Baum aus
 Bahnen, Kategorien, Posten und Sonderobjekten, in der Mitte die gewählte Bahn mit Kreisen, Strecken und Nummern,
-rechts die Eigenschaften. Posten setzt, verschiebst und löschst du mit Maus oder Tastatur; Strg+Z und Strg+Umschalt+Z
-machen Schritte rückgängig und wiederholen sie. Jede Änderung wird sofort gespeichert und läuft über dieselben
-Operationen wie Kommandozeile und KI-Assistent. Änderungen von außen siehst du nach etwa zwei Sekunden im Browser;
-hat sich die Datei unter dem Editor geändert, lehnt er die Änderung ab und lädt den neuen Stand. Bahnen, Knicke und
-Beschreibungen bearbeitest du noch mit der Kommandozeile oder dem Assistenten. Die Karte ist ein Platzhalter (Gitter
-und Rahmen), die echte Karte folgt mit freemapper-render. Der Server hört nur auf `127.0.0.1` und verlangt ein
+rechts die Eigenschaften. Mit Maus oder Tastatur setzt, verschiebst und löschst du Posten, legst Bahnen und Kategorien
+an, knickst und flaggst Strecken ab, ziehst oder setzt Postennummern und zeichnest Sonderobjekte; Strg+Z und
+Strg+Umschalt+Z machen Schritte rückgängig und wiederholen sie. Jede Änderung wird sofort gespeichert und läuft über
+dieselben Operationen wie Kommandozeile und KI-Assistent. Änderungen von außen siehst du nach etwa zwei Sekunden im
+Browser; hat sich die Datei unter dem Editor geändert, lehnt er die Änderung ab und lädt den neuen Stand. Es fehlen
+noch die Spalten C bis H der Postenbeschreibung, der Befundebereich, das Menü für Export, Import und Abgleich und die
+echte Karte: Beschreibungen bearbeitest du mit der Kommandozeile oder dem Assistenten, und die Karte ist ein
+Platzhalter (Gitter und Rahmen), bis freemapper-render sie liefert. Der Server hört nur auf `127.0.0.1` und verlangt ein
 Zugriffszeichen in der Adresse. Siehe Kapitel 4 des [Handbuchs](docs/manual/de.md#4-der-editor-vorschau) sowie
-ADR 0042, 0043 und 0047.
+ADR 0042, 0043, 0047, 0048 und 0049.
 
 Im Repository liegen außerdem das [Design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
 das [Glossar](docs/glossary.md), die [Architekturentscheidungen](docs/adr/README.md) und eine

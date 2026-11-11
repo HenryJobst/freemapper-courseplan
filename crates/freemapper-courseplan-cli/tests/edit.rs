@@ -1372,3 +1372,77 @@ fn cli_reports_changed_meanwhile_with_exit_1() {
         format!("{before}\n# touched\n")
     );
 }
+
+#[test]
+fn control_code_cli() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    ok(d, &["control", "add", p, "--at", "1,1"]);
+    ok(d, &["control", "add", p, "--at", "2,2"]);
+    assert_eq!(
+        ok(d, &["control", "code", p, "31", " K7 "]),
+        "changed the code of control 31 to K7"
+    );
+    let toml = std::fs::read_to_string(&project).unwrap();
+    assert!(toml.contains("K7") && !toml.contains("\"31\""), "{toml}");
+
+    let before = std::fs::read(&project).unwrap();
+    let taken = run(d, &["control", "code", p, "K7", "32"]);
+    assert_eq!(taken.status.code(), Some(1));
+    assert_eq!(
+        stderr(&taken).trim_end(),
+        "error: control 32 already exists"
+    );
+    let missing = run(d, &["control", "code", p, "99", "98"]);
+    assert_eq!(missing.status.code(), Some(1));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+
+    assert_eq!(
+        ok(d, &["control", "code", p, "K7", "K7"]),
+        "the code of control K7 stays K7; nothing changed"
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+    // A control or invisible character in a code is refused, and the file stays as it is.
+    let bad = run(d, &["control", "code", p, "K7", "a\u{202e}b"]);
+    assert_eq!(bad.status.code(), Some(1));
+    assert!(stderr(&bad).contains("U+202E"), "{}", stderr(&bad));
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+
+    let german = run_lang(d, "de", &["control", "code", p, "K7", "31"]);
+    assert!(german.status.success(), "{}", stderr(&german));
+    assert_eq!(
+        stdout(&german).trim_end(),
+        "Code von Posten K7 auf 31 geändert"
+    );
+}
+
+#[test]
+fn course_rename_cli() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    course_setup(d, p);
+    ok(
+        d,
+        &["course", "add", p, "A", "--start", "S1", "--finish", "F1"],
+    );
+    ok(
+        d,
+        &["course", "add", p, "B", "--start", "S1", "--finish", "F1"],
+    );
+    assert_eq!(
+        ok(d, &["course", "rename", p, "A", "Lang"]),
+        "renamed course A to Lang"
+    );
+    let taken = run(d, &["course", "rename", p, "B", "Lang"]);
+    assert_eq!(taken.status.code(), Some(1));
+    assert_eq!(
+        stderr(&taken).trim_end(),
+        "error: course Lang already exists"
+    );
+    let german = run_lang(d, "de", &["course", "rename", p, "Lang", "Kurz"]);
+    assert_eq!(stdout(&german).trim_end(), "Bahn Lang in Kurz umbenannt");
+    let toml = std::fs::read_to_string(&project).unwrap();
+    assert!(toml.contains("Kurz") && !toml.contains("Lang"), "{toml}");
+}

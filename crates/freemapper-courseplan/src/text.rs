@@ -154,6 +154,14 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::InvalidCharacter { what, point } => text(
+                lang,
+                "error-model-invalid-character",
+                &[
+                    ("what", v(word(lang, "word-name", what))),
+                    ("point", v(point)),
+                ],
+            ),
             ModelError::TooLong { what, limit, len } => text(
                 lang,
                 "error-model-too-long",
@@ -802,6 +810,7 @@ impl Localize for EditError {
             ),
             EditError::CodeTaken(code) => text(lang, "error-edit-code-taken", &[("code", v(code))]),
             EditError::IdTaken(id) => text(lang, "error-edit-id-taken", &[("id", v(id))]),
+            EditError::NameTaken(name) => text(lang, "error-edit-name-taken", &[("name", v(name))]),
             EditError::OutsideMap { at, min, max } => text(
                 lang,
                 "error-edit-outside-map",
@@ -873,6 +882,11 @@ impl Localize for EditError {
                 text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
             }
             EditError::StartWindowZero => text(lang, "error-edit-start-window-zero", &[]),
+            EditError::TooManyBends { course, limit } => text(
+                lang,
+                "error-edit-too-many-bends",
+                &[("course", v(course)), ("limit", v(limit))],
+            ),
             EditError::BlankRuleCategory { class } => text(
                 lang,
                 "error-edit-blank-rule-category",
@@ -1070,6 +1084,7 @@ mod tests {
             "courses",
             "course",
             "control",
+            "point",
             "kind",
             "path",
             "source",
@@ -1372,6 +1387,10 @@ mod tests {
                 what: "control code",
                 value: s(" 31"),
             },
+            ModelError::InvalidCharacter {
+                what: "control code",
+                point: s("U+202E"),
+            },
             ModelError::TooLong {
                 what: "course name",
                 limit: 200,
@@ -1501,6 +1520,7 @@ mod tests {
             EditError::Invalid(model_errors()),
             EditError::CodeTaken(code("31")),
             EditError::IdTaken(s("w1")),
+            EditError::NameTaken(s("A")),
             EditError::OutsideMap { at, min, max },
             EditError::InUse {
                 id: s("31"),
@@ -1540,6 +1560,10 @@ mod tests {
                 rule: s("wkb2026.distance.min"),
             },
             EditError::StartWindowZero,
+            EditError::TooManyBends {
+                course: s("A"),
+                limit: 200,
+            },
             EditError::BlankRuleCategory { class: s("H21") },
             EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];

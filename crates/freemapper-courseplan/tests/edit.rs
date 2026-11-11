@@ -104,6 +104,12 @@ fn extent() -> Option<(MapPoint, MapPoint)> {
     Some((pt(-100.0, -50.0), pt(100.0, 50.0)))
 }
 
+/// Sets the stops of an individual course without the edit's bookkeeping, as an edited file would.
+fn raw_codes(event: &mut Event, name: &str, codes: &[&str]) {
+    let course = event.courses.iter_mut().find(|c| c.name == name).unwrap();
+    course.kind = individual(codes);
+}
+
 fn codes_of(event: &Event, name: &str) -> Vec<String> {
     match &event.courses.iter().find(|c| c.name == name).unwrap().kind {
         CourseKind::Individual { controls } => controls.iter().map(|c| c.code.0.clone()).collect(),
@@ -269,7 +275,7 @@ fn set_course_controls_keeps_data_per_visit() {
         &[code("31"), code("32"), code("31"), code("33")],
     )
     .unwrap();
-    assert_eq!(cleared, [leg("A", 3)]);
+    assert_eq!(cleared.cleared, [leg("A", 3)]);
     let CourseKind::Individual { controls } = &e.courses[0].kind else {
         unreachable!()
     };
@@ -376,11 +382,27 @@ fn add_and_remove_course() {
 #[test]
 fn set_leg_and_course_number() {
     let mut e = event();
-    set_leg(&mut e, "A", LegStart::Start, vec![pt(3.0, 3.0)], true).unwrap();
+    set_leg(
+        &mut e,
+        extent(),
+        "A",
+        LegStart::Start,
+        vec![pt(3.0, 3.0)],
+        true,
+    )
+    .unwrap();
     assert_eq!(e.courses[0].start_bends, vec![pt(3.0, 3.0)]);
     assert!(e.courses[0].start_taped);
     // The leg after the last control runs to the finish.
-    set_leg(&mut e, "A", LegStart::After(1), vec![pt(4.0, 4.0)], false).unwrap();
+    set_leg(
+        &mut e,
+        extent(),
+        "A",
+        LegStart::After(1),
+        vec![pt(4.0, 4.0)],
+        false,
+    )
+    .unwrap();
     let CourseKind::Individual { controls } = &e.courses[0].kind else {
         unreachable!()
     };
@@ -404,7 +426,15 @@ fn set_leg_and_course_number() {
 fn failed_operation_leaves_event_unchanged() {
     let mut e = event();
     let before = e.clone();
-    let err = set_leg(&mut e, "A", LegStart::After(5), vec![pt(1.0, 1.0)], true).unwrap_err();
+    let err = set_leg(
+        &mut e,
+        extent(),
+        "A",
+        LegStart::After(5),
+        vec![pt(1.0, 1.0)],
+        true,
+    )
+    .unwrap_err();
     assert_eq!(
         err,
         EditError::BadIndex {
@@ -469,7 +499,7 @@ fn team_course_edit_is_not_supported() {
         Err(not_supported.clone())
     );
     assert_eq!(
-        set_leg(&mut e, "T", LegStart::Start, vec![], false),
+        set_leg(&mut e, extent(), "T", LegStart::Start, vec![], false),
         Err(not_supported.clone())
     );
     assert_eq!(
@@ -662,7 +692,7 @@ fn reorder_clears_only_the_legs_whose_next_stop_changed() {
         &[code("31"), code("32"), code("34"), code("33")],
     )
     .unwrap();
-    assert_eq!(cleared, [leg("A", 2)]);
+    assert_eq!(cleared.cleared, [leg("A", 2)]);
     assert_eq!(
         legs_of(&e),
         [
@@ -685,7 +715,7 @@ fn reorder_reports_the_start_leg_as_position_zero() {
     let mut e = bent_course();
     let cleared = set_course_controls(&mut e, "A", &[code("32"), code("31"), code("33")]).unwrap();
     // Start -> 31 becomes start -> 32; 31 -> 32 becomes 31 -> 33; 32 -> 33 becomes 32 -> 31.
-    assert_eq!(cleared, [leg("A", 0), leg("A", 1), leg("A", 2)]);
+    assert_eq!(cleared.cleared, [leg("A", 0), leg("A", 1), leg("A", 2)]);
     assert!(e.courses[0].start_bends.is_empty());
     assert_eq!(
         legs_of(&e),
@@ -717,8 +747,8 @@ fn removal_clears_the_previous_leg_and_the_length_is_the_straight_sum() {
     let mut e = bent_course();
     let removed = remove_control(&mut e, &code("31")).unwrap();
     assert_eq!(removed.cleared, [leg("A", 0)]);
-    set_leg(&mut e, "A", LegStart::After(0), vec![], false).unwrap();
-    set_leg(&mut e, "A", LegStart::After(1), vec![], false).unwrap();
+    set_leg(&mut e, extent(), "A", LegStart::After(0), vec![], false).unwrap();
+    set_leg(&mut e, extent(), "A", LegStart::After(1), vec![], false).unwrap();
     let metres = freemapper_courseplan::course::course_length_m(&e, &e.courses[0], 1000).unwrap();
     assert!((metres - 40.0).abs() < 1e-9, "{metres}");
 }
@@ -977,7 +1007,7 @@ fn a_leg_acceptance_stores_the_ends_and_is_removed_by_position() {
     let stored = &e.accepted_findings[0].legs[0];
     assert_eq!((stored.from.as_str(), stored.to.as_str()), ("31", "32"));
     // The leg now runs 31–33; the acceptance still names 31–32 and is removed by position.
-    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    raw_codes(&mut e, "A", &["31", "33"]);
     assert_eq!(e.accepted_findings[0].legs[0].to, "32");
     let mut named = acceptance("wkb2026.leg.acute_angle", &[], "");
     named.legs = vec![leg_ref("A", 1)];
@@ -1009,7 +1039,7 @@ fn an_exact_leg_acceptance_wins_over_a_stale_one_at_the_same_position() {
     };
     accept_finding(&mut e, &rules, angle("old leg")).unwrap();
     // Leg A:1 now runs 31–33; accepting it again stores a second entry and returns that one.
-    set_course_controls(&mut e, "A", &[code("31"), code("33")]).unwrap();
+    raw_codes(&mut e, "A", &["31", "33"]);
     let (done, stored) = accept_finding(&mut e, &rules, angle("new leg")).unwrap();
     assert_eq!(done, Accepted::Added);
     assert_eq!(
@@ -1051,6 +1081,16 @@ fn the_start_window_is_at_least_one_minute() {
         EditError::StartWindowZero
     );
     assert_eq!(e, before);
+}
+
+#[test]
+fn the_start_window_can_be_cleared() {
+    let mut e = event();
+    set_start_window(&mut e, 90).unwrap();
+    clear_start_window(&mut e).unwrap();
+    assert_eq!(e.event.start_window_min, None);
+    // Clearing what is not set is fine.
+    clear_start_window(&mut e).unwrap();
 }
 
 #[test]
@@ -1099,4 +1139,274 @@ fn rule_profile_is_validated_before_it_is_set() {
     assert_eq!(e, before);
     set_rule_profile(&mut e, "wkb-2026", &[]).unwrap();
     assert!(e.event.rule_overlays.is_empty());
+}
+
+// ---------------------------------------------------------------------------------------------
+// Changing a code, renaming a course
+
+#[test]
+fn change_code_follows_into_courses_and_accepted_findings() {
+    let mut e = event();
+    let mut a = acceptance("wkb2026.distance.min", &["31", "32"], "on purpose");
+    a.legs = vec![];
+    e.accepted_findings.push(a);
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef {
+            course: "A".to_owned(),
+            after: 1,
+            from: "31".to_owned(),
+            to: "32".to_owned(),
+        }],
+        note: "n".to_owned(),
+    });
+    change_code(&mut e, &code("32"), &code("77")).unwrap();
+    assert_eq!(codes_of(&e, "A"), ["31", "77"]);
+    assert_eq!(codes_of(&e, "B"), ["33", "77"]);
+    assert!(e.controls.iter().any(|c| c.code == code("77")));
+    assert!(!e.controls.iter().any(|c| c.code == code("32")));
+    assert_eq!(e.accepted_findings[0].controls, [code("31"), code("77")]);
+    assert_eq!(e.accepted_findings[1].legs[0].to, "77");
+    assert_eq!(e.accepted_findings[1].legs[0].from, "31");
+}
+
+#[test]
+fn change_code_to_a_taken_code_is_refused_and_leaves_the_event_equal() {
+    let mut e = event();
+    let before = e.clone();
+    assert_eq!(
+        change_code(&mut e, &code("31"), &code("32")),
+        Err(EditError::CodeTaken(code("32")))
+    );
+    assert_eq!(e, before);
+    assert!(matches!(
+        change_code(&mut e, &code("99"), &code("98")),
+        Err(EditError::NotFound {
+            what: "control",
+            ..
+        })
+    ));
+    for bad in ["", " 40", "40 ", &"x".repeat(65)] {
+        assert!(
+            matches!(
+                change_code(&mut e, &code("31"), &code(bad)),
+                Err(EditError::Invalid(_))
+            ),
+            "{bad:?}"
+        );
+    }
+    assert_eq!(e, before);
+    // The same code is no change.
+    change_code(&mut e, &code("31"), &code("31")).unwrap();
+    assert_eq!(e, before);
+}
+
+#[test]
+fn rename_course_follows_into_specials_and_findings() {
+    let mut e = event();
+    e.specials.push(water(&["A", "B"]));
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: Some("A".to_owned()),
+        legs: vec![],
+        note: "n".to_owned(),
+    });
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.opposing".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef::at("A", 1)],
+        note: "n".to_owned(),
+    });
+    change_course_name(&mut e, "A", "Lang").unwrap();
+    assert_eq!(e.courses[0].name, "Lang");
+    assert_eq!(e.courses[0].classes, ["H21"]);
+    match &e.specials[2] {
+        SpecialObject::Water { courses, .. } => assert_eq!(courses, &["Lang", "B"]),
+        other => panic!("{other:?}"),
+    }
+    assert_eq!(e.accepted_findings[0].course.as_deref(), Some("Lang"));
+    assert_eq!(e.accepted_findings[1].legs[0].course, "Lang");
+}
+
+#[test]
+fn rename_course_refuses_taken_missing_blank_and_long_names() {
+    let mut e = event();
+    let before = e.clone();
+    assert_eq!(
+        change_course_name(&mut e, "A", "B"),
+        Err(EditError::NameTaken("B".to_owned()))
+    );
+    assert!(matches!(
+        change_course_name(&mut e, "Z", "Y"),
+        Err(EditError::NotFound { what: "course", .. })
+    ));
+    for bad in ["", " X", "X ", &"x".repeat(201)] {
+        assert!(
+            matches!(
+                change_course_name(&mut e, "A", bad),
+                Err(EditError::Invalid(_))
+            ),
+            "{bad:?}"
+        );
+    }
+    assert_eq!(e, before);
+    change_course_name(&mut e, "A", "A").unwrap();
+    assert_eq!(e, before);
+}
+
+fn leg_acceptance(course: &str, after: u32, from: &str, to: &str) -> AcceptedFinding {
+    AcceptedFinding {
+        rule: "wkb2026.leg.acute_angle".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![LegRef {
+            course: course.to_owned(),
+            after,
+            from: from.to_owned(),
+            to: to.to_owned(),
+        }],
+        note: "n".to_owned(),
+    }
+}
+
+fn leg_after(e: &Event) -> Vec<u32> {
+    e.accepted_findings
+        .iter()
+        .map(|f| f.legs[0].after)
+        .collect()
+}
+
+#[test]
+fn inserting_a_stop_moves_an_accepted_leg_with_it() {
+    let mut e = event();
+    // Course A runs S1 31 32 F1; the leg 31 to 32 leaves position 1.
+    e.accepted_findings.push(leg_acceptance("A", 1, "31", "32"));
+    e.accepted_findings.push(leg_acceptance("A", 2, "32", "F1"));
+    let edit = set_course_controls(&mut e, "A", &[code("33"), code("31"), code("32")]).unwrap();
+    assert!(edit.dropped.is_empty());
+    assert_eq!(leg_after(&e), [2, 3]);
+}
+
+#[test]
+fn removing_a_stop_moves_or_drops_accepted_legs() {
+    let mut e = event();
+    e.controls.push(control("34"));
+    raw_codes(&mut e, "A", &["31", "32", "34"]);
+    e.accepted_findings.push(leg_acceptance("A", 2, "32", "34"));
+    e.accepted_findings.push(leg_acceptance("A", 3, "34", "F1"));
+    e.accepted_findings.push(leg_acceptance("A", 1, "31", "32"));
+    // Taking 31 away: the leg 31-32 is gone, the others move up by one.
+    let removed = remove_control(&mut e, &code("31")).unwrap();
+    assert_eq!(removed.dropped.len(), 1);
+    assert_eq!(removed.dropped[0].from, "31");
+    assert_eq!(leg_after(&e), [1, 2]);
+    assert_eq!(e.accepted_findings[0].legs[0].to, "34");
+}
+
+#[test]
+fn reordering_keeps_legs_that_survive_and_drops_the_rest() {
+    let mut e = event();
+    e.accepted_findings.push(leg_acceptance("A", 1, "31", "32"));
+    e.accepted_findings.push(leg_acceptance("A", 2, "32", "F1"));
+    let edit = set_course_controls(&mut e, "A", &[code("32"), code("31")]).unwrap();
+    // 31 to 32 and 32 to the finish no longer exist.
+    assert_eq!(edit.dropped.len(), 2);
+    assert!(e.accepted_findings.is_empty());
+}
+
+#[test]
+fn another_courses_accepted_legs_stay_when_one_course_changes() {
+    let mut e = event();
+    e.accepted_findings.push(leg_acceptance("B", 1, "33", "32"));
+    set_course_controls(&mut e, "A", &[code("32")]).unwrap();
+    assert_eq!(leg_after(&e), [1]);
+}
+
+#[test]
+fn renaming_a_control_or_course_rewrites_sync_decisions() {
+    use freemapper_courseplan_model::{Side, SyncDecision, SyncState};
+    let mut e = event();
+    let d = |key: &str| SyncDecision {
+        key: key.to_owned(),
+        take: Side::Ours,
+        fingerprint: "f".to_owned(),
+    };
+    e.sync = Some(SyncState {
+        decisions: vec![
+            d("control/31/position"),
+            d("control/310/position"),
+            d("course/A/number/31"),
+            d("course/A/number/31#2"),
+            d("course/A/stops"),
+            d("leg/31-32"),
+            d("leg/S1-31"),
+            d("course/B/stops"),
+        ],
+        ..Default::default()
+    });
+    change_code(&mut e, &code("31"), &code("41")).unwrap();
+    change_course_name(&mut e, "A", "Lang").unwrap();
+    let keys: Vec<&str> = e
+        .sync
+        .as_ref()
+        .unwrap()
+        .decisions
+        .iter()
+        .map(|d| d.key.as_str())
+        .collect();
+    assert_eq!(
+        keys,
+        [
+            "control/41/position",
+            "control/310/position",
+            "course/Lang/number/41",
+            "course/Lang/number/41#2",
+            "course/Lang/stops",
+            "leg/41-32",
+            "leg/S1-41",
+            "course/B/stops",
+        ]
+    );
+}
+
+#[test]
+fn set_leg_checks_the_extent_and_caps_the_bends() {
+    let mut e = event();
+    let before = e.clone();
+    let err = set_leg(
+        &mut e,
+        extent(),
+        "A",
+        LegStart::Start,
+        vec![pt(1e9, 0.0)],
+        false,
+    )
+    .unwrap_err();
+    assert!(matches!(err, EditError::OutsideMap { .. }));
+    let many = vec![pt(1.0, 1.0); MAX_BENDS + 1];
+    let err = set_leg(&mut e, extent(), "A", LegStart::After(0), many, false).unwrap_err();
+    assert!(matches!(
+        err,
+        EditError::TooManyBends {
+            limit: MAX_BENDS,
+            ..
+        }
+    ));
+    assert_eq!(e, before);
+    let fine = vec![pt(1.0, 1.0); MAX_BENDS];
+    set_leg(&mut e, extent(), "A", LegStart::After(0), fine, false).unwrap();
+    // Without a known extent, only the count is checked.
+    set_leg(
+        &mut e,
+        None,
+        "A",
+        LegStart::Start,
+        vec![pt(1e9, 0.0)],
+        false,
+    )
+    .unwrap();
 }

@@ -488,6 +488,18 @@ fn an_acceptance_whose_leg_changed_is_listed_as_not_matched() {
     // Course A now runs S1–32–31–F1: the leg after position 1 is 32–31, not 31–32.
     let swap = run(d, &["course", "controls", p, "A", "32,31"]);
     assert_eq!(code(&swap), Some(0), "{}", stderr(&swap));
+    // The edit drops the acceptance of the leg that is gone and says so.
+    assert!(
+        stdout(&swap).contains("dropped the accepted finding on the leg 31 to 32"),
+        "{}",
+        stdout(&swap)
+    );
+    // A file edited by hand can still hold an acceptance of a leg that is gone.
+    let mut text = std::fs::read_to_string(&project).unwrap();
+    text.push_str(
+        "\n[[accepted_findings]]\nrule = \"wkb2026.leg.through_control\"\nlegs = [{ course = \"A\", after = 1, from = \"31\", to = \"32\" }]\nnote = \"kept on purpose\"\n",
+    );
+    std::fs::write(&project, text).unwrap();
     let out = run(d, &["check", p]);
     assert_eq!(
         code(&out),

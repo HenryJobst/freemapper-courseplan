@@ -205,6 +205,22 @@ pub(super) struct ControlRef {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetControlCode {
+    pub(super) project: String,
+    pub(super) from: Code,
+    pub(super) to: Code,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct RenameCourse {
+    pub(super) project: String,
+    pub(super) from: Name,
+    pub(super) to: Name,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct DescribeControl {
     pub(super) project: String,
     pub(super) code: Code,
@@ -446,5 +462,6 @@ pub(super) struct SetRuleProfile {
 #[serde(deny_unknown_fields)]
 pub(super) struct SetStartWindow {
     pub(super) project: String,
-    pub(super) minutes: u32,
+    pub(super) minutes: Option<u32>,
+    pub(super) no_start_window: Option<bool>,
 }

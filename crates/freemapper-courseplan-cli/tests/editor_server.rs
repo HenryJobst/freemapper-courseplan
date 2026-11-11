@@ -390,3 +390,59 @@ fn place_move_undo_over_http() {
         after_add
     );
 }
+
+#[test]
+fn change_code_over_http() {
+    let editor = Editor::start();
+    let state = |editor: &Editor| -> serde_json::Value {
+        serde_json::from_str(&editor.request("GET", "api/state", &[]).2).unwrap()
+    };
+    let codes = |state: &serde_json::Value| -> Vec<String> {
+        state["event"]["controls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c["code"].to_string().trim_matches('"').to_owned())
+            .collect()
+    };
+    let first = state(&editor);
+    let revision = first["revision"].as_str().unwrap().to_owned();
+    let original = std::fs::read_to_string(editor.project_file()).unwrap();
+    assert!(codes(&first).contains(&"31".to_owned()));
+
+    // A taken code is refused and nothing is written.
+    let (status, refused) = editor.post_json(
+        "api/op/set_control_code",
+        &revision,
+        &serde_json::json!({ "from": "31", "to": "32" }),
+    );
+    assert_eq!(status, 422, "{refused}");
+    assert_eq!(
+        std::fs::read_to_string(editor.project_file()).unwrap(),
+        original
+    );
+
+    let (status, changed) = editor.post_json(
+        "api/op/set_control_code",
+        &revision,
+        &serde_json::json!({ "from": "31", "to": "K7" }),
+    );
+    assert_eq!(status, 200, "{changed}");
+    let revision = changed["revision"].as_str().unwrap().to_owned();
+    let now = state(&editor);
+    assert!(codes(&now).contains(&"K7".to_owned()) && !codes(&now).contains(&"31".to_owned()));
+    assert_eq!(now["undo"]["undo"], "Change control code");
+    assert!(
+        std::fs::read_to_string(editor.project_file())
+            .unwrap()
+            .contains("K7")
+    );
+
+    let (status, undone) = editor.post_json("api/undo", &revision, &serde_json::json!({}));
+    assert_eq!(status, 200, "{undone}");
+    assert_eq!(
+        std::fs::read_to_string(editor.project_file()).unwrap(),
+        original
+    );
+    assert!(codes(&state(&editor)).contains(&"31".to_owned()));
+}

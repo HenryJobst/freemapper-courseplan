@@ -95,6 +95,17 @@ fn cleared_json(cleared: &[edit::ClearedLeg]) -> Value {
     )
 }
 
+/// The accepted findings an edit dropped because their leg is gone, as `[{course, after, from, to}]`
+/// with the leg's old position.
+fn dropped_json(dropped: &[freemapper_courseplan_model::LegRef]) -> Value {
+    Value::Array(
+        dropped
+            .iter()
+            .map(|l| json!({ "course": l.course, "after": l.after, "from": l.from, "to": l.to }))
+            .collect(),
+    )
+}
+
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
@@ -739,6 +750,22 @@ impl CoursePlanServer {
         reply(self.remove_control_op(req))
     }
 
+    #[tool(description = "Change the code of a control")]
+    async fn set_control_code(
+        &self,
+        Parameters(req): Parameters<SetControlCode>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_control_code_op(req))
+    }
+
+    #[tool(description = "Rename a course")]
+    async fn rename_course(
+        &self,
+        Parameters(req): Parameters<RenameCourse>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.rename_course_op(req))
+    }
+
     #[tool(description = "Describe a control")]
     async fn describe_control(
         &self,
@@ -1076,6 +1103,26 @@ impl CoursePlanServer {
         })
     }
 
+    fn set_control_code_op(&self, req: SetControlCode) -> Answer {
+        self.edit(&req.project, |file| {
+            edit::change_code(
+                &mut file.event,
+                &ControlCode(req.from.0.clone()),
+                &ControlCode(req.to.0.clone()),
+            )
+            .map_err(|e| self.refused(e))?;
+            Ok(json!({ "from": req.from.0, "code": req.to.0 }))
+        })
+    }
+
+    fn rename_course_op(&self, req: RenameCourse) -> Answer {
+        self.edit(&req.project, |file| {
+            edit::change_course_name(&mut file.event, &req.from.0, &req.to.0)
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({ "from": req.from.0, "name": req.to.0 }))
+        })
+    }
+
     fn remove_control_op(&self, req: ControlRef) -> Answer {
         self.edit(&req.project, |file| {
             let removed = edit::remove_control(&mut file.event, &ControlCode(req.code.0.clone()))
@@ -1084,6 +1131,7 @@ impl CoursePlanServer {
                 "code": req.code.0,
                 "left_courses": removed.courses,
                 "cleared_legs": cleared_json(&removed.cleared),
+                "dropped_acceptances": dropped_json(&removed.dropped),
             }))
         })
     }
@@ -1350,12 +1398,13 @@ impl CoursePlanServer {
         self.edit(&req.project, |file| {
             let codes = code_list(req.codes);
             let sequence: Vec<ControlCode> = codes.iter().cloned().map(ControlCode).collect();
-            let cleared = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
+            let stops = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
                 "name": req.name.0,
                 "controls": codes,
-                "cleared_legs": cleared_json(&cleared),
+                "cleared_legs": cleared_json(&stops.cleared),
+                "dropped_acceptances": dropped_json(&stops.dropped),
             }))
         })
     }
@@ -1378,7 +1427,12 @@ impl CoursePlanServer {
             let bends = map_points(req.bends.unwrap_or_default());
             let taped = flag(req.taped);
             let count = bends.len();
-            edit::set_leg(&mut file.event, &req.name.0, leg, bends, taped).map_err(
+            let extent = if bends.is_empty() {
+                None
+            } else {
+                self.extent(file)?
+            };
+            edit::set_leg(&mut file.event, extent, &req.name.0, leg, bends, taped).map_err(
                 |e| match e {
                     edit::EditError::BadIndex { .. } => bad_index(req.after.unwrap_or(0)),
                     other => self.refused(other),
@@ -1660,8 +1714,18 @@ impl CoursePlanServer {
 
     fn set_start_window_op(&self, req: SetStartWindow) -> Answer {
         self.edit(&req.project, |file| {
-            edit::set_start_window(&mut file.event, req.minutes).map_err(|e| self.refused(e))?;
-            Ok(json!({ "start_window_min": req.minutes }))
+            match (req.minutes, flag(req.no_start_window)) {
+                (Some(minutes), false) => {
+                    edit::set_start_window(&mut file.event, minutes)
+                        .map_err(|e| self.refused(e))?;
+                    Ok(json!({ "start_window_min": minutes }))
+                }
+                (None, true) => {
+                    edit::clear_start_window(&mut file.event).map_err(|e| self.refused(e))?;
+                    Ok(json!({ "start_window_min": Value::Null }))
+                }
+                _ => Err(text(&self.lang, "mcp-error-start-window-choice", &[])),
+            }
         })
     }
 
@@ -1685,6 +1749,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "add_control",
     "move_control",
     "remove_control",
+    "set_control_code",
     "describe_control",
     "set_control_number",
     "add_special",
@@ -1695,6 +1760,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "remove_class",
     "add_course",
     "remove_course",
+    "rename_course",
     "set_course_controls",
     "set_leg",
     "set_course_details",
@@ -1786,6 +1852,8 @@ impl CoursePlanServer {
             "add_control" => run!(AddControl, add_control_op),
             "move_control" => run!(MoveControl, move_control_op),
             "remove_control" => run!(ControlRef, remove_control_op),
+            "set_control_code" => run!(SetControlCode, set_control_code_op),
+            "rename_course" => run!(RenameCourse, rename_course_op),
             "describe_control" => run!(DescribeControl, describe_control_op),
             "set_control_number" => run!(SetControlNumber, set_control_number_op),
             "add_special" => run!(AddSpecial, add_special_op),
@@ -2273,7 +2341,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 36);
+            assert_eq!(tools.len(), 38);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

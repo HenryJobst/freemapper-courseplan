@@ -269,3 +269,35 @@ fn over_long_codes_names_and_notes_are_refused() {
             .any(|error| matches!(error, ModelError::TooLong { .. }))
     );
 }
+
+#[test]
+fn control_and_invisible_characters_in_names_are_refused() {
+    for (bad, point) in [
+        ("a\u{0}b", "U+0000"),
+        ("a\u{b}b", "U+000B"),
+        ("a\nb", "U+000A"),
+        ("a\u{202e}b", "U+202E"),
+        ("a\u{2066}b", "U+2066"),
+        ("a\u{200b}b", "U+200B"),
+        ("a\u{feff}b", "U+FEFF"),
+    ] {
+        let mut e = event("");
+        e.controls[0].code = ControlCode(bad.to_owned());
+        e.courses[0].name = bad.to_owned();
+        e.classes[0].name = bad.to_owned();
+        let errors = validate(&e);
+        for what in ["control code", "course name", "class name"] {
+            assert!(
+                errors.contains(&ModelError::InvalidCharacter {
+                    what,
+                    point: point.to_owned()
+                }),
+                "{what} with {point}: {errors:?}"
+            );
+        }
+    }
+    // Ordinary text with accents, emoji and inner spaces stays fine.
+    let mut e = event("");
+    e.courses[0].name = "Lang B ä 🙂".to_owned();
+    assert_eq!(validate(&e), vec![]);
+}
