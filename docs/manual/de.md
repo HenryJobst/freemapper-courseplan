@@ -112,8 +112,7 @@ dort an.
 
 Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
 Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
-zurücknehmen. Postenbeschreibungen änderst du weiter mit der Kommandozeile oder dem KI-Assistenten; der Editor zeigt
-sie an. Der Bereich für Befunde ist leer, und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch
+zurücknehmen. Postenbeschreibungen wählst du in den Eigenschaften eines Postens. Der Bereich für Befunde ist leer, und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch
 ausgegraut. Beides folgt in späteren Versionen.
 
 ### Starten
@@ -242,6 +241,14 @@ automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
 
 Ein Ziehen ist ein Schritt für Rückgängig. Eine Warnung zu einem Abstand außerhalb des Regelbereichs zeigt der Editor
 noch nicht; `check` meldet ihn.
+
+### Postenbeschreibungen
+
+Wähle einen Posten. Seine Eigenschaften führen die Spalten C bis H auf, jede zugeklappt und mit dem aktuellen Symbol.
+Klappe eine Spalte auf, dann siehst du ihre Symbole als Raster aus Zeichen mit Nummer und Text; die Kartenobjekte im
+Umkreis von 3 mm stehen unter Spalte D. Klicke ein Symbol an oder gehe mit den Pfeiltasten hin und drücke Enter. Tippst
+du eine Nummer wie `1.3`, springt die Auswahl dorthin. „Kein Symbol“ leert die Spalte. Jede Wahl ist ein Schritt für
+Rückgängig. Spalte E bietet auch die Symbole der Spalte D an (ADR 0051).
 
 ### Sonderobjekte
 

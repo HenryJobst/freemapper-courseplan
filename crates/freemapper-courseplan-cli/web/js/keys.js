@@ -31,7 +31,7 @@ const ARROWS = {
 };
 
 function typing(target) {
-  return target instanceof Element && target.closest("input, textarea, select, [contenteditable]") !== null;
+  return target instanceof Element && target.closest("input, textarea, select, [role='listbox'], [contenteditable]") !== null;
 }
 
 // Fills the dialog's table from SHORTCUTS.

@@ -700,6 +700,7 @@ mod tests {
         ("editor/api.rs", include_str!("editor/api.rs")),
         ("editor/history.rs", include_str!("editor/history.rs")),
         ("editor/overlay.rs", include_str!("editor/overlay.rs")),
+        ("editor/symbols.rs", include_str!("editor/symbols.rs")),
         ("check_cmd.rs", include_str!("check_cmd.rs")),
         ("export_cmd.rs", include_str!("export_cmd.rs")),
         ("import_cmd.rs", include_str!("import_cmd.rs")),

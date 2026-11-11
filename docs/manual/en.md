@@ -107,8 +107,8 @@ there.
 ## 4. The editor (preview)
 
 The editor shows the event in the browser. You can place, move and delete controls, build courses and categories,
-bend and tape legs, place control numbers, draw special objects and take each step back. Control descriptions still
-go through the command line or the AI assistant, and the editor shows them. The area for findings is empty, and the
+bend and tape legs, place control numbers, draw special objects, choose control description symbols and take each step back.
+The area for findings is empty, and the
 menu items for export, import and sync are greyed out. Both follow in later versions.
 
 ### Starting it
@@ -232,6 +232,14 @@ the project stores no position for it yet.
   courses.
 
 One drag is one step for undo. The editor does not yet warn about a gap outside the rule range; `check` reports it.
+
+### Control descriptions
+
+Select a control. Its properties list the columns C to H, each folded and showing the current symbol. Open a column
+to see its symbols as a grid of icons with their numbers and texts; the map objects within 3 mm of the control are
+listed below column D. Click a symbol or move with the arrow keys and press Enter. Typing a number such as `1.3`
+jumps to it. "No symbol" empties the column. Each pick is one step for undo. Column E offers the symbols of column D
+too (ADR 0051).
 
 ### Special objects
 

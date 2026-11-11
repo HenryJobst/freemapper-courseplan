@@ -540,7 +540,17 @@ async function placeNumbers() {
   if (done) status.say(`${t("editor-status-numbers-placed")} ${done.result.placed}`, true);
 }
 
+// One pick in a description picker: one describe_control operation, the focus stays on the picked symbol.
+async function describeControl(body, focusId) {
+  const done = await runOp("describe_control", body);
+  if (!done) return;
+  props.focusAfter(focusId);
+  status.say("editor-status-described");
+  redraw();
+}
+
 const propActions = {
+  describe: describeControl,
   rules: () => state.rules,
   placeNumbers,
   move: moveControl,

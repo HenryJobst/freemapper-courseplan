@@ -5,6 +5,7 @@ import { kindLabel } from "./overlay.js";
 import { t } from "./texts.js";
 import { legLabel } from "./course.js";
 import * as numbers from "./numbers.js";
+import * as describe from "./describe.js";
 import {
   MAX_NAME_CHARS, nameProblem, courseFields, stopList, courseRemoveButton, classPanel, eventPanel,
 } from "./course.js";
@@ -17,8 +18,6 @@ let wantFocus = null;
 export function focusAfter(id) {
   wantFocus = id;
 }
-
-const COLUMNS = ["c", "d", "e", "f", "g", "h"];
 
 function mm(p) {
   return `${p[0].toFixed(2)}; ${p[1].toFixed(2)} mm`;
@@ -179,12 +178,6 @@ function controlRows(host, list, state, code, actions) {
   });
   row(list, "editor-prop-kind", kindLabel(control.kind ?? "control"));
   const error = positionFields(list, control, actions);
-  // A crossing point has no control description.
-  if (control.kind !== "crossing_point") {
-    for (const column of COLUMNS) {
-      row(list, `editor-desc-column-${column}`, control.description?.[column]);
-    }
-  }
   const users = state.event.courses
     .filter((c) => c.controls.some((x) => String(x.code) === String(code)))
     .map((c) => c.name);
@@ -196,12 +189,21 @@ function controlRows(host, list, state, code, actions) {
   remove.textContent = t("editor-prop-delete");
   remove.addEventListener("click", () => actions.remove());
   host.append(remove);
-  const heading = document.createElement("h3");
-  heading.textContent = t("editor-prop-near-heading");
-  const near = document.createElement("ul");
-  near.id = "near-list";
-  near.className = "near";
-  host.append(heading, near);
+  // A crossing point has no control description. The map objects at the control sit right after the D picker.
+  const nearElements = () => {
+    const heading = document.createElement("h4");
+    heading.textContent = t("editor-prop-near-heading");
+    const near = document.createElement("ul");
+    near.id = "near-list";
+    near.className = "near";
+    return [heading, near];
+  };
+  const nearList = (after) => after.after(...nearElements());
+  if (control.kind !== "crossing_point") {
+    describe.panel(host, control, actions, nearList);
+  } else {
+    host.append(...nearElements());
+  }
 }
 
 // Lists the map objects of `answer` (api/map/near) in the properties; null leaves the list empty.
