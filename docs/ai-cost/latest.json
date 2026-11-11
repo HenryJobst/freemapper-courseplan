@@ -1,18 +1,18 @@
 {
-  "total_usd": 471.1,
+  "total_usd": 477.0,
   "by_model_usd": {
     "claude-haiku-5-5": 0.03,
     "claude-opus-5-5": 309.24,
-    "claude-sonnet-5-5": 161.82
+    "claude-sonnet-5-5": 167.72
   },
-  "requests": 8748,
+  "requests": 8911,
   "sessions": 1,
   "first_activity": "2026-11-08T09:37:50.311Z",
-  "last_activity": "2026-11-11T13:26:45.042Z",
+  "last_activity": "2026-11-11T14:26:53.433Z",
   "unpriced_requests": {},
   "prices": {
     "source": "https://platform.claude.com/docs/en/about-claude/pricing.md",
-    "fetched_at": "2026-11-11T13:28:07Z",
+    "fetched_at": "2026-11-11T14:28:10Z",
     "stale": false
   }
 }
