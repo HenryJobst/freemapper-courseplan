@@ -132,6 +132,14 @@ pub(super) struct ExportIofXml {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct ExportScore {
+    pub(super) project: String,
+    pub(super) course: Name,
+    pub(super) path: String,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct ExportPpen {
     pub(super) project: String,
     pub(super) path: String,

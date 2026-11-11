@@ -995,6 +995,15 @@ impl Localize for ScoreError {
                 "error-score-finish-unreachable",
                 &[("x", v(at.x)), ("y", v(at.y))],
             ),
+            ScoreError::UnknownCourse(name) => {
+                t("error-score-unknown-course", &[("course", v(name))])
+            }
+            ScoreError::NotAScoreCourse(name) => {
+                t("error-score-not-a-score-course", &[("course", v(name))])
+            }
+            ScoreError::UnknownControl(code) => {
+                t("error-score-unknown-control", &[("code", v(code))])
+            }
             ScoreError::MapEmpty => t("error-score-map-empty", &[]),
             ScoreError::BadRouteSetting { name, value } => t(
                 "error-score-bad-route-setting",

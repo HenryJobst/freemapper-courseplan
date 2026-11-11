@@ -113,3 +113,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0067](0067-score-editing-ops.md) | Score courses: editing operations | Accepted | 2026-11-11 |
 | [0068](0068-score-suggest-draft-length-ops.md) | Score courses: suggest, draft and length operations | Accepted | 2026-11-11 |
 | [0069](0069-editor-score-panel.md) | Editor: the score panel, links on the map and long runs | Accepted | 2026-11-11 |
+| [0070](0070-score-export-and-sheets.md) | Score courses: export, CSV and evaluation sheet | Accepted | 2026-11-11 |

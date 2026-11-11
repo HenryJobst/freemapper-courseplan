@@ -794,3 +794,78 @@ fn no_position_without_georef() {
     let out = export_iof_xml(&e, 4000, MapKind::Sprint, Some(&grid), CREATED).unwrap();
     assert!(out.geo_positions);
 }
+
+fn score_course(name: &str) -> Course {
+    use freemapper_courseplan_model::{ScoreControl, ScoreLink};
+    course(
+        name,
+        CourseKind::Score {
+            time_limit_min: 60,
+            penalty_per_min: None,
+            controls: vec![
+                ScoreControl {
+                    code: ControlCode("31".to_owned()),
+                    value: 1,
+                },
+                ScoreControl {
+                    code: ControlCode("32".to_owned()),
+                    value: 2,
+                },
+            ],
+            links: vec![ScoreLink {
+                a: ControlCode("31".to_owned()),
+                b: ControlCode("32".to_owned()),
+            }],
+        },
+    )
+}
+
+#[test]
+fn score_course_is_written_to_iof_xml_and_validates_against_the_schema() {
+    let mut e = event();
+    e.courses = vec![individual("A", &["31"]), score_course("Score")];
+    e.courses[1].classes = vec!["Open".to_owned()];
+    let out = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap();
+    assert!(out.skipped.is_empty());
+    let xml = out.xml;
+    assert_eq!(count(&xml, "<Course>"), 2);
+    assert_eq!(count(&xml, "<Score>"), 2);
+    assert!(xml.contains("<Score>2</Score>"));
+    // Default penalty: highest value of the course or of the event, here the event's 5.
+    assert!(
+        xml.contains("timeLimitMin=\"60\" penaltyPerMin=\"5\""),
+        "{xml}"
+    );
+    assert!(xml.contains("<fcp:Link a=\"31\" b=\"32\"/>"), "{xml}");
+    assert!(xml.contains("<CourseName>Score</CourseName>"));
+    assert_eq!(xml, export(&e), "deterministic");
+    assert_valid(&xml);
+}
+
+#[test]
+fn score_course_names_an_unknown_control() {
+    let mut e = event();
+    e.controls.remove(0);
+    e.courses = vec![score_course("Score")];
+    let err = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap_err();
+    assert!(err.to_string().contains("Score"), "{err}");
+}
+
+#[test]
+fn individual_output_is_unchanged() {
+    // The snapshot test above covers the full file; here a score course beside an individual one must
+    // not change the individual course's element.
+    let mut e = event();
+    e.courses = vec![individual("A", &["31", "32"])];
+    let alone = export(&e);
+    e.courses.push(score_course("Score"));
+    let both = export(&e);
+    let first = alone
+        .split("<Course>")
+        .nth(1)
+        .unwrap()
+        .split("</Course>")
+        .next()
+        .unwrap();
+    assert!(both.contains(first));
+}

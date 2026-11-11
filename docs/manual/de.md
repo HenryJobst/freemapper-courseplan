@@ -160,8 +160,16 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
 - Knicke, Strecken, Postennummern und `course controls` gehören zu Einzelbahnen; eine Score-Bahn lehnt sie ab.
   Kategorien, Druckmaßstab, `course rename` und `course remove` gelten für beide. Mannschafts- und Staffelbahnen
   lassen sich noch nicht bearbeiten.
-- Der Export schreibt nur Einzelbahnen und nennt die ausgelassenen Score-Bahnen. Der Editor zeichnet Score-Bahnen und hat ein
+- Der IOF-XML-Export schreibt auch Score-Bahnen (siehe Export unten). Der Purple-Pen-Export lässt sie weiter aus und sagt es. Der Editor zeichnet Score-Bahnen und hat ein
   Score-Fenster (siehe „Das Score-Fenster“ im Editor-Kapitel).
+
+#### Listen und Auswertungsbogen
+
+```sh
+freemapper-courseplan export hall.courseplan.toml --course Score45 --csv score45.csv --sheet score45.md
+```
+
+`--csv` schreibt eine Zeile je Posten: `code,value,x_mm,y_mm`, nach Code geordnet, mit Positionen in Kartenmillimetern im Kartenmaßstab (y zeigt nach unten) und einem Punkt als Dezimaltrenner. `--sheet` schreibt den Auswertungsbogen als Markdown, ein Text, der sich so gut drucken lässt: das Zeitlimit, den Abzug je angefangene Minute (den gespeicherten oder den Standard), die Regel, dass bei gleicher Punktzahl gewinnt, wer schneller ist, die Pflichtverbindungen mit der Regel, dass disqualifiziert wird, wer eine Verbindung nicht direkt läuft, und eine Tabelle der Posten mit ihren Werten. Beide brauchen `--course` und lehnen eine Bahn ab, die keine Score-Bahn ist. Eine vorhandene Datei wird ersetzt. Die Werkzeuge heißen `export_score_csv` und `export_score_sheet`, mit `project`, `course` und `path` (Endung `.csv` oder `.md`). Die Entscheidungen stehen in ADR 0070.
 
 #### Vorschläge, Entwurf und Länge
 
@@ -438,8 +446,8 @@ Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus 
 Das Menü „Veranstaltung“ hat vier Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
 verknüpfte Purple-Pen-Datei des Projekts.
 
-- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzelbahnen, benannt nach der
-  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team-, Staffel- und Score-Bahnen) und sagt es, wenn die Karte
+- **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzel- und Score-Bahnen, benannt nach der
+  Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team- und Staffelbahnen) und sagt es, wenn die Karte
   keine Georeferenz hat.
 - **Nach Purple Pen exportieren…** „In die verknüpfte Datei schreiben“ aktualisiert die Datei, die `sources.ppen`
   nennt, nach den Regeln von `export --ppen`: Sie ändert nur, was das Projekt geändert hat, und speichert neue
@@ -892,15 +900,16 @@ Mit `export` gibst du die Bahnen an Auswertungsprogramme weiter, die IOF-XML 3.0
 freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
-Das Programm schreibt alle Einzelbahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
+Das Programm schreibt alle Einzel- und Score-Bahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
 Postenfolge jeder Bahn, Streckenlängen, Anstieg, die Lage der Postennummern und die Zuordnung der Bahnen zu
 Kategorien. Eine vorhandene Datei ersetzt es erst, wenn die neue vollständig geschrieben ist. Ohne `--iof-xml` tut
 `export` nichts und endet mit Fehlercode 2.
 
 Was du wissen solltest:
 
-- Mannschafts-, Staffel- und Score-Bahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
+- Mannschafts- und Staffelbahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
   ihrer Art.
+- Eine Score-Bahn steht mit dem Wert jedes Postens in `CourseControl/Score`. Für das Zeitlimit, den Abzug je angefangene Minute und die Pflichtverbindungen hat das Schema kein Element. Die Bahn trägt sie deshalb in einem `Extensions`-Element im Namensraum `urn:freemapper-courseplan:score:1` (`ScoreCourse` mit `timeLimitMin`, `penaltyPerMin` und je Paar ein `Link`). Der Abzug ist der aufgelöste, der Standard eingeschlossen. Programme, die den Namensraum nicht kennen, übergehen ihn. Die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, steht nicht in der Datei, sondern auf dem Auswertungsbogen (siehe Score-Bahnen).
 - Nennst du als Zieldatei die Projektdatei oder die Karte, bricht `export` mit einem Fehler ab und lässt beide
   unberührt.
 - Ist die Karte georeferenziert, tragen Start, Posten und Ziel Breite und Länge mit sechs Nachkommastellen. Fehlt die

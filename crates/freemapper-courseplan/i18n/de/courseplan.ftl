@@ -525,14 +525,14 @@ cli-event-profile-set-overlays = Regelprofil { $value } mit { $count ->
 
 cli-help-export = Die Bahnen für andere Programme in eine Datei schreiben
 cli-arg-export-project = Die Projektdatei
-cli-arg-export-iof-xml = Die Einzelbahnen als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben; eine vorhandene Datei wird ersetzt
+cli-arg-export-iof-xml = Die Einzel- und Score-Bahnen als IOF-XML-3.0-CourseData für Auswertungsprogramme wie OE schreiben; eine vorhandene Datei wird ersetzt
 export-iof-xml-written = { $count ->
     [one] 1 Bahn nach { $path } geschrieben
    *[other] { $count } Bahnen nach { $path } geschrieben
 }
 export-iof-xml-skipped = { $course } ausgelassen: Bahnart { $kind } wird nicht nach IOF XML exportiert
 export-iof-xml-no-geo = die Karte hat keine nutzbare Georeferenzierung, die Posten tragen daher keine Breite und Länge, nur Kartenpositionen
-export-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI oder --ppen DATEI
+export-nothing-to-do = nichts zu exportieren; nenne ein Format, zum Beispiel --iof-xml DATEI, --ppen DATEI oder --csv DATEI mit --course NAME
 error-export-iof-xml-character = Export nicht möglich: Ein Text des Ereignisses enthält das Zeichen { $point }, das XML nicht erlaubt
 error-export-iof-xml-course = Bahn { $course } kann nicht exportiert werden: { $source }
 error-export-overwrites-input = { $path } ist die Projektdatei oder ihre Karte, der Export würde sie überschreiben; nenne eine andere Datei
@@ -1546,3 +1546,48 @@ cli-score-length-ok = beide Läufer liegen in den Bändern
 cli-score-bad-link-ends = { $value } ist keine Verbindung; schreibe zwei Positionen als X,Y;X,Y
 cli-score-bad-distance = { $value } ist keine Entfernung; gib Kartenmillimeter an, null oder mehr
 mcp-error-interrupted = der Vorgang wurde vor dem Ende abgebrochen
+error-score-unknown-course = Die Bahn { $course } gibt es nicht
+error-score-not-a-score-course = Die Bahn { $course } ist keine Score-Bahn
+error-score-unknown-control = Die Bahn nennt Posten { $code }, den die Veranstaltung nicht hat
+cli-arg-export-csv = Die Posten einer Score-Bahn als CSV mit Code, Wert und Position in Kartenmillimetern schreiben; braucht --course. Eine vorhandene Datei wird ersetzt
+cli-arg-export-sheet = Den Auswertungsbogen einer Score-Bahn als Markdown schreiben; braucht --course. Eine vorhandene Datei wird ersetzt
+cli-arg-export-course = Die Score-Bahn für --csv und --sheet
+export-needs-course = --csv und --sheet brauchen --course NAME, die Score-Bahn, die geschrieben werden soll
+export-csv-written = Postenliste der Bahn { $course } nach { $path } geschrieben
+export-sheet-written = Auswertungsbogen der Bahn { $course } nach { $path } geschrieben
+mcp-tool-export-score-csv = Die Posten einer Score-Bahn als CSV schreiben. Erwartet project, course und path, die zu schreibende Datei mit der Endung .csv; eine vorhandene Datei wird ersetzt. Die erste Zeile ist die Kopfzeile code,value,x_mm,y_mm. Positionen sind Kartenmillimeter im Kartenmaßstab, y zeigt nach unten, mit Punkt geschrieben. Die Zeilen sind nach Code geordnet. Liefert path, course und controls, die Zahl der Zeilen. Eine Bahn, die keine Score-Bahn ist, wird abgelehnt.
+mcp-tool-export-score-sheet = Den Auswertungsbogen einer Score-Bahn als Markdown-Datei schreiben, die sich gut drucken lässt. Erwartet project, course und path, die zu schreibende Datei mit der Endung .md; eine vorhandene Datei wird ersetzt. Der Bogen nennt das Zeitlimit, die Strafe je angefangene Minute, die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, die Pflichtverbindungen mit der Regel, dass disqualifiziert wird, wer eine Verbindung nicht direkt läuft, und jeden Posten mit seinem Wert. Liefert path und course. Eine Bahn, die keine Score-Bahn ist, wird abgelehnt.
+mcp-param-export-score-csv-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .csv
+mcp-param-export-score-sheet-path = Die zu schreibende Datei, ein absoluter Pfad oder einer mit ~ am Anfang, mit der Endung .md
+mcp-param-export-score-csv-course = Name der Score-Bahn
+mcp-param-export-score-sheet-course = Name der Score-Bahn
+mcp-error-not-csv = { $path } endet nicht auf .csv; nenne eine .csv-Datei
+mcp-error-not-md = { $path } endet nicht auf .md; nenne eine .md-Datei
+score-sheet-title = Auswertungsbogen für { $course }
+score-sheet-event = Veranstaltung: { $title }
+score-sheet-time-limit = Zeitlimit: { $minutes ->
+    [one] 1 Minute
+   *[other] { $minutes } Minuten
+}
+score-sheet-penalty = Strafe: { $points ->
+    [one] 1 Punkt
+   *[other] { $points } Punkte
+} für jede angefangene Minute über dem Limit
+score-sheet-penalty-default = Strafe: { $points ->
+    [one] 1 Punkt
+   *[other] { $points } Punkte
+} für jede angefangene Minute über dem Limit. Die Bahn legt keinen Wert fest, das ist der Standard.
+score-sheet-tie = Bei gleicher Punktzahl gewinnt, wer schneller ist.
+score-sheet-total = Punkte insgesamt: { $points } auf { $count ->
+    [one] 1 Posten
+   *[other] { $count } Posten
+}
+score-sheet-links-heading = Pflichtverbindungen
+score-sheet-no-links = Diese Bahn hat keine Pflichtverbindungen.
+score-sheet-links-rule = Eine Verbindung sind zwei Posten, die ein Läufer direkt nacheinander anläuft, in beliebiger Reihenfolge. Wer eine Verbindung nicht direkt läuft, wird disqualifiziert.
+score-sheet-col-first = Erster Posten
+score-sheet-col-second = Zweiter Posten
+score-sheet-controls-heading = Posten
+score-sheet-col-code = Code
+score-sheet-col-value = Wert
+score-sheet-no-course = Die Bahn { $course } ist keine Score-Bahn, deshalb gibt es keinen Bogen.

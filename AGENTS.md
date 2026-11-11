@@ -22,7 +22,7 @@ Tell the person these limits before you start:
 
 - Only sprint and schoolyard maps work. Forest maps (ISOM) are refused. The map must be an `.omap` or `.xmap`.
 - Individual and score courses can be edited and checked; only individual courses are measured. Team and relay
-  courses are not built. Export writes individual courses only, skips the others and says so.
+  courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
   `score draft` and `score length` read the map and search routes, so they take seconds: about 1 s on a small
   sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Lübeck map (release build). A draft
@@ -131,6 +131,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
 | `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
 | `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles meet the length bands; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band exits with 1 and names each miss and what would help. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
+| `export --csv FILE --course NAME`, `export --sheet FILE --course NAME` | Control list (`code,value,x_mm,y_mm`, map millimetres) and Markdown evaluation sheet of a score course; other courses are refused. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
@@ -250,6 +251,7 @@ whole number.
 | `set_rule_profile` | `base`, `overlays?` | Sets the rule profile and overlays. |
 | `set_start_window` | `minutes?`, `no_start_window?` | Start window in minutes, or removes it. |
 | `export_iof_xml` | `path` | Writes IOF XML 3.0 CourseData (`.xml`). |
+| `export_score_csv`, `export_score_sheet` | `course`, `path` | CSV (`.csv`) or evaluation sheet (`.md`) of a score course. |
 | `export_ppen` | `path`, `new?` | Writes or patches a Purple Pen event (`.ppen`) and links the project to it. |
 | `import_ppen` | `path`, `replace?` | Takes over controls, courses and special objects from a `.ppen`. |
 | `sync_ppen` | `dry_run?`, `take?` | Merges the project with its linked `.ppen`; `take` is `ours` or `theirs`. |

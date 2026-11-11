@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 48] = [
+const TOOLS: [&str; 50] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -47,6 +47,8 @@ const TOOLS: [&str; 48] = [
     "init_event",
     "check",
     "export_iof_xml",
+    "export_score_csv",
+    "export_score_sheet",
     "export_ppen",
     "import_ppen",
     "sync_ppen",

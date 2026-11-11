@@ -531,14 +531,14 @@ cli-event-profile-set-overlays = set rule profile { $value } with { $count ->
 
 cli-help-export = Write the courses to a file for other programs
 cli-arg-export-project = The project file
-cli-arg-export-iof-xml = Write the individual courses as IOF XML 3.0 CourseData for result software such as OE; an existing file is replaced
+cli-arg-export-iof-xml = Write the individual and score courses as IOF XML 3.0 CourseData for result software such as OE; an existing file is replaced
 export-iof-xml-written = { $count ->
     [one] wrote 1 course to { $path }
    *[other] wrote { $count } courses to { $path }
 }
 export-iof-xml-skipped = left out { $course }: { $kind } courses are not exported to IOF XML
 export-iof-xml-no-geo = the map has no usable georeferencing, so the controls carry no latitude and longitude, only map positions
-export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE or --ppen FILE
+export-nothing-to-do = nothing to export; name a format, for example --iof-xml FILE, --ppen FILE or --csv FILE with --course NAME
 error-export-iof-xml-character = cannot export: a text of the event holds the character { $point }, which XML does not allow
 error-export-iof-xml-course = cannot export course { $course }: { $source }
 error-export-overwrites-input = { $path } is the project file or its map, and the export would overwrite it; name another file
@@ -1551,3 +1551,48 @@ cli-score-length-ok = both runners are inside the bands
 cli-score-bad-link-ends = { $value } is not a link; write two positions as X,Y;X,Y
 cli-score-bad-distance = { $value } is not a distance; give map millimetres, zero or more
 mcp-error-interrupted = the operation was interrupted before it finished
+error-score-unknown-course = course { $course } does not exist
+error-score-not-a-score-course = course { $course } is not a score course
+error-score-unknown-control = the course names control { $code }, which the event does not have
+cli-arg-export-csv = Write the controls of a score course as CSV with code, value and position in map millimetres; needs --course. An existing file is replaced
+cli-arg-export-sheet = Write the evaluation sheet of a score course as Markdown; needs --course. An existing file is replaced
+cli-arg-export-course = The score course for --csv and --sheet
+export-needs-course = --csv and --sheet need --course NAME, the score course to write
+export-csv-written = wrote the control list of { $course } to { $path }
+export-sheet-written = wrote the evaluation sheet of { $course } to { $path }
+mcp-tool-export-score-csv = Write the controls of a score course as CSV. Takes project, course and path, the file to write, which ends in .csv; an existing file is replaced. The first row is the header code,value,x_mm,y_mm. Positions are map millimetres at map scale with y pointing down, written with a dot. Rows are ordered by code. Returns path, course and controls, the number of rows. A course that is not a score course is refused.
+mcp-tool-export-score-sheet = Write the evaluation sheet of a score course as a Markdown file that prints well. Takes project, course and path, the file to write, which ends in .md; an existing file is replaced. The sheet names the time limit, the penalty per started minute, the rule that the faster runner wins on equal points, the mandatory links with the rule that a runner who does not run a link directly is disqualified, and every control with its value. Returns path and course. A course that is not a score course is refused.
+mcp-param-export-score-csv-path = The file to write, an absolute path or one starting with ~, ending in .csv
+mcp-param-export-score-sheet-path = The file to write, an absolute path or one starting with ~, ending in .md
+mcp-param-export-score-csv-course = Name of the score course
+mcp-param-export-score-sheet-course = Name of the score course
+mcp-error-not-csv = { $path } does not end in .csv; name a .csv file
+mcp-error-not-md = { $path } does not end in .md; name a .md file
+score-sheet-title = Evaluation sheet for { $course }
+score-sheet-event = Event: { $title }
+score-sheet-time-limit = Time limit: { $minutes ->
+    [one] 1 minute
+   *[other] { $minutes } minutes
+}
+score-sheet-penalty = Penalty: { $points ->
+    [one] 1 point
+   *[other] { $points } points
+} for each started minute over the limit
+score-sheet-penalty-default = Penalty: { $points ->
+    [one] 1 point
+   *[other] { $points } points
+} for each started minute over the limit. The course sets no value, so this is the default.
+score-sheet-tie = Equal points: the faster runner wins.
+score-sheet-total = Points in all: { $points } on { $count ->
+    [one] 1 control
+   *[other] { $count } controls
+}
+score-sheet-links-heading = Mandatory links
+score-sheet-no-links = This course has no mandatory links.
+score-sheet-links-rule = A link is two controls that a runner visits directly one after the other, in either order. A runner who does not run a link directly is disqualified.
+score-sheet-col-first = First control
+score-sheet-col-second = Second control
+score-sheet-controls-heading = Controls
+score-sheet-col-code = Code
+score-sheet-col-value = Value
+score-sheet-no-course = The course { $course } is not a score course, so there is no sheet.

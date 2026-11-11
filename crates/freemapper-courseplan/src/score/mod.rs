@@ -5,10 +5,12 @@ pub mod code;
 pub mod draft;
 pub mod links;
 pub mod points;
+pub mod sheet;
 pub mod tour;
 pub mod travel;
 
 pub use draft::{Draft, DraftControl, DraftFailure, DraftRequest, Hint, draft};
+pub use sheet::{evaluation_sheet, score_csv};
 pub use tour::{
     LengthIssue, LengthReport, ScoredControl, Tour, analyse_length, best_tour, best_tour_seeded,
 };
@@ -30,6 +32,12 @@ pub enum ScoreError {
     FinishUnreachable {
         at: freemapper_courseplan_model::MapPoint,
     },
+    #[error("course {0} does not exist")]
+    UnknownCourse(String),
+    #[error("course {0} is not a score course")]
+    NotAScoreCourse(String),
+    #[error("the course names control {0}, which the event does not have")]
+    UnknownControl(String),
     #[error("the map has no objects, so there is nothing to search routes on")]
     MapEmpty,
     #[error("route setting {name} is out of range: {value}")]

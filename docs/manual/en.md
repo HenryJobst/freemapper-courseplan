@@ -151,8 +151,16 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
   `set_score_settings`, `set_score_course_details`). The editor runs the same operations, and undo takes each back.
 - Bends, legs, control numbers and `course controls` belong to individual courses; a score course refuses them.
   Classes, print scale, `course rename` and `course remove` work on both. Team and relay courses cannot be edited yet.
-- Export writes individual courses only and lists the score courses it skipped. The editor draws score courses and has a Score
+- IOF XML export writes score courses too (see Export below). The Purple Pen export still skips them and says so. The editor draws score courses and has a Score
   panel (see "The Score panel" in the editor chapter).
+
+#### Lists and evaluation sheet
+
+```sh
+freemapper-courseplan export hall.courseplan.toml --course Score45 --csv score45.csv --sheet score45.md
+```
+
+`--csv` writes one row per control: `code,value,x_mm,y_mm`, ordered by code, with positions in map millimetres at map scale (y points down) and a dot as decimal separator. `--sheet` writes the evaluation sheet as Markdown, a text that prints well as it is: the time limit, the penalty per started minute (the stored one or the default), the rule that the faster runner wins on equal points, the mandatory links with the rule that a runner who does not run a link directly is disqualified, and a table of the controls with their values. Both need `--course` and refuse a course that is not a score course. An existing file is replaced. The tools are `export_score_csv` and `export_score_sheet`, with `project`, `course` and `path` (ending in `.csv` or `.md`). The decisions are in ADR 0070.
 
 #### Suggestions, draft and length
 
@@ -417,8 +425,8 @@ Half a second after each change the editor runs the same check as `check` and sh
 The Event menu has four entries. The browser never names a file; the editor writes only the project's own linked
 Purple Pen file.
 
-- **Export IOF XML (download).** The browser saves the IOF XML of the individual courses, named after the project
-  file. A dialog lists courses that were left out (team, relay and score courses) and says so when the map has no
+- **Export IOF XML (download).** The browser saves the IOF XML of the individual and score courses, named after the project
+  file. A dialog lists courses that were left out (team and relay courses) and says so when the map has no
   georeferencing.
 - **Export to Purple Pen...** "Write to the linked file" updates the file `sources.ppen` names, by the rules of
   `export --ppen`: it patches what the project changed and stores new Purple Pen ids in the project. Without a link
@@ -849,14 +857,15 @@ call) and returns `written`, `conflicts`, `changes` and `notes`. `resolve_sync_c
 freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
-The program writes all individual courses of the event to the file: controls with map position, the control
+The program writes all individual and score courses of the event to the file: controls with map position, the control
 order of each course, leg lengths, climb, the position of the control numbers and the assignment of courses to
 classes. It replaces an existing file only once the new one is completely written. Without `--iof-xml`, `export`
 does nothing and exits with code 2.
 
 Things to know:
 
-- Team, relay and score courses are not written. The program names each skipped course with its kind.
+- Team and relay courses are not written. The program names each skipped course with its kind.
+- A score course is written with the value of each control in `CourseControl/Score`. The schema has no element for the time limit, the penalty per started minute or the mandatory links, so the course carries them in an `Extensions` element in the namespace `urn:freemapper-courseplan:score:1` (`ScoreCourse` with `timeLimitMin`, `penaltyPerMin` and one `Link` per pair). The penalty is the resolved one, the default included. Programs that do not know the namespace ignore it. The rule that the faster runner wins on equal points is not part of the file; it stands on the evaluation sheet (see Score courses).
 - If the target is the project file or the map, `export` stops with an error and leaves both untouched.
 - If the map is georeferenced, start, controls and finish carry latitude and longitude with six decimals. Without
   georeferencing, or with a coordinate system the program does not support, the file has map positions only, and

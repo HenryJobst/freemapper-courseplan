@@ -593,3 +593,115 @@ fn score_settings_needs_a_switch() {
     let o = run("en", &["score", "settings", project.to_str().unwrap()]);
     assert_eq!(o.status.code(), Some(2), "{}", err(&o));
 }
+
+#[test]
+fn csv_and_sheet_files_equal_over_cli_and_mcp() {
+    let (dir, project) = with_score_course();
+    let p = project.to_str().unwrap();
+    let cli_csv = dir.path().join("cli.csv");
+    let cli_md = dir.path().join("cli.md");
+    let o = run(
+        "en",
+        &[
+            "export",
+            p,
+            "--course",
+            "Sc",
+            "--csv",
+            cli_csv.to_str().unwrap(),
+            "--sheet",
+            cli_md.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    assert!(out(&o).contains("Sc"), "{}", out(&o));
+    let mcp_csv = dir.path().join("mcp.csv");
+    let mcp_md = dir.path().join("mcp.md");
+    let a = mcp(
+        "export_score_csv",
+        json!({ "project": p, "course": "Sc", "path": mcp_csv.to_str().unwrap() }),
+    );
+    assert_eq!(a["controls"], 3, "{a}");
+    let b = mcp(
+        "export_score_sheet",
+        json!({ "project": p, "course": "Sc", "path": mcp_md.to_str().unwrap() }),
+    );
+    assert_eq!(b["course"], "Sc", "{b}");
+    let read = |f: &Path| std::fs::read_to_string(f).unwrap();
+    assert_eq!(read(&cli_csv), read(&mcp_csv));
+    assert_eq!(read(&cli_md), read(&mcp_md));
+    assert!(read(&cli_csv).starts_with("code,value,x_mm,y_mm\n31,1,"));
+    assert!(read(&cli_md).contains("Time limit: 45 minutes"));
+    // An existing file is replaced.
+    std::fs::write(&cli_csv, "old").unwrap();
+    let o = run(
+        "en",
+        &[
+            "export",
+            p,
+            "--course",
+            "Sc",
+            "--csv",
+            cli_csv.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(o.status.code(), Some(0));
+    assert!(read(&cli_csv).starts_with("code,"));
+}
+
+#[test]
+fn export_refuses_a_non_score_course() {
+    let (dir, project) = luebeck();
+    let p = project.to_str().unwrap();
+    let target = dir.path().join("x.csv");
+    let list = run("en", &["list", "courses", p, "--json"]);
+    let all: Value = serde_json::from_str(&out(&list)).unwrap();
+    let name = all["courses"][0]["name"].as_str().unwrap().to_owned();
+    let o = run(
+        "en",
+        &[
+            "export",
+            p,
+            "--course",
+            &name,
+            "--csv",
+            target.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(o.status.code(), Some(1));
+    assert_eq!(
+        err(&o).trim(),
+        format!("error: course {name} is not a score course")
+    );
+    assert!(!target.exists());
+    let o = run("en", &["export", p, "--csv", target.to_str().unwrap()]);
+    assert_eq!(o.status.code(), Some(2), "{}", err(&o));
+}
+
+#[test]
+fn iof_xml_and_ppen_export_with_a_score_course() {
+    let (dir, project) = with_score_course();
+    let p = project.to_str().unwrap();
+    let xml = dir.path().join("o.xml");
+    let ppen = dir.path().join("o.ppen");
+    let o = run(
+        "en",
+        &[
+            "export",
+            p,
+            "--iof-xml",
+            xml.to_str().unwrap(),
+            "--ppen",
+            ppen.to_str().unwrap(),
+        ],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    let text = std::fs::read_to_string(&xml).unwrap();
+    assert!(text.contains("<Score>1</Score>"), "{text}");
+    let stdout = out(&o);
+    assert!(
+        stdout.contains("left out Sc: score courses are not exported to Purple Pen"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("IOF XML"), "{stdout}");
+}

@@ -1192,3 +1192,29 @@ fn base_standard_reads_the_element_not_the_text() {
         assert_eq!(base_standard(&raw, text.as_bytes()), "2004", "{spelled}");
     }
 }
+
+#[test]
+fn ppen_export_still_skips_score_courses_and_says_so() {
+    let mut score = course("S", &[]);
+    score.kind = CourseKind::Score {
+        time_limit_min: 45,
+        penalty_per_min: None,
+        controls: vec![ScoreControl {
+            code: code("31"),
+            value: 1,
+        }],
+        links: vec![],
+    };
+    let ev = event(&[("31", 10.0, 10.0)], vec![course("A", &["31"]), score]);
+    let got = sprint(&ev);
+    assert_eq!(got.event.courses.len(), 1);
+    let note = ExportNote::CourseSkipped {
+        course: "S".to_owned(),
+        kind: "score",
+    };
+    assert_eq!(got.notes, vec![note.clone()]);
+    assert_eq!(
+        crate::text::Localize::localize(&note, &crate::text::Lang::english()),
+        "left out S: score courses are not exported to Purple Pen"
+    );
+}

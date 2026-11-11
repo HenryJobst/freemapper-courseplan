@@ -84,6 +84,15 @@ enum Command {
         /// Write the individual courses into a Purple Pen event
         #[arg(long, value_name = "FILE")]
         ppen: Option<PathBuf>,
+        /// Write the controls of a score course as CSV
+        #[arg(long, value_name = "FILE")]
+        csv: Option<PathBuf>,
+        /// Write the evaluation sheet of a score course as Markdown
+        #[arg(long, value_name = "FILE")]
+        sheet: Option<PathBuf>,
+        /// The score course for --csv and --sheet
+        #[arg(long, value_name = "NAME")]
+        course: Option<String>,
         /// With --ppen, write the file from scratch and replace an existing one
         #[arg(long, requires = "ppen")]
         new: bool,
@@ -280,6 +289,9 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .mut_arg("iof_xml", |a| with_help(a, "cli-arg-export-iof-xml"))
                 .mut_arg("ppen", |a| with_help(a, "cli-arg-export-ppen"))
                 .mut_arg("new", |a| with_help(a, "cli-arg-export-new"))
+                .mut_arg("csv", |a| with_help(a, "cli-arg-export-csv"))
+                .mut_arg("sheet", |a| with_help(a, "cli-arg-export-sheet"))
+                .mut_arg("course", |a| with_help(a, "cli-arg-export-course"))
         })
         .mut_subcommand("sync", |s| {
             s.about(t("cli-cmd-sync"))
@@ -484,7 +496,17 @@ fn main() -> ExitCode {
             iof_xml,
             ppen,
             new,
-        } => export_cmd::export(&lang, &project, iof_xml, ppen, new),
+            csv,
+            sheet,
+            course,
+        } => export_cmd::export(
+            &lang,
+            &project,
+            iof_xml,
+            ppen,
+            new,
+            export_cmd::ScoreTargets { csv, sheet, course },
+        ),
         Command::Sync {
             project,
             dry_run,

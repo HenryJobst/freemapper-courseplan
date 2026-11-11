@@ -13,6 +13,7 @@ use freemapper_courseplan::omap::read::read_map_file;
 use freemapper_courseplan::ppen_export::{
     Deletions, ExportNote, PpenExportError, Target, export_ppen_as, store_ids,
 };
+use freemapper_courseplan::score::{ScoreError, evaluation_sheet, score_csv};
 use freemapper_courseplan::text::{FluentValue, Lang, Localize, ppen_export_error, text};
 use freemapper_courseplan_model::{ProjectError, ProjectFile, write_atomic};
 
@@ -38,6 +39,8 @@ pub(crate) enum ExportError {
     NotMap(PathBuf),
     Map(PathBuf, OmapError),
     Course(IofXmlError),
+    /// The score course for the CSV or the sheet is missing or is no score course.
+    Score(ScoreError),
     /// The export to the `.ppen` at the path failed; nothing was written.
     Ppen(PathBuf, Box<PpenExportError>),
     /// The existing Purple Pen event to patch cannot be read.
@@ -80,6 +83,7 @@ impl ExportError {
                     ("source", FluentValue::from(project(e))),
                 ],
             ),
+            ExportError::Score(e) => e.localize(lang),
             ExportError::Course(IofXmlError::InvalidCharacter { point }) => text(
                 lang,
                 "error-export-iof-xml-character",
@@ -123,6 +127,40 @@ fn read_oom(file: &ProjectFile) -> Result<MapDocument, ExportError> {
         return Err(ExportError::NotMap(map_path));
     }
     read_map_file(&map_path).map_err(|e| ExportError::Map(map_path.clone(), e))
+}
+
+/// What a score list export writes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ScoreFile {
+    /// Code, value and position of every control.
+    Csv,
+    /// The printable evaluation sheet.
+    Sheet,
+}
+
+/// Writes the CSV list or the evaluation sheet of the score course `course` to `target`, replacing an
+/// existing file atomically. Returns the number of controls. Nothing is written when the course is
+/// missing or is no score course. The CLI and the MCP tools share this function (ADR 0070).
+pub(crate) fn export_score_file(
+    project: &Path,
+    target: &Path,
+    course: &str,
+    kind: ScoreFile,
+    lang: &Lang,
+) -> Result<usize, ExportError> {
+    let file = ProjectFile::load(project).map_err(ExportError::Project)?;
+    if same_file(target, project) || same_file(target, &file.map_path()) {
+        return Err(ExportError::Overwrites(target.to_path_buf()));
+    }
+    // The CSV rules decide whether the course exists, is a score course and names known controls.
+    let csv = score_csv(&file.event, course).map_err(ExportError::Score)?;
+    let controls = csv.lines().count().saturating_sub(1);
+    let body = match kind {
+        ScoreFile::Csv => csv,
+        ScoreFile::Sheet => evaluation_sheet(&file.event, course, lang),
+    };
+    write_atomic(target, &body).map_err(ExportError::Project)?;
+    Ok(controls)
 }
 
 /// The IOF XML text of `project`, made in memory: nothing is written and no target can be overwritten.
@@ -334,6 +372,13 @@ fn same_file(a: &Path, b: &Path) -> bool {
     matches!((resolve(a), resolve(b)), (Some(x), Some(y)) if x == y)
 }
 
+/// The targets and the course of the score list exports.
+pub(crate) struct ScoreTargets {
+    pub(crate) csv: Option<PathBuf>,
+    pub(crate) sheet: Option<PathBuf>,
+    pub(crate) course: Option<String>,
+}
+
 /// The `export` command.
 pub(crate) fn export(
     lang: &Lang,
@@ -341,9 +386,13 @@ pub(crate) fn export(
     iof_xml: Option<PathBuf>,
     ppen: Option<PathBuf>,
     new: bool,
+    score: ScoreTargets,
 ) -> Result<(), Failure> {
-    if iof_xml.is_none() && ppen.is_none() {
+    if iof_xml.is_none() && ppen.is_none() && score.csv.is_none() && score.sheet.is_none() {
         return Err(Failure::Usage(text(lang, "export-nothing-to-do", &[])));
+    }
+    if (score.csv.is_some() || score.sheet.is_some()) && score.course.is_none() {
+        return Err(Failure::Usage(text(lang, "export-needs-course", &[])));
     }
     let failed = |e: ExportError| {
         Failure::Error(e.message(
@@ -362,6 +411,27 @@ pub(crate) fn export(
             "error-export-same-target",
             &[("path", path_arg(ppen))],
         )));
+    }
+    if let Some(course) = &score.course {
+        for (target, kind, id) in [
+            (&score.csv, ScoreFile::Csv, "export-csv-written"),
+            (&score.sheet, ScoreFile::Sheet, "export-sheet-written"),
+        ] {
+            if let Some(target) = target {
+                export_score_file(project, target, course, kind, lang).map_err(failed)?;
+                println!(
+                    "{}",
+                    text(
+                        lang,
+                        id,
+                        &[
+                            ("course", FluentValue::from(course.clone())),
+                            ("path", path_arg(target)),
+                        ],
+                    )
+                );
+            }
+        }
     }
     if let Some(target) = iof_xml {
         let report = export_iof_xml_file(project, &target, &now_iso()).map_err(failed)?;

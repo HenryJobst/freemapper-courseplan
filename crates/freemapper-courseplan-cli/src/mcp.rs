@@ -1068,6 +1068,22 @@ impl CoursePlanServer {
         reply(self.export_iof_xml_op(req))
     }
 
+    #[tool(description = "Write the controls of a score course as CSV")]
+    async fn export_score_csv(
+        &self,
+        Parameters(req): Parameters<ExportScore>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.export_score_csv_op(req))
+    }
+
+    #[tool(description = "Write the evaluation sheet of a score course")]
+    async fn export_score_sheet(
+        &self,
+        Parameters(req): Parameters<ExportScore>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.export_score_sheet_op(req))
+    }
+
     #[tool(description = "Export the courses to a Purple Pen event")]
     async fn export_ppen(
         &self,
@@ -1860,6 +1876,38 @@ impl CoursePlanServer {
         }
     }
 
+    fn export_score_csv_op(&self, req: ExportScore) -> Answer {
+        self.export_score_op(req, crate::export_cmd::ScoreFile::Csv)
+    }
+
+    fn export_score_sheet_op(&self, req: ExportScore) -> Answer {
+        self.export_score_op(req, crate::export_cmd::ScoreFile::Sheet)
+    }
+
+    fn export_score_op(&self, req: ExportScore, kind: crate::export_cmd::ScoreFile) -> Answer {
+        let project = resolve_project(&self.lang, &req.project)?;
+        let (extension, refusal) = match kind {
+            crate::export_cmd::ScoreFile::Csv => ("csv", "mcp-error-not-csv"),
+            crate::export_cmd::ScoreFile::Sheet => ("md", "mcp-error-not-md"),
+        };
+        let target = resolve_kind(&self.lang, &req.path, &[extension], refusal)?;
+        let course = req.course.0.clone();
+        let controls =
+            crate::export_cmd::export_score_file(&project, &target, &course, kind, &self.lang)
+                .map_err(|e| {
+                    e.message(
+                        &self.lang,
+                        |e| project_error(&self.lang, e),
+                        |p, e| map_error(&self.lang, p, e),
+                    )
+                })?;
+        Ok(json!({
+            "path": target.display().to_string(),
+            "course": course,
+            "controls": controls,
+        }))
+    }
+
     fn export_ppen_op(&self, req: ExportPpen) -> Answer {
         {
             let project = resolve_project(&self.lang, &req.project)?;
@@ -2059,6 +2107,8 @@ pub(crate) const EDITOR_ONLY: &[&str] = &["score_apply_draft"];
 pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
     "init_event",
     "export_iof_xml",
+    "export_score_csv",
+    "export_score_sheet",
     "export_ppen",
     "import_ppen",
     "sync_ppen",
@@ -2166,6 +2216,8 @@ impl CoursePlanServer {
             "map_extent" => run!(ProjectOnly, map_extent_op),
             "check" => run!(ProjectOnly, check_op),
             "export_iof_xml" => run!(ExportIofXml, export_iof_xml_op),
+            "export_score_csv" => run!(ExportScore, export_score_csv_op),
+            "export_score_sheet" => run!(ExportScore, export_score_sheet_op),
             "export_ppen" => run!(ExportPpen, export_ppen_op),
             "import_ppen" => run!(ImportPpen, import_ppen_op),
             "sync_ppen" => run!(SyncPpen, sync_ppen_op),
@@ -2635,7 +2687,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 48);
+            assert_eq!(tools.len(), 50);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));
