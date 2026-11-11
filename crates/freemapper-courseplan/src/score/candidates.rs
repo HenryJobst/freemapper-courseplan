@@ -64,6 +64,14 @@ const SITES_PER_LIMIT: usize = 2;
 const ATTEMPTS_PER_LIMIT: usize = 4;
 /// Other candidates each candidate gets a leg to.
 const NEAREST_LEGS: usize = 4;
+/// How much sparser the picks get from the start to the farthest site: the spacing a site needs grows
+/// linearly from 1 at the start to `1 + SPACING_GROWTH` at the far end, so the area around the start
+/// gets close picks (value 1 stays near) and the rim gets few (ADR 0071).
+const SPACING_GROWTH: f64 = 2.0;
+/// Sites closer to the rim of the mapped area than this many minimum distances are weighed down
+/// linearly, to a floor of `RIM_FLOOR` at the rim itself.
+const RIM_MARGIN_DISTANCES: f64 = 3.0;
+const RIM_FLOOR: f64 = 0.3;
 /// A corner may lie in the blocked cell of its wall; it needs a free place at one of these distances (map mm).
 const CORNER_PROBE_MM: [f64; 3] = [0.5, 1.0, 1.5];
 
@@ -294,6 +302,12 @@ fn check_end(
     }
 }
 
+/// What a site is worth in the pick, per millimetre of distance to the nearest pick: clear features
+/// first, sites far from the start need more room, sites at the rim count less.
+fn site_weight(clarity: f64, spacing: f64, rim: f64) -> f64 {
+    clarity * rim / spacing
+}
+
 /// Route choice of the leg between two points; none when the surface finds no route.
 fn choice_of(
     travel: &dyn TravelTime,
@@ -374,6 +388,31 @@ pub fn suggest_with(
     let max_ratio = RouteParams::default().max_length_ratio;
     let mut kept: Vec<(&Site, f64, f64)> = Vec::new();
     let mut used = vec![false; pool.len()];
+    // Weights of the pick: the spacing grows with the distance from the start, and the rim of the area
+    // the map objects span counts less.
+    let far_from_start = pool
+        .iter()
+        .map(|(s, _)| dist(&s.at, &ctx.start))
+        .fold(0.0_f64, f64::max)
+        .max(f64::EPSILON);
+    let (x0, x1, y0, y1) = raw.iter().fold(
+        (f64::MAX, f64::MIN, f64::MAX, f64::MIN),
+        |(a, b, c, d), s| (a.min(s.at.x), b.max(s.at.x), c.min(s.at.y), d.max(s.at.y)),
+    );
+    let rim_margin = (RIM_MARGIN_DISTANCES * ctx.min_distance_mm).max(f64::EPSILON);
+    let weight: Vec<f64> = pool
+        .iter()
+        .map(|(s, _)| {
+            let spacing = 1.0 + SPACING_GROWTH * dist(&s.at, &ctx.start) / far_from_start;
+            let rim = (s.at.x - x0)
+                .min(x1 - s.at.x)
+                .min(s.at.y - y0)
+                .min(y1 - s.at.y)
+                .max(0.0);
+            let rim = RIM_FLOOR + (1.0 - RIM_FLOOR) * (rim / rim_margin).min(1.0);
+            site_weight(s.clarity, spacing, rim)
+        })
+        .collect();
     let mut tries = 0;
     while kept.len() < ctx.limit.saturating_mul(SITES_PER_LIMIT)
         && tries < ctx.limit.saturating_mul(ATTEMPTS_PER_LIMIT)
@@ -381,11 +420,11 @@ pub fn suggest_with(
         // Farthest point first, clear features preferred; the pool is in position order, so ties go to
         // the lower x, then y.
         let mut best: Option<(usize, f64)> = None;
-        for (i, (site, _)) in pool.iter().enumerate() {
+        for (i, _) in pool.iter().enumerate() {
             if used[i] || near[i] < ctx.min_distance_mm {
                 continue;
             }
-            let value = near[i] * site.clarity;
+            let value = near[i] * weight[i];
             if best.is_none_or(|(_, v)| value > v) {
                 best = Some((i, value));
             }

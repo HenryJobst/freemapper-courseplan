@@ -667,3 +667,11 @@ fn luebeck_timing_for_limit_60() {
     );
     assert!(!found.is_empty());
 }
+
+#[test]
+fn site_weight_favours_near_clear_sites_away_from_the_rim() {
+    // Same clarity: a site far from the start needs more room, a site at the rim counts less.
+    assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.9, 3.0, 1.0));
+    assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.9, 1.0, 0.3));
+    assert!(super::site_weight(0.9, 1.0, 1.0) > super::site_weight(0.6, 1.0, 1.0));
+}

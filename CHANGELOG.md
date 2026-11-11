@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+- Score-Vorschläge liegen seltener am Kartenrand und näher am Start: Die Auswahl setzt Stellen nahe dem Start dichter und wertet Stellen am Rand ab. Im Lübecker Beispiel sanken die Kandidaten bis 48 m vom Rand von 21 auf 3 von 60, und die Posten mit Wert 1 rückten von 360 m auf 230 m an den Start (ADR 0071).
+
 ## [0.13.0] - 2026-11-11
 
 ### Hinzugefügt

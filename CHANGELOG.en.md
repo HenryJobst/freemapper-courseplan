@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Fixed
+
+- Score suggestions sit less at the rim of the map and closer to the start: the pick spaces sites more densely near the start and weighs down sites at the rim. On the Lübeck example the candidates within 48 m of the rim fell from 21 of 60 to 3, and the value-1 controls moved from 360 m to 230 m from the start (ADR 0071).
+
 ## [0.13.0] - 2026-11-11
 
 ### Added
