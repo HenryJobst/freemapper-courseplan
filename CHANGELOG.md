@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- Intern: Kartenart, Sidecar-Leser und Objektklasse kommen aus `freemapper-core` v0.19.0 (`freemapper-contract`) statt aus eigenen Kopien. Namen und Ausgaben bleiben gleich.
+
 ## [0.12.0] - 2026-11-11
 
 ### Hinzugefügt

@@ -16,7 +16,7 @@ use freemapper_courseplan::omap::MapCoord;
 use freemapper_courseplan_model::{
     ControlKind, Course, CourseKind, Event, MapPoint, SpecialObject,
 };
-use freemapper_printrules::scale::{MapKind as PrintKind, course_symbols};
+use freemapper_printrules::scale::course_symbols;
 use freemapper_render::overprint::{CourseSymbolSizes, overprint};
 use freemapper_render::page::Overprint;
 
@@ -28,11 +28,6 @@ use super::overlay::overlay;
 /// forest maps), the ones freemapper-print draws with. The checks and the overlay take circle, line and number
 /// height from `numbers::overprint_sizes`; a test keeps the two equal.
 pub(super) fn course_symbol_sizes(kind: MapKind) -> CourseSymbolSizes {
-    let kind = match kind {
-        MapKind::Sprint => PrintKind::Sprint,
-        MapKind::Schoolyard => PrintKind::Schoolyard,
-        MapKind::Forest => PrintKind::Forest,
-    };
     course_symbols(kind, kind.base_scale()).0
 }
 
@@ -693,7 +688,7 @@ mod tests {
         let mut s = setup(|_| {});
         s.kind = MapKind::Sprint;
         s.scale = 5000;
-        let (sheet, factor) = course_symbols(PrintKind::Sprint, 5000);
+        let (sheet, factor) = course_symbols(MapKind::Sprint, 5000);
         assert_eq!((sheet.circle_diameter_mm, factor), (6.0, 1.0));
         let mut out = Vec::new();
         let name = s.event.courses[0].name.clone();
@@ -788,7 +783,7 @@ mod tests {
 
     #[test]
     fn symbol_sizes_agree_with_the_numbers_module() {
-        for kind in [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest] {
+        for kind in MapKind::ALL {
             let (sizes, base) = (
                 course_symbol_sizes(kind),
                 freemapper_courseplan::numbers::overprint_sizes(kind),

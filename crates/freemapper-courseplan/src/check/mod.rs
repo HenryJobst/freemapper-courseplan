@@ -834,8 +834,8 @@ fn event_filter(ctx: &CheckContext<'_>, rule: &Rule) -> Option<(&'static str, Ar
             (SKIP_DISCIPLINE, vec![("discipline", ArgValue::Text(name))])
         });
     }
-    if !rule.admits(FIELD_MAP_KINDS, FilterArg::Text(ctx.map_kind.as_str())) {
-        let name = ctx.map_kind.as_str().to_owned();
+    if !rule.admits(FIELD_MAP_KINDS, FilterArg::Text(ctx.map_kind.name())) {
+        let name = ctx.map_kind.name().to_owned();
         return Some((SKIP_MAP_KIND, vec![("kind", ArgValue::Text(name))]));
     }
     None

@@ -216,7 +216,7 @@ pub(crate) fn state_json(
         "map": {
             "path": file.map_path().display().to_string(),
             "scale": scale,
-            "kind": kind.as_str(),
+            "kind": kind.name(),
             "extent": extent,
         },
         "courses": courses,

@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- Internal: the map kind, the sidecar reader and the object class now come from `freemapper-core` v0.19.0 (`freemapper-contract`) instead of local copies. Names and output stay the same.
+
 ## [0.12.0] - 2026-11-11
 
 ### Added

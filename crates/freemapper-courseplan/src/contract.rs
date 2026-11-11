@@ -44,7 +44,7 @@ fn each(test: impl Fn(&Read)) {
 /// The kind the sidecar must give: `None` for the fixture whose kind no reader knows.
 fn sidecar_kind(read: &Read) -> Option<MapKind> {
     let name = read.expected.map_kind.as_str();
-    let kind = MapKind::ALL.into_iter().find(|k| k.as_str() == name);
+    let kind = MapKind::from_name(name);
     assert!(kind.is_some() || name == "unknown", "{}: {name}", read.name);
     kind
 }
