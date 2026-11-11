@@ -157,7 +157,12 @@ a position outside the map, the file stays as it was and a message says why.
   centre is nearest to the pointer, as long as the pointer is within the circle's radius plus the line width. The
   properties on the right show it.
 - **Place.** Choose "Place control" and click on the map. The editor adds a control at that point. The code of a
-  control is read-only in the editor for now.
+  control is read-only in the editor for now. Codes may have up to 64 characters; names and notes, up to 200.
+- **Place crossing point.** "Place crossing point" works the same way but adds a control of the kind "Crossing
+  point". It takes the next free code, shares the numbering with the other controls and appears in the tree with
+  "(Crossing point)". On the map it is drawn as two arcs without a circle. Its properties show code, kind and
+  position, but no control description, since a crossing point has none. The editor cannot add it to a course yet;
+  that still goes through the command line or the AI assistant. Moving, deleting and undo work as for any control.
 - **Move.** Drag a circle, or type a new value into the fields X (mm) and Y (mm) in the properties. You may write
   a decimal comma or a decimal point, `12,5` or `12.5`. Anything else marks the field and shows a hint. While you
   drag, only the circle moves. Legs and numbers follow when you let go. Esc cancels the drag, and the control
@@ -165,7 +170,8 @@ a position outside the map, the file stays as it was and a message says why.
 - **Nudge.** With a control selected, the arrow keys move it by 0.1 mm, with Shift by 1 mm. The editor saves once
   when you release the key, so holding a key makes a single undo step. Without a selection, the arrow keys move the
   view.
-- **Delete.** Press Delete or Backspace, or use "Delete control" in the properties. A control that no course
+- **Delete.** Press Delete or Backspace while the focus is on the map or the tree, or use "Delete control" in the
+  properties. In a field or on a button the keys do nothing. A control that no course
   visits is deleted at once; undo takes it back. If courses visit the control, a dialog lists them and asks. The
   focus is on "Cancel". "Delete" removes the control and takes it out of those courses. A stray Backspace
   on a selected, unused control therefore deletes it without a question; undo brings it back.
@@ -176,12 +182,15 @@ The toolbar buttons "Undo" and "Redo" and the keys Ctrl/Cmd+Z and Ctrl/Cmd+Shift
 steps of this editor session. One placing, one drop, one field change, one delete and one series of nudges is a
 step each. The status bar reports "Undone" or "Redone".
 
-- The editor keeps the last 100 steps. They are lost when you close the editor.
+- The editor keeps the last 100 steps, as long as their file copies together stay under 64 MiB; the oldest steps go
+  first. They are lost when you close the editor.
+- Undo and redo act on the state you see. If a second browser tab shows an older state than the file, they refuse
+  and the tab loads the current state; they never revert what the other tab did without you seeing it.
 - Undo restores the file as it was before the step, comments and layout included. That also takes back whatever
   else the step changed in the file, for example the removal of a control from a course.
 - If another program changed the file after your last step, undo and redo refuse. The status bar says "The project
   file changed outside the editor, so undo and redo are no longer possible. Nothing was changed." and the history
-  is empty from then on.
+  is empty from then on. The editor notices this at your next undo or redo, not at the moment of the outside change.
 
 ### Shortcuts
 

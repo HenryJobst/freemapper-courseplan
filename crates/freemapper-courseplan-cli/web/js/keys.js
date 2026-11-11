@@ -64,7 +64,11 @@ export function bind(actions) {
     } else if (evt.altKey || mod) {
       handled = false;
     } else if (key === "Delete" || key === "Backspace") {
-      actions.remove();
+      // Only with the focus on the map, the tree or nowhere: never on a button or in a field.
+      const at = evt.target;
+      const onMap = !(at instanceof Element) || at === document.body || at.id === "map-svg" || inTree;
+      if (!onMap) handled = false;
+      else actions.remove();
     } else if (key === "Escape") {
       actions.cancel();
     } else if (key === "v" || key === "V") {

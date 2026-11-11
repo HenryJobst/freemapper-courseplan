@@ -113,6 +113,26 @@ async function loadNear() {
 // page always shows the file. A refusal or a conflict shows in the status bar and in the banner above the map.
 
 let busy = false;
+// An operation that arrived while another ran is dropped; the page is loaded again when the running one ends,
+// so a typed value or a moved circle does not stay although nothing was sent.
+let refreshAfter = false;
+
+function dropped() {
+  refreshAfter = true;
+  status.say("editor-status-busy");
+}
+
+async function idle() {
+  busy = false;
+  if (refreshAfter && !state.closed) {
+    refreshAfter = false;
+    try {
+      await loadState(false);
+    } catch {
+      status.say("editor-status-lost");
+    }
+  }
+}
 
 function failure(answer) {
   const data = answer.data;
@@ -121,7 +141,11 @@ function failure(answer) {
 
 // Runs one operation; the answer's data on success, or null (the banner says why).
 async function runOp(tool, body) {
-  if (busy || state.closed) return null;
+  if (state.closed) return null;
+  if (busy) {
+    dropped();
+    return null;
+  }
   busy = true;
   try {
     return await settle(await post(`api/op/${tool}`, body, state.revision));
@@ -129,7 +153,7 @@ async function runOp(tool, body) {
     status.say("editor-status-lost");
     return null;
   } finally {
-    busy = false;
+    await idle();
   }
 }
 
@@ -144,8 +168,8 @@ async function settle(answer) {
   }
   const message = failure(answer);
   if (message) {
+    // The banner is an alert region: a screen reader reads it, so the status bar does not repeat it.
     status.showBanner(message);
-    status.say(message, true);
   }
   if (answer.status === 409 && typeof answer.data === "object") state.revision = answer.data.revision;
   await loadState(false);
@@ -164,7 +188,7 @@ async function history(redo) {
   } catch {
     status.say("editor-status-lost");
   } finally {
-    busy = false;
+    await idle();
   }
 }
 
@@ -180,7 +204,7 @@ async function placeControl(at, crossing) {
   if (crossing) body.crossing_point = true;
   const done = await runOp("add_control", body);
   if (!done) return;
-  status.say("editor-status-placed");
+  status.say(crossing ? "editor-status-placed-crossing" : "editor-status-placed");
   await selectKey(`control:${done.result.code}`);
 }
 
@@ -200,21 +224,33 @@ async function deleteControl(code) {
   status.say(left.length ? `${t("editor-status-deleted")}: ${left.join(", ")}` : t("editor-status-deleted"), true);
 }
 
-// Deleting asks first when a course visits the control.
-function requestDelete() {
-  const selected = state.selection;
-  if (selected?.kind !== "control" || !controlOf(selected.id) || busy) return;
-  const users = coursesUsing(selected.id);
-  if (users.length === 0) {
-    deleteControl(selected.id);
-    return;
-  }
+// Puts the courses that visit `code` in the confirm dialog; false when none does.
+function fillConfirm(code) {
+  const users = controlOf(code) ? coursesUsing(code) : [];
+  if (users.length === 0) return false;
   const list = document.getElementById("confirm-courses");
   list.replaceChildren(...users.map((name) => {
     const li = document.createElement("li");
     li.textContent = name;
     return li;
   }));
+  return true;
+}
+
+// The state changed under an open dialog: its course list follows the file, and it closes when the control is
+// gone or no course visits it any more (the plain delete would not have asked).
+function refreshConfirm() {
+  if (confirmDialog.open && !fillConfirm(confirmDialog.dataset.code)) confirmDialog.close();
+}
+
+// Deleting asks first when a course visits the control.
+function requestDelete() {
+  const selected = state.selection;
+  if (selected?.kind !== "control" || !controlOf(selected.id) || busy) return;
+  if (!fillConfirm(selected.id)) {
+    deleteControl(selected.id);
+    return;
+  }
   confirmDialog.dataset.code = String(selected.id);
   confirmDialog.showModal();
 }
@@ -345,6 +381,7 @@ async function loadState(announce) {
     state.treeKey = state.course ? `course:${state.course}` : "all";
   }
   updateHistoryButtons();
+  refreshConfirm();
   await loadOverlay(state.course);
   redraw();
   if (announce) status.say("editor-status-reloaded");
@@ -413,23 +450,31 @@ async function commitNudge() {
 
 function bindMapInput() {
   const view = state.view;
-  // A press on the map: { x, y (pixels), moved, target, pan } or a control drag in `drag`.
+  // A press on the map: { id (the pointer), x, y (pixels), moved, target, at } or a control drag in `drag`.
+  // Only the primary pointer counts: a second finger neither places, moves nor selects, and the events of
+  // another pointer than the one that pressed are ignored.
   let press = null;
+  const ours = (evt) => press !== null && evt.pointerId === press.id;
 
   svg.addEventListener("pointerdown", (evt) => {
-    if (evt.button !== 0 || busy) return;
+    if (!evt.isPrimary || evt.button !== 0 || busy) return;
     const at = view.screenToMap(evt);
     const hit = tools.getTool() === "select" ? hitControl(at) : null;
-    press = { x: evt.clientX, y: evt.clientY, moved: false, target: evt.target, at };
+    press = { id: evt.pointerId, x: evt.clientX, y: evt.clientY, moved: false, target: evt.target, at };
     if (hit) {
       const c = state.overlay.controls.find((x) => x.code === hit);
       drag = { code: hit, start: at, orig: [...c.at], moved: false };
     }
-    svg.setPointerCapture(evt.pointerId);
+    try {
+      svg.setPointerCapture(evt.pointerId);
+    } catch {
+      // The pointer is gone already (a synthetic or very short touch); the press still ends with its own events.
+    }
   });
   svg.addEventListener("pointermove", (evt) => {
+    if (!evt.isPrimary) return;
     status.setCursor(view.screenToMap(evt));
-    if (!press) return;
+    if (!ours(evt)) return;
     const dx = evt.clientX - press.x;
     const dy = evt.clientY - press.y;
     if (!press.moved && Math.hypot(dx, dy) < DRAG_PIXELS) return;
@@ -450,6 +495,7 @@ function bindMapInput() {
     press.y = evt.clientY;
   });
   svg.addEventListener("pointerup", (evt) => {
+    if (!ours(evt)) return;
     const finished = press;
     const dragged = drag;
     press = null;
@@ -477,9 +523,11 @@ function bindMapInput() {
     cancelDrag();
     press = null;
   };
-  svg.addEventListener("pointercancel", abandon);
-  svg.addEventListener("lostpointercapture", () => {
-    if (press) abandon();
+  svg.addEventListener("pointercancel", (evt) => {
+    if (ours(evt)) abandon();
+  });
+  svg.addEventListener("lostpointercapture", (evt) => {
+    if (ours(evt)) abandon();
   });
   svg.addEventListener("pointerleave", () => status.setCursor(null));
   svg.addEventListener("wheel", (evt) => {

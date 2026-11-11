@@ -23,14 +23,21 @@ anything another program wrote.
   `{ error }` when the tool refused the edit, with the file byte-identical.
 - **One operation at a time**. Each operation runs on the blocking pool while it holds the state lock: read
   bytes, compare, run the tool, read bytes, record the step. Concurrent posts queue; with the same revision, the
-  first wins and the rest get 409.
+  first wins and the rest get 409. Right before the tool runs, the bytes are read once more and compared with
+  those the step will record as "before"; a write in that gap answers 409. Undo and redo carry the revision
+  header too and answer 409 when it is not the file's current revision, so a second tab cannot revert the first
+  tab's edit unseen.
 - **A broken file blocks edits** *(Claude's call)*. When the project file does not load, every operation answers
   409 with the load error and writes nothing, until the file loads again.
-- **Undo by snapshots** *(Claude's call)*. A step keeps the whole file text before and after, with a label from
-  the catalog (`editor-op-<tool>`), at most 100 steps. Undo writes `before` and redo writes `after`, atomically
-  (temporary file, then rename), and only while the file still equals the text the step started from. If it does
+- **Undo by snapshots** *(Claude's call)*. The history is one chain of whole-file texts, a label from the catalog
+  (`editor-op-<tool>`) between each pair, at most 100 steps and at most 64 MiB of text in all; the oldest steps go
+  first, the newest always stays. Undo writes the previous text and redo the next one, atomically (the shared
+  `write_atomic`: temporary file, then rename), and only while the file still equals the text the step started from. If it does
   not, nothing is written, the history is cleared and the answer is 409. Snapshots keep comments and layout
   exactly and need no inverse operation per tool. `api/state` carries the labels of the next undo and redo.
+- **I/O errors** of a tool (the project cannot be read or written) answer 500 with a generic localized text;
+  texts that are too long (codes over 64, names and notes over 200 characters) are refused by the model's
+  validation, shared by CLI, MCP and editor.
 - **External changes**: no watcher; the page polls `api/revision` (ADR 0046).
 
 ## Consequences

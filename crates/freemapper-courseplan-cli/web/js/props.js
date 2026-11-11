@@ -60,10 +60,19 @@ function field(list, id, labelId, value) {
   input.type = "text";
   input.inputMode = "decimal";
   input.autocomplete = "off";
-  input.value = shown(value);
+  // defaultValue keeps the text shown for the file's value, to tell an edited field from an untouched one.
+  input.defaultValue = shown(value);
+  input.value = input.defaultValue;
   detail.append(input);
   list.append(term, detail);
   return input;
+}
+
+// The value of a position field: the exact number from the file while the text is the one shown for it (the
+// display is rounded, so editing the other axis must not round this one), else the number typed. Null when the
+// text is no number.
+export function positionOf(input, exact) {
+  return input.value === input.defaultValue ? exact : parseMm(input.value);
 }
 
 // Editing X or Y moves the control: actions.move(code, x, y). Something that is no number is refused in the
@@ -78,9 +87,14 @@ function positionFields(list, control, actions) {
   error.textContent = t("editor-error-number");
   for (const input of inputs) {
     input.setAttribute("aria-describedby", "prop-error");
+    // Text typed but not yet committed must survive a reload of the page's data.
+    input.addEventListener("input", () => {
+      input.dataset.dirty = "1";
+    });
     input.addEventListener("change", () => {
-      const nx = parseMm(inputs[0].value);
-      const ny = parseMm(inputs[1].value);
+      delete input.dataset.dirty;
+      const nx = positionOf(inputs[0], x);
+      const ny = positionOf(inputs[1], y);
       for (const [i, v] of [[0, nx], [1, ny]]) inputs[i].setAttribute("aria-invalid", String(v === null));
       error.hidden = nx !== null && ny !== null;
       if (nx === null || ny === null) return;
@@ -96,8 +110,11 @@ function controlRows(host, list, state, code, actions) {
   row(list, "editor-prop-code", control.code);
   row(list, "editor-prop-kind", kindLabel(control.kind ?? "control"));
   const error = positionFields(list, control, actions);
-  for (const column of COLUMNS) {
-    row(list, `editor-desc-column-${column}`, control.description?.[column]);
+  // A crossing point has no control description.
+  if (control.kind !== "crossing_point") {
+    for (const column of COLUMNS) {
+      row(list, `editor-desc-column-${column}`, control.description?.[column]);
+    }
   }
   const users = state.event.courses
     .filter((c) => c.controls.some((x) => String(x.code) === String(code)))
@@ -159,6 +176,11 @@ function classRows(list, state, name) {
 
 // Fills `host` for the selection { kind, id, course? }, or the empty hint without one.
 export function show(host, state, selection, overlay, actions) {
+  // A field with text typed but not committed keeps it: nothing is rebuilt under the cursor.
+  const key = selection ? `${selection.kind}:${selection.id}` : "";
+  const active = document.activeElement;
+  if (state && selection && host.dataset.key === key && host.contains(active) && active.dataset?.dirty) return;
+  host.dataset.key = key;
   // Keep the focus in the field being edited: the page is rebuilt after each change.
   const focused = host.contains(document.activeElement) ? document.activeElement.id : "";
   host.replaceChildren();

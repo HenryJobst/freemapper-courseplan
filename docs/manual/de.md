@@ -163,7 +163,14 @@ nennt den Grund.
   den Posten, dessen Mittelpunkt dem Mauszeiger am nächsten liegt, solange der Zeiger höchstens den Kreisradius plus
   die Linienbreite entfernt ist. Rechts zeigen die Eigenschaften ihn an.
 - **Setzen.** Wähle „Posten setzen“ und klicke auf die Karte. Der Editor legt an dieser Stelle einen Posten an. Den
-  Code eines Postens kannst du im Editor vorerst nicht ändern.
+  Code eines Postens kannst du im Editor vorerst nicht ändern. Codes dürfen bis zu 64 Zeichen lang sein, Namen und
+  Notizen bis zu 200.
+- **Querungsstelle setzen.** „Querungsstelle setzen“ arbeitet genauso, legt aber einen Posten der Art
+  „Querungsstelle“ an. Er bekommt den nächsten freien Code, teilt die Nummerierung mit den übrigen Posten und steht im
+  Baum mit „(Querungsstelle)“. Auf der Karte erscheint er als zwei Bögen ohne Kreis. Die Eigenschaften zeigen Code, Art
+  und Position, aber keine Postenbeschreibung, denn eine Querungsstelle hat keine. Zu einer Bahn hinzufügen kannst du
+  sie im Editor noch nicht; das geht weiter über die Kommandozeile oder den KI-Assistenten. Verschieben, Löschen und
+  Rückgängig gelten wie bei jedem Posten.
 - **Verschieben.** Ziehe einen Kreis, oder trage in den Eigenschaften neue Werte in die Felder X (mm) und Y (mm) ein.
   Du kannst Dezimalkomma oder Dezimalpunkt schreiben, `12,5` oder `12.5`. Alles andere markiert das Feld und zeigt
   einen Hinweis. Beim Ziehen bewegt sich nur der Kreis. Strecken und Nummern folgen, wenn du loslässt. Esc bricht das
@@ -171,7 +178,8 @@ nennt den Grund.
 - **Schieben.** Bei gewähltem Posten verschieben ihn die Pfeiltasten um 0,1 mm, mit Umschalt um 1 mm. Der Editor
   speichert einmal, wenn du die Taste loslässt; eine gehaltene Taste ergibt also nur einen Schritt zum
   Rückgängigmachen. Ohne Auswahl verschieben die Pfeiltasten die Ansicht.
-- **Löschen.** Drücke Entf oder Rücktaste, oder nimm „Posten löschen“ in den Eigenschaften. Einen Posten, den keine
+- **Löschen.** Drücke Entf oder Rücktaste, solange der Fokus auf der Karte oder im Baum liegt, oder nimm „Posten
+  löschen“ in den Eigenschaften. In einem Feld oder auf einer Schaltfläche tun die Tasten nichts. Einen Posten, den keine
   Bahn besucht, löscht der Editor sofort; mit Rückgängig holst du ihn zurück. Besuchen Bahnen den Posten, listet ein
   Dialog sie auf und fragt nach. Der Fokus liegt auf „Abbrechen“. „Löschen“ entfernt den Posten und nimmt ihn aus
   diesen Bahnen. Eine versehentliche Rücktaste löscht deshalb einen gewählten, unbenutzten Posten ohne Rückfrage;
@@ -184,12 +192,17 @@ die Schritte dieser Editor-Sitzung durch. Ein Setzen, ein Loslassen nach dem Zie
 und eine Reihe von Pfeiltasten-Schritten sind je ein Schritt. Die Statusleiste meldet „Rückgängig gemacht“ oder
 „Wiederholt“.
 
-- Der Editor behält die letzten 100 Schritte. Schließt du den Editor, sind sie weg.
+- Der Editor behält die letzten 100 Schritte, solange deren Dateikopien zusammen unter 64 MiB bleiben; die ältesten
+  gehen zuerst. Schließt du den Editor, sind sie weg.
+- Rückgängig und Wiederholen beziehen sich auf den Stand, den du siehst. Zeigt ein zweiter Browser-Tab einen älteren
+  Stand als die Datei, lehnen sie ab, und der Tab lädt den aktuellen Stand; sie nehmen nie zurück, was der andere Tab
+  getan hat, ohne dass du es gesehen hast.
 - Rückgängig stellt die Datei so wieder her, wie sie vor dem Schritt war, samt Kommentaren und Aufbau. Das nimmt auch
   alles andere zurück, was der Schritt in der Datei geändert hat, etwa das Entfernen eines Postens aus einer Bahn.
 - Hat ein anderes Programm die Datei nach deinem letzten Schritt geändert, lehnen Rückgängig und Wiederholen ab. Die
   Statusleiste meldet dann, dass die Projektdatei außerhalb des Editors geändert wurde und beides nicht mehr möglich
-  ist; es wurde nichts geändert. Der Verlauf ist danach leer.
+  ist; es wurde nichts geändert. Der Verlauf ist danach leer. Der Editor merkt das erst bei deinem nächsten Rückgängig
+  oder Wiederholen, nicht im Moment der Änderung von außen.
 
 ### Tastenkürzel
 
