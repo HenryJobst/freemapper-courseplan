@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.12.0] - 2026-11-11
+
 ### Hinzugefügt
 
 - `list controls|courses|specials|classes` führen die Einzelheiten eines Projekts als Tabelle auf, `map extent` und `map near --at X,Y --radius MM` nennen den Umfang der Karte und die Kartenobjekte nahe einem Punkt. Mit `--json` geben sie die Antwort des gleichnamigen MCP-Werkzeugs unverändert aus (ADR 0059). `event start-window --none` entfernt das Startfenster, wie es `set_start_window` mit `no_start_window` tut.

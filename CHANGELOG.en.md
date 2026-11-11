@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-11
+
 ### Added
 
 - `list controls|courses|specials|classes` list the details of a project as a table, and `map extent` and `map near --at X,Y --radius MM` report the map extent and the map objects near a point. With `--json` each prints the answer of the matching MCP tool unchanged (ADR 0059). `event start-window --none` removes the start window, as `set_start_window` with `no_start_window` does.
