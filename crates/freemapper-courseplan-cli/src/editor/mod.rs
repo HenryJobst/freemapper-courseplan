@@ -285,13 +285,10 @@ async fn api_op(
 }
 
 /// `POST api/score/{tool}`: `score_suggest`, `score_length` and `score_draft`, which need the map and can run
-/// for seconds (ADR 0069). Same body and revision header as `api/op/{tool}`, same answer.
-///
-/// Unlike an operation, a read-only call does not hold the state lock while it computes: the lock is taken
-/// briefly to compare the revision, the tool then runs on the blocking pool, and the file is compared once more
-/// when it is done. So `api/revision` and the reads answer meanwhile. A draft with `apply: true` writes, so it
-/// is a plain operation: it holds the lock for the whole run (the page is waiting for it and polls nothing),
-/// re-checks the revision and records its undo step.
+/// for seconds (ADR 0069). Same body and revision header as `api/op/{tool}`, same answer. They only read: the lock
+/// is taken briefly to compare the revision, the tool runs on the blocking pool without it, and the file is
+/// compared once more when it is done (a change gives a conflict and no result). So `api/revision` and the reads
+/// answer meanwhile. A draft is written by the operation `score_apply_draft`, not by this route.
 async fn api_score(
     State(state): State<Shared>,
     Path(tool): Path<String>,
@@ -305,10 +302,12 @@ async fn api_score(
         serde_json::from_slice(&body).ok()
     };
     if api::score_writes(&tool, &args) {
-        return serialized(state, move |st| {
-            api::run_op(st, &tool, revision.as_deref(), args)
-        })
-        .await;
+        let lang = state.lock().await.lang.clone();
+        return (
+            StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({ "error": text(&lang, "editor-op-bad-body", &[]) })),
+        )
+            .into_response();
     }
     let prepared = {
         let mut guard = state.clone().lock_owned().await;

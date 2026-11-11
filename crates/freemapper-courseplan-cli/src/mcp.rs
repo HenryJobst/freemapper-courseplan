@@ -2050,6 +2050,9 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "resolve_sync_conflict",
 ];
 
+/// Operations only the editor runs: they are no MCP tools and no CLI commands (ADR 0069).
+pub(crate) const EDITOR_ONLY: &[&str] = &["score_apply_draft"];
+
 /// Tools the editor does not run as operations: they take file paths, or they are reads served
 /// by dedicated routes. A new MCP tool must join one of the two lists (a test enforces it).
 #[cfg(test)]
@@ -2157,6 +2160,7 @@ impl CoursePlanServer {
             "set_course_number" => run!(SetCourseNumber, set_course_number_op),
             "score_suggest" => run!(ScoreSuggest, score_suggest_op),
             "score_draft" => run!(ScoreDraft, score_draft_op),
+            "score_apply_draft" => run!(ScoreApplyDraft, score_apply_draft_op),
             "score_length" => run!(CourseRef, score_length_op),
             "map_features_near" => run!(FeaturesNear, map_features_near_op),
             "map_extent" => run!(ProjectOnly, map_extent_op),

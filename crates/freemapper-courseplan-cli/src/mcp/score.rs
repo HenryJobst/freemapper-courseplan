@@ -23,7 +23,7 @@ use freemapper_courseplan_model::{
 };
 use serde_json::{Value, json};
 
-use super::params::{CourseRef, ScoreDraft, ScoreSuggest};
+use super::params::{CourseRef, ScoreApplyDraft, ScoreDraft, ScoreSuggest};
 use super::{Answer, CoursePlanServer, flag, pt};
 
 /// Grid edge in metres of the surface that serves the legs between controls; the one the length
@@ -61,6 +61,39 @@ struct Computed {
     leftovers: Vec<ControlCode>,
     extent: Option<(MapPoint, MapPoint)>,
     settings: ScoreSettings,
+}
+
+/// The controls only the score course `name` uses; they leave with it when it is replaced, so their sites and
+/// codes are free again.
+fn leftovers_of(event: &Event, name: &str) -> Vec<ControlCode> {
+    let own = event.courses.iter().find(|c| c.name == name);
+    match own.map(|c| &c.kind) {
+        Some(CourseKind::Score { controls, .. }) => controls
+            .iter()
+            .map(|c| c.code.clone())
+            .filter(|code| {
+                !event
+                    .courses
+                    .iter()
+                    .filter(|c| c.name != name)
+                    .any(|c| course_uses(&c.kind, code))
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// What writing a draft as a score course needs: the course, its ends, and the controls and links to write.
+struct DraftWrite<'a> {
+    name: &'a str,
+    time_limit_min: u32,
+    start: &'a str,
+    finish: &'a str,
+    existed: bool,
+    leftovers: &'a [ControlCode],
+    extent: Option<(MapPoint, MapPoint)>,
+    controls: Vec<(ControlCode, u32, MapPoint)>,
+    links: Vec<(ControlCode, ControlCode)>,
 }
 
 /// The forbidden-route margin of the candidates in map millimetres.
@@ -572,21 +605,7 @@ impl CoursePlanServer {
                 (sid, s, fid, f)
             }
         };
-        // The controls only the replaced course used leave with it, so their sites and codes are free.
-        let leftovers: Vec<ControlCode> = match existing_course.map(|c| &c.kind) {
-            Some(CourseKind::Score { controls, .. }) => controls
-                .iter()
-                .map(|c| c.code.clone())
-                .filter(|code| {
-                    !event
-                        .courses
-                        .iter()
-                        .filter(|c| &c.name != name)
-                        .any(|c| course_uses(&c.kind, code))
-                })
-                .collect(),
-            _ => Vec::new(),
-        };
+        let leftovers = leftovers_of(event, name);
         let kept: Vec<&Control> = event
             .controls
             .iter()
@@ -669,10 +688,36 @@ impl CoursePlanServer {
         c: &Computed,
         d: &Draft,
     ) -> Result<(), String> {
-        let name = req.name.0.as_str();
-        let event = &mut file.event;
+        self.write_score_course(
+            &mut file.event,
+            &DraftWrite {
+                name: &req.name.0,
+                time_limit_min: req.time_limit_min,
+                start: &c.start,
+                finish: &c.finish,
+                existed: c.existed,
+                leftovers: &c.leftovers,
+                extent: c.extent.clone(),
+                controls: d
+                    .controls
+                    .iter()
+                    .map(|x| (x.code.clone(), u32::from(x.value), x.at.clone()))
+                    .collect(),
+                links: d
+                    .links
+                    .iter()
+                    .map(|&(a, b)| (d.controls[a].code.clone(), d.controls[b].code.clone()))
+                    .collect(),
+            },
+        )
+    }
+
+    /// Writes controls and links as the score course through the edit operations, which refuse taken codes,
+    /// values the code does not carry, positions off the map and links that do not form chains.
+    fn write_score_course(&self, event: &mut Event, w: &DraftWrite) -> Result<(), String> {
+        let name = w.name;
         let refused = |e| self.refused(e);
-        if c.existed {
+        if w.existed {
             let links: Vec<_> = event
                 .courses
                 .iter()
@@ -689,41 +734,105 @@ impl CoursePlanServer {
             edit::set_score_course_details(
                 event,
                 name,
-                Some(req.time_limit_min),
+                Some(w.time_limit_min),
                 edit::PenaltyChange::Keep,
             )
             .map_err(refused)?;
-            for code in &c.leftovers {
+            for code in w.leftovers {
                 edit::remove_control(event, code).map_err(refused)?;
             }
         } else {
-            edit::add_score_course(event, name, &c.start, &c.finish, req.time_limit_min, None)
+            edit::add_score_course(event, name, w.start, w.finish, w.time_limit_min, None)
                 .map_err(refused)?;
         }
-        for control in &d.controls {
+        for (code, _, at) in &w.controls {
             edit::add_control(
                 event,
-                c.extent.clone(),
-                control.at.clone(),
-                Some(control.code.clone()),
+                w.extent.clone(),
+                at.clone(),
+                Some(code.clone()),
                 ControlKind::Control,
             )
             .map_err(refused)?;
         }
-        let inputs: Vec<edit::ScoreControlInput> = d
+        let inputs: Vec<edit::ScoreControlInput> = w
             .controls
             .iter()
-            .map(|x| edit::ScoreControlInput {
-                code: x.code.clone(),
-                value: Some(u32::from(x.value)),
+            .map(|(code, value, _)| edit::ScoreControlInput {
+                code: code.clone(),
+                value: Some(*value),
             })
             .collect();
         edit::set_score_controls(event, name, &inputs).map_err(refused)?;
-        for &(a, b) in &d.links {
-            edit::add_score_link(event, name, &d.controls[a].code, &d.controls[b].code)
-                .map_err(refused)?;
+        for (a, b) in &w.links {
+            edit::add_score_link(event, name, a, b).map_err(refused)?;
         }
         Ok(())
+    }
+
+    /// Applies a draft the editor showed, as it is, to the existing score course `name`: no search runs, so the
+    /// written controls are the ones the person saw. One call is one change of the file, hence one undo step.
+    /// Only the editor calls this; it is no MCP tool (ADR 0069).
+    pub(super) fn score_apply_draft_op(&self, req: ScoreApplyDraft) -> Answer {
+        self.edit(&req.project, |file| {
+            if req.time_limit_min == 0 {
+                return Err(self.refused(edit::EditError::BadTimeLimit));
+            }
+            let extent = self.extent(file)?;
+            let name = req.name.0.as_str();
+            let course = file
+                .event
+                .courses
+                .iter()
+                .find(|c| c.name == name)
+                .ok_or_else(|| {
+                    self.refused(edit::EditError::NotFound {
+                        what: "course",
+                        id: name.to_owned(),
+                    })
+                })?;
+            if !matches!(course.kind, CourseKind::Score { .. }) {
+                return Err(self.refused(edit::EditError::NotScoreCourse {
+                    course: name.to_owned(),
+                }));
+            }
+            let (start, finish) = (course.start.clone(), course.finish.clone());
+            let leftovers = leftovers_of(&file.event, name);
+            let codes: Vec<&str> = req.controls.iter().map(|c| c.code.0.as_str()).collect();
+            let mut links = Vec::new();
+            for l in &req.links {
+                for end in [&l.a.0, &l.b.0] {
+                    if !codes.contains(&end.as_str()) {
+                        return Err(self.refused(edit::EditError::NotFound {
+                            what: "control",
+                            id: end.clone(),
+                        }));
+                    }
+                }
+                links.push((ControlCode(l.a.0.clone()), ControlCode(l.b.0.clone())));
+            }
+            let controls = req
+                .controls
+                .iter()
+                .map(|c| (ControlCode(c.code.0.clone()), c.value, c.at.map_point()))
+                .collect::<Vec<_>>();
+            let count = controls.len();
+            self.write_score_course(
+                &mut file.event,
+                &DraftWrite {
+                    name,
+                    time_limit_min: req.time_limit_min,
+                    start: &start,
+                    finish: &finish,
+                    existed: true,
+                    leftovers: &leftovers,
+                    extent,
+                    controls,
+                    links,
+                },
+            )?;
+            Ok(json!({ "name": name, "controls": count }))
+        })
     }
 
     fn draft_json(&self, req: &ScoreDraft, c: &Computed, d: &Draft, applied: bool) -> Value {

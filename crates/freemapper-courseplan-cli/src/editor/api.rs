@@ -16,7 +16,7 @@ use super::EditorState;
 use super::history::HistoryError;
 use super::map_view::{FileStamp, MapEntry};
 use super::overlay::r3;
-use crate::mcp::{CoursePlanServer, EDITOR_TOOLS, OpError};
+use crate::mcp::{CoursePlanServer, EDITOR_ONLY, EDITOR_TOOLS, OpError};
 
 /// The fingerprint of the project file (FNV-1a 64 over its bytes, 16 hex digits).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -432,7 +432,7 @@ pub(crate) fn run_op(
 ) -> Reply {
     let lang = st.lang.clone();
     let fail = |status, id: &str| (status, json!({ "error": msg(&lang, id) }));
-    if !EDITOR_TOOLS.contains(&tool) {
+    if !EDITOR_TOOLS.contains(&tool) && !EDITOR_ONLY.contains(&tool) {
         return fail(StatusCode::NOT_FOUND, "editor-op-unknown");
     }
     let Some(revision) = revision else {
@@ -499,7 +499,8 @@ pub(crate) fn run_op(
 /// The tools of `POST api/score/{tool}`: the long ones, which need the map and can run for seconds (ADR 0069).
 pub(crate) const SCORE_TOOLS: &[&str] = &["score_suggest", "score_length", "score_draft"];
 
-/// Whether the call writes: only a draft with `apply: true` does. It takes the plain operation path.
+/// Whether the call asks to write: a draft with `apply: true`. The page applies a shown draft with the operation
+/// `score_apply_draft` instead, so this route refuses it.
 pub(crate) fn score_writes(tool: &str, args: &Option<Value>) -> bool {
     tool == "score_draft"
         && args

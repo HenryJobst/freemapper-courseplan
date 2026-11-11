@@ -18,7 +18,7 @@ let working = false;
 let note = "";
 let ctx = null;
 
-// ctx = { runOp(tool, body), runScore(tool, body), redraw(), say(id), state() } from main.js.
+// ctx = { runOp, runScore, redraw, say, state, focusAfter(id), lastFailure(), showBanner(text) } from main.js.
 export function bind(context) {
   ctx = context;
 }
@@ -31,7 +31,10 @@ const hasResults = () => results.candidates.length > 0 || results.draft !== null
 
 // A write of this page keeps the results; the revision they belong to moves along.
 export function rebase(revision) {
-  if (hasResults()) results.revision = revision;
+  if (!hasResults()) return;
+  results.revision = revision;
+  // A length report describes the course as it was; any write makes it stale.
+  results.length = null;
 }
 
 // True when results were dropped because the project changed under them.
@@ -124,76 +127,102 @@ const courseOf = () => {
   return s.data.event.courses.find((c) => c.name === s.course) ?? null;
 };
 
+// Redraws and puts the focus back on the control that started the action (the pane is rebuilt on every redraw).
+function done(focusId) {
+  ctx.focusAfter(focusId);
+  ctx.redraw();
+}
+
 async function suggest() {
   const course = courseOf();
   if (!course) return;
   note = "";
-  const done = await ctx.runScore("score_suggest", {});
-  if (!done || ctx.state().course !== course.name) return;
-  results = { ...empty(), course: course.name, candidates: done.result.candidates, revision: done.revision };
+  const answer = await ctx.runScore("score_suggest", {});
+  if (!answer || ctx.state().course !== course.name) return done("score-suggest");
+  results = { ...empty(), course: course.name, candidates: answer.result.candidates, revision: answer.revision };
   ctx.say("editor-score-status-suggested");
-  ctx.redraw();
-}
-
-function draftBody(course, apply) {
-  const body = { name: course.name, time_limit_min: course.time_limit_min };
-  if (apply) body.apply = true;
-  return body;
+  done("score-suggest");
 }
 
 async function draft() {
   const course = courseOf();
   if (!course) return;
   note = "";
-  const done = await ctx.runScore("score_draft", draftBody(course, false));
-  if (!done || ctx.state().course !== course.name) return;
-  results = { ...empty(), course: course.name, draft: done.result, length: null, revision: done.revision };
+  const body = { name: course.name, time_limit_min: course.time_limit_min };
+  const answer = await ctx.runScore("score_draft", body);
+  if (!answer || ctx.state().course !== course.name) return done("score-draft");
+  results = { ...empty(), course: course.name, draft: answer.result, revision: answer.revision };
   ctx.say("editor-score-status-drafted");
-  ctx.redraw();
+  done("score-apply");
 }
 
+// Writes the draft the person sees, as it is: no new search, so nothing else can be written.
 async function apply() {
   const course = courseOf();
-  if (!course || results.draft === null) return;
-  const done = await ctx.runScore("score_draft", draftBody(course, true));
-  if (!done) return;
+  const shown = results.draft;
+  if (!course || shown === null) return;
+  const body = {
+    name: course.name,
+    time_limit_min: shown.time_limit_min,
+    controls: shown.controls.map((c) => ({ code: c.code, value: c.value, at: c.at })),
+    links: shown.links,
+  };
+  const written = await ctx.runOp("score_apply_draft", body);
+  if (!written) return done("score-apply");
   results = empty();
   ctx.say("editor-score-status-applied");
-  ctx.redraw();
+  done("score-draft");
 }
 
 async function length() {
   const course = courseOf();
   if (!course) return;
   note = "";
-  const done = await ctx.runScore("score_length", { name: course.name });
-  if (!done || ctx.state().course !== course.name) return;
-  results = { ...empty(), course: course.name, length: done.result.length, revision: done.revision };
+  const answer = await ctx.runScore("score_length", { name: course.name });
+  if (!answer || ctx.state().course !== course.name) return done("score-length");
+  results = { ...empty(), course: course.name, length: answer.result.length, revision: answer.revision };
   ctx.say("editor-score-status-length");
-  ctx.redraw();
+  done("score-length");
 }
 
 function discard() {
   results = empty();
   note = "";
-  ctx.redraw();
+  done("score-suggest");
 }
 
-// Two operations, so that each is one undo step: the control, then the course with the control in it.
+// A change of the limit or of the shared settings makes candidates and draft stale: they are dropped.
+async function change(tool, body, focusId) {
+  ctx.focusAfter(focusId);
+  const written = await ctx.runOp(tool, body);
+  if (written) results = empty();
+  done(focusId);
+}
+
+// Two operations, so that each is one undo step: the control, then the course with the control in it. If the
+// second one is refused, the control is taken out again, so a retry does not meet "code exists".
 async function accept(candidate) {
   const name = results.course;
   if (!name || !candidate.code) return;
+  const next = results.candidates[results.candidates.indexOf(candidate) + 1] ?? null;
+  const after = next?.code ? `score-accept-${next.code}` : "score-suggest";
+  ctx.focusAfter(after);
   const added = await ctx.runOp("add_control", { at: candidate.at, code: candidate.code });
-  if (!added) return;
+  if (!added) return done(after);
   const course = ctx.state().data.event.courses.find((c) => c.name === name);
-  if (!course) return;
+  if (!course) return done(after);
   const controls = course.controls.map((c) => ({ code: String(c.code), value: c.value }));
   controls.push({ code: candidate.code, value: candidate.value });
-  const done = await ctx.runOp("set_score_controls", { name, controls });
-  if (!done) return;
+  const set = await ctx.runOp("set_score_controls", { name, controls });
+  if (!set) {
+    const reason = ctx.lastFailure();
+    await ctx.runOp("remove_control", { code: candidate.code });
+    if (reason) ctx.showBanner(reason);
+    return done(`score-accept-${candidate.code}`);
+  }
   results.candidates = results.candidates.filter((c) => c !== candidate);
   ctx.say("editor-score-status-accepted");
-  ctx.redraw();
+  done(after);
 }
 
 // --- Panel -----------------------------------------------------------------------------------------------------------
@@ -248,7 +277,7 @@ function draftBlock(result) {
   block.append(table(["editor-score-col-code", "editor-score-col-value"], result.controls.map((c) => [c.code, c.value])));
   block.append(reportBlock(result.length));
   const bar = node("p", { class: "score-actions" });
-  bar.append(button("score-apply", "editor-score-apply", apply), button("score-discard", "editor-score-discard", discard));
+  bar.append(button("score-apply", "editor-score-apply", apply), button("score-discard-draft", "editor-score-discard", discard));
   block.append(bar);
   return block;
 }
@@ -271,7 +300,7 @@ export function panel(host, state, course) {
 
   const fields = node("dl", { class: "props" });
   numberRow(fields, "score-limit", "editor-score-limit", course.time_limit_min, (n) =>
-    ctx.runOp("set_score_course_details", { name, time_limit_min: n }));
+    change("set_score_course_details", { name, time_limit_min: n }, "score-limit"));
   const stored = course.penalty_per_min ?? null;
   const term = node("dt");
   term.append(node("label", { for: "score-penalty-default" }, t("editor-score-penalty-default")));
@@ -323,7 +352,7 @@ export function panel(host, state, course) {
       ["score-mix-hard", "editor-score-mix-hard", "mix_hard_percent"],
       ["score-seed", "editor-score-seed", "seed"],
     ]) {
-      numberRow(settings, id, labelId, s[key], (n) => ctx.runOp("set_score_settings", { [key]: n }));
+      numberRow(settings, id, labelId, s[key], (n) => change("set_score_settings", { [key]: n }, id));
     }
     row(settings, "editor-score-good-band", `${s.good_band_percent[0]}${DASH}${s.good_band_percent[1]} %`);
     row(settings, "editor-score-very-good-band", `${s.very_good_band_percent[0]}${DASH}${s.very_good_band_percent[1]} %`);
@@ -336,6 +365,9 @@ export function panel(host, state, course) {
     }
     if (results.candidates.length > 0) {
       section.append(node("h4", {}, t("editor-score-candidates")));
+      if (results.candidates.some((c) => !c.code)) {
+        section.append(node("p", { class: "hint" }, t("editor-score-no-code-hint")));
+      }
       section.append(candidateTable(results.candidates));
       const clear = node("p", { class: "score-actions" });
       clear.append(button("score-discard", "editor-score-discard", discard));

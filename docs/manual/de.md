@@ -180,7 +180,7 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
   der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
   `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
-  sonst 30 m). Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen.
+  sonst 30 m). Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
 - `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
   standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
   95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
@@ -393,8 +393,9 @@ Eigenschaften das Score-Fenster.
   „Übernehmen“ fügt einen der Bahn hinzu, als zwei Schritte für Rückgängig. Ein Kandidat ohne freien Code lässt sich
   nicht übernehmen.
 - **Bahn entwerfen.** Rechnet einen Entwurf für das Zeitlimit und zeigt Posten, Verbindungen und den Längenbericht
-  mit beiden Läuferprofilen. Nichts ändert sich, bis du „Entwurf übernehmen“ wählst; das legt die Posten dieser Bahn
-  an oder ersetzt sie. „Länge prüfen“ meldet die Bahn, wie sie ist.
+  mit beiden Läuferprofilen. Nichts ändert sich, bis du „Entwurf übernehmen“ wählst. Das schreibt genau den Entwurf auf
+  dem Bildschirm, ohne neue Suche, und ersetzt die Posten und die Verbindungen dieser Bahn, als ein Schritt für
+  Rückgängig. Ändert sich das Zeitlimit oder eine Einstellung, ist der Entwurf verworfen. „Länge prüfen“ meldet die Bahn, wie sie ist.
 - **Während es läuft.** Ein Vorschlag oder Entwurf braucht Sekunden. Die Schaltflächen bleiben gesperrt, das Fenster
   sagt, dass es arbeitet, und der Editor bemerkt Änderungen an der Datei weiter. Kandidaten und Entwürfe werden nicht
   gespeichert. Ändert ein anderes Programm das Projekt in der Zwischenzeit, sind sie verworfen und das Fenster sagt es.

@@ -176,6 +176,8 @@ async function loadNear() {
 // page always shows the file. A refusal or a conflict shows in the status bar and in the banner above the map.
 
 let busy = false;
+// The text of the last refusal or conflict, for a caller that has to undo a step and show it again.
+let lastFailure = "";
 // An operation that arrived while another ran is dropped; the page is loaded again when the running one ends,
 // so a typed value or a moved circle does not stay although nothing was sent.
 let refreshAfter = false;
@@ -257,6 +259,9 @@ score.bind({
   redraw: () => redraw(),
   say: (id) => status.say(id),
   state: () => state,
+  focusAfter: props.focusAfter,
+  lastFailure: () => lastFailure,
+  showBanner: status.showBanner,
 });
 
 async function settle(answer) {
@@ -271,6 +276,7 @@ async function settle(answer) {
     return answer.data;
   }
   const message = failure(answer);
+  lastFailure = message;
   if (message) {
     // The banner is an alert region: a screen reader reads it, so the status bar does not repeat it.
     status.showBanner(message);

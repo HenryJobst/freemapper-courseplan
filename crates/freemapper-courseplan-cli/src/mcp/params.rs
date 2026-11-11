@@ -561,3 +561,31 @@ pub(super) struct ScoreDraft {
     pub(super) links: Option<Vec<LinkEnds>>,
     pub(super) apply: Option<bool>,
 }
+
+/// One control of a draft the editor applies: its code, value and position.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct DraftControl {
+    pub(super) code: Code,
+    pub(super) value: u32,
+    pub(super) at: Point,
+}
+
+/// A mandatory link between two controls of the draft, by code.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct DraftLink {
+    pub(super) a: Code,
+    pub(super) b: Code,
+}
+
+/// A draft the editor shows, applied as it is (editor only, ADR 0069).
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreApplyDraft {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) controls: Vec<DraftControl>,
+    pub(super) links: Vec<DraftLink>,
+}

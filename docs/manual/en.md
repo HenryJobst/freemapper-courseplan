@@ -171,7 +171,9 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
   would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
   smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m).
-  Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded.
+  Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded. With `--json`
+  and over MCP each candidate also has a free `code` that carries its value. It is `null` when no free code is left:
+  only the best-ranked candidates get one.
 - `score draft` picks controls from these sites and gives them values and codes, so that the good runner scores
   87 to 93 percent of all points by default within the limit and the very good runner takes every control and
   finishes after 95 to 100 percent of it by default. Both bands are settings of the event. Without `--apply` it only prints the draft. With
@@ -336,8 +338,9 @@ dashed line between its two controls. Select the course in the tree to open the 
 - **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
   one to the course, as two steps for undo. A candidate without a free code cannot be accepted.
 - **Draft course.** Computes a draft for the time limit and shows its controls, links and the length report with
-  both runner profiles. Nothing changes until you choose "Apply draft", which creates or replaces the controls of
-  this course. "Check length" reports the course as it is.
+  both runner profiles. Nothing changes until you choose "Apply draft". It writes exactly the draft on the screen,
+  without a new search, and replaces the controls and the links of this course, as one step for undo. A change of
+  the time limit or of a setting discards the draft. "Check length" reports the course as it is.
 - **While it runs.** A suggestion or draft takes seconds. The buttons stay disabled, the panel says that it is
   working, and the editor still notices changes to the file. Candidates and drafts are not saved. If another program
   changes the project meanwhile, they are discarded and the panel says so.
