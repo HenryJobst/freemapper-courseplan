@@ -302,6 +302,27 @@ pub fn suggest_with(
     }
     check_end(fine, &ctx.start, |at| ScoreError::StartUnreachable { at })?;
     check_end(fine, &ctx.finish, |at| ScoreError::FinishUnreachable { at })?;
+    // The coarse surface (large cells) can block an end that the fine one reaches, or cut start from
+    // finish. Then the legs between candidates run on the fine surface too: slower, but not empty.
+    let coarse = match check_end(coarse, &ctx.start, |at| ScoreError::StartUnreachable { at })
+        .and_then(|()| {
+            check_end(coarse, &ctx.finish, |at| ScoreError::FinishUnreachable {
+                at,
+            })
+        })
+        .and_then(|()| {
+            coarse
+                .fastest(ctx.start.clone(), ctx.finish.clone())
+                .map(|_| ())
+        }) {
+        Ok(()) => coarse,
+        Err(
+            ScoreError::StartUnreachable { .. }
+            | ScoreError::FinishUnreachable { .. }
+            | ScoreError::Unreachable { .. },
+        ) => fine,
+        Err(e) => return Err(e),
+    };
     let raw = raw_sites(index);
     // The pool: sites outside forbidden areas with standing room.
     let pool: Vec<(&Site, MapPoint)> = raw
@@ -321,7 +342,10 @@ pub fn suggest_with(
                 .fold(f64::INFINITY, f64::min)
         })
         .collect();
-    let mut kept: Vec<(&Site, MapPoint, f64)> = Vec::new();
+    // Site, route end, effort in seconds, route choice of the leg from the start.
+    let max_ratio = RouteParams::default().max_length_ratio;
+    let mut kept: Vec<(&Site, MapPoint, f64, f64)> = Vec::new();
+    let mut used = vec![false; pool.len()];
     let mut tries = 0;
     while kept.len() < ctx.limit.saturating_mul(SITES_PER_LIMIT)
         && tries < ctx.limit.saturating_mul(ATTEMPTS_PER_LIMIT)
@@ -330,7 +354,7 @@ pub fn suggest_with(
         // the lower x, then y.
         let mut best: Option<(usize, f64)> = None;
         for (i, (site, _)) in pool.iter().enumerate() {
-            if near[i] < ctx.min_distance_mm {
+            if used[i] || near[i] < ctx.min_distance_mm {
                 continue;
             }
             let value = near[i] * site.clarity;
@@ -341,9 +365,12 @@ pub fn suggest_with(
         let Some((i, _)) = best else { break };
         tries += 1;
         let (site, end) = pool[i].clone();
+        used[i] = true;
+        // Reachable: from the start on the fine surface (effort), to the finish and from the start with
+        // alternatives on the coarse one (route choice).
         let reachable = match fine.fastest(ctx.start.clone(), end.clone()) {
             Ok(route) => match coarse.fastest(end.clone(), ctx.finish.clone()) {
-                Ok(_) => Some(route.time_s),
+                Ok(_) => choice_of(coarse, &ctx.start, &end, max_ratio)?.map(|c| (route.time_s, c)),
                 Err(ScoreError::Unreachable { .. }) => None,
                 Err(e) => return Err(e),
             },
@@ -354,18 +381,15 @@ pub fn suggest_with(
         for (j, (other, _)) in pool.iter().enumerate() {
             near[j] = near[j].min(dist(&other.at, &site.at));
         }
-        if let Some(effort) = reachable {
-            kept.push((site, end, effort));
+        if let Some((effort, choice)) = reachable {
+            kept.push((site, end, effort, choice));
         }
     }
     let n = kept.len();
-    let max_ratio = RouteParams::default().max_length_ratio;
     let mut pairs: BTreeMap<(usize, usize), Option<f64>> = BTreeMap::new();
     let mut out = Vec::with_capacity(n);
-    for (i, (site, end, effort_s)) in kept.iter().enumerate() {
-        let mut values: Vec<f64> = choice_of(coarse, &ctx.start, end, max_ratio)?
-            .into_iter()
-            .collect();
+    for (i, (site, _, effort_s, start_choice)) in kept.iter().enumerate() {
+        let mut values = vec![*start_choice];
         let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
         others.sort_by(|&a, &b| {
             dist(&site.at, &kept[a].0.at)

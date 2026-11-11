@@ -39,6 +39,8 @@ struct Fake {
     lost: Vec<MapPoint>,
     /// Legs between two candidates fail; legs from the start and to the finish still work.
     pairs_lost: bool,
+    /// Legs from the start to anything but the finish fail.
+    no_start_legs: bool,
     calls: AtomicUsize,
     /// Sites the start leg was asked for, in order.
     probed: std::sync::Mutex<Vec<MapPoint>>,
@@ -51,6 +53,7 @@ impl Fake {
             blocked: vec![],
             lost: vec![],
             pairs_lost: false,
+            no_start_legs: false,
             calls: AtomicUsize::new(0),
             probed: std::sync::Mutex::new(vec![]),
         }
@@ -67,6 +70,7 @@ impl TravelTime for Fake {
         if self.lost.contains(&from)
             || self.lost.contains(&to)
             || (self.pairs_lost && !end(&from) && !end(&to))
+            || (self.no_start_legs && from == p(0.0, 0.0) && to != p(100.0, 0.0))
         {
             return Err(ScoreError::Unreachable { from, to });
         }
@@ -295,10 +299,10 @@ fn many_sites_stay_bounded_and_deterministic() {
     let fake = Fake::plain();
     let a = suggest(&index, &fake, &c).unwrap();
     assert_eq!(a.len(), 5);
-    // Wanted: 2 * limit = 10 sites, each with a start leg, a finish leg and 4 neighbour legs, plus the
-    // two end checks (passable here, so no probe).
+    // 2 * limit = 10 sites; each costs three legs (fastest from the start, fastest to the finish, start leg
+    // with alternatives), then at most 4 neighbour legs each, plus the start-to-finish probe.
     let calls = fake.calls.load(Ordering::Relaxed);
-    assert!(calls <= 10 * 6, "{calls} legs");
+    assert!(calls <= 1 + 10 * 3 + 10 * 4, "{calls} legs");
     assert_eq!(a, suggest(&index, &Fake::plain(), &c).unwrap());
 }
 
@@ -321,6 +325,7 @@ fn the_selection_spreads_over_a_wide_map() {
     suggest(&index, &fake, &c).unwrap();
     // The 16 sites picked for routing, before the cut by route choice.
     let mut picked = fake.probed.lock().unwrap().clone();
+    picked.retain(|q| *q != p(100.0, 0.0)); // the probe from start to finish
     picked.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
     picked.dedup();
     let west = picked.iter().filter(|q| q.x < 200.0).count();
@@ -331,22 +336,91 @@ fn the_selection_spreads_over_a_wide_map() {
 
 #[test]
 fn unreachable_candidates_are_replaced_by_further_sites() {
-    let features: Vec<_> = (0..12)
-        .map(|i| boulder(10.0 + 20.0 * f64::from(i), 40.0))
-        .collect();
-    let lost: Vec<_> = (0..6)
-        .map(|i| p(10.0 + 20.0 * f64::from(i), 40.0))
-        .collect();
-    let index = MapIndex::from_features(features);
+    // Farthest-first tries the far end (x 130 to 230) first; those sites are lost, so the picks fail
+    // before the near ones replace them.
+    let at = |i: i32| p(10.0 + 20.0 * f64::from(i), 40.0);
+    let index = MapIndex::from_features((0..12).map(|i| boulder(at(i).x, 40.0)).collect());
     let travel = Fake {
-        lost,
+        lost: (6..12).map(at).collect(),
         ..Fake::plain()
     };
     let mut c = ctx(&[], &[]);
     c.limit = 3;
     let found = suggest(&index, &travel, &c).unwrap();
     assert_eq!(found.len(), 3);
-    assert!(found.iter().all(|c| c.at.x > 110.0));
+    assert!(found.iter().all(|c| c.at.x < 130.0));
+    // The first start leg is the probe to the finish.
+    let first_try = travel.probed.lock().unwrap()[1].clone();
+    assert_eq!(first_try, at(11), "the far end is tried first and fails");
+}
+
+#[test]
+fn the_loop_stops_after_four_tries_per_limit_when_everything_is_lost() {
+    let at = |i: i32| p(10.0 + 20.0 * f64::from(i), 40.0);
+    let index = MapIndex::from_features((0..30).map(|i| boulder(at(i).x, 40.0)).collect());
+    let travel = Fake {
+        lost: (0..30).map(at).collect(),
+        ..Fake::plain()
+    };
+    let mut c = ctx(&[], &[]);
+    c.limit = 2;
+    assert!(suggest(&index, &travel, &c).unwrap().is_empty());
+    // 8 tries, one leg each, plus the start-to-finish probe of the coarse surface.
+    assert_eq!(travel.calls.load(Ordering::Relaxed), 9);
+}
+
+#[test]
+fn a_site_is_not_picked_twice_with_minimum_distance_zero() {
+    let index = MapIndex::from_features(vec![boulder(30.0, 30.0), boulder(60.0, 60.0)]);
+    let mut c = ctx(&[], &[]);
+    c.min_distance_mm = 0.0;
+    c.limit = 5;
+    assert_eq!(suggest(&index, &Fake::plain(), &c).unwrap().len(), 2);
+}
+
+#[test]
+fn a_coarse_start_leg_that_fails_drops_the_candidate_without_nan() {
+    // One candidate only (no neighbours); the coarse surface loses the leg from the start.
+    let index = MapIndex::from_features(vec![boulder(30.0, 30.0)]);
+    let coarse = Fake {
+        no_start_legs: true,
+        ..Fake::plain()
+    };
+    let found = suggest_with(&index, &Fake::plain(), &coarse, &ctx(&[], &[])).unwrap();
+    assert!(found.is_empty());
+    // A coarse surface that cannot join start and finish at all gives way to the fine one.
+    let cut = Fake {
+        lost: vec![p(0.0, 0.0)],
+        ..Fake::plain()
+    };
+    let found = suggest_with(&index, &Fake::plain(), &cut, &ctx(&[], &[])).unwrap();
+    assert_eq!(found.len(), 1);
+    // With the leg intact, a lone candidate has finite numbers.
+    let found = suggest(&index, &Fake::plain(), &ctx(&[], &[])).unwrap();
+    assert_eq!(found.len(), 1);
+    let c = &found[0];
+    assert!(
+        [c.route_choice, c.difficulty, c.effort_s]
+            .iter()
+            .all(|v| v.is_finite())
+    );
+}
+
+#[test]
+fn a_coarse_surface_that_blocks_an_end_gives_way_to_the_fine_one() {
+    let index = MapIndex::from_features(vec![boulder(30.0, 30.0), boulder(60.0, 60.0)]);
+    let coarse = Fake {
+        blocked: vec![(p(0.0, 0.0), 0.0)],
+        lost: vec![p(0.0, 0.0)],
+        ..Fake::plain()
+    };
+    let found = suggest_with(&index, &Fake::plain(), &coarse, &ctx(&[], &[])).unwrap();
+    assert_eq!(found.len(), 2);
+    assert_eq!(
+        coarse.calls.load(Ordering::Relaxed),
+        1,
+        "only the end probe"
+    );
 }
 
 #[test]
@@ -524,7 +598,7 @@ fn luebeck_timing_for_limit_60() {
             .controls
             .iter()
             .map(|c| c.map_mm.clone())
-            .find(|q| surface.passable(q.clone()))
+            .find(|q| surface.passable(q.clone()) && coarse.fastest(q.clone(), at(false)).is_ok())
             .unwrap_or_else(|| at(true)),
         finish: at(false),
         specials,
@@ -532,6 +606,15 @@ fn luebeck_timing_for_limit_60() {
         existing: &[],
         limit: 60,
     };
+    // The example's start flag lies inside a building (ADR 0062).
+    let flagged = SuggestContext {
+        start: at(true),
+        ..c.clone()
+    };
+    assert!(matches!(
+        suggest_with(&index, &surface, &coarse, &flagged),
+        Err(ScoreError::StartUnreachable { .. })
+    ));
     let t1 = std::time::Instant::now();
     let found = suggest_with(&index, &surface, &coarse, &c).unwrap();
     println!(
