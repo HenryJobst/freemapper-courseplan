@@ -32,8 +32,9 @@ Tell the person these limits before you start:
   Purple Pen 4.0 (checked once by the author).
 - Purple Pen must be closed for the event before a `sync`, and opened again afterwards. Otherwise Purple Pen may
   overwrite the merged file.
-- The editor draws the real map, but a map larger than one A3 sheet at map scale is clipped to its middle part;
-  courses outside it stay on the overlay.
+- The editor draws score courses with their mandatory links and has a Score panel for suggest, draft and length;
+  candidates and drafts stay in the page until accepted or applied. The editor draws the real map, but a map
+  larger than one A3 sheet at map scale is clipped to its middle part; courses outside it stay on the overlay.
 - There is no print preview and no printing of courses yet; printing waits for freemapper-print.
 - The route analysis is missing, so a straight leg through an out-of-bounds area is only a warning.
 - OCAD is not needed and not tested.

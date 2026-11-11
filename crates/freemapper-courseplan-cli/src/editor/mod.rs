@@ -109,6 +109,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/api/map/near"), get(map_near))
         .route(&format!("{prefix}/api/symbols"), get(api_symbols))
         .route(&format!("{prefix}/api/op/{{tool}}"), post(api_op))
+        .route(&format!("{prefix}/api/score/{{tool}}"), post(api_score))
         .route(&format!("{prefix}/api/export/iof-xml"), get(api_export_xml))
         .route(&format!("{prefix}/api/export/ppen"), post(api_export_ppen))
         .route(
@@ -281,6 +282,67 @@ async fn api_op(
         api::run_op(st, &tool, revision.as_deref(), args)
     })
     .await
+}
+
+/// `POST api/score/{tool}`: `score_suggest`, `score_length` and `score_draft`, which need the map and can run
+/// for seconds (ADR 0069). Same body and revision header as `api/op/{tool}`, same answer.
+///
+/// Unlike an operation, a read-only call does not hold the state lock while it computes: the lock is taken
+/// briefly to compare the revision, the tool then runs on the blocking pool, and the file is compared once more
+/// when it is done. So `api/revision` and the reads answer meanwhile. A draft with `apply: true` writes, so it
+/// is a plain operation: it holds the lock for the whole run (the page is waiting for it and polls nothing),
+/// re-checks the revision and records its undo step.
+async fn api_score(
+    State(state): State<Shared>,
+    Path(tool): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let revision = page_revision(&headers);
+    let args = if body.is_empty() {
+        Some(serde_json::json!({}))
+    } else {
+        serde_json::from_slice(&body).ok()
+    };
+    if api::score_writes(&tool, &args) {
+        return serialized(state, move |st| {
+            api::run_op(st, &tool, revision.as_deref(), args)
+        })
+        .await;
+    }
+    let prepared = {
+        let mut guard = state.clone().lock_owned().await;
+        let tool = tool.clone();
+        blocking(move || api::prepare_read(&mut guard, &tool, revision.as_deref(), args)).await
+    };
+    let job = match prepared {
+        Some(Ok(job)) => job,
+        Some(Err((status, body))) => return (status, axum::Json(body)).into_response(),
+        None => {
+            return plain(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "internal error".to_owned(),
+            );
+        }
+    };
+    match blocking(move || api::run_read(job)).await {
+        Some(Ok(body)) => axum::Json(body).into_response(),
+        Some(Err(api::ReadEnd::Reply((status, body)))) => {
+            (status, axum::Json(body)).into_response()
+        }
+        Some(Err(api::ReadEnd::Stale)) => {
+            serialized(state, |st| {
+                api::reload(st);
+                let lang = st.lang.clone();
+                api::conflict(st, api::msg(&lang, "editor-op-stale"))
+            })
+            .await
+        }
+        None => plain(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "internal error".to_owned(),
+        ),
+    }
 }
 
 /// `GET api/export/iof-xml`: the IOF XML of the project as a download. The counts of courses and of those

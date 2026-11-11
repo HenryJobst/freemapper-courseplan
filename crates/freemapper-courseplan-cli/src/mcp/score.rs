@@ -8,7 +8,7 @@ use freemapper_courseplan::map::{MapIndex, MapKind, map_kind_for_file};
 use freemapper_courseplan::score::candidates::{
     Candidate, FORBIDDEN_LINE_MARGIN_M, SuggestContext, suggest_with,
 };
-use freemapper_courseplan::score::points::assign_values;
+use freemapper_courseplan::score::points::{CodeRules, assign_codes, assign_values};
 use freemapper_courseplan::score::travel::{
     CostSurface, Pace, RouteParams, SharedRoutes, TravelTime,
 };
@@ -266,12 +266,35 @@ impl CoursePlanServer {
         )
         .map_err(|e| self.locs(&e))?;
         let values = assign_values(&candidates, &settings);
+        // A free code that carries the value, for a caller that adds the candidate as a control (the
+        // editor does). Without room in the code space the codes stay empty.
+        let taken: Vec<ControlCode> = event.controls.iter().map(|c| c.code.clone()).collect();
+        let coords: Vec<MapPoint> = candidates.iter().map(|c| c.at.clone()).collect();
+        let rules = CodeRules::from_settings(&settings);
+        let assign = |n: usize| assign_codes(&values[..n], &taken, &coords[..n], &rules).ok();
+        // The code space is smaller than the default list: the best-ranked candidates get codes, the rest
+        // stay without (the largest prefix that fits, found by halving).
+        let (mut low, mut high) = (0, values.len());
+        while low < high {
+            let mid = (low + high).div_ceil(2);
+            if assign(mid).is_some() {
+                low = mid;
+            } else {
+                high = mid - 1;
+            }
+        }
+        let mut codes: Vec<Option<String>> = assign(low)
+            .map(|c| c.into_iter().map(|c| Some(c.0)).collect())
+            .unwrap_or_default();
+        codes.resize(values.len(), None);
         let list: Vec<Value> = candidates
             .iter()
             .zip(&values)
-            .map(|(c, value)| {
+            .zip(&codes)
+            .map(|((c, value), code)| {
                 json!({
                     "at": point_json(&c.at),
+                    "code": code,
                     "symbol_code": c.symbol_code,
                     "route_choice": c.route_choice,
                     "difficulty": c.difficulty,

@@ -16,7 +16,7 @@ use super::EditorState;
 use super::history::HistoryError;
 use super::map_view::{FileStamp, MapEntry};
 use super::overlay::r3;
-use crate::mcp::{EDITOR_TOOLS, OpError};
+use crate::mcp::{CoursePlanServer, EDITOR_TOOLS, OpError};
 
 /// The fingerprint of the project file (FNV-1a 64 over its bytes, 16 hex digits).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -220,6 +220,7 @@ pub(crate) fn state_json(
             "extent": extent,
         },
         "courses": courses,
+        "score_settings": event.score_settings(),
         "undo": { "undo": undo.0, "redo": undo.1 },
         "link": { "ppen": ppen.map(|p| p.display().to_string()) },
         "error": Value::Null,
@@ -492,6 +493,117 @@ pub(crate) fn run_op(
                 conflict(st, msg(&lang, "editor-op-stale"))
             }
         }
+    }
+}
+
+/// The tools of `POST api/score/{tool}`: the long ones, which need the map and can run for seconds (ADR 0069).
+pub(crate) const SCORE_TOOLS: &[&str] = &["score_suggest", "score_length", "score_draft"];
+
+/// Whether the call writes: only a draft with `apply: true` does. It takes the plain operation path.
+pub(crate) fn score_writes(tool: &str, args: &Option<Value>) -> bool {
+    tool == "score_draft"
+        && args
+            .as_ref()
+            .and_then(|a| a.get("apply"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+}
+
+/// What a read-only long call takes from the state under a short lock, so that it can run without it.
+pub(super) struct ReadJob {
+    project: PathBuf,
+    lang: Lang,
+    /// The revision the page named, which the file has when the job starts.
+    revision: String,
+    tool: String,
+    args: Value,
+}
+
+/// How a read-only long call ended, other than with a result.
+pub(super) enum ReadEnd {
+    Reply(Reply),
+    /// The file changed while the tool ran; the result belongs to no revision the page can show.
+    Stale,
+}
+
+/// First half of a read-only long call, under the state lock: read the file, compare the revision the page saw
+/// and hand out what the second half needs. Nothing here runs for long.
+pub(super) fn prepare_read(
+    st: &mut EditorState,
+    tool: &str,
+    revision: Option<&str>,
+    args: Option<Value>,
+) -> Result<ReadJob, Reply> {
+    let lang = st.lang.clone();
+    let fail = |status, id: &str| (status, json!({ "error": msg(&lang, id) }));
+    if !SCORE_TOOLS.contains(&tool) {
+        return Err(fail(StatusCode::NOT_FOUND, "editor-op-unknown"));
+    }
+    let Some(revision) = revision else {
+        return Err(fail(StatusCode::BAD_REQUEST, "editor-op-no-revision"));
+    };
+    let Some(args @ Value::Object(_)) = args else {
+        return Err(fail(StatusCode::BAD_REQUEST, "editor-op-bad-body"));
+    };
+    reload(st);
+    if let Err(e) = &st.loaded.file {
+        let e = e.clone();
+        return Err(conflict(st, e));
+    }
+    if st.loaded.revision.0 != revision {
+        return Err(conflict(st, msg(&lang, "editor-op-stale")));
+    }
+    Ok(ReadJob {
+        project: st.project.clone(),
+        lang,
+        revision: revision.to_owned(),
+        tool: tool.to_owned(),
+        args,
+    })
+}
+
+/// Projects whose long calls sleep this long (milliseconds) before the tool runs (tests only): a slow tool
+/// that goes through the same code as a real one.
+#[cfg(test)]
+pub(super) static SLOW: std::sync::Mutex<Vec<(PathBuf, u64)>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(test)]
+fn slow_hook(path: &Path) {
+    let wait = SLOW
+        .lock()
+        .ok()
+        .and_then(|list| list.iter().find(|(p, _)| p == path).map(|(_, ms)| *ms));
+    if let Some(ms) = wait {
+        std::thread::sleep(std::time::Duration::from_millis(ms));
+    }
+}
+
+/// Second half of a read-only long call, without the state lock: the tool reads the file itself and computes.
+/// The file is read again afterwards: a result is only handed out for the revision it was computed on.
+pub(super) fn run_read(job: ReadJob) -> Result<Value, ReadEnd> {
+    #[cfg(test)]
+    slow_hook(&job.project);
+    let lang = job.lang.clone();
+    let fail = |status, id: &str| ReadEnd::Reply((status, json!({ "error": msg(&lang, id) })));
+    let result =
+        CoursePlanServer::new(job.lang.clone()).call_json(&job.project, &job.tool, job.args);
+    let unchanged =
+        std::fs::read(&job.project).is_ok_and(|bytes| Revision::of(&bytes).0 == job.revision);
+    if !unchanged {
+        return Err(ReadEnd::Stale);
+    }
+    match result {
+        Ok(result) => Ok(json!({ "revision": job.revision, "result": result })),
+        Err(OpError::UnknownTool) => Err(fail(StatusCode::NOT_FOUND, "editor-op-unknown")),
+        Err(OpError::BadArgs(message)) => Err(ReadEnd::Reply((
+            StatusCode::BAD_REQUEST,
+            json!({ "error": tidy(&without_project_field(&message), &[]) }),
+        ))),
+        Err(OpError::Io) => Err(fail(StatusCode::INTERNAL_SERVER_ERROR, "editor-io-failed")),
+        Err(OpError::Refused(message)) => Err(ReadEnd::Reply((
+            StatusCode::UNPROCESSABLE_ENTITY,
+            json!({ "error": tidy(&message, &[&job.project]) }),
+        ))),
     }
 }
 

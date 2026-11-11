@@ -214,8 +214,8 @@ format version step; translations of all texts through Fluent files, English and
 
 - Answered *(user, 2026-11-11)*: missing a mandatory link means disqualification. The user will look at the
   proposed candidates on the Lübeck map once step 2 exists and name those they would never use.
-- Is a link drawn on the map as a line between the two controls (as a leg), and does the control description
-  mention it?
+- Answered *(Claude's call, 2026-11-11, ADR 0069)*: the editor draws a link as a dashed line between the two
+  controls, in the marked-leg style, and it is no leg. The control description does not mention it.
 - Acceptance of the candidates *(user: yes)*: the Lübeck sprint example (`examples/luebeck-sprint`); the proposals
   are shown once step 2 exists, the rejected ones become test cases.
 - Whether the value should be shown on the map in a later event setting (the field exists, the default is off).

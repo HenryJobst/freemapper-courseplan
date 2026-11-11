@@ -266,3 +266,16 @@ dialog button { font: inherit; }
 .finding-list.skipped .finding { border-left-color: var(--line); }
 #accept-input { width: 100%; font: inherit; padding: 0.1rem 0.3rem; background: var(--bg); color: var(--fg); border: 1px solid var(--line); }
 #accept-input[aria-invalid="true"] { border: 2px solid var(--warn-line); }
+
+/* Score panel: candidates and drafts are dashed circles with a text, so colour is not the only sign. */
+#layer-score { pointer-events: none; }
+#layer-score circle, #layer-score line { stroke: var(--sel); }
+#layer-score text { fill: var(--sel); stroke: none; font-family: system-ui, sans-serif; font-weight: 700; }
+#layer-score .draft-control circle { stroke-width: 0.3px; }
+.score-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.3rem 0; }
+.score-table { border-collapse: collapse; width: 100%; margin: 0.25rem 0; font-variant-numeric: tabular-nums; }
+.score-table th, .score-table td { text-align: left; padding: 0.1rem 0.3rem; border-bottom: 1px solid var(--line); }
+.score-links { margin: 0; padding-left: 1.1rem; }
+#score-progress:empty { display: none; }
+#pane-props[aria-busy="true"] { cursor: progress; }
+.banner-box span { white-space: pre-line; }

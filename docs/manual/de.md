@@ -160,8 +160,8 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
 - Knicke, Strecken, Postennummern und `course controls` gehören zu Einzelbahnen; eine Score-Bahn lehnt sie ab.
   Kategorien, Druckmaßstab, `course rename` und `course remove` gelten für beide. Mannschafts- und Staffelbahnen
   lassen sich noch nicht bearbeiten.
-- Der Export schreibt nur Einzelbahnen und nennt die ausgelassenen Score-Bahnen. Die Editor-Seite zeichnet
-  Score-Bahnen noch nicht.
+- Der Export schreibt nur Einzelbahnen und nennt die ausgelassenen Score-Bahnen. Der Editor zeichnet Score-Bahnen und hat ein
+  Score-Fenster (siehe „Das Score-Fenster“ im Editor-Kapitel).
 
 #### Vorschläge, Entwurf und Länge
 
@@ -378,6 +378,27 @@ des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
 
 Die Liste kommt aus freemapper-core. Jedes Symbol, das du wählen kannst, lässt sich also auch in eine `.ppen`-Datei
 schreiben (ADR 0051).
+
+### Das Score-Fenster
+
+Eine Score-Bahn hat keine Reihenfolge. Der Editor zeichnet deshalb ihre Posten, Start und Ziel und jede
+Pflichtverbindung als gestrichelte Linie zwischen ihren beiden Posten. Wähle die Bahn im Baum, dann öffnet sich in den
+Eigenschaften das Score-Fenster.
+
+- **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
+  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten und der Startwert. Die beiden
+  Spannen werden angezeigt, nicht bearbeitet. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
+  Veranstaltung braucht dafür einen Start und ein Ziel.
+- **Posten vorschlagen.** Zeigt geordnete Kandidaten als gestrichelte Kreise mit ihrem Wert und als Tabelle.
+  „Übernehmen“ fügt einen der Bahn hinzu, als zwei Schritte für Rückgängig. Ein Kandidat ohne freien Code lässt sich
+  nicht übernehmen.
+- **Bahn entwerfen.** Rechnet einen Entwurf für das Zeitlimit und zeigt Posten, Verbindungen und den Längenbericht
+  mit beiden Läuferprofilen. Nichts ändert sich, bis du „Entwurf übernehmen“ wählst; das legt die Posten dieser Bahn
+  an oder ersetzt sie. „Länge prüfen“ meldet die Bahn, wie sie ist.
+- **Während es läuft.** Ein Vorschlag oder Entwurf braucht Sekunden. Die Schaltflächen bleiben gesperrt, das Fenster
+  sagt, dass es arbeitet, und der Editor bemerkt Änderungen an der Datei weiter. Kandidaten und Entwürfe werden nicht
+  gespeichert. Ändert ein anderes Programm das Projekt in der Zwischenzeit, sind sie verworfen und das Fenster sagt es.
+- Bahnmodus und Druckvorschau gibt es nur für Einzelbahnen.
 
 ### Sonderobjekte
 

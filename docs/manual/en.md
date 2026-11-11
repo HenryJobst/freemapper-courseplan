@@ -151,8 +151,8 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
   `set_score_settings`, `set_score_course_details`). The editor runs the same operations, and undo takes each back.
 - Bends, legs, control numbers and `course controls` belong to individual courses; a score course refuses them.
   Classes, print scale, `course rename` and `course remove` work on both. Team and relay courses cannot be edited yet.
-- Export writes individual courses only and lists the score courses it skipped. The editor page does not draw score
-  courses yet.
+- Export writes individual courses only and lists the score courses it skipped. The editor draws score courses and has a Score
+  panel (see "The Score panel" in the editor chapter).
 
 #### Suggestions, draft and length
 
@@ -324,6 +324,24 @@ A leg is the line between two stops. Click it with the "Select" tool to choose i
 
 Each gesture is one step for undo, and the course length in the properties changes with it. A leg that a change to
 the stops sends to another stop loses its bends and tape.
+
+### The Score panel
+
+A score course has no running order, so the editor draws its controls, start and finish, and each mandatory link as a
+dashed line between its two controls. Select the course in the tree to open the Score panel in the properties.
+
+- **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
+  settings: highest value, the paces, the share of hard controls and the seed. The two bands are shown, not edited.
+  "New score course..." in the tree makes a course with a 45 minute limit; the event needs one start and one finish.
+- **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
+  one to the course, as two steps for undo. A candidate without a free code cannot be accepted.
+- **Draft course.** Computes a draft for the time limit and shows its controls, links and the length report with
+  both runner profiles. Nothing changes until you choose "Apply draft", which creates or replaces the controls of
+  this course. "Check length" reports the course as it is.
+- **While it runs.** A suggestion or draft takes seconds. The buttons stay disabled, the panel says that it is
+  working, and the editor still notices changes to the file. Candidates and drafts are not saved. If another program
+  changes the project meanwhile, they are discarded and the panel says so.
+- Course mode and the print preview are for individual courses only.
 
 ### Control numbers
 

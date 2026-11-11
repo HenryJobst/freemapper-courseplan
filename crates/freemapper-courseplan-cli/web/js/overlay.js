@@ -247,6 +247,17 @@ export function draw(overlay, selection, course = null, extras = {}) {
       drawBends(leg, overlay, selection, body, halos);
     }
   }
+  // The mandatory links of a score course: marked-leg style, not selectable (they are no legs).
+  for (const link of overlay.links ?? []) {
+    const line = el("polyline", {
+      points: pointList(link.drawn),
+      fill: "none",
+      class: "leg taped link",
+      "stroke-width": overlay.sizes.line,
+      "stroke-dasharray": `${overlay.sizes.dash} ${overlay.sizes.dash_gap}`,
+    }, body);
+    el("title", {}, line).textContent = `${link.a} \u2013 ${link.b}`;
+  }
   for (const s of overlay.starts) drawStart(s, overlay, selection, body, halos);
   for (const f of overlay.finishes) drawFinish(f, overlay, selection, body, halos);
   for (const c of overlay.controls) drawControl(c, overlay, selection, body, halos);
