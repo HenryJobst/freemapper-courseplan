@@ -364,6 +364,25 @@ fn unknown_code_names_the_course() {
 }
 
 #[test]
+fn characters_xml_forbids_are_refused_not_written() {
+    for bad in ["a\u{0}b", "a\u{b}b", "a\u{1f}b", "a\u{fffe}b"] {
+        let mut e = event();
+        e.courses = vec![individual("Lang", &["31"])];
+        e.courses[0].name = bad.to_owned();
+        let err = export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).unwrap_err();
+        assert!(
+            matches!(err, IofXmlError::InvalidCharacter { .. }),
+            "{bad:?}"
+        );
+    }
+    // A newline or a tab is legal XML and passes.
+    let mut e = event();
+    e.courses = vec![individual("Lang", &["31"])];
+    e.courses[0].name = "a\nb".to_owned();
+    assert!(export_iof_xml(&e, 4000, MapKind::Sprint, None, CREATED).is_ok());
+}
+
+#[test]
 fn numbers_are_short_and_never_negative_zero() {
     assert_eq!(fmt(-0.001), "0");
     assert_eq!(fmt(1200.0), "1200");

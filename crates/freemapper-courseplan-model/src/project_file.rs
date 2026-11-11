@@ -47,6 +47,10 @@ pub enum ModelError {
         limit: usize,
         len: usize,
     },
+    /// `what` is as for `BlankName`; `point` is the code point of the first offending character, such as
+    /// `U+202E`.
+    #[error("{what} contains the control or invisible character {point}")]
+    InvalidCharacter { what: &'static str, point: String },
     /// An accepted finding needs a note; only an empty or blank one is refused.
     #[error("the note of accepted finding {rule} is empty")]
     BlankNote { rule: String },

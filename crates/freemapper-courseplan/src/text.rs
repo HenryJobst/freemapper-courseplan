@@ -154,6 +154,14 @@ impl Localize for ModelError {
                     ("value", v(value)),
                 ],
             ),
+            ModelError::InvalidCharacter { what, point } => text(
+                lang,
+                "error-model-invalid-character",
+                &[
+                    ("what", v(word(lang, "word-name", what))),
+                    ("point", v(point)),
+                ],
+            ),
             ModelError::TooLong { what, limit, len } => text(
                 lang,
                 "error-model-too-long",
@@ -1372,6 +1380,10 @@ mod tests {
             ModelError::BlankName {
                 what: "control code",
                 value: s(" 31"),
+            },
+            ModelError::InvalidCharacter {
+                what: "control code",
+                point: s("U+202E"),
             },
             ModelError::TooLong {
                 what: "course name",

@@ -213,7 +213,20 @@ fn check_name(errors: &mut Vec<ModelError>, what: &'static str, value: &str) {
             what,
             value: value.to_owned(),
         });
+    } else if let Some(bad) = value.chars().find(|c| is_invisible_control(*c)) {
+        errors.push(ModelError::InvalidCharacter {
+            what,
+            point: format!("U+{:04X}", u32::from(bad)),
+        });
     }
+}
+
+/// A control character or an invisible formatting character that no name or code may contain: it
+/// makes XML ill-formed (NUL, most C0 controls) or hides what a name says (direction overrides, zero
+/// width characters).
+fn is_invisible_control(c: char) -> bool {
+    c.is_control()
+        || matches!(c, '\u{200B}'..='\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}' | '\u{FEFF}')
 }
 
 /// For a line or area kind: its English name, the fewest points it needs and the points it has. A

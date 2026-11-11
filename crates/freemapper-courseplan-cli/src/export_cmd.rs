@@ -80,6 +80,11 @@ impl ExportError {
                     ("source", FluentValue::from(project(e))),
                 ],
             ),
+            ExportError::Course(IofXmlError::InvalidCharacter { point }) => text(
+                lang,
+                "error-export-iof-xml-character",
+                &[("point", FluentValue::from(point))],
+            ),
             ExportError::Course(IofXmlError::Course { course, source }) => text(
                 lang,
                 "error-export-iof-xml-course",

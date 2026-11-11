@@ -49,6 +49,10 @@ pub enum IofXmlError {
     /// A course cannot be measured, for example because it names an unknown control.
     #[error("course {course}: {source}")]
     Course { course: String, source: CourseError },
+    /// A text of the event holds a character that XML 1.0 does not allow, such as U+0000; the file
+    /// would not be well-formed.
+    #[error("the event holds the character {point}, which XML 1.0 does not allow")]
+    InvalidCharacter { point: String },
 }
 
 /// One stop of a course as the XML lists it.
@@ -290,6 +294,11 @@ fn write_document(
     Ok(w.into_inner())
 }
 
+/// Whether XML 1.0 allows the character (the `Char` production).
+fn is_xml_char(c: char) -> bool {
+    matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{D7FF}' | '\u{E000}'..='\u{FFFD}' | '\u{10000}'..='\u{10FFFF}')
+}
+
 /// Writes the individual courses of `event` as IOF XML 3.0 `CourseData`.
 ///
 /// `map_scale` is the scale denominator and `map_kind` the kind of the map (it sets the overprint sizes
@@ -299,7 +308,8 @@ fn write_document(
 /// [`IofXmlExport::skipped`].
 ///
 /// # Errors
-/// [`IofXmlError::Course`] when an individual course cannot be measured; nothing is written then.
+/// [`IofXmlError::Course`] when an individual course cannot be measured, [`IofXmlError::InvalidCharacter`]
+/// when a text holds a character XML forbids; nothing is written then.
 pub fn export_iof_xml(
     event: &Event,
     map_scale: u32,
@@ -328,6 +338,11 @@ pub fn export_iof_xml(
     let bytes = write_document(event, map_scale, geo, created, &courses)
         .expect("writing to a Vec<u8> cannot fail");
     let xml = String::from_utf8(bytes).expect("quick-xml writes UTF-8 from UTF-8 input");
+    if let Some(bad) = xml.chars().find(|c| !is_xml_char(*c)) {
+        return Err(IofXmlError::InvalidCharacter {
+            point: format!("U+{:04X}", u32::from(bad)),
+        });
+    }
     Ok(IofXmlExport {
         xml,
         geo_positions: geo.is_some(),
