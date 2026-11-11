@@ -1105,6 +1105,7 @@ mod tests {
             "name",
             "id",
             "good",
+            "default",
             "very_good",
             "mix_hard",
             "seed",

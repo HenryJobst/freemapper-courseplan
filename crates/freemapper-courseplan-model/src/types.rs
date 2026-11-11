@@ -335,7 +335,10 @@ pub enum CourseKind {
     },
     Score {
         time_limit_min: u32,
-        penalty_per_min: u32,
+        /// Points deducted per started minute over the limit. `None` means the default, which
+        /// [`score_penalty`] works out from the controls and the event's highest value.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        penalty_per_min: Option<u32>,
         controls: Vec<ScoreControl>,
         /// Pairs of controls to run directly after each other; a runner who does not is disqualified.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -613,6 +616,26 @@ pub struct Event {
     pub score: Option<ScoreSettings>,
 }
 
+/// The penalty per started minute of a score course: the stored one, or the default, the highest control
+/// value of the course and at least the event's highest value, so that a minute over never pays off.
+pub fn score_penalty(
+    stored: Option<u32>,
+    controls: &[ScoreControl],
+    settings: &ScoreSettings,
+) -> u32 {
+    stored.unwrap_or_else(|| default_penalty(controls, settings))
+}
+
+/// The default penalty of a score course (ADR 0067).
+pub fn default_penalty(controls: &[ScoreControl], settings: &ScoreSettings) -> u32 {
+    controls
+        .iter()
+        .map(|c| c.value)
+        .max()
+        .unwrap_or(0)
+        .max(u32::from(settings.value_max))
+}
+
 impl Event {
     /// The score settings of the event, or the defaults while none are set.
     pub fn score_settings(&self) -> ScoreSettings {
@@ -826,7 +849,7 @@ mod tests {
                     "S",
                     CourseKind::Score {
                         time_limit_min: 60,
-                        penalty_per_min: 30,
+                        penalty_per_min: Some(30),
                         controls: vec![
                             ScoreControl {
                                 code: code("31"),

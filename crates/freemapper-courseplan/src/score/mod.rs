@@ -43,7 +43,7 @@ pub enum ScoreError {
     )]
     ValueSpaceExhausted { value: u8, limit: usize },
     #[error("a point value must lie from 1 to {value_max}, not {value}")]
-    BadValue { value: u8, value_max: u8 },
+    BadValue { value: u32, value_max: u8 },
     #[error("{values} values but {coords} positions were given")]
     PositionsMismatch { values: usize, coords: usize },
     #[error("the link between controls {a} and {b} does not fit the time limit")]
@@ -59,7 +59,7 @@ pub enum ScoreError {
     )]
     LinksNotAChain { control: usize },
     #[error(
-        "no tour was found that holds every link within the time limit; the link between controls {a} and {b} fits worst, but the search above the exact size is not a proof"
+        "no tour was found that holds every link within the time limit; the link between controls {a} and {b} fits worst. The search is not exhaustive for larger courses, so this is no proof"
     )]
     LinkTourNotFound { a: usize, b: usize },
 }

@@ -542,7 +542,7 @@ fn team_relay_score_are_skipped_and_named() {
     let mut score = course("S", &[]);
     score.kind = CourseKind::Score {
         time_limit_min: 60,
-        penalty_per_min: 10,
+        penalty_per_min: Some(10),
         controls: vec![ScoreControl {
             code: code("31"),
             value: 10,

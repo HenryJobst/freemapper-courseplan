@@ -10,7 +10,8 @@ the details.
 freemapper-courseplan sets courses on a finished map from OpenOrienteering Mapper (OOM, `.omap`): controls with
 code and control description, start, finish, classes, individual courses with bends and marked legs, control
 numbers placed behind the circle, and special objects (marked routes, forbidden routes, out-of-bounds and
-dangerous areas, first aid posts, water points). `check` tests the courses against a rule profile (built in:
+dangerous areas, first aid posts, water points). Score courses are also supported: controls with values (the code
+carries the value), a time limit, a penalty per minute over the limit and optional mandatory links. `check` tests the courses against a rule profile (built in:
 `wkb-2026`, overlay `nor-bb-2021`) and names the source of each finding. Courses go out as IOF XML 3.0 for result
 software and as Purple Pen events (`.ppen`), and a Purple Pen event can be taken over or merged back.
 
@@ -124,7 +125,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `list controls\|courses\|specials\|classes` | The details as a table; `--json` gives the MCP answer. |
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
-| `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty. Each takes `--json`. |
+| `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
@@ -206,7 +207,7 @@ whole number.
 | `map_features_near` | `x`, `y`, `radius_mm`, `limit?` | Map objects near a position, nearest first (default 20, at most 200). |
 | `add_control` | `at`, `code?`, `crossing_point?` | Adds a control; without `code` the lowest free one from 31. |
 | `move_control` | `code`, `at` | Moves a control. |
-| `set_control_code` | `from`, `to` | Changes a code; courses and accepted findings follow. |
+| `set_control_code` | `from`, `to` | Changes a code; courses and accepted findings follow. A score control takes the value its new code carries. |
 | `remove_control` | `code` | Removes a control and its visits. |
 | `describe_control` | `code`, `c?` to `h?`, `clear?` | Sets description symbols of columns C to H as IOF symbol ids. |
 | `set_control_number` | `code`, `direction?`, `gap_mm?`, `clear?` | Central number placement: `direction` and `gap_mm` together, or `clear`. |
@@ -222,12 +223,12 @@ whole number.
 | `set_course_controls` | `name`, `codes` | Replaces the controls in running order. |
 | `set_leg` | `name`, `from_start?`, `after?`, `bends?`, `taped?` | Bends and marked-route flag of one leg: give `from_start` or `after`. |
 | `set_course_details` | `name`, `classes?`, `climb_m?`, `no_climb?`, `print_scale?`, `no_print_scale?` | Changes classes, climb, print scale; works on score courses too. |
-| `add_score_course` | `name`, `start`, `finish`, `time_limit_min`, `penalty_per_min?` | Adds a score course without controls. Without a penalty it is the highest control value of the course, at least `value_max`. |
+| `add_score_course` | `name`, `start`, `finish`, `time_limit_min`, `penalty_per_min?` | Adds a score course without controls. Without `penalty_per_min` the course stores none and the penalty defaults to the highest control value of the course, at least `value_max`; answers give `penalty_is_default`. |
 | `set_score_controls` | `name`, `controls` | Replaces the controls: a list of `{code, value?}`. Without `value` the code gives it (second digit of a two-digit code, last digit of a longer one); a different value is refused. |
 | `set_control_value` | `name`, `code`, `value` | Accepts only the value the code carries (repairs a drifted file); to change a value, change the code. |
 | `add_score_link`, `remove_score_link` | `name`, `a`, `b` | Mandatory link between two controls of a score course, either direction. A runner who skips it is disqualified. At most two links per control, no ring. |
 | `set_score_settings` | `value_max?`, `good_pace_s_per_km?`, `very_good_pace_s_per_km?`, `mix_hard_percent?`, `seed?` | Event-wide score settings (no `name`, takes `project` only). |
-| `set_score_course_details` | `name`, `time_limit_min?`, `penalty_per_min?` | Time limit and penalty of a score course. |
+| `set_score_course_details` | `name`, `time_limit_min?`, `penalty_per_min?`, `no_penalty?` | Time limit and penalty of a score course; `no_penalty` goes back to the default penalty. |
 | `place_numbers` | `name`, `overwrite?` | Places the control numbers automatically; call again after changing legs. |
 | `set_course_number` | `name`, `after`, `direction?`, `gap_mm?`, `clear?` | Number placement of one control in one course. |
 | `check` | none | Tests the individual and score courses against the rule profile. |

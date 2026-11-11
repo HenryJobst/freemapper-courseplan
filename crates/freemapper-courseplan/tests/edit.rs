@@ -202,7 +202,7 @@ fn remove_control_used_by_score_course_is_refused() {
         "S",
         CourseKind::Score {
             time_limit_min: 60,
-            penalty_per_min: 1,
+            penalty_per_min: Some(1),
             controls: vec![ScoreControl {
                 code: code("32"),
                 value: 10,
@@ -1496,7 +1496,7 @@ fn score_event() -> Event {
     e
 }
 
-type ScoreView = (u32, u32, Vec<(String, u32)>, Vec<(String, String)>);
+type ScoreView = (u32, Option<u32>, Vec<(String, u32)>, Vec<(String, String)>);
 
 fn score_of(e: &Event, name: &str) -> ScoreView {
     match &e.courses.iter().find(|c| c.name == name).unwrap().kind {
@@ -1521,21 +1521,35 @@ fn score_of(e: &Event, name: &str) -> ScoreView {
     }
 }
 
+fn limits(time_limit_min: u32, penalty_per_min: u32, penalty_is_default: bool) -> ScoreLimits {
+    ScoreLimits {
+        time_limit_min,
+        penalty_per_min,
+        penalty_is_default,
+    }
+}
+
 #[test]
 fn default_penalty_is_the_highest_value() {
     let mut e = event();
-    // An empty course: the event's highest value (5 by default).
-    assert_eq!(add_score_course(&mut e, "Sc", "S1", "F1", 45, None), Ok(5));
-    // A given penalty stays, whatever the controls say.
+    // Without a penalty nothing is stored; the default is the event's highest value (5) while the course is empty.
+    assert_eq!(
+        add_score_course(&mut e, "Sc", "S1", "F1", 45, None),
+        Ok(limits(45, 5, true))
+    );
+    assert_eq!(score_of(&e, "Sc").1, None);
+    // A given penalty is stored and stays, whatever the controls say.
     assert_eq!(
         add_score_course(&mut e, "Sd", "S1", "F1", 60, Some(2)),
-        Ok(2)
+        Ok(limits(60, 2, false))
     );
     let stored = set_score_controls(&mut e, "Sd", &[input("33", None)]).unwrap();
-    assert_eq!(stored.penalty_per_min, 2);
-    // A default penalty follows the controls: codes 31 and 33 give the values 1 and 3, below value_max.
+    assert_eq!(stored.limits, limits(60, 2, false));
+    // Controls change the default on read and store nothing: values 1 and 3 stay below value_max.
     let stored = set_score_controls(&mut e, "Sc", &[input("31", None), input("33", None)]).unwrap();
-    assert_eq!(stored.penalty_per_min, 5);
+    assert_eq!(stored.limits, limits(45, 5, true));
+    assert_eq!(score_of(&e, "Sc").1, None);
+    // A value above value_max raises the default once value_max allows it.
     set_score_settings(
         &mut e,
         &ScoreSettingsChange {
@@ -1544,20 +1558,30 @@ fn default_penalty_is_the_highest_value() {
         },
     )
     .unwrap();
-    // Raised value_max: a course made now gets 9; the stored 5 stays on the old course.
-    assert_eq!(add_score_course(&mut e, "Se", "S1", "F1", 45, None), Ok(9));
-    assert_eq!(score_of(&e, "Sc").1, 5);
-    // A control of value 7 on a default-penalty course raises nothing below value_max.
+    let stored = set_score_controls(&mut e, "Sc", &[input("39", None)]);
+    assert!(stored.is_err(), "no control 39 yet");
+    e.controls.push(control("39"));
+    let stored = set_score_controls(&mut e, "Sc", &[input("31", None), input("39", None)]).unwrap();
+    assert_eq!(stored.limits, limits(45, 9, true));
+    // The default follows value_max on read: a stored penalty would not.
     assert_eq!(
-        default_penalty(
-            &[freemapper_courseplan_model::ScoreControl {
-                code: code("37"),
-                value: 12
-            }],
-            &e.score_settings()
-        ),
-        12
+        add_score_course(&mut e, "Se", "S1", "F1", 45, None),
+        Ok(limits(45, 9, true))
     );
+    assert_eq!(
+        freemapper_courseplan_model::default_penalty(&[], &e.score_settings()),
+        9
+    );
+    // Setting a penalty stores it; no penalty goes back to the default.
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Set(3)),
+        Ok(limits(45, 3, false))
+    );
+    assert_eq!(
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Default),
+        Ok(limits(45, 9, true))
+    );
+    assert_eq!(score_of(&e, "Sc").1, None);
 }
 
 #[test]
@@ -1698,6 +1722,21 @@ fn link_ops_enforce_the_model_rules() {
 }
 
 #[test]
+fn a_recoded_score_control_takes_the_value_of_its_new_code() {
+    let mut e = score_event();
+    add_score_link(&mut e, "Sc", &code("31"), &code("32")).unwrap();
+    assert_eq!(score_of(&e, "Sc").2[0], ("31".to_owned(), 1));
+    rename_control(&mut e, &code("31"), &code("35"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("35".to_owned(), 5));
+    assert_eq!(score_of(&e, "Sc").3, [("35".to_owned(), "32".to_owned())]);
+    // A code that carries no value keeps the old value; `check` reports the mismatch.
+    rename_control(&mut e, &code("35"), &code("A1"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("A1".to_owned(), 5));
+    rename_control(&mut e, &code("A1"), &code("ABC"));
+    assert_eq!(score_of(&e, "Sc").2[0], ("ABC".to_owned(), 5));
+}
+
+#[test]
 fn score_settings_and_details_are_checked_and_stored() {
     let mut e = score_event();
     let stored = set_score_settings(
@@ -1725,19 +1764,19 @@ fn score_settings_and_details_are_checked_and_stored() {
     ));
     assert_eq!(e, before);
     assert_eq!(
-        set_score_course_details(&mut e, "Sc", Some(60), Some(4)),
-        Ok((60, 4))
+        set_score_course_details(&mut e, "Sc", Some(60), PenaltyChange::Set(4)),
+        Ok(limits(60, 4, false))
     );
     assert_eq!(
-        set_score_course_details(&mut e, "Sc", None, Some(6)),
-        Ok((60, 6))
+        set_score_course_details(&mut e, "Sc", None, PenaltyChange::Set(6)),
+        Ok(limits(60, 6, false))
     );
     assert_eq!(
-        set_score_course_details(&mut e, "Sc", Some(0), None),
+        set_score_course_details(&mut e, "Sc", Some(0), PenaltyChange::Keep),
         Err(EditError::BadTimeLimit)
     );
     assert_eq!(
-        set_score_course_details(&mut e, "A", Some(30), None),
+        set_score_course_details(&mut e, "A", Some(30), PenaltyChange::Keep),
         Err(EditError::NotScoreCourse { course: "A".into() })
     );
 }

@@ -121,6 +121,16 @@ fn link_answer(event: &Event, course: &str, a: &ControlCode, b: &ControlCode) ->
     json!({ "name": course, "a": a.0, "b": b.0, "links": links })
 }
 
+/// The answer of the tools that change the time limit or the penalty of a score course.
+fn limits_json(name: &str, limits: &edit::ScoreLimits) -> Value {
+    json!({
+        "name": name,
+        "time_limit_min": limits.time_limit_min,
+        "penalty_per_min": limits.penalty_per_min,
+        "penalty_is_default": limits.penalty_is_default,
+    })
+}
+
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
@@ -199,11 +209,17 @@ fn course_json(event: &Event, course: &Course, map_scale: u32, lang: &Lang) -> A
         links,
     } = &course.kind
     {
+        let penalty = freemapper_courseplan_model::score_penalty(
+            *penalty_per_min,
+            controls,
+            &event.score_settings(),
+        );
         out["controls"] = json!(controls.iter().map(|c| &c.code.0).collect::<Vec<_>>());
         out["control_count"] = json!(controls.len());
         out["score"] = json!({
             "time_limit_min": time_limit_min,
-            "penalty_per_min": penalty_per_min,
+            "penalty_per_min": penalty,
+            "penalty_is_default": penalty_per_min.is_none(),
             "controls": controls
                 .iter()
                 .map(|c| json!({ "code": c.code.0, "value": c.value }))
@@ -1561,7 +1577,7 @@ impl CoursePlanServer {
 
     fn add_score_course_op(&self, req: AddScoreCourse) -> Answer {
         self.edit(&req.project, |file| {
-            let penalty = edit::add_score_course(
+            let limits = edit::add_score_course(
                 &mut file.event,
                 &req.name.0,
                 &req.start.0,
@@ -1570,11 +1586,7 @@ impl CoursePlanServer {
                 req.penalty_per_min,
             )
             .map_err(|e| self.refused(e))?;
-            Ok(json!({
-                "name": req.name.0,
-                "time_limit_min": req.time_limit_min,
-                "penalty_per_min": penalty,
-            }))
+            Ok(limits_json(&req.name.0, &limits))
         })
     }
 
@@ -1583,12 +1595,14 @@ impl CoursePlanServer {
             let controls: Vec<edit::ScoreControlInput> = req
                 .controls
                 .into_iter()
-                .filter(|c| !c.code.0.is_empty())
                 .map(|c| edit::ScoreControlInput {
                     code: ControlCode(c.code.0),
                     value: c.value,
                 })
                 .collect();
+            if controls.iter().any(|c| c.code.0.is_empty()) {
+                return Err(text(&self.lang, "mcp-error-score-code-empty", &[]));
+            }
             let stored = edit::set_score_controls(&mut file.event, &req.name.0, &controls)
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
@@ -1598,7 +1612,8 @@ impl CoursePlanServer {
                     .iter()
                     .map(|c| json!({ "code": c.code.0, "value": c.value }))
                     .collect::<Vec<_>>(),
-                "penalty_per_min": stored.penalty_per_min,
+                "penalty_per_min": stored.limits.penalty_per_min,
+                "penalty_is_default": stored.limits.penalty_is_default,
             }))
         })
     }
@@ -1650,21 +1665,32 @@ impl CoursePlanServer {
 
     fn set_score_course_details_op(&self, req: SetScoreCourseDetails) -> Answer {
         self.edit(&req.project, |file| {
-            if req.time_limit_min.is_none() && req.penalty_per_min.is_none() {
+            if req.penalty_per_min.is_some() && flag(req.no_penalty) {
+                return Err(text(
+                    &self.lang,
+                    "cli-parse-argument-conflict",
+                    &[
+                        ("arg", FluentValue::from("penalty_per_min".to_owned())),
+                        ("other", FluentValue::from("no_penalty".to_owned())),
+                    ],
+                ));
+            }
+            let penalty = match (req.penalty_per_min, flag(req.no_penalty)) {
+                (Some(p), _) => edit::PenaltyChange::Set(p),
+                (None, true) => edit::PenaltyChange::Default,
+                (None, false) => edit::PenaltyChange::Keep,
+            };
+            if req.time_limit_min.is_none() && penalty == edit::PenaltyChange::Keep {
                 return Err(text(&self.lang, "mcp-error-no-score-course-change", &[]));
             }
-            let (limit, penalty) = edit::set_score_course_details(
+            let limits = edit::set_score_course_details(
                 &mut file.event,
                 &req.name.0,
                 req.time_limit_min,
-                req.penalty_per_min,
+                penalty,
             )
             .map_err(|e| self.refused(e))?;
-            Ok(json!({
-                "name": req.name.0,
-                "time_limit_min": limit,
-                "penalty_per_min": penalty,
-            }))
+            Ok(limits_json(&req.name.0, &limits))
         })
     }
 

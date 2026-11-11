@@ -84,7 +84,7 @@ Assistenten, wie er das Programm selbst installiert und benutzt. Die Projektdate
 TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Score-Bahnen bearbeitest du mit `score` und `course add --kind score`; Mannschafts- und Staffelbahnen kann das Programm
 noch nicht bearbeiten, und gemessen werden nur Einzelbahnen. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
 
-`freemapper-courseplan check <Projekt>` prüft die Einzelbahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
+`freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
 `nor-bb-2021` (Bahnempfehlungen Berlin/Brandenburg), `freemapper-courseplan event profile <Projekt> wkb-2026
 --overlay nor-bb-2021` wählt sie. Eine gewollte Ausnahme trägt `finding accept <Projekt> <Prüfregel> --note TEXT` mit

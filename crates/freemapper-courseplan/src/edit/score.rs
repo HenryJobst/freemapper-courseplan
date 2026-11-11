@@ -3,23 +3,12 @@
 //! a clone, validate, write back only a consistent result.
 
 use freemapper_courseplan_model::{
-    ControlCode, Course, CourseKind, Event, ScoreControl, ScoreLink, ScoreSettings,
+    ControlCode, Course, CourseKind, Event, ScoreControl, ScoreLink, ScoreSettings, score_penalty,
 };
 
 use super::{EditError, apply, course_mut, not_found};
 use crate::score::ScoreError;
 use crate::score::code::value_of_code;
-
-/// The penalty per started minute over the limit when the setter gives none: the highest control value
-/// of the course, at least the event's highest value, so that one more minute never pays off.
-pub fn default_penalty(controls: &[ScoreControl], settings: &ScoreSettings) -> u32 {
-    controls
-        .iter()
-        .map(|c| c.value)
-        .max()
-        .unwrap_or(0)
-        .max(u32::from(settings.value_max))
-}
 
 /// One control of a score course as the caller gives it; without a value the code's value is taken.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -44,13 +33,48 @@ impl ScoreSettingsChange {
     }
 }
 
+/// The time limit and penalty of a score course as they read now.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScoreLimits {
+    pub time_limit_min: u32,
+    /// The stored penalty, or the default while none is stored.
+    pub penalty_per_min: u32,
+    /// The penalty is the default, not a stored one.
+    pub penalty_is_default: bool,
+}
+
 /// What [`set_score_controls`] stored.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ScoreControlsEdit {
     pub controls: Vec<ScoreControl>,
-    /// The penalty per minute after the edit: unchanged, or the new default while the old one was the
-    /// default of the old controls.
-    pub penalty_per_min: u32,
+    pub limits: ScoreLimits,
+}
+
+/// The limits of a score course under `settings`.
+pub fn limits_of(kind: &CourseKind, settings: &ScoreSettings) -> Option<ScoreLimits> {
+    match kind {
+        CourseKind::Score {
+            time_limit_min,
+            penalty_per_min,
+            controls,
+            ..
+        } => Some(ScoreLimits {
+            time_limit_min: *time_limit_min,
+            penalty_per_min: score_penalty(*penalty_per_min, controls, settings),
+            penalty_is_default: penalty_per_min.is_none(),
+        }),
+        _ => None,
+    }
+}
+
+/// What to do with the penalty of a score course.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PenaltyChange {
+    #[default]
+    Keep,
+    Set(u32),
+    /// Back to the default, worked out from the controls.
+    Default,
 }
 
 /// The value of a score control: the one the code carries, or the given one for a code that carries
@@ -75,7 +99,7 @@ fn checked_value(
     };
     if value == 0 || value > u32::from(settings.value_max) {
         return Err(ScoreError::BadValue {
-            value: u8::try_from(value).unwrap_or(u8::MAX),
+            value,
             value_max: settings.value_max,
         }
         .into());
@@ -85,7 +109,7 @@ fn checked_value(
 
 type ScoreParts<'a> = (
     &'a mut u32,
-    &'a mut u32,
+    &'a mut Option<u32>,
     &'a mut Vec<ScoreControl>,
     &'a mut Vec<ScoreLink>,
 );
@@ -104,8 +128,8 @@ fn score_mut(course: &mut Course) -> Result<ScoreParts<'_>, EditError> {
     }
 }
 
-/// Adds a score course without controls. The penalty is the given one, or the default of an empty
-/// course, the event's highest value. Returns the stored penalty.
+/// Adds a score course without controls. Without a penalty the course stores none and uses the default.
+/// Returns the limits as they read now.
 pub fn add_score_course(
     event: &mut Event,
     name: &str,
@@ -113,12 +137,11 @@ pub fn add_score_course(
     finish: &str,
     time_limit_min: u32,
     penalty_per_min: Option<u32>,
-) -> Result<u32, EditError> {
+) -> Result<ScoreLimits, EditError> {
     if time_limit_min == 0 {
         return Err(EditError::BadTimeLimit);
     }
     apply(event, |e| {
-        let penalty = penalty_per_min.unwrap_or_else(|| default_penalty(&[], &e.score_settings()));
         e.courses.push(Course {
             ppen_id: None,
             name: name.to_owned(),
@@ -132,19 +155,20 @@ pub fn add_score_course(
             planned_print_scale: None,
             kind: CourseKind::Score {
                 time_limit_min,
-                penalty_per_min: penalty,
+                penalty_per_min,
                 controls: vec![],
                 links: vec![],
             },
         });
-        Ok(penalty)
+        let course = e.courses.last().expect("just added");
+        Ok(limits_of(&course.kind, &e.score_settings()).expect("a score course"))
     })
 }
 
 /// Replaces the controls of a score course. A control without a value takes the one its code carries;
 /// a value the code does not carry is refused. A control may appear once, and links keep naming only
-/// controls of the course, so dropping a linked control is refused. The penalty follows the controls
-/// only while it still is the default of the old ones; a penalty the setter chose stays.
+/// controls of the course, so dropping a linked control is refused. A stored penalty stays; the default
+/// follows the controls on its own.
 pub fn set_score_controls(
     event: &mut Event,
     name: &str,
@@ -166,15 +190,12 @@ pub fn set_score_controls(
             });
         }
         let course = course_mut(e, name)?;
-        let (_, penalty, old, _) = score_mut(course)?;
-        if *penalty == default_penalty(old, &settings) {
-            *penalty = default_penalty(&stored, &settings);
-        }
-        let penalty_per_min = *penalty;
+        let (_, _, old, _) = score_mut(course)?;
         *old = stored.clone();
+        let limits = limits_of(&course.kind, &settings).expect("a score course");
         Ok(ScoreControlsEdit {
             controls: stored,
-            penalty_per_min,
+            limits,
         })
     })
 }
@@ -264,24 +285,28 @@ pub fn set_score_settings(
     })
 }
 
-/// Changes the time limit or the penalty of a score course and returns both as stored.
+/// Changes the time limit or the penalty of a score course and returns both as they read now.
 pub fn set_score_course_details(
     event: &mut Event,
     name: &str,
     time_limit_min: Option<u32>,
-    penalty_per_min: Option<u32>,
-) -> Result<(u32, u32), EditError> {
+    penalty: PenaltyChange,
+) -> Result<ScoreLimits, EditError> {
     if time_limit_min == Some(0) {
         return Err(EditError::BadTimeLimit);
     }
     apply(event, |e| {
-        let (limit, penalty, _, _) = score_mut(course_mut(e, name)?)?;
+        let settings = e.score_settings();
+        let course = course_mut(e, name)?;
+        let (limit, stored, _, _) = score_mut(course)?;
         if let Some(v) = time_limit_min {
             *limit = v;
         }
-        if let Some(v) = penalty_per_min {
-            *penalty = v;
+        match penalty {
+            PenaltyChange::Keep => {}
+            PenaltyChange::Set(v) => *stored = Some(v),
+            PenaltyChange::Default => *stored = None,
         }
-        Ok((*limit, *penalty))
+        Ok(limits_of(&course.kind, &settings).expect("a score course"))
     })
 }

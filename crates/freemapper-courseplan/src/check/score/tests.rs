@@ -17,7 +17,7 @@ fn score_event(
     let mut course = course("S", &[]);
     course.kind = CourseKind::Score {
         time_limit_min: limit,
-        penalty_per_min: penalty,
+        penalty_per_min: Some(penalty),
         controls: controls
             .iter()
             .map(|&(c, v, _, _)| ScoreControl {

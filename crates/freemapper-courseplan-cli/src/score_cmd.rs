@@ -97,15 +97,17 @@ pub enum ScoreCourseCmd {
         ArgGroup::new("change")
             .required(true)
             .multiple(true)
-            .args(["time_limit", "penalty"])
+            .args(["time_limit", "penalty", "no_penalty"])
     ))]
     Set {
         project: PathBuf,
         name: String,
         #[arg(long, value_name = "MIN")]
         time_limit: Option<String>,
-        #[arg(long, value_name = "N")]
+        #[arg(long, value_name = "N", conflicts_with = "no_penalty")]
         penalty: Option<String>,
+        #[arg(long)]
+        no_penalty: bool,
         #[arg(long)]
         json: bool,
     },
@@ -226,6 +228,7 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
                     name,
                     time_limit,
                     penalty,
+                    no_penalty,
                     json,
                 },
         } => {
@@ -235,6 +238,9 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             }
             if let Some(v) = penalty {
                 args["penalty_per_min"] = json!(parse_count(lang, &v)?);
+            }
+            if no_penalty {
+                args["no_penalty"] = json!(true);
             }
             let value = run_tool(lang, &project, "set_score_course_details", args)?;
             if json {
@@ -247,11 +253,22 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
                     ("name", s(&value["name"])),
                     ("limit", s(&value["time_limit_min"])),
                     ("penalty", s(&value["penalty_per_min"])),
+                    ("default", default_flag(&value)),
                 ],
             );
             Ok(())
         }
     }
+}
+
+/// `yes` when the answer's penalty is the default, for the select in the catalog text.
+fn default_flag(value: &Value) -> String {
+    if value["penalty_is_default"] == true {
+        "yes"
+    } else {
+        "no"
+    }
+    .to_owned()
 }
 
 fn link(lang: &Lang, cmd: LinkCmd) -> Outcome {
@@ -348,6 +365,7 @@ pub fn add_course(lang: &Lang, new: NewScoreCourse, json: bool) -> Outcome {
             ("name", s(&value["name"])),
             ("limit", s(&value["time_limit_min"])),
             ("penalty", s(&value["penalty_per_min"])),
+            ("default", default_flag(&value)),
         ],
     );
     Ok(())

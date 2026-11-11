@@ -529,4 +529,5 @@ pub(super) struct SetScoreCourseDetails {
     pub(super) name: Name,
     pub(super) time_limit_min: Option<u32>,
     pub(super) penalty_per_min: Option<u32>,
+    pub(super) no_penalty: Option<bool>,
 }

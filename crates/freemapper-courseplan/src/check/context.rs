@@ -253,7 +253,11 @@ fn score_context<'a>(
     Ok(ScoreCourseContext {
         course,
         time_limit_min: *time_limit_min,
-        penalty_per_min: *penalty_per_min,
+        penalty_per_min: freemapper_courseplan_model::score_penalty(
+            *penalty_per_min,
+            controls,
+            &event.score_settings(),
+        ),
         controls: resolved,
         links: links.iter().map(|l| (l.a.clone(), l.b.clone())).collect(),
         start,

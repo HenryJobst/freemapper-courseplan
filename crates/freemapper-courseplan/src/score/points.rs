@@ -105,7 +105,7 @@ pub fn assign_codes(
     }
     if let Some(&value) = values.iter().find(|&&v| v == 0 || v > rules.value_max) {
         return Err(ScoreError::BadValue {
-            value,
+            value: u32::from(value),
             value_max: rules.value_max,
         });
     }

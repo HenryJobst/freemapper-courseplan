@@ -142,9 +142,11 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
   ohne Wert, etwa `A1`, braucht einen: `A1=2`.
 - Die Werte reichen von 1 bis zum höchsten Wert der Veranstaltung, standardmäßig 5, höchstens 9
   (`score settings --value-max`).
-- Ohne `--penalty` ist der Abzug je angefangene Minute der höchste Postenwert der Bahn, mindestens der höchste Wert
-  der Veranstaltung, damit sich eine Minute zu viel nie lohnt. Er folgt den Posten, solange du keinen eigenen Wert
-  gesetzt hast; `score course set --penalty` legt ihn fest.
+- Ohne `--penalty` speichert die Bahn keinen Abzug und nimmt den Standard: den höchsten Postenwert der Bahn,
+  mindestens den höchsten Wert der Veranstaltung, damit sich eine Minute zu viel nie lohnt. Der Standard folgt den
+  Posten. `score course set --penalty N` speichert eine eigene Zahl, `--no-penalty` kehrt zum Standard zurück.
+- Wer den Code eines Postens ändert (`control code`), gibt ihm den Wert des neuen Codes. Ein Code ohne Wert lässt
+  den alten Wert stehen, und `check` meldet den Unterschied.
 - Eine Verbindung nennt zwei Posten, die der Läufer direkt nacheinander anlaufen muss, in beliebiger Richtung. Wer
   das nicht tut, wird disqualifiziert. Ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen
   Ring schließen. Ein Posten mit Verbindung bleibt in der Bahn, bis du die Verbindung entfernst

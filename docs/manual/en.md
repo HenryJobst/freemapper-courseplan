@@ -136,9 +136,11 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
   same rule, so it only repairs a value in the file that no longer matches its code. A code that carries no value,
   such as `A1`, needs one: `A1=2`.
 - Values run from 1 to the highest value of the event, 5 by default and at most 9 (`score settings --value-max`).
-- Without `--penalty` the penalty per started minute is the highest control value of the course, at least the
-  highest value of the event, so a minute over never pays off. It follows the controls as long as you have not set
-  your own; `score course set --penalty` fixes it.
+- Without `--penalty` the course stores no penalty and uses the default: the highest control value of the course, at
+  least the highest value of the event, so a minute over never pays off. The default follows the controls.
+  `score course set --penalty N` stores your own number, and `--no-penalty` goes back to the default.
+- Changing a control's code (`control code`) gives it the value of the new code. A code that carries no value keeps
+  the old value, and `check` reports the difference.
 - A link names two controls that the runner has to visit directly one after the other, in either direction. A runner
   who does not is disqualified. A control takes at most two links, and links may not close a ring. A control with a
   link stays in the course until you remove the link (`score link remove`).

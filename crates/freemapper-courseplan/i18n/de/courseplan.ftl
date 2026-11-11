@@ -775,7 +775,7 @@ mcp-tool-list-specials = Die Sonderobjekte auflisten (Start, Ziel, Pflichtstreck
 mcp-tool-list-classes = Die Kategorien auflisten, mit Regelkategorie und erwarteten Startern.
 mcp-tool-add-control = Einen Posten an einer Position in Kartenmillimetern anlegen. Ohne code gilt der niedrigste freie Code ab 31. Die Position muss auf der Karte liegen. Gibt den Code zurück.
 mcp-tool-move-control = Einen Posten an eine neue Position in Kartenmillimetern setzen. Die Position muss auf der Karte liegen.
-mcp-tool-set-control-code = Den Code eines Postens ändern. Die Bahnen, die akzeptierten Befunde und jede andere Stelle, die den Posten nennt, ziehen mit. Der neue Code muss frei sein, darf nicht leer sein und höchstens 64 Zeichen lang sein.
+mcp-tool-set-control-code = Den Code eines Postens ändern. Die Bahnen, die akzeptierten Befunde und jede andere Stelle, die den Posten nennt, ziehen mit. In einer Score-Bahn übernimmt der Posten den Wert, den sein neuer Code trägt; ein Code ohne Wert lässt den alten Wert stehen. Der neue Code muss frei sein, darf nicht leer sein und höchstens 64 Zeichen lang sein.
 mcp-tool-remove-control = Einen Posten samt seinen Besuchen in Einzelbahnen entfernen. Das Ergebnis nennt die Bahnen, die er verlassen hat, und in cleared_legs die Strecken, die Knickpunkte und Abflaggung verloren haben, weil sie jetzt zu einem anderen Bahnpunkt führen.
 mcp-tool-describe-control = Die Beschreibungssymbole eines Postens setzen, Spalte C bis H, als IOF-Symbol-IDs. Spalten, die du weglässt, behalten ihr Symbol. clear leert zuerst alle Spalten.
 mcp-tool-set-control-number = Festlegen, wo die Nummer eines Postens steht, als Richtung in Grad (0 = Osten, gegen den Uhrzeigersinn) und Abstand zwischen Kreislinie und Nummer in Druckmillimetern. clear stellt den Standardplatz wieder her.
@@ -1342,7 +1342,7 @@ word-score-problem-must-be-below-the-good-pace = muss unter der Pace des guten L
 word-what-link = Verbindung
 error-edit-score-course = Bahn { $course } ist eine Score-Bahn. Diese Änderung gibt es nur für Einzelbahnen
 error-edit-not-score-course = Bahn { $course } ist keine Score-Bahn
-error-edit-value-disagrees = Der Code von Posten { $code } trägt den Wert { $expected }, nicht { $value }. Ändere stattdessen den Code
+error-edit-value-disagrees = Der Code von Posten { $code } trägt den Wert { $expected }, nicht { $value }. Ändere stattdessen den Code, der Wert folgt ihm
 error-edit-code-carries-no-value = Der Code von Posten { $code } trägt keinen Wert. Gib einen an
 error-edit-duplicate-score-control = Posten { $code } steht zweimal in der Score-Bahn
 error-edit-bad-time-limit = Das Zeitlimit muss mindestens 1 Minute betragen
@@ -1360,20 +1360,22 @@ error-score-link-does-not-fit = Die Verbindung zwischen Posten { $a } und { $b }
 error-score-bad-link = Die Verbindung zwischen Posten { $a } und { $b } nennt einen Posten, den es nicht gibt, oder zweimal denselben
 error-score-link-end-not-candidate = Ein Ende der gewünschten Verbindung { $link } liegt auf keinem Kandidaten
 error-score-links-not-a-chain = Die Verbindungen an Posten { $control } bilden keine Kette: Ein Posten hat höchstens zwei Verbindungen, und sie dürfen keinen Ring schließen
-error-score-link-tour-not-found = Es wurde keine Runde gefunden, die alle Verbindungen im Zeitlimit hält. Die Verbindung zwischen Posten { $a } und { $b } passt am schlechtesten, doch die Suche oberhalb der exakten Größe ist kein Beweis
+error-score-link-tour-not-found = Es wurde keine Runde gefunden, die alle Verbindungen im Zeitlimit hält. Die Verbindung zwischen Posten { $a } und { $b } passt am schlechtesten. Bei größeren Bahnen sucht das Programm nicht erschöpfend, das ist also kein Beweis
 mcp-error-no-score-settings-change = nichts zu ändern; gib mindestens eines von value_max, good_pace_s_per_km, very_good_pace_s_per_km, mix_hard_percent und seed an
-mcp-error-no-score-course-change = nichts zu ändern; gib time_limit_min oder penalty_per_min an
-mcp-tool-add-score-course = Eine Score-Bahn ohne Posten anlegen, aus Start, Ziel und einem Zeitlimit in Minuten. Der Abzug je angefangene Minute über dem Limit ist der angegebene, sonst der höchste erlaubte Punktewert (value_max). Gibt name, time_limit_min und penalty_per_min zurück. Die Posten kommen mit set_score_controls dazu.
-mcp-tool-set-score-controls = Die Posten einer Score-Bahn ersetzen, in beliebiger Reihenfolge. Jeder Eintrag hat einen Code und kann einen Wert haben. Ohne Wert gibt der Code ihn vor: die zweite Ziffer eines zweistelligen Codes, die letzte eines längeren. Ein Wert, der vom Code abweicht, wird abgelehnt, ebenso einer außerhalb von 1 bis value_max. Ein Posten darf nur einmal vorkommen, und ein Posten, den eine Verbindung nennt, lässt sich nicht weglassen. Solange der Abzug noch der Standard ist, folgt er dem höchsten Wert. Gibt name, controls mit code und value und penalty_per_min zurück.
-mcp-tool-set-control-value = Den Wert eines Postens einer Score-Bahn setzen. Der Code trägt den Wert, daher wird nur der Wert des Codes angenommen; um einem Posten einen anderen Wert zu geben, ändere seinen Code mit set_control_code. Der Aufruf repariert einen gespeicherten Wert, der nicht mehr zum Code passt. Gibt name, code und value zurück.
+mcp-error-no-score-course-change = nichts zu ändern; gib time_limit_min, penalty_per_min oder no_penalty an
+mcp-error-score-code-empty = Ein Posten einer Score-Bahn braucht einen Code
+mcp-tool-add-score-course = Eine Score-Bahn ohne Posten anlegen, aus Start, Ziel und einem Zeitlimit in Minuten. Ohne Abzug speichert die Bahn keinen und nimmt den Standard: den höchsten Postenwert der Bahn, mindestens value_max, damit sich eine Minute zu viel nie lohnt. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück. Die Posten kommen mit set_score_controls dazu.
+mcp-tool-set-score-controls = Die Posten einer Score-Bahn ersetzen, in beliebiger Reihenfolge. Jeder Eintrag hat einen Code und kann einen Wert haben. Ohne Wert gibt der Code ihn vor: die zweite Ziffer eines zweistelligen Codes, die letzte eines längeren. Ein Wert, der vom Code abweicht, wird abgelehnt, ebenso einer außerhalb von 1 bis value_max. Ein Posten braucht einen Code und darf nur einmal vorkommen, und ein Posten, den eine Verbindung nennt, lässt sich nicht weglassen. Ein Standardabzug folgt den Posten von selbst. Gibt name, controls mit code und value, penalty_per_min und penalty_is_default zurück.
+mcp-tool-set-control-value = Den Wert eines Postens einer Score-Bahn setzen. Der Code trägt den Wert, daher wird nur der Wert des Codes angenommen; um einem Posten einen anderen Wert zu geben, ändere seinen Code mit set_control_code, der Wert folgt. Der Aufruf repariert einen gespeicherten Wert, der nicht mehr zum Code passt. Gibt name, code und value zurück.
 mcp-tool-add-score-link = Verlangen, dass zwei Posten einer Score-Bahn direkt nacheinander gelaufen werden, in beliebiger Richtung. Wer es nicht tut, wird disqualifiziert. Beide Posten müssen zur Bahn gehören, ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen Ring schließen. Gibt name, a, b und links zurück, alle Verbindungen der Bahn.
 mcp-tool-remove-score-link = Die Verbindung zwischen zwei Posten einer Score-Bahn entfernen; die Reihenfolge der beiden ist gleich. Gibt name, a, b und links zurück, die verbleibenden Verbindungen.
 mcp-tool-set-score-settings = Die Score-Einstellungen ändern, die alle Score-Bahnen der Veranstaltung teilen: value_max (höchster Punktewert, 1 bis 9), good_pace_s_per_km und very_good_pace_s_per_km (Sekunden je Kilometer), mix_hard_percent (Anteil schwerer Posten) und seed (legt die Entwurfssuche fest). Nicht genannte Felder bleiben. Gibt alle Einstellungen zurück.
-mcp-tool-set-score-course-details = Das Zeitlimit in Minuten oder den Abzug je angefangene Minute einer Score-Bahn ändern. Gibt name, time_limit_min und penalty_per_min zurück.
+mcp-tool-set-score-course-details = Das Zeitlimit in Minuten oder den Abzug je angefangene Minute einer Score-Bahn ändern. penalty_per_min speichert einen Abzug; no_penalty kehrt zum Standard zurück, dem höchsten Postenwert der Bahn, mindestens value_max. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück.
 mcp-param-time-limit-min = Zeitlimit in Minuten, mindestens 1
-mcp-param-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste erlaubte Punktewert]
+mcp-param-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste Postenwert der Bahn, mindestens value_max]
 mcp-param-set-score-course-details-time-limit-min = Zeitlimit in Minuten, mindestens 1 [Standard: unverändert]
 mcp-param-set-score-course-details-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: unverändert]
+mcp-param-set-score-course-details-no-penalty = Zum Standardabzug zurückkehren, dem höchsten Postenwert der Bahn, mindestens value_max [Standard: false]
 mcp-param-set-score-controls-controls = Die Posten der Bahn, jeder ein Objekt mit code und optional value
 mcp-param-set-score-controls-value = Punkte des Postens [Standard: der Wert, den der Code trägt]
 mcp-param-value = Punkte des Postens, von 1 bis zum höchsten Wert der Veranstaltung
@@ -1392,7 +1394,7 @@ cli-help-score-link-add = Verlangen, dass zwei Posten direkt nacheinander gelauf
 cli-help-score-link-remove = Die Verbindung zwischen zwei Posten entfernen
 cli-help-score-settings = Die Score-Einstellungen der Veranstaltung ändern
 cli-help-score-course = Eine Score-Bahn ändern
-cli-help-score-course-set = Zeitlimit oder Abzug einer Score-Bahn ändern
+cli-help-score-course-set = Zeitlimit oder Abzug einer Score-Bahn ändern; --no-penalty kehrt zum Standardabzug zurück
 cli-arg-score-controls-codes = Posten, durch Kommas getrennt, zum Beispiel 31,42 oder 31=1,42=2
 cli-arg-score-value-value = Punkte des Postens
 cli-arg-score-json = Die Antwort als JSON ausgeben, dieselbe wie das MCP-Werkzeug
@@ -1405,17 +1407,24 @@ cli-arg-score-settings-mix-hard = Anteil schwerer Posten in der Mischung, 0 bis 
 cli-arg-score-settings-seed = Startwert der Entwurfssuche
 cli-arg-score-course-set-time-limit = Zeitlimit in Minuten
 cli-arg-score-course-set-penalty = Abzug in Punkten je angefangene Minute über dem Limit
+cli-arg-score-course-set-no-penalty = Zum Standardabzug zurückkehren, dem höchsten Postenwert der Bahn, mindestens dem höchsten Wert der Veranstaltung
 cli-arg-course-add-kind = Art der Bahn, individual oder score [Standard: individual]
 cli-arg-course-add-time-limit = Zeitlimit in Minuten; für eine Score-Bahn nötig
 cli-arg-course-add-json = Die Antwort als JSON ausgeben, dieselbe wie das MCP-Werkzeug; nur mit --kind score
-cli-arg-course-add-penalty = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste erlaubte Punktewert]
-cli-score-course-added = Score-Bahn { $name } angelegt: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit
+cli-arg-course-add-penalty = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste Postenwert der Bahn, mindestens der höchste Wert der Veranstaltung]
+cli-score-course-added = Score-Bahn { $name } angelegt: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit{ $default ->
+    [yes] { " " }(der Standard)
+   *[no] { "" }
+}
 cli-score-controls = { $name }: { $count } Posten, { $total } Punkte ({ $list })
 cli-score-value = Posten { $code } von { $name } zählt { $value } Punkte
 cli-score-link-added = { $a } und { $b } in { $name } verbunden
 cli-score-link-removed = Verbindung zwischen { $a } und { $b } in { $name } entfernt
 cli-score-settings = Score-Einstellungen: höchster Wert { $value_max }, guter Läufer { $good } s/km, sehr guter Läufer { $very_good } s/km, { $mix_hard } Prozent schwere Posten, Startwert { $seed }
-cli-score-course-set = { $name }: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit
+cli-score-course-set = { $name }: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit{ $default ->
+    [yes] { " " }(der Standard)
+   *[no] { "" }
+}
 cli-score-bad-pace = { $value } ist keine Pace; gib Sekunden je Kilometer an, etwa 250, oder Minuten und Sekunden, etwa 4:10
 cli-score-bad-control = { $value } ist kein Posten mit Wert; schreibe den Code oder den Code, = und den Wert, etwa 31 oder 31=1
 cli-course-add-score-only = --time-limit, --penalty und --json gehören zu --kind score

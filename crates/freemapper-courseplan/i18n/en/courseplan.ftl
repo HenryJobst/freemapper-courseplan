@@ -780,7 +780,7 @@ mcp-tool-list-specials = List the special objects (start, finish, marked routes,
 mcp-tool-list-classes = List the classes with rule category and expected starters.
 mcp-tool-add-control = Add a control at a position in map mm. Without code the lowest free code from 31 up is used. The position must lie on the map. Returns the code.
 mcp-tool-move-control = Move a control to a new position in map mm. The position must lie on the map.
-mcp-tool-set-control-code = Change the code of a control. The courses, the accepted findings and every other place that names the control follow. The new code must be free, not empty and at most 64 characters long.
+mcp-tool-set-control-code = Change the code of a control. The courses, the accepted findings and every other place that names the control follow. In a score course the control takes the value its new code carries; a code that carries none keeps the old value. The new code must be free, not empty and at most 64 characters long.
 mcp-tool-remove-control = Remove a control and its visits in individual courses. The result lists the courses it left, and in cleared_legs the legs that lost their bends and marked-route flag because they now run to another stop.
 mcp-tool-describe-control = Set the description symbols of a control, column C to H, as IOF symbol ids. Columns you leave out keep their symbol. clear empties all columns first.
 mcp-tool-set-control-number = Set where the number of a control is drawn, as direction in degrees (0 = east, counter-clockwise) and gap between circle line and number in print mm. clear goes back to the default placement.
@@ -1347,7 +1347,7 @@ word-score-problem-must-be-below-the-good-pace = must be below the good pace
 word-what-link = link
 error-edit-score-course = course { $course } is a score course; this change works on individual courses only
 error-edit-not-score-course = course { $course } is not a score course
-error-edit-value-disagrees = control { $code } carries the value { $expected } in its code, not { $value }; change the code instead
+error-edit-value-disagrees = control { $code } carries the value { $expected } in its code, not { $value }; change the code instead, and the value follows
 error-edit-code-carries-no-value = the code of control { $code } carries no value; give one
 error-edit-duplicate-score-control = control { $code } appears twice in the score course
 error-edit-bad-time-limit = the time limit must be at least 1 minute
@@ -1365,20 +1365,22 @@ error-score-link-does-not-fit = the link between controls { $a } and { $b } does
 error-score-bad-link = the link between controls { $a } and { $b } names a control that does not exist or the same control twice
 error-score-link-end-not-candidate = an end of the requested link { $link } lies on no candidate
 error-score-links-not-a-chain = the links at control { $control } do not form a chain: a control may have at most two links and they may not close a ring
-error-score-link-tour-not-found = no tour was found that holds every link within the time limit; the link between controls { $a } and { $b } fits worst, but the search above the exact size is not a proof
+error-score-link-tour-not-found = no tour was found that holds every link within the time limit; the link between controls { $a } and { $b } fits worst. The search is not exhaustive for larger courses, so this is no proof
 mcp-error-no-score-settings-change = nothing to change; give at least one of value_max, good_pace_s_per_km, very_good_pace_s_per_km, mix_hard_percent and seed
-mcp-error-no-score-course-change = nothing to change; give time_limit_min or penalty_per_min
-mcp-tool-add-score-course = Add a score course without controls, from a start, a finish and a time limit in minutes. The penalty per started minute over the limit is the one given, else the highest point value allowed (value_max). Returns name, time_limit_min and penalty_per_min. Add the controls with set_score_controls.
-mcp-tool-set-score-controls = Replace the controls of a score course, in any order. Each entry has a code and may have a value. Without a value the code gives it: the second digit of a two-digit code, the last digit of a longer one. A value that differs from the code is refused, and so is a value outside 1 to value_max. A control may appear once, and a control that a link names cannot be dropped. While the penalty is still the default, it follows the highest value. Returns name, controls with code and value, and penalty_per_min.
-mcp-tool-set-control-value = Set the value of one control of a score course. The code carries the value, so only the value of the code is accepted; to give a control another value, change its code with set_control_code. The call repairs a stored value that no longer matches its code. Returns name, code and value.
+mcp-error-no-score-course-change = nothing to change; give time_limit_min, penalty_per_min or no_penalty
+mcp-error-score-code-empty = a control of a score course needs a code
+mcp-tool-add-score-course = Add a score course without controls, from a start, a finish and a time limit in minutes. Without a penalty the course has no stored penalty and uses the default: the highest control value of the course, at least value_max, so a minute over never pays off. Returns name, time_limit_min, penalty_per_min and penalty_is_default. Add the controls with set_score_controls.
+mcp-tool-set-score-controls = Replace the controls of a score course, in any order. Each entry has a code and may have a value. Without a value the code gives it: the second digit of a two-digit code, the last digit of a longer one. A value that differs from the code is refused, and so is a value outside 1 to value_max. A control needs a code and may appear once, and a control that a link names cannot be dropped. A default penalty follows the controls on its own. Returns name, controls with code and value, penalty_per_min and penalty_is_default.
+mcp-tool-set-control-value = Set the value of one control of a score course. The code carries the value, so only the value of the code is accepted; to give a control another value, change its code with set_control_code, and the value follows. The call repairs a stored value that no longer matches its code. Returns name, code and value.
 mcp-tool-add-score-link = Require two controls of a score course to be run directly one after the other, in either direction. A runner who does not is disqualified. Both controls must be in the course, a control takes at most two links, and links may not close a ring. Returns name, a, b and links, all links of the course.
 mcp-tool-remove-score-link = Remove the link between two controls of a score course; either order matches. Returns name, a, b and links, the links that remain.
 mcp-tool-set-score-settings = Change the score settings that all score courses of the event share: value_max (highest point value, 1 to 9), good_pace_s_per_km and very_good_pace_s_per_km (seconds per kilometre), mix_hard_percent (share of hard controls) and seed (fixes the draft search). Fields not given stay as they are. Returns all settings.
-mcp-tool-set-score-course-details = Change the time limit in minutes or the penalty per started minute of a score course. Returns name, time_limit_min and penalty_per_min.
+mcp-tool-set-score-course-details = Change the time limit in minutes or the penalty per started minute of a score course. penalty_per_min stores a penalty; no_penalty goes back to the default, the highest control value of the course, at least value_max. Returns name, time_limit_min, penalty_per_min and penalty_is_default.
 mcp-param-time-limit-min = Time limit in minutes, at least 1
-mcp-param-penalty-per-min = Points deducted per started minute over the limit [default: the highest point value allowed]
+mcp-param-penalty-per-min = Points deducted per started minute over the limit [default: the highest control value of the course, at least value_max]
 mcp-param-set-score-course-details-time-limit-min = Time limit in minutes, at least 1 [default: unchanged]
 mcp-param-set-score-course-details-penalty-per-min = Points deducted per started minute over the limit [default: unchanged]
+mcp-param-set-score-course-details-no-penalty = Go back to the default penalty, the highest control value of the course, at least value_max [default: false]
 mcp-param-set-score-controls-controls = The controls of the course, each an object with code and an optional value
 mcp-param-set-score-controls-value = Points of the control [default: the value the code carries]
 mcp-param-value = Points of the control, from 1 to the highest value of the event
@@ -1397,7 +1399,7 @@ cli-help-score-link-add = Require two controls to be run directly one after the 
 cli-help-score-link-remove = Remove the link between two controls
 cli-help-score-settings = Change the score settings of the event
 cli-help-score-course = Change a score course
-cli-help-score-course-set = Change the time limit or the penalty of a score course
+cli-help-score-course-set = Change the time limit or the penalty of a score course; --no-penalty goes back to the default penalty
 cli-arg-score-controls-codes = Controls separated by commas, for example 31,42 or 31=1,42=2
 cli-arg-score-value-value = Points of the control
 cli-arg-score-json = Print the answer as JSON, the same as the MCP tool gives
@@ -1410,17 +1412,24 @@ cli-arg-score-settings-mix-hard = Share of hard controls in the mix, 0 to 100 pe
 cli-arg-score-settings-seed = Seed of the draft search
 cli-arg-score-course-set-time-limit = Time limit in minutes
 cli-arg-score-course-set-penalty = Points deducted per started minute over the limit
+cli-arg-score-course-set-no-penalty = Go back to the default penalty, the highest control value of the course, at least the highest value of the event
 cli-arg-course-add-kind = Kind of course, individual or score [default: individual]
 cli-arg-course-add-time-limit = Time limit in minutes; required for a score course
 cli-arg-course-add-json = Print the answer as JSON, the same as the MCP tool gives; only with --kind score
-cli-arg-course-add-penalty = Points deducted per started minute over the limit [default: the highest point value allowed]
-cli-score-course-added = added score course { $name }: { $limit } minutes, { $penalty } points per minute over the limit
+cli-arg-course-add-penalty = Points deducted per started minute over the limit [default: the highest control value of the course, at least the highest value of the event]
+cli-score-course-added = added score course { $name }: { $limit } minutes, { $penalty } points per minute over the limit{ $default ->
+    [yes] { " " }(the default)
+   *[no] { "" }
+}
 cli-score-controls = { $name }: { $count } controls, { $total } points ({ $list })
 cli-score-value = control { $code } of { $name } is worth { $value } points
 cli-score-link-added = linked { $a } and { $b } in { $name }
 cli-score-link-removed = removed the link between { $a } and { $b } in { $name }
 cli-score-settings = score settings: highest value { $value_max }, good runner { $good } s/km, very good runner { $very_good } s/km, { $mix_hard } percent hard controls, seed { $seed }
-cli-score-course-set = { $name }: { $limit } minutes, { $penalty } points per minute over the limit
+cli-score-course-set = { $name }: { $limit } minutes, { $penalty } points per minute over the limit{ $default ->
+    [yes] { " " }(the default)
+   *[no] { "" }
+}
 cli-score-bad-pace = { $value } is not a pace; give seconds per kilometre, such as 250, or minutes and seconds, such as 4:10
 cli-score-bad-control = { $value } is not a control with a value; write the code, or the code, = and the value, such as 31 or 31=1
 cli-course-add-score-only = --time-limit, --penalty and --json belong to --kind score

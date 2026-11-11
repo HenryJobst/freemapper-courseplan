@@ -85,7 +85,7 @@ how to install and use the program itself. The project file is TOML, and
 you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. Score courses are edited with `score` and `course add --kind score`; the program cannot edit team or relay courses yet, and it measures only individual courses. It cannot print
 courses either, and it does not read forest maps.
 
-`freemapper-courseplan check <project>` checks the individual courses against a rule profile, each finding with
+`freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with
 severity, place, rule and source. The built-in profile is `wkb-2026` (competition rules 2026) and the overlay
 `nor-bb-2021` (course recommendations for Berlin and Brandenburg); `freemapper-courseplan event profile <project>
 wkb-2026 --overlay nor-bb-2021` selects them. `finding accept <project> <rule> --note TEXT` records an intended

@@ -454,7 +454,7 @@ fn a_draft_raises_no_mix_finding_at_the_default_settings() {
         let mut event = t::event(&list, vec![t::course("S", &[])]);
         event.courses[0].kind = CourseKind::Score {
             time_limit_min: 60,
-            penalty_per_min: 30,
+            penalty_per_min: Some(30),
             controls: d
                 .controls
                 .iter()

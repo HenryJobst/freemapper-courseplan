@@ -189,7 +189,14 @@ fn score_course_round_trips_through_cli() {
         "--time-limit",
         "45",
     ]);
-    assert!(said.contains("45 minutes, 5 points per minute"), "{said}");
+    assert!(
+        said.contains("45 minutes, 5 points per minute over the limit (the default)"),
+        "{said}"
+    );
+    assert_eq!(
+        course_of(&project, "Sc")["score"]["penalty_is_default"],
+        true
+    );
     // The individual command is unchanged and the default kind.
     ok(&[
         "course",
@@ -225,6 +232,22 @@ fn score_course_round_trips_through_cli() {
         "4",
     ]);
     ok(&["course", "set", p, "Sc", "--classes", "Offen"]);
+    // A stored penalty is not the default; --no-penalty goes back.
+    assert_eq!(
+        course_of(&project, "Sc")["score"]["penalty_is_default"],
+        false
+    );
+    let said = ok(&["score", "course", "set", p, "Sc", "--no-penalty"]);
+    assert!(
+        said.contains("5 points per minute over the limit (the default)"),
+        "{said}"
+    );
+    assert!(
+        !std::fs::read_to_string(&project)
+            .unwrap()
+            .contains("penalty_per_min")
+    );
+    ok(&["score", "course", "set", p, "Sc", "--penalty", "4"]);
     let course = course_of(&project, "Sc");
     assert_eq!(course["kind"], "score");
     assert_eq!(course["classes"], json!(["Offen"]));
@@ -233,6 +256,7 @@ fn score_course_round_trips_through_cli() {
         json!({
             "time_limit_min": 60,
             "penalty_per_min": 4,
+            "penalty_is_default": false,
             "controls": [
                 {"code": "31", "value": 1},
                 {"code": "34", "value": 4},
@@ -247,6 +271,14 @@ fn score_course_round_trips_through_cli() {
         "{file}"
     );
     assert!(file.contains("good_pace_s_per_km = 260"), "{file}");
+    // Recoding a control gives it the value of its new code, and the link follows.
+    ok(&["control", "code", p, "31", "38"]);
+    let course = course_of(&project, "Sc");
+    assert_eq!(
+        course["score"]["controls"][0],
+        json!({"code": "38", "value": 8})
+    );
+    assert_eq!(course["score"]["links"], json!([{"a": "38", "b": "34"}]));
     // The file loads again and the checks run on it.
     let checked = run("en", &["check", p]);
     assert!(
@@ -257,7 +289,7 @@ fn score_course_round_trips_through_cli() {
     // The German help and confirmation exist.
     let help = out(&run("de", &["score", "link", "add", "--help"]));
     assert!(help.contains("direkt nacheinander"), "{help}");
-    let said = out(&run("de", &["score", "link", "add", p, "Sc", "31", "32"]));
+    let said = out(&run("de", &["score", "link", "add", p, "Sc", "38", "32"]));
     assert!(said.contains("verbunden"), "{said}");
 }
 
@@ -487,6 +519,16 @@ fn set_score_settings_json_is_the_mcp_answer() {
 }
 
 #[test]
+fn set_score_course_details_no_penalty_json_is_the_mcp_answer() {
+    same(
+        &["score", "course", "set"],
+        &["Sc", "--time-limit", "50", "--no-penalty"],
+        "set_score_course_details",
+        json!({ "name": "Sc", "time_limit_min": 50, "no_penalty": true }),
+    );
+}
+
+#[test]
 fn set_score_course_details_json_is_the_mcp_answer() {
     same(
         &["score", "course", "set"],
@@ -494,6 +536,55 @@ fn set_score_course_details_json_is_the_mcp_answer() {
         "set_score_course_details",
         json!({ "name": "Sc", "time_limit_min": 60, "penalty_per_min": 3 }),
     );
+}
+
+#[test]
+fn an_empty_code_is_refused_not_dropped() {
+    let (_dir, project) = with_score_course();
+    let before = std::fs::read(&project).unwrap();
+    let mut child = Command::new(BIN)
+        .arg("mcp")
+        .env("FREEMAPPER_LANG", "en")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    let messages = [
+        json!({ "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-06-18", "capabilities": {},
+            "clientInfo": { "name": "test", "version": "1" } } }),
+        json!({ "jsonrpc": "2.0", "method": "notifications/initialized", "params": {} }),
+        json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {
+            "name": "set_score_controls",
+            "arguments": { "project": project.to_str().unwrap(), "name": "Sc",
+                           "controls": [{ "code": "31" }, { "code": " " }] } } }),
+    ];
+    for m in messages {
+        writeln!(stdin, "{m}").unwrap();
+    }
+    stdin.flush().unwrap();
+    let reply = loop {
+        let mut line = String::new();
+        assert!(stdout.read_line(&mut line).unwrap() > 0, "server closed");
+        let v: Value = serde_json::from_str(&line).unwrap();
+        if v["id"] == 2 {
+            break v;
+        }
+    };
+    let _ = child.kill();
+    let _ = child.wait();
+    assert_eq!(reply["result"]["isError"], true, "{reply}");
+    assert!(
+        reply["result"]["content"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("needs a code"),
+        "{reply}"
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
 }
 
 #[test]
