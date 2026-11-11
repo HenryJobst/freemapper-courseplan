@@ -47,7 +47,6 @@ pub struct DraftControl {
     pub candidate: usize,
     pub at: MapPoint,
     pub value: u8,
-    /// Empty only in the best attempt of a failure whose codes could not be assigned.
     pub code: ControlCode,
     pub hard: bool,
 }
@@ -79,9 +78,14 @@ pub enum Hint {
 }
 
 /// The best attempt and why it does not do. Nothing was written.
+///
+/// `hint` is `Impossible` exactly when `error` is `Some`, except that a tour error for a link that
+/// does not fit also carries `LimitUp`. The other hints come from the issues and leave `error` at
+/// `None`. `best` is the evaluated count with the smallest sum of misses and with assignable codes,
+/// not the last bisection probe; it is empty when no count has codes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DraftFailure {
-    pub best: Draft,
+    pub best: Box<Draft>,
     pub issues: Vec<LengthIssue>,
     pub hint: Hint,
     pub error: Option<ScoreError>,
@@ -90,6 +94,15 @@ pub struct DraftFailure {
 struct Trial {
     k: usize,
     report: LengthReport,
+    values: Vec<u8>,
+    /// The codes of this count, or why none can be assigned; such a count is no draft.
+    codes: Result<Vec<ControlCode>, ScoreError>,
+}
+
+impl Trial {
+    fn ok(&self) -> bool {
+        self.report.issues.is_empty() && self.codes.is_ok()
+    }
 }
 
 struct Search<'a> {
@@ -112,20 +125,30 @@ struct Outcome {
 impl Search<'_> {
     fn attempt(&self, order: &[usize], k: usize) -> Result<Trial, ScoreError> {
         let picks = &order[..k];
-        let report = {
-            let (_, controls) = self.values_of(picks);
-            analyse_length(
-                &controls,
-                &self.links,
-                self.req.travel_good,
-                self.req.travel_very_good,
-                self.req.start.clone(),
-                self.req.finish.clone(),
-                self.limit_s,
-                self.req.settings,
-            )?
-        };
-        Ok(Trial { k, report })
+        let (values, controls) = self.values_of(picks);
+        let report = analyse_length(
+            &controls,
+            &self.links,
+            self.req.travel_good,
+            self.req.travel_very_good,
+            self.req.start.clone(),
+            self.req.finish.clone(),
+            self.limit_s,
+            self.req.settings,
+        )?;
+        let coords: Vec<MapPoint> = controls.iter().map(|c| c.at.clone()).collect();
+        let codes = assign_codes(
+            &values,
+            self.req.taken,
+            &coords,
+            &CodeRules::from_settings(self.req.settings),
+        );
+        Ok(Trial {
+            k,
+            report,
+            values,
+            codes,
+        })
     }
 
     fn values_of(&self, picks: &[usize]) -> (Vec<u8>, Vec<ScoredControl>) {
@@ -146,7 +169,8 @@ impl Search<'_> {
     }
 
     /// Bisection for the largest count the very good runner still covers completely, then a scan
-    /// downwards for a count with both bands met. Counts are evaluated once.
+    /// downwards for a count with both bands met and codes that can be assigned; a count whose
+    /// codes fail is skipped. Counts are evaluated once.
     fn search(&self, order: Vec<usize>) -> Result<Outcome, ScoreError> {
         let mut seen: BTreeMap<usize, Trial> = BTreeMap::new();
         let completes = |t: &Trial| {
@@ -161,7 +185,7 @@ impl Search<'_> {
                 e.insert(self.attempt(&order, k)?);
             }
             let t = &seen[&k];
-            Ok((completes(t), t.report.issues.is_empty()))
+            Ok((completes(t), t.ok()))
         };
         let kmax = if eval(self.max_k)?.0 {
             self.max_k
@@ -200,14 +224,18 @@ impl Search<'_> {
                     )
                 })
         });
+        // The evaluated count with the smallest sum of misses (not the last bisection probe), among
+        // those whose codes can be assigned.
+        let code_error = seen.values().find_map(|t| t.codes.as_ref().err().cloned());
         let best = seen
             .into_values()
+            .filter(|t| t.codes.is_ok())
             .min_by(|a, b| {
                 miss(&a.report)
                     .total_cmp(&miss(&b.report))
                     .then(a.k.cmp(&b.k))
             })
-            .expect("at least one count was evaluated");
+            .ok_or_else(|| code_error.expect("a count without codes has an error"))?;
         Ok(Outcome {
             order,
             trial: best,
@@ -262,7 +290,7 @@ fn empty_draft() -> Draft {
 
 fn plain_failure(hint: Hint, error: Option<ScoreError>) -> DraftFailure {
     DraftFailure {
-        best: empty_draft(),
+        best: Box::new(empty_draft()),
         issues: Vec::new(),
         hint,
         error,
@@ -300,18 +328,17 @@ fn hint_for(r: &LengthReport, pool_too_short: bool) -> Hint {
     }) {
         return Hint::LimitUp;
     }
-    if has(|i| matches!(i, LengthIssue::GoodBelow { .. })) {
-        return Hint::FasterProfile;
-    }
     if pool_too_short {
         return Hint::MoreCandidates;
+    }
+    if has(|i| matches!(i, LengthIssue::GoodBelow { .. })) {
+        return Hint::FasterProfile;
     }
     Hint::LimitDown
 }
 
 /// Builds the draft; see ADR 0065. On a miss the failure carries the best attempt, the issues of
 /// its length analysis and a hint. The result is the same on every run.
-#[allow(clippy::result_large_err)]
 pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     let s = req.settings;
     let limit_s = f64::from(req.limit_min) * 60.0;
@@ -330,23 +357,28 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     }
     let mut forced: Vec<usize> = Vec::new();
     let mut links = Vec::new();
-    for (a, b) in req.links {
+    for (n, (a, b)) in req.links.iter().enumerate() {
         let (Some(ca), Some(cb)) = (
             match_candidate(req.candidates, &pool, a),
             match_candidate(req.candidates, &pool, b),
         ) else {
-            return Err(plain_failure(Hint::MoreCandidates, None));
-        };
-        let (ia, ib) = (slot(&mut forced, ca), slot(&mut forced, cb));
-        if ia == ib {
             return Err(plain_failure(
                 Hint::Impossible,
-                Some(ScoreError::BadLink { a: ia, b: ib }),
+                Some(ScoreError::LinkEndNotACandidate { link: n }),
+            ));
+        };
+        if ca == cb {
+            // The indices are those of the candidates, as the controls are not chosen yet.
+            return Err(plain_failure(
+                Hint::Impossible,
+                Some(ScoreError::BadLink { a: ca, b: cb }),
             ));
         }
-        links.push((ia, ib));
+        links.push((slot(&mut forced, ca), slot(&mut forced, cb)));
     }
-    let max_k = pool.len().min(code_space(s.value_max));
+    // Codes the map has already take room from the space; per-value room is checked per count.
+    let free_codes = code_space(s.value_max).saturating_sub(req.taken.len());
+    let max_k = pool.len().min(free_codes);
     let min_k = forced.len().max(1);
     if min_k > max_k {
         return Err(plain_failure(Hint::MoreCandidates, None));
@@ -360,6 +392,7 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     };
     let share = f64::from(s.mix_hard_percent) / 100.0;
     let mut outcomes = Vec::new();
+    let mut code_error = None;
     for hard_share in [Some(share), None] {
         let order = priority_order(
             req.candidates,
@@ -369,8 +402,18 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
             &req.finish,
             hard_share,
         );
-        let out = match search.search(order) {
-            Ok(o) => o,
+        match search.search(order) {
+            Ok(o) => {
+                let done = o.ok;
+                outcomes.push(o);
+                if done {
+                    break;
+                }
+            }
+            Err(
+                e
+                @ (ScoreError::CodeSpaceExhausted { .. } | ScoreError::ValueSpaceExhausted { .. }),
+            ) => code_error = Some(e),
             Err(e) => {
                 let hint = match e {
                     ScoreError::LinkDoesNotFit { .. } | ScoreError::LinkTourNotFound { .. } => {
@@ -380,33 +423,22 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
                 };
                 return Err(plain_failure(hint, Some(e)));
             }
-        };
-        let done = out.ok;
-        outcomes.push(out);
-        if done {
-            break;
         }
     }
     let chosen = if let Some(i) = outcomes.iter().position(|o| o.ok) {
         outcomes.swap_remove(i)
+    } else if let Some(best) = outcomes.into_iter().min_by(|a, b| {
+        miss(&a.trial.report)
+            .total_cmp(&miss(&b.trial.report))
+            .then(a.trial.k.cmp(&b.trial.k))
+    }) {
+        best
     } else {
-        outcomes
-            .into_iter()
-            .min_by(|a, b| {
-                miss(&a.trial.report)
-                    .total_cmp(&miss(&b.trial.report))
-                    .then(a.trial.k.cmp(&b.trial.k))
-            })
-            .expect("one search ran")
+        return Err(plain_failure(Hint::Impossible, code_error));
     };
     let k = chosen.trial.k;
     let picks = &chosen.order[..k];
-    let (values, _) = search.values_of(picks);
-    let coords: Vec<MapPoint> = picks
-        .iter()
-        .map(|&i| req.candidates[i].at.clone())
-        .collect();
-    let codes = assign_codes(&values, req.taken, &coords, &CodeRules::from_settings(s));
+    let codes = chosen.trial.codes.expect("a chosen count has codes");
     let hard_actual = picks
         .iter()
         .filter(|&&i| is_hard(&req.candidates[i]))
@@ -417,16 +449,12 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
     let draft = Draft {
         controls: picks
             .iter()
-            .zip(&values)
-            .enumerate()
-            .map(|(n, (&i, &value))| DraftControl {
+            .zip(chosen.trial.values.iter().zip(codes))
+            .map(|(&i, (&value, code))| DraftControl {
                 candidate: i,
                 at: req.candidates[i].at.clone(),
                 value,
-                code: codes
-                    .as_ref()
-                    .map(|c| c[n].clone())
-                    .unwrap_or_else(|_| ControlCode(String::new())),
+                code,
                 hard: is_hard(&req.candidates[i]),
             })
             .collect(),
@@ -437,20 +465,12 @@ pub fn draft(req: &DraftRequest<'_>) -> Result<Draft, DraftFailure> {
         mix_missed_percent,
     };
     if chosen.ok {
-        return match codes {
-            Ok(_) => Ok(draft),
-            Err(e) => Err(DraftFailure {
-                issues: Vec::new(),
-                best: draft,
-                hint: Hint::Impossible,
-                error: Some(e),
-            }),
-        };
+        return Ok(draft);
     }
     let hint = hint_for(&draft.report, chosen.pool_too_short);
     Err(DraftFailure {
         issues: draft.report.issues.clone(),
-        best: draft,
+        best: Box::new(draft),
         hint,
         error: None,
     })

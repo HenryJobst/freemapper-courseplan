@@ -52,6 +52,8 @@ pub enum ScoreError {
         "the link between controls {a} and {b} names a control that does not exist or the same control twice"
     )]
     BadLink { a: usize, b: usize },
+    #[error("an end of the requested link {link} lies on no candidate")]
+    LinkEndNotACandidate { link: usize },
     #[error(
         "the links at control {control} do not form a chain: a control may have at most two links and they may not close a ring"
     )]
