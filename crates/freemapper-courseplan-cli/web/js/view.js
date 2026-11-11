@@ -100,14 +100,24 @@ export function bindMapLayer(group, view, onError = () => {}) {
     const zoom = Math.min(view.scale * (window.devicePixelRatio || 1), MAX_IMAGE_SIDE_PX / side);
     const q = [rect.x0, rect.y0, rect.x1, rect.y1, zoom].map((n) => Number(n.toFixed(4)));
     const url = `api/map.svg?x0=${q[0]}&y0=${q[1]}&x1=${q[2]}&y1=${q[3]}&zoom=${q[4]}`;
-    if (force) {
-      try {
-        await fetch(url, { cache: "reload" });
-      } catch {
+    // One request: the body is the SVG (shown through a blob URL) or the server's reason for refusing.
+    let blobUrl;
+    try {
+      const answer = await fetch(url, force ? { cache: "reload" } : {});
+      if (mine !== ticket) return;
+      if (!answer.ok) {
+        onError(await answer.text());
         return;
       }
+      blobUrl = URL.createObjectURL(await answer.blob());
+    } catch {
+      // The server is gone; the poll reports that.
+      return;
     }
-    if (mine !== ticket) return;
+    if (mine !== ticket) {
+      URL.revokeObjectURL(blobUrl);
+      return;
+    }
     const image = document.createElementNS(SVG_NS, "image");
     image.setAttribute("x", rect.x0);
     image.setAttribute("y", rect.y0);
@@ -115,6 +125,7 @@ export function bindMapLayer(group, view, onError = () => {}) {
     image.setAttribute("height", rect.y1 - rect.y0);
     image.setAttribute("preserveAspectRatio", "none");
     image.addEventListener("load", () => {
+      URL.revokeObjectURL(blobUrl);
       if (mine !== ticket) {
         image.remove();
         return;
@@ -122,17 +133,11 @@ export function bindMapLayer(group, view, onError = () => {}) {
       for (const old of [...group.children]) if (old !== image) old.remove();
       onError(null);
     });
-    image.addEventListener("error", async () => {
+    image.addEventListener("error", () => {
+      URL.revokeObjectURL(blobUrl);
       image.remove();
-      if (mine !== ticket) return;
-      try {
-        const answer = await fetch(url);
-        if (!answer.ok && mine === ticket) onError(await answer.text());
-      } catch {
-        // The server is gone; the poll reports that.
-      }
     });
-    image.setAttribute("href", url);
+    image.setAttribute("href", blobUrl);
     group.append(image);
   }
 

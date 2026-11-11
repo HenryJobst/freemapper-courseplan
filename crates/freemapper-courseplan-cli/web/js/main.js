@@ -908,6 +908,9 @@ function keepLegSelection() {
   }
 }
 
+// The standing note about the map (cut off, incomplete), shown again when a refused section recovers.
+let mapNote = null;
+
 async function loadMapInfo(fit) {
   const answer = await get("api/map/view");
   if (!answer.ok) return;
@@ -918,7 +921,7 @@ async function loadMapInfo(fit) {
     state.mapLayer = bindMapLayer(document.getElementById("layer-map"), state.view, (text) => {
       // The overlay stays; the status bar says why the map area is empty.
       if (text) status.say(text, true);
-      else if (mapRefused) status.say("", true);
+      else if (mapRefused) mapNote ? status.say(mapNote) : status.say("", true);
       mapRefused = Boolean(text);
     });
     state.view.addEventListener("viewchange", () => {
@@ -931,6 +934,9 @@ async function loadMapInfo(fit) {
   placeLayers();
   state.pageBox = info.page_box;
   if (fit) state.view.fit(info.page_box);
+  // A persistent note: the map area is cut off or lacks objects, which nothing else on the page shows.
+  mapNote = info.clipped ? "editor-map-clipped" : info.incomplete ? "editor-map-incomplete" : null;
+  if (mapNote) status.say(mapNote);
 }
 
 // A control being dragged, or null: { code, start (map mm under the pointer), orig (the circle's centre) }.

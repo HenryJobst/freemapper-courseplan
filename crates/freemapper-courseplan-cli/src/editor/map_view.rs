@@ -78,6 +78,14 @@ pub(crate) trait MapView: Send + Sync {
     fn svg_for(&self, rect: PageRect, zoom: f64) -> Result<String, MapViewError>;
     fn hit_at(&self, page: (f64, f64), tolerance_mm: f64) -> Vec<MapHit>;
     fn is_placeholder(&self) -> bool;
+    /// The map is larger than the page the renderer builds, so it is cut off.
+    fn is_clipped(&self) -> bool {
+        false
+    }
+    /// A renderer limit cut objects short or left them out.
+    fn is_incomplete(&self) -> bool {
+        false
+    }
 }
 
 /// Frame, grid and a note; no map content.
@@ -208,11 +216,37 @@ impl MapView for PlaceholderMap {
     }
 }
 
-/// Length and modification time of a file: when either changes, the cached map is stale.
+/// What tells two states of a map file apart: length and modification time, plus, where the system has them, the
+/// inode and the change time, and a hash of the first and last 4 KiB. A tool that rewrites the map with the same
+/// length inside one mtime tick still changes one of them. The read is two small chunks, not the file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct FileStamp {
     pub len: u64,
     pub modified: SystemTime,
+    /// Inode and change time (seconds, nanoseconds); 0 where the system has none.
+    pub identity: (u64, i64, i64),
+    pub edges: u64,
+}
+
+const EDGE_BYTES: u64 = 4096;
+
+fn edge_hash(path: &Path, len: u64) -> std::io::Result<u64> {
+    use std::hash::{Hash, Hasher};
+    use std::io::{Read, Seek, SeekFrom};
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    let mut chunk = Vec::new();
+    file.by_ref().take(EDGE_BYTES).read_to_end(&mut chunk)?;
+    chunk.hash(&mut hasher);
+    if len > EDGE_BYTES {
+        chunk.clear();
+        file.seek(SeekFrom::Start(
+            len.saturating_sub(EDGE_BYTES).max(EDGE_BYTES),
+        ))?;
+        file.take(EDGE_BYTES).read_to_end(&mut chunk)?;
+        chunk.hash(&mut hasher);
+    }
+    Ok(hasher.finish())
 }
 
 impl FileStamp {
@@ -223,18 +257,31 @@ impl FileStamp {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap_or_default();
         format!(
-            "{}-{}.{:09}",
+            "{}-{}.{:09}-{:x}.{}.{}-{:x}",
             self.len,
             since.as_secs(),
-            since.subsec_nanos()
+            since.subsec_nanos(),
+            self.identity.0,
+            self.identity.1,
+            self.identity.2,
+            self.edges
         )
     }
 
     pub(crate) fn of(path: &Path) -> std::io::Result<Self> {
         let meta = std::fs::metadata(path)?;
+        #[cfg(unix)]
+        let identity = {
+            use std::os::unix::fs::MetadataExt;
+            (meta.ino(), meta.ctime(), meta.ctime_nsec())
+        };
+        #[cfg(not(unix))]
+        let identity = (0, 0, 0);
         Ok(Self {
             len: meta.len(),
             modified: meta.modified()?,
+            identity,
+            edges: edge_hash(path, meta.len())?,
         })
     }
 }
@@ -311,7 +358,7 @@ fn build(path: &Path, stamp: FileStamp, lang: &Lang) -> MapResult {
     let index = MapIndex::from_document(&doc);
     let view = RenderMap::new(&doc, &index).map_err(|e| {
         let reason = match e {
-            MapViewError::TooLarge => "too large".to_owned(),
+            MapViewError::TooLarge => text(lang, "editor-map-too-large", &[]),
             MapViewError::Render(reason) => reason,
         };
         tidy(

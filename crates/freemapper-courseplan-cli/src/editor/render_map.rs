@@ -11,7 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use freemapper_courseplan::map::MapIndex;
 use freemapper_courseplan::omap::MapDocument;
-use freemapper_render::build::{Orientation, PageSpec, Paper, build_page};
+use freemapper_render::build::{BuildReport, Orientation, PageSpec, Paper, build_page};
 use freemapper_render::page::{PageMapping, PaperBox, RenderedPage};
 use freemapper_render::svg::{SvgError, SvgView, write_svg};
 
@@ -67,13 +67,27 @@ pub(crate) struct RenderMap {
     page: RenderedPage,
     affine: Affine,
     codes: HashMap<u32, String>,
-    /// The last SVG: a repeated view (a reload, a second tab) does not render again.
+    /// The last SVG: a repeated view (a reload, a second tab) does not render again. The lock is held only to
+    /// look up and to store, never while the renderer writes.
     last: Mutex<Option<(ViewKey, String)>>,
     renders: AtomicUsize,
     /// What the editor fits to: the extent of the map's objects plus a margin, inside the page.
     view_box: PageRect,
     /// The map reaches beyond the page, so the renderer clipped it.
     clipped: bool,
+    /// A renderer limit cut objects short or left them out.
+    incomplete: bool,
+}
+
+/// What the renderer could not show: `(clipped, incomplete)`. `skipped_objects` (hidden symbols) is silent on
+/// purpose; the three limits below lose map content the user wants to see.
+pub(super) fn limits_of(report: &BuildReport) -> (bool, bool) {
+    (
+        report.overflow_mm.is_some(),
+        report.truncated_objects > 0
+            || report.objects_not_drawn_page_limit > 0
+            || report.dropped_pattern_objects > 0,
+    )
 }
 
 impl RenderMap {
@@ -93,16 +107,21 @@ impl RenderMap {
             x1: page.page_mm.0,
             y1: page.page_mm.1,
         };
-        // An empty map shows the whole page.
+        // The renderer centres the painted bounds on the page, so the box is symmetric around the page centre and
+        // holds the extent of the objects plus a margin; an empty map shows the whole page.
         let view_box = index.extent().map_or(whole, |(min, max)| {
             let (a, b) = (affine.to_page(min), affine.to_page(max));
+            let (cx, cy) = (whole.x1 / 2.0, whole.y1 / 2.0);
+            let hx = (a.0 - cx).abs().max((b.0 - cx).abs()) + BOX_MARGIN_MM;
+            let hy = (a.1 - cy).abs().max((b.1 - cy).abs()) + BOX_MARGIN_MM;
             PageRect {
-                x0: (a.0.min(b.0) - BOX_MARGIN_MM).max(whole.x0),
-                y0: (a.1.min(b.1) - BOX_MARGIN_MM).max(whole.y0),
-                x1: (a.0.max(b.0) + BOX_MARGIN_MM).min(whole.x1),
-                y1: (a.1.max(b.1) + BOX_MARGIN_MM).min(whole.y1),
+                x0: (cx - hx).max(whole.x0),
+                y0: (cy - hy).max(whole.y0),
+                x1: (cx + hx).min(whole.x1),
+                y1: (cy + hy).min(whole.y1),
             }
         });
+        let (clipped, incomplete) = limits_of(&report);
         Ok(Self {
             view_box,
             page,
@@ -110,7 +129,8 @@ impl RenderMap {
             codes,
             last: Mutex::new(None),
             renders: AtomicUsize::new(0),
-            clipped: report.overflow_mm.is_some(),
+            clipped,
+            incomplete,
         })
     }
 
@@ -123,6 +143,11 @@ impl RenderMap {
     pub(crate) fn is_clipped(&self) -> bool {
         self.clipped
     }
+
+    /// True when a renderer limit cut objects short or left them out.
+    pub(crate) fn is_incomplete(&self) -> bool {
+        self.incomplete
+    }
 }
 
 impl MapView for RenderMap {
@@ -132,6 +157,14 @@ impl MapView for RenderMap {
 
     fn page_box(&self) -> PageRect {
         self.view_box
+    }
+
+    fn is_clipped(&self) -> bool {
+        self.clipped
+    }
+
+    fn is_incomplete(&self) -> bool {
+        self.incomplete
     }
 
     fn svg_for(&self, rect: PageRect, zoom: f64) -> Result<String, MapViewError> {
@@ -149,11 +182,13 @@ impl MapView for RenderMap {
             return Err(MapViewError::TooLarge);
         }
         let key: ViewKey = [rect.x0, rect.y0, rect.x1, rect.y1, zoom].map(f64::to_bits);
-        let mut last = self.last.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some((k, svg)) = last.as_ref()
-            && *k == key
         {
-            return Ok(svg.clone());
+            let last = self.last.lock().unwrap_or_else(|e| e.into_inner());
+            if let Some((k, svg)) = last.as_ref()
+                && *k == key
+            {
+                return Ok(svg.clone());
+            }
         }
         let view = SvgView {
             rect: Some(PaperBox {
@@ -167,7 +202,7 @@ impl MapView for RenderMap {
             SvgError::TooLarge => MapViewError::TooLarge,
             other => MapViewError::Render(other.to_string()),
         })?;
-        *last = Some((key, svg.clone()));
+        *self.last.lock().unwrap_or_else(|e| e.into_inner()) = Some((key, svg.clone()));
         Ok(svg)
     }
 

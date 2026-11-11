@@ -559,6 +559,8 @@ async fn map_info(State(state): State<Shared>) -> Response {
         "page_box": [b.x0, b.y0, b.x1, b.y1],
         "mapping": { "k": m.k, "dx": m.dx, "dy": m.dy },
         "placeholder": entry.view.is_placeholder(),
+        "clipped": entry.view.is_clipped(),
+        "incomplete": entry.view.is_incomplete(),
     }))
     .into_response()
 }
