@@ -118,7 +118,11 @@ fn an_accepted_angle_comes_back_when_its_leg_runs_to_another_control() {
         map_mm: at,
         ..e.controls[0].clone()
     });
-    crate::edit::set_course_controls(&mut e, "A", &[code("39"), code("32")]).unwrap();
+    // Edited in the file, not through the edit operation, which would move or drop the acceptance.
+    if let freemapper_courseplan_model::CourseKind::Individual { controls } = &mut e.courses[0].kind
+    {
+        controls[0].code = code("39");
+    }
     let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
     assert_eq!(r.findings.len(), 1, "{r:?}");
     assert_eq!(r.findings[0].location, leg("A", 0));

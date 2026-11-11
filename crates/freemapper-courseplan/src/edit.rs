@@ -94,6 +94,9 @@ pub enum EditError {
     /// A start window of 0 minutes means no window; the start capacity check needs at least 1.
     #[error("the start window must be at least 1 minute")]
     StartWindowZero,
+    /// A leg carries at most [`MAX_BENDS`] bends.
+    #[error("a leg of course {course} may have at most {limit} bends")]
+    TooManyBends { course: String, limit: usize },
     /// A rule category must not be empty; clear it instead.
     #[error("the rule category of class {class} is empty; give a category or clear it")]
     BlankRuleCategory { class: String },
@@ -125,6 +128,9 @@ fn join_errors(errors: &[ModelError]) -> String {
         .join("; ")
 }
 
+/// The most bends one leg may carry.
+pub const MAX_BENDS: usize = 200;
+
 /// Where a leg begins: at the start, or after the control at the given 0-based index.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LegStart {
@@ -150,6 +156,70 @@ pub struct RemovedControl {
     pub courses: Vec<String>,
     /// The legs that lost their bends and taped flag.
     pub cleared: Vec<ClearedLeg>,
+    /// Accepted findings dropped because the leg they sit on no longer exists, by the leg's old
+    /// course, position and ends.
+    pub dropped: Vec<LegRef>,
+}
+
+/// What [`set_course_controls`] changed besides the control list.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct StopsEdit {
+    /// The legs that lost their bends and taped flag.
+    pub cleared: Vec<ClearedLeg>,
+    /// Accepted findings dropped because the leg they sit on no longer exists, by the leg's old
+    /// course, position and ends.
+    pub dropped: Vec<LegRef>,
+}
+
+/// The ids of the stops of an individual course in running order: start, controls, finish.
+fn stop_ids(course: &Course) -> Vec<String> {
+    let CourseKind::Individual { controls } = &course.kind else {
+        return Vec::new();
+    };
+    let mut ids = vec![course.start.clone()];
+    ids.extend(controls.iter().map(|c| c.code.0.clone()));
+    ids.push(course.finish.clone());
+    ids
+}
+
+/// After the stops of `course` changed from `old` to `new` (see [`stop_ids`]): moves the legs of
+/// accepted findings to where the leg between the same two stops now runs (the n-th occurrence of
+/// a pair stays the n-th), and drops a finding whose leg is gone. Legs without ends, and legs that
+/// did not match the old stops, stay as they are. Returns the legs that were lost.
+fn remap_accepted_legs(
+    event: &mut Event,
+    course: &str,
+    old: &[String],
+    new: &[String],
+) -> Vec<LegRef> {
+    let pair = |ids: &[String], i: usize| (ids.get(i).cloned(), ids.get(i + 1).cloned());
+    let mut lost = Vec::new();
+    event.accepted_findings.retain_mut(|finding| {
+        let mut keep = true;
+        for leg in finding
+            .legs
+            .iter_mut()
+            .filter(|l| l.course == course && !l.from.is_empty())
+        {
+            let at = leg.after as usize;
+            if pair(old, at) != (Some(leg.from.clone()), Some(leg.to.clone())) {
+                continue;
+            }
+            let ordinal = (0..at).filter(|&i| pair(old, i) == pair(old, at)).count();
+            let found = (0..new.len().saturating_sub(1))
+                .filter(|&i| pair(new, i) == pair(old, at))
+                .nth(ordinal);
+            match found {
+                Some(i) => leg.after = u32::try_from(i).unwrap_or(u32::MAX),
+                None => {
+                    lost.push(leg.clone());
+                    keep = false;
+                }
+            }
+        }
+        keep
+    });
+    lost
 }
 
 /// After a change of an individual course's sequence: clears the bends and taped flag of every
@@ -391,6 +461,7 @@ pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<RemovedCo
             });
         }
         let mut removed = RemovedControl::default();
+        let mut remaps = Vec::new();
         for course in &mut e.courses {
             let CourseKind::Individual { controls } = &mut course.kind else {
                 continue;
@@ -403,11 +474,21 @@ pub fn remove_control(event: &mut Event, code: &ControlCode) -> Result<RemovedCo
                 .filter(|&k| &controls[k].code != code)
                 .map(|k| controls.get(k + 1).map(|c| c.code.clone()))
                 .collect();
+            let old_ids = stop_ids(course);
+            let CourseKind::Individual { controls } = &mut course.kind else {
+                continue;
+            };
             controls.retain(|c| &c.code != code);
             removed.courses.push(course.name.clone());
             removed
                 .cleared
                 .extend(clear_changed_legs(course, old_first, &old_next));
+            remaps.push((course.name.clone(), old_ids, stop_ids(course)));
+        }
+        for (name, old_ids, new_ids) in remaps {
+            removed
+                .dropped
+                .extend(remap_accepted_legs(e, &name, &old_ids, &new_ids));
         }
         e.controls.retain(|c| &c.code != code);
         Ok(removed)
@@ -543,18 +624,21 @@ pub fn remove_course(event: &mut Event, name: &str) -> Result<(), EditError> {
 /// the number of the n-th visit of that code in the old sequence, and its bends and `taped` flag
 /// only while its leg runs to the same next stop as before (ruling R12); new visits start empty.
 /// The leg from the start keeps its bends only while the first stop stays. Returns the legs that
-/// lost bends or the taped flag.
+/// lost bends or the taped flag. Accepted findings on legs follow the legs between the same two
+/// stops; those whose leg is gone are dropped and returned.
 pub fn set_course_controls(
     event: &mut Event,
     name: &str,
     codes: &[ControlCode],
-) -> Result<Vec<ClearedLeg>, EditError> {
+) -> Result<StopsEdit, EditError> {
     apply(event, |e| {
         let known: Vec<ControlCode> = e.controls.iter().map(|c| c.code.clone()).collect();
-        let controls = individual_mut(course_mut(e, name)?)?;
+        individual_mut(course_mut(e, name)?)?;
         if let Some(unknown) = codes.iter().find(|code| !known.contains(code)) {
             return Err(not_found("control", unknown.0.clone()));
         }
+        let old_ids = stop_ids(course_mut(e, name)?);
+        let controls = individual_mut(course_mut(e, name)?)?;
         let old = std::mem::take(controls);
         let old_first = old.first().map(|c| c.code.clone());
         let mut old_next = Vec::with_capacity(codes.len());
@@ -580,19 +664,33 @@ pub fn set_course_controls(
             );
         }
         let course = course_mut(e, name)?;
-        Ok(clear_changed_legs(course, old_first, &old_next))
+        let cleared = clear_changed_legs(course, old_first, &old_next);
+        let new_ids = stop_ids(course);
+        let dropped = remap_accepted_legs(e, name, &old_ids, &new_ids);
+        Ok(StopsEdit { cleared, dropped })
     })
 }
 
-/// Sets the bends and the marked-route flag of one leg of an individual course.
+/// Sets the bends and the marked-route flag of one leg of an individual course. Every bend must lie
+/// on the map (when its `extent` is known) and a leg takes at most [`MAX_BENDS`] bends.
 pub fn set_leg(
     event: &mut Event,
+    extent: Option<(MapPoint, MapPoint)>,
     name: &str,
     leg: LegStart,
     bends: Vec<MapPoint>,
     taped: bool,
 ) -> Result<(), EditError> {
     apply(event, |e| {
+        if bends.len() > MAX_BENDS {
+            return Err(EditError::TooManyBends {
+                course: name.to_owned(),
+                limit: MAX_BENDS,
+            });
+        }
+        for bend in &bends {
+            check_inside(&extent, bend)?;
+        }
         let course = course_mut(e, name)?;
         match leg {
             LegStart::Start => {
@@ -945,10 +1043,45 @@ pub fn change_course_name(event: &mut Event, from: &str, to: &str) -> Result<(),
     })
 }
 
+/// Rewrites the stored sync decisions whose key names `from` as a control or a course (the key
+/// forms of `sync::decide::conflict_key`), so they keep matching after a rename.
+fn rename_decision_keys(event: &mut Event, is_control: bool, from: &str, to: &str) {
+    use crate::sync::decide::escape;
+    let Some(sync) = event.sync.as_mut() else {
+        return;
+    };
+    let (from, to) = (escape(from), escape(to));
+    let swap = |seg: &str| -> String {
+        // A number key's control segment may end in `#visit`.
+        match seg.split_once('#') {
+            Some((name, visit)) if name == from => format!("{to}#{visit}"),
+            None if seg == from => to.clone(),
+            _ => seg.to_owned(),
+        }
+    };
+    for decision in &mut sync.decisions {
+        let parts: Vec<&str> = decision.key.split('/').collect();
+        let mut out: Vec<String> = parts.iter().map(|p| (*p).to_owned()).collect();
+        match parts.as_slice() {
+            ["control", name, ..] if is_control => out[1] = swap(name),
+            ["course", name, ..] if !is_control => out[1] = swap(name),
+            ["course", _, "number", c] if is_control => out[3] = swap(c),
+            ["leg", ends] if is_control => {
+                if let Some((a, b)) = ends.split_once('-') {
+                    out[1] = format!("{}-{}", swap(a), swap(b));
+                }
+            }
+            _ => {}
+        }
+        decision.key = out.join("/");
+    }
+}
+
 /// Renames a control everywhere the project names it: the control, the stops of courses of every kind,
-/// and the controls and legs of accepted findings. Used by the sync when Purple Pen recodes a control.
+/// and the controls and legs of accepted findings, and the stored sync decisions. Used by the sync when Purple Pen recodes a control.
 /// It does not check that `to` is free.
 pub fn rename_control(event: &mut Event, from: &ControlCode, to: &ControlCode) {
+    rename_decision_keys(event, true, &from.0, &to.0);
     let fix = |code: &mut ControlCode| {
         if code == from {
             code.clone_from(to);
@@ -999,9 +1132,10 @@ pub fn rename_control(event: &mut Event, from: &ControlCode, to: &ControlCode) {
 }
 
 /// Renames a course everywhere the project names it: the course, the course lists of special objects, and
-/// the course and legs of accepted findings. Classes stay with the course. It does not check that `to` is
+/// the course and legs of accepted findings, and the stored sync decisions. Classes stay with the course. It does not check that `to` is
 /// free.
 pub fn rename_course(event: &mut Event, from: &str, to: &str) {
+    rename_decision_keys(event, false, from, to);
     for course in &mut event.courses {
         if course.name == from {
             to.clone_into(&mut course.name);

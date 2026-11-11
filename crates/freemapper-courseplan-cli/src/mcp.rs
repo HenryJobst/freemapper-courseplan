@@ -95,6 +95,17 @@ fn cleared_json(cleared: &[edit::ClearedLeg]) -> Value {
     )
 }
 
+/// The accepted findings an edit dropped because their leg is gone, as `[{course, after, from, to}]`
+/// with the leg's old position.
+fn dropped_json(dropped: &[freemapper_courseplan_model::LegRef]) -> Value {
+    Value::Array(
+        dropped
+            .iter()
+            .map(|l| json!({ "course": l.course, "after": l.after, "from": l.from, "to": l.to }))
+            .collect(),
+    )
+}
+
 fn round(x: f64, digits: i32) -> f64 {
     let f = 10f64.powi(digits);
     (x * f).round() / f
@@ -1120,6 +1131,7 @@ impl CoursePlanServer {
                 "code": req.code.0,
                 "left_courses": removed.courses,
                 "cleared_legs": cleared_json(&removed.cleared),
+                "dropped_acceptances": dropped_json(&removed.dropped),
             }))
         })
     }
@@ -1386,12 +1398,13 @@ impl CoursePlanServer {
         self.edit(&req.project, |file| {
             let codes = code_list(req.codes);
             let sequence: Vec<ControlCode> = codes.iter().cloned().map(ControlCode).collect();
-            let cleared = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
+            let stops = edit::set_course_controls(&mut file.event, &req.name.0, &sequence)
                 .map_err(|e| self.refused(e))?;
             Ok(json!({
                 "name": req.name.0,
                 "controls": codes,
-                "cleared_legs": cleared_json(&cleared),
+                "cleared_legs": cleared_json(&stops.cleared),
+                "dropped_acceptances": dropped_json(&stops.dropped),
             }))
         })
     }
@@ -1414,7 +1427,12 @@ impl CoursePlanServer {
             let bends = map_points(req.bends.unwrap_or_default());
             let taped = flag(req.taped);
             let count = bends.len();
-            edit::set_leg(&mut file.event, &req.name.0, leg, bends, taped).map_err(
+            let extent = if bends.is_empty() {
+                None
+            } else {
+                self.extent(file)?
+            };
+            edit::set_leg(&mut file.event, extent, &req.name.0, leg, bends, taped).map_err(
                 |e| match e {
                     edit::EditError::BadIndex { .. } => bad_index(req.after.unwrap_or(0)),
                     other => self.refused(other),

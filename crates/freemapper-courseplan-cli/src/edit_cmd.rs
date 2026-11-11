@@ -557,6 +557,7 @@ pub fn control(lang: &Lang, cmd: ControlCmd) -> Outcome {
                 );
             }
             say_cleared(lang, &removed.cleared);
+            say_dropped(lang, &removed.dropped);
         }
         ControlCmd::Describe {
             project,
@@ -928,7 +929,7 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
             let list = codes(list.split(',').map(|c| c.trim().to_owned()));
             let mut file = load(lang, &project)?;
             let sequence: Vec<ControlCode> = list.iter().cloned().map(ControlCode).collect();
-            let cleared = edit::set_course_controls(&mut file.event, &name, &sequence)
+            let stops = edit::set_course_controls(&mut file.event, &name, &sequence)
                 .map_err(|e| refused(lang, e))?;
             save(lang, &mut file)?;
             let shown = if list.is_empty() {
@@ -941,7 +942,8 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 "cli-edit-course-controls",
                 &[("name", v(name)), ("codes", v(shown))],
             );
-            say_cleared(lang, &cleared);
+            say_cleared(lang, &stops.cleared);
+            say_dropped(lang, &stops.dropped);
         }
         CourseCmd::Rename { project, from, to } => {
             let mut file = load(lang, &project)?;
@@ -989,10 +991,17 @@ pub fn course(lang: &Lang, cmd: CourseCmd) -> Outcome {
                 .collect::<Result<Vec<_>, _>>()?;
             let count = bends.len();
             let mut file = load(lang, &project)?;
-            edit::set_leg(&mut file.event, &name, leg, bends, taped).map_err(|e| match e {
-                edit::EditError::BadIndex { .. } => bad_index(shown.unwrap_or(0)),
-                other => refused(lang, other),
-            })?;
+            let extent = if bends.is_empty() {
+                None
+            } else {
+                map_extent(lang, &file)?
+            };
+            edit::set_leg(&mut file.event, extent, &name, leg, bends, taped).map_err(
+                |e| match e {
+                    edit::EditError::BadIndex { .. } => bad_index(shown.unwrap_or(0)),
+                    other => refused(lang, other),
+                },
+            )?;
             save(lang, &mut file)?;
             let taped = text(
                 lang,
@@ -1179,6 +1188,21 @@ fn say_cleared(lang: &Lang, cleared: &[edit::ClearedLeg]) {
                 &[name, ("index", v(after.to_string()))],
             ),
         }
+    }
+}
+
+/// One line per accepted finding that an edit dropped because its leg no longer exists.
+fn say_dropped(lang: &Lang, dropped: &[freemapper_courseplan_model::LegRef]) {
+    for leg in dropped {
+        say(
+            lang,
+            "cli-edit-acceptance-dropped",
+            &[
+                ("name", v(leg.course.clone())),
+                ("from", v(leg.from.clone())),
+                ("to", v(leg.to.clone())),
+            ],
+        );
     }
 }
 

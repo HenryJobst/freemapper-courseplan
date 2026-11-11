@@ -105,6 +105,7 @@ error-edit-finding-has-one-place = a finding of rule { $name } has one place: gi
 error-edit-finding-wrong-place = findings of rule { $name } sit at { $places }, never at { $place }
 error-edit-accepted-not-found = there is no accepted finding of rule { $name } at this place
 error-edit-start-window-zero = the start window must be at least 1 minute
+error-edit-too-many-bends = a leg of course { $course } may have at most { $limit } bends
 error-edit-blank-rule-category = the rule category of class { $name } is empty; give a category or clear it
 
 ## Reading OOM maps (OmapError)
@@ -389,6 +390,7 @@ cli-edit-course-leg-after = set the leg after position { $index } of course { $n
 cli-edit-course-number-set = course { $name }, position { $index }: number at direction { $direction } degrees, gap { $gap } mm
 cli-edit-course-number-cleared = course { $name }, position { $index }: number placement cleared
 cli-edit-leg-cleared = course { $name }: cleared the bends and taped flag of the leg after position { $index }, which now runs to another stop
+cli-edit-acceptance-dropped = course { $name }: dropped the accepted finding on the leg { $from } to { $to }, which no longer exists
 cli-edit-start-leg-cleared = course { $name }: cleared the bends and taped flag of the leg from the start, which now runs to another stop
 
 cli-help-course = Add, change, number and remove individual courses

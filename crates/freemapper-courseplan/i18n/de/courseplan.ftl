@@ -105,6 +105,7 @@ error-edit-finding-has-one-place = Ein Befund der Prüfregel { $name } hat einen
 error-edit-finding-wrong-place = Befunde der Prüfregel { $name } betreffen { $places }, nie { $place }
 error-edit-accepted-not-found = An diesem Ort gibt es keinen akzeptierten Befund der Prüfregel { $name }
 error-edit-start-window-zero = Das Startfenster muss mindestens 1 Minute lang sein
+error-edit-too-many-bends = Eine Strecke der Bahn { $course } darf höchstens { $limit } Knickpunkte haben
 error-edit-blank-rule-category = Die Regelkategorie der Kategorie { $name } ist leer; gib eine an oder entferne sie
 
 ## OOM-Karten lesen (OmapError)
@@ -386,6 +387,7 @@ cli-edit-course-leg-after = Strecke nach Position { $index } der Bahn { $name } 
 cli-edit-course-number-set = Bahn { $name }, Position { $index }: Nummer in Richtung { $direction } Grad, Abstand { $gap } mm
 cli-edit-course-number-cleared = Bahn { $name }, Position { $index }: Nummernlage zurückgesetzt
 cli-edit-leg-cleared = Bahn { $name }: Knickpunkte und Abflaggung der Strecke nach Position { $index } entfernt, weil sie jetzt zu einem anderen Bahnpunkt führt
+cli-edit-acceptance-dropped = Bahn { $name }: Akzeptierten Befund auf der Strecke { $from } nach { $to } entfernt, weil es sie nicht mehr gibt
 cli-edit-start-leg-cleared = Bahn { $name }: Knickpunkte und Abflaggung der Strecke vom Start entfernt, weil sie jetzt zu einem anderen Bahnpunkt führt
 
 cli-help-course = Einzelbahnen anlegen, ändern, nummerieren und entfernen

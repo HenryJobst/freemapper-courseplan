@@ -882,6 +882,11 @@ impl Localize for EditError {
                 text(lang, "error-edit-accepted-not-found", &[("name", v(rule))])
             }
             EditError::StartWindowZero => text(lang, "error-edit-start-window-zero", &[]),
+            EditError::TooManyBends { course, limit } => text(
+                lang,
+                "error-edit-too-many-bends",
+                &[("course", v(course)), ("limit", v(limit))],
+            ),
             EditError::BlankRuleCategory { class } => text(
                 lang,
                 "error-edit-blank-rule-category",
@@ -1079,6 +1084,7 @@ mod tests {
             "courses",
             "course",
             "control",
+            "point",
             "kind",
             "path",
             "source",
@@ -1554,6 +1560,10 @@ mod tests {
                 rule: s("wkb2026.distance.min"),
             },
             EditError::StartWindowZero,
+            EditError::TooManyBends {
+                course: s("A"),
+                limit: 200,
+            },
             EditError::BlankRuleCategory { class: s("H21") },
             EditError::Rules(RulesError::NotABase(s("nor-bb-2021"))),
         ];
