@@ -50,7 +50,7 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Skizze einer Sprintbahn in der Lübecker Altstadt"></a>
 
-Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine Score-Bahn mit 28 Posten. Das Bild ist eine
+Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine Score-Bahn mit 9 Posten und 15 Minuten Limit. Das Bild ist eine
 Skizze: Die Karte stammt aus freemapper-print, die Bahn ist darübergezeichnet. Befehle, Projektdatei und Ausgaben
 stehen unter [`examples/luebeck-sprint`](examples/luebeck-sprint/); alle Beispiele zeigt
 [`examples/README.md`](examples/README.md).

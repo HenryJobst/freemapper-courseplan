@@ -51,7 +51,7 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Sketch of a sprint course in Lübeck's old town"></a>
 
-A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a score course with 28 controls. The image is a sketch:
+A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a score course with 9 controls and a 15-minute limit. The image is a sketch:
 the map comes from freemapper-print, the course is drawn on top. Commands, project file and output are in
 [`examples/luebeck-sprint`](examples/luebeck-sprint/); [`examples/README.en.md`](examples/README.en.md) lists all
 examples.
