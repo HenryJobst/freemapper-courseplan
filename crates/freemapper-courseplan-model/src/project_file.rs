@@ -54,7 +54,6 @@ pub enum ModelError {
     /// An accepted finding needs a note; only an empty or blank one is refused.
     #[error("the note of accepted finding {rule} is empty")]
     BlankNote { rule: String },
-    /// Courses name their start and finish by id, so a control code must not look like one.
     #[error(
         "course {course} has a link between {a} and {b}, but {code} is not one of its controls"
     )]
@@ -82,11 +81,18 @@ pub enum ModelError {
         course: String,
         code: crate::ControlCode,
     },
+    #[error("course {course} links {a} and {b}, which closes a loop; links must form chains")]
+    LinkCycle {
+        course: String,
+        a: crate::ControlCode,
+        b: crate::ControlCode,
+    },
     #[error("score setting {what} is out of range: {reason}")]
     ScoreSettingOutOfRange {
         what: &'static str,
         reason: &'static str,
     },
+    /// Courses name their start and finish by id, so a control code must not look like one.
     #[error("control code {0} is also the id of a special object")]
     CodeClashesWithSpecial(crate::ControlCode),
     #[error("special object {id} lists course {course} more than once")]

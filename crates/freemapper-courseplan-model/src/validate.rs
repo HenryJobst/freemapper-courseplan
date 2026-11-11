@@ -265,18 +265,19 @@ fn check_links(
 ) {
     let mut seen: HashSet<(&ControlCode, &ControlCode)> = HashSet::new();
     let mut degree: HashMap<&ControlCode, usize> = HashMap::new();
+    let mut parent: HashMap<&ControlCode, &ControlCode> = HashMap::new();
     for link in links {
-        let mut unknown = false;
-        for code in [&link.a, &link.b] {
-            if !controls.iter().any(|c| &c.code == code) {
-                unknown = true;
-                errors.push(ModelError::LinkToUnknownControl {
-                    course: course.to_owned(),
-                    a: link.a.clone(),
-                    b: link.b.clone(),
-                    code: code.clone(),
-                });
-            }
+        let missing = [&link.a, &link.b]
+            .into_iter()
+            .find(|code| !controls.iter().any(|c| &c.code == *code));
+        let unknown = missing.is_some();
+        if let Some(code) = missing {
+            errors.push(ModelError::LinkToUnknownControl {
+                course: course.to_owned(),
+                a: link.a.clone(),
+                b: link.b.clone(),
+                code: code.clone(),
+            });
         }
         if link.a == link.b {
             errors.push(ModelError::LinkToItself {
@@ -301,6 +302,16 @@ fn check_links(
             });
             continue;
         }
+        let (ra, rb) = (root(&mut parent, &link.a), root(&mut parent, &link.b));
+        if ra == rb {
+            errors.push(ModelError::LinkCycle {
+                course: course.to_owned(),
+                a: link.a.clone(),
+                b: link.b.clone(),
+            });
+            continue;
+        }
+        parent.insert(ra, rb);
         for code in [&link.a, &link.b] {
             *degree.entry(code).or_default() += 1;
         }
@@ -318,6 +329,18 @@ fn check_links(
     }
 }
 
+/// Union-find root of `code` among the controls joined so far.
+fn root<'a>(
+    parent: &mut HashMap<&'a ControlCode, &'a ControlCode>,
+    code: &'a ControlCode,
+) -> &'a ControlCode {
+    let mut at = code;
+    while let Some(next) = parent.get(at) {
+        at = next;
+    }
+    at
+}
+
 fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
     let mut bad = |what: &'static str, reason: &'static str| {
         errors.push(ModelError::ScoreSettingOutOfRange { what, reason });
@@ -330,6 +353,12 @@ fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
     }
     if s.very_good_pace_s_per_km == 0 {
         bad("very_good_pace_s_per_km", "must be more than 0");
+    }
+    if s.good_pace_s_per_km > 0
+        && s.very_good_pace_s_per_km > 0
+        && s.very_good_pace_s_per_km >= s.good_pace_s_per_km
+    {
+        bad("very_good_pace_s_per_km", "must be below the good pace");
     }
     for (what, (low, high)) in [
         ("good_band_percent", s.good_band_percent),

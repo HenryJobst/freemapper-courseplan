@@ -1209,3 +1209,42 @@ fn score_settings_round_trip_and_default_absent() {
     assert_eq!(again.event.score, Some(custom.clone()));
     assert_eq!(again.event.score_settings(), custom);
 }
+
+#[test]
+fn custom_score_settings_with_a_large_seed_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), &event_text("", "", ""));
+    let mut project = ProjectFile::load(&file).unwrap();
+    let custom = ScoreSettings {
+        value_max: 7,
+        good_pace_s_per_km: 270,
+        very_good_pace_s_per_km: 230,
+        good_band_percent: (80, 90),
+        very_good_band_percent: (96, 99),
+        mix_hard_percent: 25,
+        seed: u32::MAX,
+    };
+    project.event.score = Some(custom.clone());
+    project.save().unwrap();
+    assert_eq!(ProjectFile::load(&file).unwrap().event.score, Some(custom));
+}
+
+#[test]
+fn misspelt_score_and_link_keys_are_unknown_keys() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(
+        dir.path(),
+        &format!("{}\n[score]\nvalue_mx = 4\n", event_text("", "", "")),
+    );
+    assert_eq!(load_errors(&file), vec![unknown_key("score", "value_mx")]);
+
+    let text = format!(
+        "{}{SCORE_COURSE}links = [{{ a = 31, b = 32, c = 1 }}]\n",
+        event_text("", "", "")
+    );
+    let file = write_event(dir.path(), &text);
+    assert_eq!(
+        load_errors(&file),
+        vec![unknown_key("courses[1].links[0]", "c")]
+    );
+}

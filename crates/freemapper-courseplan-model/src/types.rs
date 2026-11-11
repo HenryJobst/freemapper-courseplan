@@ -564,7 +564,7 @@ pub struct ScoreSettings {
     /// Share of hard controls in the mix, in percent.
     pub mix_hard_percent: u8,
     /// Seed of the draft search, so that every run gives the same answer.
-    pub seed: u64,
+    pub seed: u32,
 }
 
 impl Default for ScoreSettings {

@@ -225,6 +225,11 @@ impl Localize for ModelError {
                 "error-model-link-branches",
                 &[("course", v(course)), ("code", v(code))],
             ),
+            ModelError::LinkCycle { course, a, b } => text(
+                lang,
+                "error-model-link-cycle",
+                &[("course", v(course)), ("a", v(a)), ("b", v(b))],
+            ),
             ModelError::ScoreSettingOutOfRange { what, reason } => text(
                 lang,
                 "error-model-score-setting-out-of-range",
@@ -1314,6 +1319,7 @@ mod tests {
             "must-be-more-than-0",
             "low-is-above-high",
             "must-not-exceed-100",
+            "must-be-below-the-good-pace",
         ] {
             ids.insert(format!("word-score-problem-{problem}"));
         }

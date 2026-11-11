@@ -1314,3 +1314,5 @@ word-score-problem-must-be-1-to-9 = must be 1 to 9
 word-score-problem-must-be-more-than-0 = must be more than 0
 word-score-problem-low-is-above-high = low is above high
 word-score-problem-must-not-exceed-100 = must not exceed 100
+error-model-link-cycle = course { $course } links { $a } and { $b }, which closes a loop; links must form chains
+word-score-problem-must-be-below-the-good-pace = must be below the good pace

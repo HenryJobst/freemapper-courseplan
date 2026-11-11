@@ -1309,3 +1309,5 @@ word-score-problem-must-be-1-to-9 = muss 1 bis 9 sein
 word-score-problem-must-be-more-than-0 = muss größer als 0 sein
 word-score-problem-low-is-above-high = der untere Wert liegt über dem oberen
 word-score-problem-must-not-exceed-100 = darf 100 nicht überschreiten
+error-model-link-cycle = Bahn { $course } verbindet { $a } und { $b } und schließt damit einen Kreis; Verbindungen müssen Ketten bilden
+word-score-problem-must-be-below-the-good-pace = muss unter der Pace des guten Läufers liegen

@@ -415,3 +415,72 @@ fn settings_out_of_range_are_refused() {
         );
     }
 }
+
+#[test]
+fn links_sharing_a_control_without_branching_pass() {
+    let ok = event(&score("links = [{ a = 31, b = 32 }, { a = 32, b = 33 }]"));
+    assert_eq!(validate(&ok), vec![]);
+}
+
+#[test]
+fn link_to_a_control_of_another_course_is_refused() {
+    // 31 and 32 exist in the project; 35 exists but is not in course S.
+    let extra = format!(
+        "\n[[controls]]\ncode = 35\nmap_mm = [40.0, 30.0]\n{}",
+        score("links = [{ a = 31, b = 35 }]")
+    );
+    assert_eq!(
+        validate(&event(&extra)),
+        vec![ModelError::LinkToUnknownControl {
+            course: "S".into(),
+            a: code("31"),
+            b: code("35"),
+            code: code("35"),
+        }]
+    );
+}
+
+#[test]
+fn both_codes_unknown_gives_one_error() {
+    let errors = validate(&event(&score("links = [{ a = 90, b = 91 }]")));
+    assert_eq!(errors.len(), 1, "{errors:?}");
+}
+
+#[test]
+fn a_closed_loop_of_links_is_refused() {
+    let errors = validate(&event(&score(
+        "links = [{ a = 31, b = 32 }, { a = 32, b = 33 }, { a = 33, b = 31 }]",
+    )));
+    assert_eq!(
+        errors,
+        vec![ModelError::LinkCycle {
+            course: "S".into(),
+            a: code("33"),
+            b: code("31"),
+        }]
+    );
+}
+
+#[test]
+fn very_good_pace_must_be_below_the_good_pace() {
+    for settings in [
+        "good_pace_s_per_km = 200",
+        "very_good_pace_s_per_km = 250",
+        "good_pace_s_per_km = 240\nvery_good_pace_s_per_km = 240",
+    ] {
+        let errors = validate(&event(&format!("\n[score]\n{settings}\n")));
+        assert!(
+            matches!(
+                errors.as_slice(),
+                [ModelError::ScoreSettingOutOfRange {
+                    what: "very_good_pace_s_per_km",
+                    ..
+                }]
+            ),
+            "{settings}: {errors:?}"
+        );
+    }
+    // A very good band that starts below the good band's top is fine.
+    let ok = "\n[score]\ngood_band_percent = [87, 93]\nvery_good_band_percent = [90, 100]\n";
+    assert_eq!(validate(&event(ok)), vec![]);
+}
