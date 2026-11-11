@@ -1,21 +1,37 @@
 # Speed classes of the cost surface (ADR 0061), keyed by ISSprOM symbol code.
 # A code matches itself and its sub-codes (505 matches 505.1, not 5051); the longest matching code wins.
 #
-# kind = "block"   impassable; the cell cannot be entered (not for the crossings below)
-# kind = "cross"   crossing over a blocked cell (bridge, crossing point): the cell is passable again
-# kind = "ground"  ground cover; the slowest cover on a cell wins
+# kind = "block"   impassable line or area (walls, fences, out-of-bounds); a crossing point on a line opens it
+# kind = "solid"   impassable whatever its geometry (cliffs, water, buildings, closed areas); only a bridge opens it
+# kind = "cross"   crossing point (519, 710): opens a cell blocked by a line, never a solid one
+# kind = "bridge"  bridge: opens every blocked cell under it
+# kind = "ground"  ground cover; the slowest cover on a cell wins. A paved or path cell replaces it.
 # kind = "fast"    surface that replaces the ground cover (paths, roads, paved areas); the fastest wins
 # factor           time per metre relative to level open ground (1.0 = the runner's pace)
 #
 # Anything not listed (and no map object at all) counts as level open ground, factor 1.0.
 
 [[class]]
+kind = "solid"
+codes = ["201", "301", "307", "410", "520", "521", "709", "714"]
+
+[[class]]
 kind = "block"
-codes = ["201", "301", "307", "410", "515", "518", "520", "521", "529", "708", "709", "714"]
+codes = ["515", "518", "529", "708"]
 
 [[class]]
 kind = "cross"
-codes = ["512", "519", "710"]
+codes = ["519", "710"]
+
+[[class]]
+kind = "bridge"
+codes = ["512", "512.1"]
+
+# Underpass or tunnel: the runner stays on the ground above, so it changes nothing.
+[[class]]
+kind = "ground"
+factor = 1.0
+codes = ["512.2"]
 
 [[class]]
 kind = "fast"
@@ -32,15 +48,16 @@ kind = "fast"
 factor = 0.90
 codes = ["506", "507", "508"]
 
+# Stairs are ground, not fast: a faster surface must not hide them. On paved ground the paved factor wins.
 [[class]]
-kind = "fast"
+kind = "ground"
 factor = 1.25
 codes = ["532"]
 
 [[class]]
 kind = "ground"
 factor = 1.1
-codes = ["402"]
+codes = ["402", "306"]
 
 [[class]]
 kind = "ground"
@@ -50,7 +67,7 @@ codes = ["213", "407", "413", "210"]
 [[class]]
 kind = "ground"
 factor = 1.5
-codes = ["403", "404", "412", "113"]
+codes = ["403", "404", "412", "113", "305"]
 
 [[class]]
 kind = "ground"

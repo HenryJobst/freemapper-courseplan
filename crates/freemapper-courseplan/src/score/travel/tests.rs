@@ -40,6 +40,25 @@ fn field(more: Vec<MapFeature>) -> MapIndex {
     MapIndex::from_features(features)
 }
 
+/// The field inside a closed wall frame, so nothing can walk around the ends of a divider.
+fn framed(more: Vec<MapFeature>) -> MapIndex {
+    let mut features = vec![
+        rect("401", 0.0, 0.0, 200.0, 200.0),
+        line(
+            "515",
+            &[
+                (-10.0, -10.0),
+                (210.0, -10.0),
+                (210.0, 210.0),
+                (-10.0, 210.0),
+                (-10.0, -10.0),
+            ],
+        ),
+    ];
+    features.extend(more);
+    MapIndex::from_features(features)
+}
+
 fn surface(index: &MapIndex, blocked: &[Vec<MapPoint>]) -> CostSurface {
     CostSurface::build(index, SCALE, blocked, PACE, &RouteParams::default()).unwrap()
 }
@@ -217,8 +236,174 @@ fn an_empty_map_and_bad_settings_are_errors() {
 fn a_point_inside_a_building_snaps_to_the_edge() {
     let index = field(vec![rect("521", 85.0, 85.0, 115.0, 115.0)]);
     let s = surface(&index, &[]);
-    // Two metres inside the wall: still found, by the nearest free cell.
-    assert!(s.legs(p(87.0, 100.0), p(180.0, 100.0)).is_ok());
+    // On the outline the point snaps to a free neighbour cell; two metres inside it cannot
+    // leave without crossing the wall.
+    assert!(s.legs(p(85.2, 100.0), p(180.0, 100.0)).is_ok());
+    assert!(matches!(
+        s.legs(p(95.0, 100.0), p(180.0, 100.0)),
+        Err(ScoreError::Unreachable { .. })
+    ));
+}
+
+#[test]
+fn short_leg_with_a_building_gives_two_routes() {
+    let params = RouteParams::default();
+    // 50 m leg, 15 m building in the middle.
+    let index = field(vec![rect("521", 77.0, 92.0, 92.0, 107.0)]);
+    let routes = surface(&index, &[])
+        .legs(p(60.0, 100.0), p(110.0, 100.0))
+        .unwrap()
+        .routes;
+    assert_eq!(routes.len(), 2, "{routes:?}");
+    assert!(routes[1].length_m <= routes[0].length_m * params.max_length_ratio);
+    // 30 m leg, 10 m building.
+    let index = field(vec![rect("521", 90.0, 95.0, 100.0, 105.0)]);
+    let routes = surface(&index, &[])
+        .legs(p(75.0, 100.0), p(105.0, 100.0))
+        .unwrap()
+        .routes;
+    assert_eq!(routes.len(), 2, "{routes:?}");
+    assert!(routes[1].length_m <= routes[0].length_m * params.max_length_ratio);
+}
+
+#[test]
+fn max_routes_and_length_ratio_limit_the_alternatives() {
+    // The building is off centre: the route below it is a little longer than the one above.
+    let index = field(vec![rect("521", 85.0, 80.0, 115.0, 130.0)]);
+    let count = |params: RouteParams| {
+        let s = CostSurface::build(&index, SCALE, &[], PACE, &params).unwrap();
+        s.legs(p(20.0, 100.0), p(180.0, 100.0))
+            .unwrap()
+            .routes
+            .len()
+    };
+    let default = RouteParams::default();
+    assert!(count(default.clone()) >= 2);
+    assert_eq!(
+        count(RouteParams {
+            max_routes: 1,
+            ..default.clone()
+        }),
+        1
+    );
+    assert_eq!(
+        count(RouteParams {
+            max_routes: 2,
+            ..default.clone()
+        }),
+        2
+    );
+    assert_eq!(
+        count(RouteParams {
+            max_length_ratio: 1.0,
+            ..default
+        }),
+        1
+    );
+}
+
+#[test]
+fn crossing_points_open_walls_but_not_buildings() {
+    let (a, b) = (p(20.0, 100.0), p(180.0, 100.0));
+    let wall = line("515", &[(100.0, -10.0), (100.0, 210.0)]);
+    let closed = surface(&framed(vec![wall.clone()]), &[]);
+    assert!(matches!(
+        closed.legs(a.clone(), b.clone()),
+        Err(ScoreError::Unreachable { .. })
+    ));
+    let gate = feature("519", FeatureGeometry::Point(p(100.0, 100.0)));
+    let open = surface(&framed(vec![wall, gate.clone()]), &[]);
+    let routes = open.legs(a.clone(), b.clone()).unwrap().routes;
+    assert!((routes[0].length_m - 160.0).abs() < 4.0, "{routes:?}");
+    // A building is solid: a crossing point on its outline does not open it.
+    let house = rect("521", 95.0, -10.0, 105.0, 210.0);
+    let solid = surface(&framed(vec![house, gate]), &[]);
+    assert!(!solid.passable(p(100.0, 100.0)));
+    assert!(matches!(
+        solid.legs(a, b),
+        Err(ScoreError::Unreachable { .. })
+    ));
+}
+
+#[test]
+fn a_bridge_crosses_water() {
+    let (a, b) = (p(20.0, 100.0), p(180.0, 100.0));
+    let river = rect("301", 90.0, -10.0, 110.0, 210.0);
+    let wet = surface(&framed(vec![river.clone()]), &[]);
+    assert!(matches!(
+        wet.legs(a.clone(), b.clone()),
+        Err(ScoreError::Unreachable { .. })
+    ));
+    let bridge = line("512", &[(85.0, 100.0), (115.0, 100.0)]);
+    let dry = surface(&framed(vec![river, bridge]), &[]);
+    assert!(dry.passable(p(100.0, 100.0)));
+    assert!(dry.legs(a, b).is_ok());
+}
+
+#[test]
+fn a_blocked_destination_is_unreachable() {
+    let s = surface(&field(vec![rect("521", 100.0, 100.0, 140.0, 140.0)]), &[]);
+    assert!(matches!(
+        s.legs(p(20.0, 20.0), p(120.0, 120.0)),
+        Err(ScoreError::Unreachable { .. })
+    ));
+}
+
+#[test]
+fn a_start_on_a_thin_wall_snaps_to_a_free_cell() {
+    let wall = line("515", &[(100.0, 0.0), (100.0, 200.0)]);
+    let gate = feature("519", FeatureGeometry::Point(p(100.0, 190.0)));
+    let s = surface(&field(vec![wall, gate]), &[]);
+    let from = p(100.2, 100.0);
+    assert!(!s.passable(from.clone()));
+    let routes = s.legs(from.clone(), p(60.0, 100.0)).unwrap().routes;
+    assert_eq!(routes[0].points[0], from);
+}
+
+#[test]
+fn absurd_extents_are_refused_without_a_panic() {
+    let index = field(vec![]);
+    let build = |ring: Vec<MapPoint>| {
+        CostSurface::build(&index, SCALE, &[ring], PACE, &RouteParams::default()).err()
+    };
+    let far = build(vec![p(0.0, 0.0), p(1e12, 0.0), p(1e12, 1.0)]);
+    assert!(
+        matches!(far, Some(ScoreError::GridTooLarge { .. })),
+        "{far:?}"
+    );
+    for bad in [f64::NAN, f64::INFINITY] {
+        let err = build(vec![p(bad, 0.0), p(1.0, 1.0), p(2.0, 2.0)]);
+        assert!(
+            matches!(
+                err,
+                Some(ScoreError::BadRouteSetting {
+                    name: "blocked",
+                    ..
+                })
+            ),
+            "{bad}"
+        );
+    }
+    let fine = RouteParams {
+        cell_m: 0.001,
+        ..RouteParams::default()
+    };
+    assert!(matches!(
+        CostSurface::build(&index, SCALE, &[], PACE, &fine),
+        Err(ScoreError::GridTooLarge { .. })
+    ));
+}
+
+#[test]
+fn speeds_table_has_no_duplicate_codes_and_sane_factors() {
+    let table = raster::Table::embedded();
+    let mut seen = std::collections::HashSet::new();
+    for (code, kind) in &table.0 {
+        assert!(seen.insert(code.clone()), "{code} is in two classes");
+        if let raster::Kind::Ground(f) | raster::Kind::Fast(f) = kind {
+            assert!((0.5..=4.0).contains(f), "{code}: {f}");
+        }
+    }
 }
 
 /// Prints the build time on the Lübeck example map (ADR 0061). Run with `--ignored --nocapture`.

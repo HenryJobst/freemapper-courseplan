@@ -6,8 +6,10 @@ use std::collections::BinaryHeap;
 use super::RouteParams;
 use super::raster::Grid;
 
-/// Two routes within this distance count as one route (ADR 0061), in metres on the ground.
-pub(super) const CORRIDOR_M: f64 = 10.0;
+/// Largest corridor, in metres on the ground (ADR 0061). The corridor is 12 percent of the best
+/// route, at least two cells.
+const CORRIDOR_MAX_M: f64 = 10.0;
+const CORRIDOR_SHARE: f64 = 0.12;
 /// Extra cost factor inside the corridor of a route already found.
 const PENALTY: f32 = 2.0;
 /// A candidate is searched at most this many times per wanted route.
@@ -189,7 +191,10 @@ impl<'g> Searcher<'g> {
             return Some(found);
         }
         let n = self.grid.factor.len();
-        let w = (CORRIDOR_M / self.cell_m).ceil().max(1.0) as i64;
+        let corridor_m = (CORRIDOR_SHARE * self.length_m(&found[0]))
+            .min(CORRIDOR_MAX_M)
+            .max(2.0 * self.cell_m);
+        let w = (corridor_m / self.cell_m).ceil() as i64;
         let mut pen = vec![1.0f32; n];
         let mut stamp = Marks {
             stamp: vec![0; n],
@@ -204,12 +209,11 @@ impl<'g> Searcher<'g> {
             let Some(candidate) = self.shortest(s, t, Some(&pen)) else {
                 break;
             };
-            if self.length_m(&candidate) > limit {
-                break;
-            }
-            let distinct = found.iter().all(|accepted| {
-                self.is_distinct(&mut stamp, accepted, &candidate, w, params.max_overlap)
-            });
+            // A candidate that is too long is dropped, but its penalty makes room for the next one.
+            let distinct = self.length_m(&candidate) <= limit
+                && found.iter().all(|accepted| {
+                    self.is_distinct(&mut stamp, accepted, &candidate, w, params.max_overlap)
+                });
             if distinct {
                 found.push(candidate.clone());
             }
@@ -240,7 +244,8 @@ impl<'g> Searcher<'g> {
     }
 
     /// A candidate is distinct from an accepted route when at most `max_overlap` of its cells lie
-    /// within the corridor of that route and some cell lies beyond twice the corridor.
+    /// within `w` cells of that route, not counting the cells within `w` cells of the start and the
+    /// end (every route shares those), and some cell lies beyond `2 * w` cells from it.
     fn is_distinct(
         &self,
         marks: &mut Marks,
@@ -254,11 +259,21 @@ impl<'g> Searcher<'g> {
         for &cell in accepted {
             self.cells_within(cell, w, |c| marks.stamp[c] = near);
         }
-        let shared = candidate
-            .iter()
-            .filter(|&&c| marks.stamp[c] == near)
-            .count();
-        if shared as f64 / candidate.len() as f64 > max_overlap {
+        let width = self.grid.width as i64;
+        let (first, last) = (candidate[0] as i64, candidate[candidate.len() - 1] as i64);
+        let close = |a: i64, b: i64| {
+            let (dx, dy) = (a % width - b % width, a / width - b / width);
+            dx * dx + dy * dy <= w * w
+        };
+        let (mut counted, mut shared) = (0usize, 0usize);
+        for &c in candidate {
+            if close(c as i64, first) || close(c as i64, last) {
+                continue;
+            }
+            counted += 1;
+            shared += usize::from(marks.stamp[c] == near);
+        }
+        if counted > 0 && shared as f64 / counted as f64 > max_overlap {
             return false;
         }
         marks.now += 1;

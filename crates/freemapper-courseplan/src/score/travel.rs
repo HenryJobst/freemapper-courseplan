@@ -61,7 +61,9 @@ pub struct LegRoutes {
 pub trait TravelTime {
     /// The fastest route and clearly different alternatives from `from` to `to`.
     fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError>;
-    /// Whether a runner can stand at `p`.
+    /// Whether a runner can stand at `p`: inside the raster and not in a blocked cell. `legs`
+    /// is more forgiving: an end point in a blocked cell moves to a free cell within three cells
+    /// that a straight line over free cells reaches, and fails with `Unreachable` if there is none.
     fn passable(&self, p: MapPoint) -> bool;
 }
 
@@ -112,7 +114,8 @@ impl CostSurface {
         mm * f64::from(self.scale) / 1000.0
     }
 
-    /// The passable cell for `p`: its own, or the nearest passable one within `SNAP_CELLS`.
+    /// The passable cell for `p`: its own, or the nearest free one within `SNAP_CELLS` that a
+    /// straight line reaches over free cells only, so a point never snaps across a wall.
     fn cell_for(&self, p: &MapPoint) -> Option<usize> {
         let cell = self.grid.cell_of(p)?;
         if self.grid.factor[cell].is_finite() {
@@ -130,12 +133,29 @@ impl CostSurface {
                 let idx = (r * w + c) as usize;
                 let d = dx * dx + dy * dy;
                 // Nearest first; equal distance falls to the lower cell index.
-                if self.grid.factor[idx].is_finite() && best.is_none_or(|b| (d, idx) < b) {
+                if self.grid.factor[idx].is_finite()
+                    && best.is_none_or(|b| (d, idx) < b)
+                    && self.free_line(col, row, c, r)
+                {
                     best = Some((d, idx));
                 }
             }
         }
         best.map(|(_, idx)| idx)
+    }
+
+    /// Whether the cells strictly between two cells on the straight line are all free.
+    fn free_line(&self, c0: i64, r0: i64, c1: i64, r1: i64) -> bool {
+        let steps = (c1 - c0).abs().max((r1 - r0).abs()) * 2;
+        (1..steps).all(|k| {
+            let t = k as f64 / steps as f64;
+            let c = (c0 as f64 + (c1 - c0) as f64 * t).round() as i64;
+            let r = (r0 as f64 + (r1 - r0) as f64 * t).round() as i64;
+            let same = |cc, rr| (c, r) == (cc, rr);
+            same(c0, r0)
+                || same(c1, r1)
+                || self.grid.factor[(r * self.grid.width as i64 + c) as usize].is_finite()
+        })
     }
 
     fn route(

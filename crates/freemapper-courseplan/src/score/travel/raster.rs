@@ -12,18 +12,24 @@ use crate::score::ScoreError;
 pub(super) const MAX_CELLS: u64 = 16_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum Kind {
+pub(super) enum Kind {
+    /// Impassable; a crossing point on a line of it opens the cell.
     Block,
+    /// Impassable whatever its geometry; nothing but a bridge opens it.
+    Solid,
+    /// A crossing point: opens cells blocked by a line, never a building or water area.
     Cross,
+    /// A bridge: opens every blocked cell under it.
+    Bridge,
     Ground(f32),
     Fast(f32),
 }
 
 /// The speed classes of `speeds.toml`: symbol code, kind. Parsed once per build.
-struct Table(Vec<(String, Kind)>);
+pub(super) struct Table(pub(super) Vec<(String, Kind)>);
 
 impl Table {
-    fn embedded() -> Table {
+    pub(super) fn embedded() -> Table {
         let doc: toml::Table = include_str!("../speeds.toml")
             .parse()
             .expect("speeds.toml is valid TOML");
@@ -35,7 +41,9 @@ impl Table {
                 .unwrap_or(1.0) as f32;
             let kind = match class["kind"].as_str().expect("class has a kind") {
                 "block" => Kind::Block,
+                "solid" => Kind::Solid,
                 "cross" => Kind::Cross,
+                "bridge" => Kind::Bridge,
                 "ground" => Kind::Ground(factor),
                 "fast" => Kind::Fast(factor),
                 other => panic!("speeds.toml: unknown kind {other}"),
@@ -69,8 +77,10 @@ pub(super) struct Grid {
 struct Layers {
     ground: Vec<f32>,
     fast: Vec<f32>,
-    block: Vec<bool>,
+    block_area: Vec<bool>,
+    block_line: Vec<bool>,
     cross: Vec<bool>,
+    bridge: Vec<bool>,
 }
 
 impl Grid {
@@ -82,6 +92,12 @@ impl Grid {
     ) -> Result<Grid, ScoreError> {
         let (mut lo, mut hi) = index.extent().ok_or(ScoreError::MapEmpty)?;
         for p in blocked.iter().flatten() {
+            if !(p.x.is_finite() && p.y.is_finite()) {
+                return Err(ScoreError::BadRouteSetting {
+                    name: "blocked",
+                    value: f64::NAN,
+                });
+            }
             lo = MapPoint {
                 x: lo.x.min(p.x),
                 y: lo.y.min(p.y),
@@ -94,11 +110,13 @@ impl Grid {
         let cell_mm = cell_m * 1000.0 / f64::from(scale);
         let margin = 2.0 * cell_mm;
         let origin = (lo.x - margin, lo.y - margin);
-        let width = ((hi.x + margin - origin.0) / cell_mm).ceil() as u64 + 1;
-        let height = ((hi.y + margin - origin.1) / cell_mm).ceil() as u64 + 1;
-        if width * height > MAX_CELLS {
+        let width = ((hi.x + margin - origin.0) / cell_mm).ceil() + 1.0;
+        let height = ((hi.y + margin - origin.1) / cell_mm).ceil() + 1.0;
+        let cells = width * height;
+        // NaN and infinity from absurd coordinates are refused too.
+        if cells.is_nan() || cells > MAX_CELLS as f64 {
             return Err(ScoreError::GridTooLarge {
-                cells: width * height,
+                cells: cells as u64,
                 limit: MAX_CELLS,
             });
         }
@@ -114,8 +132,10 @@ impl Grid {
         let mut layers = Layers {
             ground: vec![1.0; n],
             fast: vec![f32::INFINITY; n],
-            block: vec![false; n],
+            block_area: vec![false; n],
+            block_line: vec![false; n],
             cross: vec![false; n],
+            bridge: vec![false; n],
         };
         let table = Table::embedded();
         let mut cache: HashMap<&str, Option<Kind>> = HashMap::new();
@@ -135,11 +155,12 @@ impl Grid {
             } else {
                 FeatureGeometry::Area(vec![ring.clone()])
             };
-            grid.paint(&mut layers, &geometry, Kind::Block);
+            grid.paint(&mut layers, &geometry, Kind::Solid);
         }
         grid.factor = (0..n)
             .map(|i| {
-                if layers.block[i] && !layers.cross[i] {
+                let blocked = layers.block_area[i] || (layers.block_line[i] && !layers.cross[i]);
+                if blocked && !layers.bridge[i] {
                     f32::INFINITY
                 } else if layers.fast[i].is_finite() {
                     layers.fast[i]
@@ -168,10 +189,12 @@ impl Grid {
         }
     }
 
-    fn mark(&self, layers: &mut Layers, cell: usize, kind: Kind) {
+    fn mark(&self, layers: &mut Layers, cell: usize, kind: Kind, line: bool) {
         match kind {
-            Kind::Block => layers.block[cell] = true,
+            Kind::Block if line => layers.block_line[cell] = true,
+            Kind::Block | Kind::Solid => layers.block_area[cell] = true,
             Kind::Cross => layers.cross[cell] = true,
+            Kind::Bridge => layers.bridge[cell] = true,
             Kind::Ground(f) => layers.ground[cell] = layers.ground[cell].max(f),
             Kind::Fast(f) => layers.fast[cell] = layers.fast[cell].min(f),
         }
@@ -181,18 +204,18 @@ impl Grid {
         match geometry {
             FeatureGeometry::Point(p) => {
                 if let Some(cell) = self.cell_of(p) {
-                    self.mark(layers, cell, kind);
+                    self.mark(layers, cell, kind, false);
                 }
             }
-            FeatureGeometry::Line(points) => self.paint_line(layers, points, kind),
+            FeatureGeometry::Line(points) => self.paint_line(layers, points, kind, true),
             FeatureGeometry::Area(rings) => {
                 self.fill(layers, rings, kind);
-                if kind == Kind::Block || kind == Kind::Cross {
+                if matches!(kind, Kind::Block | Kind::Solid) {
                     // A narrow wall or building must not vanish between cell centres.
                     for ring in rings {
                         let mut closed = ring.clone();
                         closed.extend(ring.first().cloned());
-                        self.paint_line(layers, &closed, kind);
+                        self.paint_line(layers, &closed, kind, false);
                     }
                 }
             }
@@ -200,11 +223,11 @@ impl Grid {
     }
 
     /// Marks every cell a polyline touches, sampled at half a cell.
-    fn paint_line(&self, layers: &mut Layers, points: &[MapPoint], kind: Kind) {
+    fn paint_line(&self, layers: &mut Layers, points: &[MapPoint], kind: Kind, line: bool) {
         if let [only] = points
             && let Some(cell) = self.cell_of(only)
         {
-            self.mark(layers, cell, kind);
+            self.mark(layers, cell, kind, line);
         }
         for pair in points.windows(2) {
             let (a, b) = (&pair[0], &pair[1]);
@@ -218,7 +241,7 @@ impl Grid {
                     y: a.y + (b.y - a.y) * t,
                 };
                 if let Some(cell) = self.cell_of(&p) {
-                    self.mark(layers, cell, kind);
+                    self.mark(layers, cell, kind, line);
                 }
             }
         }
@@ -256,7 +279,7 @@ impl Grid {
                 let from = col_of(*x0).max(0.0) as usize;
                 let to = col_of(*x1).min(self.width as f64) as usize;
                 for col in from..to {
-                    self.mark(layers, row * self.width + col, kind);
+                    self.mark(layers, row * self.width + col, kind, false);
                 }
             }
         }
