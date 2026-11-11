@@ -157,12 +157,14 @@ ist nach 97,6 Prozent des Limits im Ziel. Das Beispiel nimmt 15 Minuten, und ein
 (`luebeck_score_example_meets_its_bands_and_check_is_quiet`) hält es dort. Das ist eine kurze Bahn mit 9 Posten; eine
 längere braucht mehr Codes, als der Standardbereich hergibt.
 
-**Seit ADR 0072 verfehlt ein neuer Entwurf die Bänder.** Die Einstellungen halten Posten jetzt 100 m auseinander
-(150 m von Start und Ziel, 200 m zwischen hochwertigen). Auf dieser Karte, etwa 1 km mal 0,8 km, bleiben 25 Stellen.
-Ein neuer Lauf mit 15 Minuten gibt dem guten Läufer 94,7 Prozent der Punkte (Band 87 bis 93). Bei 30 und bei 45
-Minuten reicht die Menge nicht: Der gute Läufer holt alle Punkte, und der sehr gute Läufer ist nach 69 und nach 46
-Prozent des Limits im Ziel. Das nächste Limit, das beide Bänder trifft, sind 13 Minuten mit 4 Posten. Die Score-Bahn
-in der Projektdatei ist der frühere Entwurf. Sie hält alle neuen Abstände ein, und `check` bleibt still.
+**Seit ADR 0072 verfehlt ein neuer Entwurf bei 15 Minuten die Bänder.** Die Einstellungen halten Posten jetzt 100 m
+auseinander (150 m von Start und Ziel, 200 m zwischen hochwertigen). Mit dem breiteren Kandidatenvorrat aus ADR 0073
+liefert diese Karte, etwa 1 km mal 0,8 km, 31 Stellen (vorher 19; überwiegend Gebäude, und etwa die Hälfte der
+Versuche scheitert in Innenhöfen). Ein neuer Lauf mit 15 Minuten gibt dem guten Läufer 93,5 Prozent der Punkte, einen
+halben Punkt über dem Band von 87 bis 93. Die Limits 11 und 14 Minuten treffen beide Bänder (6 Posten mit 16 Punkten,
+9 mit 25). Bei 30 und 45 Minuten reicht die Menge weiter nicht: Der Entwurf endet bei 20 bis 22 Posten, der gute Läufer
+holt alle Punkte, und der sehr gute Läufer ist nach 78 und nach 52 Prozent des Limits im Ziel. Die Score-Bahn in der
+Projektdatei ist der frühere Entwurf mit 15 Minuten. Sie hält alle neuen Abstände ein, und `check` bleibt still.
 
 `check` meldet für dieses Projekt keinen Fehler und eine Warnung, die die Projektdatei mit Begründung akzeptiert:
 

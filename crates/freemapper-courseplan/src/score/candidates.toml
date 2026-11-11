@@ -1,34 +1,116 @@
-# Candidate control sites (ADR 0062), keyed by ISSprOM symbol code. A code matches itself and its sub-codes
-# (521 matches 521.3, not 5213).
+# Candidate control sites (ADR 0062, widened by ADR 0073), keyed by ISSprOM symbol code. A code matches itself
+# and its sub-codes (521 matches 521.3, not 5213; 501.1 does not match 501.16).
 #
-# kind = "point"   a point symbol is a site at its position
-# kind = "corner"  the corner vertices of a line or area outline (turn of at least 45 degrees) are sites
-# clarity          how clearly a runner recognises the feature, 0.0 to 1.0; feature unclarity is 1 - clarity
+# kind = "point"     a point symbol is a site at its position
+# kind = "corner"    the vertices of a line or area outline that turn by 45 degrees or more are sites
+# kind = "end"       the free ends of an open line: no other line of the end and junction codes touches them
+# kind = "junction"  a line end that meets another such line: a fork, or a branch onto a path. Crossings are
+#                    left out (bridges and tunnels make them ambiguous), and so is a path cut in two
+# clarity            how clearly a runner recognises the feature, 0.0 to 1.0; feature unclarity is 1 - clarity.
+#                    Fixed and distinct things are high; things that move, grow or are only a change of
+#                    surface are low. Low is never excluded: the setter sees the clarity in the difficulty.
 #
 # freemapper-core has no object class for "clear control site", so the list is ours. ISSprOM has no bench
-# symbol; benches and the like show up as 530 or 531 (prominent man-made feature).
+# symbol, no lamp, bollard or hydrant; they show up as 530 or 531 (prominent man-made feature).
 
+# --- Points -------------------------------------------------------------------------------------------------
+
+# Fixed, distinct objects.
 [[class]]
 kind = "point"
 clarity = 0.9
-codes = ["311", "526", "524", "525", "522.1", "530", "531"]
+codes = ["311", "526", "524", "525", "522.1", "530", "531", "521.1"]
 
+# Distinct, but a boulder or a spring is harder to tell from its neighbours; a prominent water feature or
+# landform is named on the map because it stands out.
 [[class]]
 kind = "point"
 clarity = 0.8
-codes = ["204", "205", "206", "312", "417", "527"]
+codes = ["204", "205", "206", "312", "313", "115", "417", "527", "519", "201.1", "201.8", "201.9"]
+
+# Small cliffs and rock faces, waterholes, small landforms, bushes: real, but small or hard to tell apart.
+[[class]]
+kind = "point"
+clarity = 0.7
+codes = ["202.2", "202.8", "202.9", "303"]
 
 [[class]]
 kind = "point"
 clarity = 0.6
 codes = ["109", "110", "111", "112", "203", "207", "418", "419"]
 
+# --- Corners of outlines ------------------------------------------------------------------------------------
+
+# Buildings, canopies, walls, fences: sharp and fixed. 522 is the canopy symbol as a whole, 522.3 and 522.4 its
+# parts.
 [[class]]
 kind = "corner"
 clarity = 0.9
-codes = ["521", "522.3", "522.4"]
+codes = ["521", "522"]
 
 [[class]]
 kind = "corner"
 clarity = 0.8
-codes = ["515", "518", "513", "516", "532", "501.1"]
+codes = [
+    "515", "518", "513", "516", "532", "501.1",
+    # Gigantic boulder, impassable and passable cliffs, earth banks.
+    "206", "201", "202", "104",
+]
+
+# Water and its bank: the edge is clear, a pond corner can move with the season.
+[[class]]
+kind = "corner"
+clarity = 0.7
+codes = ["301", "302", "529", "528", "105"]
+
+# Hedges and thick vegetation, gullies, prominent line features: the corner is real but the edge is soft.
+[[class]]
+kind = "corner"
+clarity = 0.6
+codes = ["410", "107", "108"]
+
+# Sharp bends of paths and the edge of paved ground: the surface changes, nothing stands there.
+[[class]]
+kind = "corner"
+clarity = 0.5
+codes = [
+    "501.5", "501.11", "501.2", "501.3",
+    "501.6", "501.7", "501.8", "501.9", "501.16", "501.17", "501.18", "501.19",
+    "505", "506", "507", "508",
+    "415", "416",
+]
+
+# --- Ends of open lines -------------------------------------------------------------------------------------
+
+# A wall, a bridge, a tunnel or a stairway ends in a place a runner knows at once.
+[[class]]
+kind = "end"
+clarity = 0.8
+codes = ["515", "518", "513", "532", "512", "529", "201", "202"]
+
+# A fence ends clearly, a hedge or a step line less so.
+[[class]]
+kind = "end"
+clarity = 0.7
+codes = ["516", "410.1", "501.1", "528", "104", "105"]
+
+# The end of a path: it stops, but the way on may be a worn patch.
+[[class]]
+kind = "end"
+clarity = 0.6
+codes = [
+    "501.6", "501.7", "501.8", "501.9", "501.16", "501.17", "501.18", "501.19",
+    "505", "506", "507", "508",
+]
+
+# --- Junctions of paths ---------------------------------------------------------------------------------------
+
+# Where one path ends on another or three meet. Often too alike in a net of paths; therefore low, so the
+# difficulty is up and the picker prefers other sites when it has them.
+[[class]]
+kind = "junction"
+clarity = 0.6
+codes = [
+    "501.6", "501.7", "501.8", "501.9", "501.16", "501.17", "501.18", "501.19",
+    "505", "506", "507", "508",
+]
