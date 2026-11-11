@@ -110,10 +110,11 @@ dort an.
 
 ## 4. Der Editor (Vorschau)
 
-Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und Kategorien anlegen und jeden
-Schritt zurücknehmen. Knicke, Nummern und Sonderobjekte änderst du auch im Editor. Postenbeschreibungen änderst du weiter mit der
-Kommandozeile oder dem KI-Assistenten; der Editor zeigt sie an. Die Menüpunkte zum Exportieren, Importieren und
-Abgleichen sind noch ausgegraut.
+Der Editor zeigt die Veranstaltung im Browser. Du kannst Posten setzen, verschieben und löschen, Bahnen und
+Kategorien anlegen, Strecken knicken und abflaggen, Postennummern setzen, Sonderobjekte zeichnen und jeden Schritt
+zurücknehmen. Postenbeschreibungen änderst du weiter mit der Kommandozeile oder dem KI-Assistenten; der Editor zeigt
+sie an. Der Bereich für Befunde ist leer, und die Menüpunkte zum Exportieren, Importieren und Abgleichen sind noch
+ausgegraut. Beides folgt in späteren Versionen.
 
 ### Starten
 
@@ -152,29 +153,22 @@ Die Karte ist in dieser Vorschau ein Platzhalter: ein Rahmen um die Kartenausdeh
 und ein Hinweistext. Kreise, Strecken und Nummern liegen an der richtigen Stelle der Karte, aber darunter ist noch
 kein Karteninhalt zu sehen. Den liefert später freemapper-render.
 
-### Posten setzen, verschieben und löschen
+### Posten
 
-Die Werkzeugleiste hat die Werkzeuge „Auswählen“ und „Posten setzen“. Jede Änderung wird sofort gespeichert, über
-dieselben Operationen wie in der Kommandozeile und beim KI-Assistenten; es gelten also dieselben Prüfungen. Lehnt das
-Programm eine Änderung ab, etwa eine Position außerhalb der Karte, bleibt die Datei, wie sie war, und eine Meldung
-nennt den Grund.
+Die Werkzeugleiste hat die Werkzeuge „Auswählen“, „Posten setzen“, „Querungsstelle setzen“ und „Sonderobjekt“. Jede
+Änderung wird sofort gespeichert, über dieselben Operationen wie in der Kommandozeile und beim KI-Assistenten; es
+gelten also dieselben Prüfungen. Lehnt das Programm eine Änderung ab, etwa eine Position außerhalb der Karte, bleibt
+die Datei, wie sie war, und eine Meldung nennt den Grund.
 
 - **Auswählen.** Mit dem Werkzeug „Auswählen“ klickst du einen Posten in der Karte oder im Baum an. Ein Klick wählt
   den Posten, dessen Mittelpunkt dem Mauszeiger am nächsten liegt, solange der Zeiger höchstens den Kreisradius plus
   die Linienbreite entfernt ist. Rechts zeigen die Eigenschaften ihn an.
-- **Setzen.** Wähle „Posten setzen“ und klicke auf die Karte. Der Editor legt an dieser Stelle einen Posten an. Den
-  Code des gewählten Postens änderst du im Feld „Kennzahl“ der Eigenschaften; die Bahnen und akzeptierten Befunde,
-  die den Posten nennen, ziehen mit. Dasselbe leistet `freemapper-courseplan control code halle.courseplan.toml 31
-  K7`. Der Editor lehnt einen Code ab, der leer ist, Leerzeichen am Anfang oder Ende hat, länger als 64 Zeichen
-  ist oder einem anderen Posten gehört. Namen und Notizen dürfen bis zu 200 Zeichen lang sein. Eine Bahn benennst du
-  um, indem du im Feld „Name“ ihrer Eigenschaften den Namen änderst, oder mit `freemapper-courseplan course rename
-  halle.courseplan.toml A Lang`.
+- **Setzen.** Wähle „Posten setzen“ und klicke auf die Karte. Der Editor legt an dieser Stelle einen Posten an.
 - **Querungsstelle setzen.** „Querungsstelle setzen“ arbeitet genauso, legt aber einen Posten der Art
   „Querungsstelle“ an. Er bekommt den nächsten freien Code, teilt die Nummerierung mit den übrigen Posten und steht im
   Baum mit „(Querungsstelle)“. Auf der Karte erscheint er als zwei Bögen ohne Kreis. Die Eigenschaften zeigen Code, Art
-  und Position, aber keine Postenbeschreibung, denn eine Querungsstelle hat keine. Zu einer Bahn hinzufügen kannst du
-  sie im Editor noch nicht; das geht weiter über die Kommandozeile oder den KI-Assistenten. Verschieben, Löschen und
-  Rückgängig gelten wie bei jedem Posten.
+  und Position, aber keine Postenbeschreibung, denn eine Querungsstelle hat keine. Zu einer Bahn fügst du sie im
+  Bahnmodus hinzu wie jeden Posten.
 - **Verschieben.** Ziehe einen Kreis, oder trage in den Eigenschaften neue Werte in die Felder X (mm) und Y (mm) ein.
   Du kannst Dezimalkomma oder Dezimalpunkt schreiben, `12,5` oder `12.5`. Alles andere markiert das Feld und zeigt
   einen Hinweis. Beim Ziehen bewegt sich nur der Kreis. Strecken und Nummern folgen, wenn du loslässt. Esc bricht das
@@ -182,43 +176,30 @@ nennt den Grund.
 - **Schieben.** Bei gewähltem Posten verschieben ihn die Pfeiltasten um 0,1 mm, mit Umschalt um 1 mm. Der Editor
   speichert einmal, wenn du die Taste loslässt; eine gehaltene Taste ergibt also nur einen Schritt zum
   Rückgängigmachen. Ohne Auswahl verschieben die Pfeiltasten die Ansicht.
+- **Code ändern.** Ändere das Feld „Kennzahl“ in den Eigenschaften. Die Bahnen und akzeptierten Befunde, die den
+  Posten nennen, ziehen mit. Der Editor lehnt einen Code ab, der leer ist, Leerzeichen am Anfang oder Ende hat, länger
+  als 64 Zeichen ist oder einem anderen Posten gehört. In der Kommandozeile geht dasselbe mit
+  `freemapper-courseplan control code halle.courseplan.toml 31 K7` (siehe „Code oder Namen in der Kommandozeile
+  ändern“ weiter unten).
 - **Löschen.** Drücke Entf oder Rücktaste, solange der Fokus auf der Karte oder im Baum liegt, oder nimm „Posten
-  löschen“ in den Eigenschaften. In einem Feld oder auf einer Schaltfläche tun die Tasten nichts. Einen Posten, den keine
-  Bahn besucht, löscht der Editor sofort; mit Rückgängig holst du ihn zurück. Besuchen Bahnen den Posten, listet ein
-  Dialog sie auf und fragt nach. Der Fokus liegt auf „Abbrechen“. „Löschen“ entfernt den Posten und nimmt ihn aus
+  löschen“ in den Eigenschaften. In einem Feld oder auf einer Schaltfläche tun die Tasten nichts. Einen Posten, den
+  keine Bahn besucht, löscht der Editor sofort; mit Rückgängig holst du ihn zurück. Besuchen Bahnen den Posten, listet
+  ein Dialog sie auf und fragt nach. Der Fokus liegt auf „Abbrechen“. „Löschen“ entfernt den Posten und nimmt ihn aus
   diesen Bahnen. Eine versehentliche Rücktaste löscht deshalb einen gewählten, unbenutzten Posten ohne Rückfrage;
   Rückgängig bringt ihn zurück.
 
-### Bahnen, Kategorien und Veranstaltung
+### Bahnen und Kategorien
 
 - **Neue Bahn.** Wähle unter „Bahnen“ im Baum „Neue Bahn...“ und tippe einen Namen. Die Bahn bekommt Start und Ziel der
   Veranstaltung. Hat die Veranstaltung nicht genau einen Start und ein Ziel, sagt der Editor das und legt nichts an.
-- **Bahnmodus.** Wähle eine Bahn und dann „Bahnmodus“. Die Posten, die die Bahn nicht besucht, erscheinen grau. Ein Klick
-  auf einen Posten hängt ihn vor dem Ziel an. Um einen Posten mitten in die Bahn einzufügen, klickst du zuerst die
-  Strecke, an die er gehört, und dann den Posten. Die gewählte Strecke wird dick und blau, und die Statusleiste nennt
-  sie. Esc verwirft die gewählte Strecke; ein zweites Esc verlässt den Bahnmodus.
-- **Knickpunkte und abgeflaggte Strecken.** Klicke mit dem Auswahlwerkzeug auf eine Strecke der Bahn, um sie zu
-  wählen. Ziehst du an ihrer Linie, entsteht dort ein Knickpunkt. Ziehst du einen Knickpunkt, verschiebt er sich, und
-  Entf löscht den gewählten Knickpunkt. Ein Klick auf einen Knickpunkt wählt ihn. Jede Geste ist ein Schritt für
-  Rückgängig, und die Bahnlänge in den Eigenschaften ändert sich mit. Das Feld „Abgeflaggt“ in den Eigenschaften der
-  Strecke markiert sie als abgeflaggte Strecke.
-- **Postennummern.** Im Bahnmodus ziehst du ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor
-  den Ort in Richtung und Abstand um und speichert beides für diese Bahn. Ist „für alle Bahnen“ angekreuzt, gilt die
-  Lage am Posten für jede Bahn, die ihn nutzt. „Nummern platzieren“ setzt die Nummern der Bahn automatisch und lässt
-  gesetzte Nummern stehen; mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle
-  Bahnen gesetzten bleiben. Ein Ziehen ist ein Schritt für Rückgängig. Hat die Bahn für die Nummer schon eine eigene Lage, geht sie der Lage am Posten vor; dann bleibt das Feld stehen, und die Statusleiste sagt es. Eine Warnung zu einem Abstand außerhalb des
-  Regelbereichs zeigt der Editor noch nicht; `check` meldet ihn.
-- **Sonderobjekte.** Wähle „Sonderobjekt“, dann eine Art (Start, Ziel, Erste-Hilfe-Posten, Wasserstelle, markierte
-  Strecke, verbotene Route, Sperrgebiet, Gefahrenfläche) und prüfe die Kennung in der Werkzeugleiste. Sie wird als
-  `<Art>-<n>` vorgeschlagen und lässt sich ändern. Start, Ziel, Erste-Hilfe-Posten und Wasserstelle setzt ein Klick.
-  Eine Linie oder Fläche zeichnest du durch Klicken ihrer Punkte und schließt sie mit Enter oder einem Doppelklick ab;
-  Esc bricht ab, Entf nimmt den letzten Punkt zurück, und eine gestrichelte Vorschau mit Punkten zeigt die Zeichnung.
-  Eine Fläche braucht drei Punkte, eine markierte Strecke zwei. Eine verbotene Route darf einen einzigen Punkt haben;
-  sie wird als Kreuz gezeichnet. Jedes Objekt ist ein Schritt für Rückgängig. In der Karte tragen die Arten zusätzlich
-  einen Buchstaben oder ein Zeichen: M markierte Strecke, Kreuz verbotene Route, OB Sperrgebiet, ! Gefahrenfläche,
-  Plus Erste Hilfe, W Wasser. In den Eigenschaften eines gewählten Objekts hakst du die Bahnen an, zu denen es gehört;
-  ohne Haken gehört es zu allen Bahnen (Start und Ziel haben keine Bahnliste). „Sonderobjekt löschen“ entfernt das
-  Objekt, Rückgängig holt es zurück. Der Editor kann ein Sonderobjekt nicht verschieben: Lösche es und zeichne es neu.
+  Einen Namen, den es schon gibt, der leer oder länger als 200 Zeichen ist, lehnt der Dialog ab.
+- **Bahn umbenennen.** Ändere das Feld „Name“ in den Eigenschaften der Bahn. Sonderobjekte und akzeptierte Befunde,
+  die die Bahn nennen, ziehen mit. In der Kommandozeile gilt `freemapper-courseplan course rename
+  halle.courseplan.toml A Lang`.
+- **Bahnmodus.** Wähle eine Bahn und dann „Bahnmodus“. Die Posten, die die Bahn nicht besucht, erscheinen grau. Ein
+  Klick auf einen Posten hängt ihn vor dem Ziel an. Um einen Posten mitten in die Bahn einzufügen, klickst du zuerst
+  die Strecke, an die er gehört, und dann den Posten. Die gewählte Strecke wird dick und blau, und die Statusleiste
+  nennt sie. Esc verwirft die gewählte Strecke; ein zweites Esc verlässt den Bahnmodus. Der Bahnmodus hat keine Taste.
 - **Posten der Bahn.** Die Eigenschaften einer Bahn listen ihre Posten. Mit „Nach oben“, „Nach unten“ und „Entfernen“
   änderst du die Reihenfolge. Liegt der Fokus auf einer Zeile, verschieben Alt+Pfeil hoch und Alt+Pfeil runter den
   Posten. Jede Änderung ist ein Schritt für Rückgängig und speichert die ganze Liste auf einmal. Läuft durch eine
@@ -232,6 +213,51 @@ nennt den Grund.
 - **Veranstaltung.** „Einstellungen“ unter „Veranstaltung“ im Baum zeigen die Disziplin, die du hier nicht ändern
   kannst, das Regelprofil mit seinen Overlays (durch Kommas getrennt) und das Startfenster in Minuten. Der Server
   prüft die Namen der Profile.
+
+### Strecken und Knicke
+
+Eine Strecke ist die Linie zwischen zwei Posten. Klicke sie mit dem Auswahlwerkzeug an, um sie zu wählen.
+
+- **Knick einfügen.** Ziehe an der Linie der gewählten Strecke. Dort, wo du loslässt, entsteht ein Knick.
+- **Knick verschieben oder löschen.** Ziehe einen Knick, um ihn zu verschieben. Ein Klick wählt ihn, Entf löscht ihn.
+- **Abgeflaggte Strecke.** Das Feld „Abgeflaggt“ in den Eigenschaften der Strecke markiert sie als abgeflaggte
+  Strecke.
+
+Jede Geste ist ein Schritt für Rückgängig, und die Bahnlänge in den Eigenschaften ändert sich mit. Läuft eine Strecke
+nach einer Änderung der Posten zu einem anderen Posten, verliert sie ihre Knicke und ihr Absperrband.
+
+### Nummern
+
+Das Nummernfeld eines Postens steht neben seinem Kreis. Eine gestrichelte Linie heißt: Das Programm hat es
+automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
+
+- **Ziehen.** Ziehe im Bahnmodus ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor den Ort in
+  Richtung und Abstand vom Kreis um und speichert beides für diese Bahn.
+- **Für alle Bahnen.** Ist „für alle Bahnen“ angekreuzt, gilt die Lage am Posten für jede Bahn, die ihn nutzt. Hat die
+  Bahn für die Nummer schon eine eigene Lage, geht sie der Lage am Posten vor. Das Feld springt dann zurück, und die
+  Statusleiste sagt es.
+- **Nummern platzieren.** „Nummern platzieren“ setzt die Nummern der Bahn automatisch und lässt gesetzte Nummern
+  stehen. Mit „auch gesetzte Nummern ersetzen“ wird alles neu berechnet, nur die am Posten für alle Bahnen gesetzten
+  bleiben.
+
+Ein Ziehen ist ein Schritt für Rückgängig. Eine Warnung zu einem Abstand außerhalb des Regelbereichs zeigt der Editor
+noch nicht; `check` meldet ihn.
+
+### Sonderobjekte
+
+- **Zeichnen.** Wähle „Sonderobjekt“, dann eine Art (Start, Ziel, Erste-Hilfe-Posten, Wasserstelle, markierte
+  Strecke, verbotene Route, Sperrgebiet, Gefahrenfläche) und prüfe die Kennung in der Werkzeugleiste. Sie wird als
+  `<Art>-<n>` vorgeschlagen und lässt sich ändern. Start, Ziel, Erste-Hilfe-Posten und Wasserstelle setzt ein Klick.
+  Eine Linie oder Fläche zeichnest du durch Klicken ihrer Punkte und schließt sie mit Enter oder einem Doppelklick ab.
+  Esc bricht ab, Entf nimmt den letzten Punkt zurück, und eine gestrichelte Vorschau mit Punkten zeigt die Zeichnung.
+  Eine Fläche braucht drei Punkte, eine markierte Strecke zwei. Eine verbotene Route darf einen einzigen Punkt haben;
+  sie wird als Kreuz gezeichnet. Jedes Objekt ist ein Schritt für Rückgängig.
+- **Zeichen in der Karte.** M markierte Strecke, Kreuz verbotene Route, OB Sperrgebiet, ! Gefahrenfläche, Plus Erste
+  Hilfe, W Wasser.
+- **Bahnen zuordnen.** Hake in den Eigenschaften eines gewählten Objekts die Bahnen an, zu denen es gehört. Ohne Haken
+  gehört es zu allen Bahnen. Start und Ziel haben keine Bahnliste.
+- **Löschen.** „Sonderobjekt löschen“ oder die Entf-Taste entfernt das Objekt, Rückgängig holt es zurück.
+- **Kein Verschieben.** Der Editor kann ein Sonderobjekt nicht verschieben. Lösche es und zeichne es neu (ADR 0049).
 
 ### Rückgängig und Wiederholen
 
@@ -261,11 +287,13 @@ tippst, gilt nie als Kürzel.
 | --- | --- |
 | Strg/Cmd+Z | Rückgängig |
 | Strg/Cmd+Umschalt+Z, Strg+Y | Wiederholen |
-| Entf, Rücktaste | Gewählten Posten löschen |
-| Esc | Ziehen oder gewählte Strecke abbrechen oder zum Auswahlwerkzeug zurückgehen |
+| Entf, Rücktaste | Gewählten Posten, Knick oder gewähltes Sonderobjekt löschen; beim Zeichnen den letzten Punkt |
+| Esc | Ziehen oder Zeichnen abbrechen, gewählte Strecke verwerfen, Bahnmodus verlassen oder zum Auswahlwerkzeug zurückgehen |
 | Alt+Pfeil hoch, Alt+Pfeil runter | Fokussierten Posten einer Bahn verschieben |
+| Enter | Gerade gezeichnete Linie oder Fläche abschließen |
 | V | Auswahlwerkzeug |
 | C | Werkzeug „Posten setzen“ |
+| S | Werkzeug „Sonderobjekt“ |
 | Pfeiltasten | Gewählten Posten um 0,1 mm verschieben (ohne Auswahl: Ansicht verschieben) |
 | Umschalt+Pfeiltasten | Gewählten Posten um 1 mm verschieben |
 | `+`, `-` | Vergrößern, verkleinern (Strg oder Cmd mit diesen Tasten zoomt weiter den Browser) |
@@ -277,6 +305,18 @@ tippst, gilt nie als Kürzel.
 - Im Baum wählst du mit den Pfeiltasten, Pos1 und Ende einen Eintrag und bestätigst mit Eingabe.
 - Mit der Maus verschiebst du die Ansicht, indem du auf leerer Fläche ziehst, und zoomst mit dem Mausrad.
 - Mit der Tabulatortaste springst du vom Baum zur Karte, zu den Eigenschaften und zum Menü.
+
+### Code oder Namen in der Kommandozeile ändern
+
+```sh
+freemapper-courseplan control code halle.courseplan.toml 31 K7
+freemapper-courseplan course rename halle.courseplan.toml A Lang
+```
+
+`control code` gibt Posten 31 den Code K7. `course rename` benennt Bahn A in Lang um. Bahnen, Sonderobjekte und
+akzeptierte Befunde, die den Posten oder die Bahn nennen, ziehen mit. Einen Code oder Namen, den es schon gibt, der
+leer ist, Leerzeichen am Rand hat oder zu lang ist, lehnt das Programm mit einer Meldung ab, und die Datei bleibt,
+wie sie war. Der KI-Assistent hat dafür die Werkzeuge `set_control_code` und `rename_course`.
 
 ### Änderungen von außerhalb des Editors
 
