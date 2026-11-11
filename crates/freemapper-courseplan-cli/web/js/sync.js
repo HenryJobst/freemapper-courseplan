@@ -8,6 +8,7 @@ import * as status from "./status.js";
 
 let hooks = null;
 let done = false;
+let ticket = 0;
 
 const menu = document.querySelector(".menu");
 const warnDialog = document.getElementById("sync-warn-dialog");
@@ -18,6 +19,12 @@ const allButtons = [document.getElementById("sync-all-ours"), document.getElemen
 const WARNED = "courseplan-sync-warned";
 
 export const dialogOpen = () => warnDialog.open || dialog.open;
+
+// The dialogs open from items of the closed menu; when they close the browser would return the focus to such a
+// hidden item. It goes to the menu's button instead, unless another dialog took over.
+function returnFocus() {
+  if (document.querySelector("dialog[open]") === null) menu.querySelector("summary")?.focus();
+}
 
 const el = (tag, content, className) => {
   const node = document.createElement(tag);
@@ -56,6 +63,11 @@ export function bind(h) {
     openPanel();
   });
   document.getElementById("sync-close").addEventListener("click", () => dialog.close());
+  for (const each of [warnDialog, dialog]) each.addEventListener("close", returnFocus);
+  // A dry run that answers after the dialog closed is dropped.
+  dialog.addEventListener("close", () => {
+    ticket += 1;
+  });
   runButton.addEventListener("click", () => runSync(null));
   document.getElementById("sync-all-ours").addEventListener("click", () => runSync("ours"));
   document.getElementById("sync-all-theirs").addEventListener("click", () => runSync("theirs"));
@@ -90,19 +102,24 @@ function openPanel() {
   setError(null);
   show(document.getElementById("sync-body"), false);
   runButton.disabled = true;
+  runButton.textContent = t("editor-sync-run");
+  show(document.getElementById("sync-first-note"), false);
   document.getElementById("sync-status").textContent = t("editor-sync-checking");
   dialog.showModal();
   dryRun();
 }
 
 async function dryRun() {
+  ticket += 1;
+  const mine = ticket;
   let answer;
   try {
     answer = await post("api/sync", { dry_run: true, take: null }, hooks.revision());
   } catch {
-    failed(t("editor-status-lost"));
+    if (mine === ticket) failed(t("editor-status-lost"));
     return;
   }
+  if (mine !== ticket) return;
   if (!answer.ok) {
     failed(failureText(answer));
     if (answer.status === 409 && typeof answer.data === "object") await hooks.written(answer.data.revision);
@@ -176,8 +193,12 @@ function render(data) {
   fillNotes(data.notes ?? []);
   show(document.getElementById("sync-history-note"), changes.length > 0);
   show(document.getElementById("sync-body"), true);
-  const idle = conflicts.length === 0 && changes.length > 0;
-  runButton.disabled = !idle;
+  // Without a base copy (first sync, or one that was lost) the files may agree and the sync still has a job:
+  // it writes the base copy. Without it the next change on either side counts as a conflict.
+  const baseOnly = conflicts.length === 0 && changes.length === 0 && (data.base ?? "use") !== "use";
+  show(document.getElementById("sync-first-note"), baseOnly);
+  runButton.textContent = t(baseOnly ? "editor-sync-run-first" : "editor-sync-run");
+  runButton.disabled = !(conflicts.length === 0 && (changes.length > 0 || baseOnly));
   for (const button of allButtons) button.disabled = false;
 }
 
@@ -234,7 +255,7 @@ async function runSync(take) {
     }
     done = true;
     status.say("editor-status-synced");
-    render({ ...data, changes: [], conflicts: [] });
+    render({ ...data, changes: [], conflicts: [], base: "use" });
     document.getElementById("sync-status").textContent = t("editor-sync-done");
     const lines = [];
     if (data.ppen_changed) lines.push(t("editor-sync-written-ppen"));

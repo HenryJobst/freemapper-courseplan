@@ -58,12 +58,14 @@ pub(crate) fn sync(st: &mut EditorState, revision: Option<&str>, body: &[u8]) ->
         })
         .into_iter()
         .collect();
+    let before = st.loaded.revision.0.clone();
     let result = sync_file(&st.project, request.dry_run, &take);
     // A real sync may have written the project: read it again whatever the result was.
     reload(st);
     match result {
         Ok(outcome) => {
-            if outcome.written {
+            // Writing only the base copy leaves the project as it was: the undo history stays valid (ADR 0054).
+            if outcome.written && st.loaded.revision.0 != before {
                 st.history.clear();
             }
             let mut answer = sync_json(&outcome, &lang);
@@ -84,6 +86,13 @@ fn failure(st: &EditorState, error: SyncCmdError, target: &std::path::Path) -> R
             source: ProjectError::ChangedMeanwhile { .. },
             ..
         } => return conflict(st, msg(lang, "editor-op-stale")),
+        SyncCmdError::LinkMissing(_) => {
+            return fail(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                lang,
+                "editor-sync-link-missing",
+            );
+        }
         SyncCmdError::Project(ProjectError::Read { .. } | ProjectError::Write { .. }) => {
             return fail(StatusCode::INTERNAL_SERVER_ERROR, lang, "editor-io-failed");
         }
@@ -108,7 +117,19 @@ fn failure(st: &EditorState, error: SyncCmdError, target: &std::path::Path) -> R
     }
     let changed_meanwhile = matches!(error, SyncCmdError::ChangedMeanwhile(_));
     let partial = matches!(error, SyncCmdError::Partial { .. });
-    let text = tidy(&error.message(lang), &[&st.project, target]);
+    let base = freemapper_courseplan::sync::base::base_path(&st.project);
+    let mut paths: Vec<std::path::PathBuf> = vec![st.project.clone(), target.to_path_buf(), base];
+    match &error {
+        SyncCmdError::NotMap(p)
+        | SyncCmdError::Map(p, _)
+        | SyncCmdError::Overwrites(p)
+        | SyncCmdError::Read(p, _)
+        | SyncCmdError::BaseUnusable(p)
+        | SyncCmdError::ChangedMeanwhile(p) => paths.push(p.clone()),
+        _ => {}
+    }
+    let paths: Vec<&std::path::Path> = paths.iter().map(|p| p.as_path()).collect();
+    let text = tidy(&error.message(lang), &paths);
     if changed_meanwhile || partial {
         return (
             StatusCode::CONFLICT,

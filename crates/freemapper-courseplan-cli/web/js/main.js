@@ -584,11 +584,20 @@ async function removeAcceptance(accepted) {
 // Fits the map to map-mm points, with room around them (at least 20 mm on a side).
 function fitPoints(points) {
   if (!state.view || points.length === 0) return;
-  const xs = points.map((p) => p[0]);
-  const ys = points.map((p) => p[1]);
-  const room = Math.max(20, 0.25 * Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)));
-  const a = state.view.toPage([Math.min(...xs) - room, Math.min(...ys) - room]);
-  const b = state.view.toPage([Math.max(...xs) + room, Math.max(...ys) + room]);
+  // A loop, not Math.max(...list): a very long list would overflow the argument limit.
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const [x, y] of points) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  const room = Math.max(20, 0.25 * Math.max(x1 - x0, y1 - y0));
+  const a = state.view.toPage([x0 - room, y0 - room]);
+  const b = state.view.toPage([x1 + room, y1 + room]);
   state.view.fit([Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])]);
 }
 
@@ -638,6 +647,7 @@ findings.bind({
 
 // Export and import (ADR 0053). They run like an operation: one at a time, and the page loads the project
 // again afterwards. `written` is called with the revision the server answered, also after a refusal.
+let writes = 0;
 async function exclusive(work) {
   if (state.closed) return;
   if (busy) {
@@ -645,6 +655,7 @@ async function exclusive(work) {
     return;
   }
   busy = true;
+  writes += 1;
   try {
     await work();
   } catch {
@@ -1266,11 +1277,14 @@ let polling = false;
 const gestureActive = () => !!(drag || nudge || legDrag || numberDrag);
 
 async function poll() {
-  if (polling || document.hidden || state.closed || gestureActive()) return;
+  if (polling || document.hidden || state.closed || gestureActive() || busy) return;
   polling = true;
+  const epoch = writes;
   try {
     const answer = await get("api/revision");
-    if (!answer.ok) return;
+    // The server answers a poll queued behind our own export, import or sync with the new revision before the
+    // page has noted it: such an answer says nothing about outside changes.
+    if (!answer.ok || busy || epoch !== writes) return;
     const now = answer.data;
     const before = state.seen;
     state.seen = now;

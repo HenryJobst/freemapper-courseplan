@@ -52,6 +52,13 @@ export function bind(h) {
     importPpen();
   });
   importReplace.addEventListener("change", showImportHints);
+  for (const dialog of [exportDialog, importDialog, reportDialog]) dialog.addEventListener("close", returnFocus);
+}
+
+// The dialogs open from items of the closed menu; when they close the browser would return the focus to such a
+// hidden item. It goes to the menu's button instead, unless another dialog took over.
+function returnFocus() {
+  if (document.querySelector("dialog[open]") === null) menu.querySelector("summary")?.focus();
 }
 
 function closeMenu() {

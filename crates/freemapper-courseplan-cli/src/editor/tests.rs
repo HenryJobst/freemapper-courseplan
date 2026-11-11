@@ -3124,4 +3124,90 @@ mod sync_panel {
         );
         assert_eq!(got["revision"], revision(&app).await);
     }
+
+    /// The Luebeck example linked to `out.ppen`, synced once, then the base copy deleted.
+    fn unsynced(dir: &Path) -> PathBuf {
+        let project = synced(dir);
+        std::fs::remove_file(freemapper_courseplan::sync::base::base_path(&project)).unwrap();
+        project
+    }
+
+    #[tokio::test]
+    async fn the_first_sync_writes_the_base_copy_and_keeps_the_undo_history() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = unsynced(dir.path());
+        let base = freemapper_courseplan::sync::base::base_path(&project);
+        assert!(!base.exists());
+        let app = router_for(&project);
+        // An edit and its undo leave the project as it was and a redo step in the history.
+        let rev = revision(&app).await;
+        let (status, op) = call(
+            &app,
+            "POST",
+            "/tok/api/op/add_control",
+            Some(&rev),
+            json!({"at": {"x": 1.0, "y": 2.0}, "code": "41"})
+                .to_string()
+                .into_bytes(),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{op}");
+        let rev = revision(&app).await;
+        let (status, undone) =
+            call(&app, "POST", "/tok/api/undo", Some(&rev), b"{}".to_vec()).await;
+        assert_eq!(status, StatusCode::OK, "{undone}");
+        let redo = |app: axum::Router| async move {
+            call(&app, "GET", "/tok/api/state", None, Vec::new())
+                .await
+                .1["undo"]["redo"]
+                .clone()
+        };
+        assert!(redo(app.clone()).await.is_string());
+        let (_, dry) = sync(&app, json!({"dry_run": true, "take": null}), None).await;
+        assert_ne!(dry["base"], "use", "{dry}");
+        assert!(dry["changes"].as_array().unwrap().is_empty(), "{dry}");
+        assert!(dry["conflicts"].as_array().unwrap().is_empty(), "{dry}");
+        let before = std::fs::read(&project).unwrap();
+        let rev = revision(&app).await;
+        let (status, done) = sync(&app, json!({"dry_run": false, "take": null}), Some(&rev)).await;
+        assert_eq!(status, StatusCode::OK, "{done}");
+        assert_eq!(done["written"], true, "{done}");
+        assert!(base.exists(), "the base copy is written");
+        assert!(std::fs::read(&project).unwrap() == before, "base copy only");
+        assert!(
+            redo(app.clone()).await.is_string(),
+            "the project text did not change: the history stays"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_missing_link_target_has_a_fixed_text_without_a_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = synced(dir.path());
+        std::fs::remove_file(dir.path().join("out.ppen")).unwrap();
+        let app = router_for(&project);
+        let (status, got) = sync(&app, json!({"dry_run": true, "take": null}), None).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{got}");
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-sync-link-missing", &[]);
+        assert_eq!(got["error"], want);
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn a_symlinked_directory_in_the_link_is_refused() {
+        let dir = tempfile::tempdir().unwrap();
+        let project = synced(dir.path());
+        let real = dir.path().join("real");
+        std::fs::create_dir(&real).unwrap();
+        std::fs::rename(dir.path().join("out.ppen"), real.join("out.ppen")).unwrap();
+        std::os::unix::fs::symlink(&real, dir.path().join("sub")).unwrap();
+        edit(&project, "out.ppen", "sub/out.ppen");
+        let app = router_for(&project);
+        let (status, got) = sync(&app, json!({"dry_run": true, "take": null}), None).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{got}");
+        let want =
+            freemapper_courseplan::text::text(&Lang::english(), "editor-export-link-refused", &[]);
+        assert_eq!(got["error"], want);
+    }
 }

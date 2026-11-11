@@ -70,6 +70,22 @@ fn export_failure(st: &EditorState, error: ExportError, paths: &[&Path]) -> Repl
         ExportError::Project(ProjectError::Read { .. } | ProjectError::Write { .. }) => {
             return fail(StatusCode::INTERNAL_SERVER_ERROR, lang, "editor-io-failed");
         }
+        // The exporter's and the reader's own texts quote parser output; the page gets a fixed one.
+        ExportError::Ppen(..) | ExportError::ReadTarget(..) => {
+            return fail(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                lang,
+                "editor-export-ppen-failed",
+            );
+        }
+        _ => {}
+    }
+    let mut all: Vec<PathBuf> = paths.iter().map(|p| p.to_path_buf()).collect();
+    match &error {
+        ExportError::NotMap(p)
+        | ExportError::Map(p, _)
+        | ExportError::Overwrites(p)
+        | ExportError::IdsNotStored(p, _) => all.push(p.clone()),
         _ => {}
     }
     let text = error.message(
@@ -77,9 +93,10 @@ fn export_failure(st: &EditorState, error: ExportError, paths: &[&Path]) -> Repl
         |e| e.localize(lang),
         |p, e| map_load_error(lang, p, e),
     );
+    let all: Vec<&Path> = all.iter().map(|p| p.as_path()).collect();
     (
         StatusCode::UNPROCESSABLE_ENTITY,
-        json!({ "error": tidy(&text, paths) }),
+        json!({ "error": tidy(&text, &all) }),
     )
 }
 
@@ -173,8 +190,7 @@ pub(super) fn linked_ppen(st: &EditorState, no_link: &str) -> Result<PathBuf, Re
         .extension()
         .and_then(|e| e.to_str())
         .is_some_and(|e| e.eq_ignore_ascii_case("ppen"));
-    let symlink = std::fs::symlink_metadata(&target).is_ok_and(|m| m.file_type().is_symlink());
-    if !is_ppen || symlink {
+    if !is_ppen || !plain_path(&st.project, link) {
         return Err(fail(
             StatusCode::UNPROCESSABLE_ENTITY,
             lang,
@@ -182,6 +198,29 @@ pub(super) fn linked_ppen(st: &EditorState, no_link: &str) -> Result<PathBuf, Re
         ));
     }
     Ok(target)
+}
+
+/// Whether no part of the link below the project's folder is a symbolic link: every component of the path
+/// that `sources.ppen` names is checked, not only the last one.
+fn plain_path(project: &Path, link: &Path) -> bool {
+    use std::path::Component;
+    let mut at = project.parent().unwrap_or(Path::new("")).to_path_buf();
+    for part in link.components() {
+        match part {
+            Component::Normal(name) => {
+                at.push(name);
+                if std::fs::symlink_metadata(&at).is_ok_and(|m| m.file_type().is_symlink()) {
+                    return false;
+                }
+            }
+            Component::ParentDir => {
+                at.pop();
+            }
+            Component::RootDir | Component::Prefix(_) => at = PathBuf::from(part.as_os_str()),
+            Component::CurDir => {}
+        }
+    }
+    true
 }
 
 /// `POST api/export/ppen`. `linked` writes the project's linked file by the CLI rules, clears the undo history
