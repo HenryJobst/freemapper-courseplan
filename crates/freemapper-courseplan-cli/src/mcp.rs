@@ -36,6 +36,7 @@ use crate::sync_cmd::{SyncCmdError, store_decision, sync_file, sync_json};
 use freemapper_courseplan::sync::decide::Take;
 
 mod params;
+mod score;
 use params::*;
 
 /// Most features `map_features_near` returns, and the default.
@@ -60,6 +61,16 @@ fn success(mut value: Value) -> Result<CallToolResult, McpError> {
 /// A tool error the assistant can relay to the user.
 fn failure(message: String) -> Result<CallToolResult, McpError> {
     Ok(CallToolResult::error(vec![ContentBlock::text(message)]))
+}
+
+/// Runs a long operation off the server's thread, so other requests are not held up by it.
+async fn blocking(
+    work: impl FnOnce() -> Answer + Send + 'static,
+) -> Result<CallToolResult, McpError> {
+    match tokio::task::spawn_blocking(work).await {
+        Ok(answer) => reply(answer),
+        Err(_) => failure("the operation was interrupted".to_owned()),
+    }
 }
 
 fn reply(answer: Answer) -> Result<CallToolResult, McpError> {
@@ -979,6 +990,33 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SetScoreCourseDetails>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.set_score_course_details_op(req))
+    }
+
+    #[tool(description = "Suggest control sites for a score course")]
+    async fn score_suggest(
+        &self,
+        Parameters(req): Parameters<ScoreSuggest>,
+    ) -> Result<CallToolResult, McpError> {
+        let server = self.clone();
+        blocking(move || server.score_suggest_op(req)).await
+    }
+
+    #[tool(description = "Draft a score course")]
+    async fn score_draft(
+        &self,
+        Parameters(req): Parameters<ScoreDraft>,
+    ) -> Result<CallToolResult, McpError> {
+        let server = self.clone();
+        blocking(move || server.score_draft_op(req)).await
+    }
+
+    #[tool(description = "Analyse the length of a score course")]
+    async fn score_length(
+        &self,
+        Parameters(req): Parameters<CourseRef>,
+    ) -> Result<CallToolResult, McpError> {
+        let server = self.clone();
+        blocking(move || server.score_length_op(req)).await
     }
 
     #[tool(description = "Place the control numbers of a course")]
@@ -2001,6 +2039,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "remove_score_link",
     "set_score_settings",
     "set_score_course_details",
+    "score_draft",
     "place_numbers",
     "set_course_number",
     "accept_finding",
@@ -2026,6 +2065,8 @@ pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
     "list_classes",
     "map_features_near",
     "map_extent",
+    "score_suggest",
+    "score_length",
     "check",
 ];
 
@@ -2113,6 +2154,9 @@ impl CoursePlanServer {
             "set_score_course_details" => run!(SetScoreCourseDetails, set_score_course_details_op),
             "place_numbers" => run!(PlaceNumbers, place_numbers_op),
             "set_course_number" => run!(SetCourseNumber, set_course_number_op),
+            "score_suggest" => run!(ScoreSuggest, score_suggest_op),
+            "score_draft" => run!(ScoreDraft, score_draft_op),
+            "score_length" => run!(CourseRef, score_length_op),
             "map_features_near" => run!(FeaturesNear, map_features_near_op),
             "map_extent" => run!(ProjectOnly, map_extent_op),
             "check" => run!(ProjectOnly, check_op),
@@ -2586,7 +2630,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 45);
+            assert_eq!(tools.len(), 48);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

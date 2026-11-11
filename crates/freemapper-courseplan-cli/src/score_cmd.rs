@@ -9,7 +9,7 @@ use clap::{ArgGroup, Subcommand};
 use freemapper_courseplan::text::{FluentValue, Lang, text};
 use serde_json::{Value, json};
 
-use crate::edit_cmd::{Failure, parse_count};
+use crate::edit_cmd::{Failure, parse_count, parse_point};
 use crate::query_cmd::{print_json, run_tool};
 
 type Outcome = Result<(), Failure>;
@@ -65,6 +65,44 @@ pub enum ScoreCmd {
     Course {
         #[command(subcommand)]
         action: ScoreCourseCmd,
+    },
+    /// Suggest control sites
+    Suggest {
+        project: PathBuf,
+        #[arg(long, value_name = "N")]
+        limit: Option<String>,
+        #[arg(long, value_name = "MM")]
+        min_distance: Option<String>,
+        #[arg(long, value_name = "ID")]
+        start: Option<String>,
+        #[arg(long, value_name = "ID")]
+        finish: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Draft a score course
+    Draft {
+        project: PathBuf,
+        name: String,
+        #[arg(long, value_name = "MIN")]
+        time_limit: String,
+        #[arg(long, value_name = "ID")]
+        start: Option<String>,
+        #[arg(long, value_name = "ID")]
+        finish: Option<String>,
+        #[arg(long, value_name = "X,Y;X,Y", allow_hyphen_values = true)]
+        link: Vec<String>,
+        #[arg(long)]
+        apply: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Analyse the length of a score course
+    Length {
+        project: PathBuf,
+        name: String,
+        #[arg(long)]
+        json: bool,
     },
 }
 
@@ -179,6 +217,138 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             Ok(())
         }
         ScoreCmd::Link { action } => link(lang, action),
+        ScoreCmd::Suggest {
+            project,
+            limit,
+            min_distance,
+            start,
+            finish,
+            json,
+        } => {
+            let mut args = json!({});
+            if let Some(v) = limit {
+                args["limit"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = min_distance {
+                args["min_distance_mm"] = json!(parse_mm(lang, &v)?);
+            }
+            if let Some(v) = start {
+                args["start"] = json!(v);
+            }
+            if let Some(v) = finish {
+                args["finish"] = json!(v);
+            }
+            let value = run_tool(lang, &project, "score_suggest", args)?;
+            if json {
+                return print_json(&value);
+            }
+            say(lang, "cli-score-suggest", &[("count", s(&value["count"]))]);
+            for c in items(&value, "candidates") {
+                say(
+                    lang,
+                    "cli-score-suggest-line",
+                    &[
+                        ("at", xy(&c["at"])),
+                        ("symbol", s(&c["symbol_code"])),
+                        ("value", s(&c["value"])),
+                        ("choice", s(&c["route_choice"])),
+                        ("difficulty", s(&c["difficulty"])),
+                        ("effort", s(&c["effort_s"])),
+                    ],
+                );
+            }
+            Ok(())
+        }
+        ScoreCmd::Draft {
+            project,
+            name,
+            time_limit,
+            start,
+            finish,
+            link,
+            apply,
+            json,
+        } => {
+            let mut args = json!({
+                "name": name,
+                "time_limit_min": parse_count(lang, &time_limit)?,
+                "apply": apply,
+            });
+            if let Some(v) = start {
+                args["start"] = json!(v);
+            }
+            if let Some(v) = finish {
+                args["finish"] = json!(v);
+            }
+            let mut links = Vec::new();
+            for l in &link {
+                let bad = || {
+                    Failure::Usage(text(
+                        lang,
+                        "cli-score-bad-link-ends",
+                        &[("value", FluentValue::from(l.clone()))],
+                    ))
+                };
+                let (a, b) = l.split_once(';').ok_or_else(bad)?;
+                let (a, b) = (parse_point(lang, a.trim())?, parse_point(lang, b.trim())?);
+                links.push(json!({ "a": { "x": a.x, "y": a.y }, "b": { "x": b.x, "y": b.y } }));
+            }
+            if !links.is_empty() {
+                args["links"] = json!(links);
+            }
+            let value = run_tool(lang, &project, "score_draft", args)?;
+            if json {
+                return print_json(&value);
+            }
+            let list = items(&value, "controls");
+            say(
+                lang,
+                if value["applied"] == true {
+                    "cli-score-draft-applied"
+                } else {
+                    "cli-score-draft"
+                },
+                &[
+                    ("name", s(&value["name"])),
+                    ("count", list.len().to_string()),
+                    ("points", s(&value["length"]["all_points"])),
+                ],
+            );
+            for c in list {
+                say(
+                    lang,
+                    "cli-score-draft-control",
+                    &[
+                        ("code", s(&c["code"])),
+                        ("value", s(&c["value"])),
+                        ("at", xy(&c["at"])),
+                    ],
+                );
+            }
+            print_length(lang, &value["length"]);
+            Ok(())
+        }
+        ScoreCmd::Length {
+            project,
+            name,
+            json,
+        } => {
+            let value = run_tool(lang, &project, "score_length", json!({ "name": name }))?;
+            if json {
+                return print_json(&value);
+            }
+            say(
+                lang,
+                "cli-score-length",
+                &[
+                    ("name", s(&value["name"])),
+                    ("limit", s(&value["time_limit_min"])),
+                    ("count", s(&value["controls"])),
+                ],
+            );
+            print_length(lang, &value["length"]);
+            Ok(())
+        }
         ScoreCmd::Settings {
             project,
             value_max,
@@ -258,6 +428,60 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             );
             Ok(())
         }
+    }
+}
+
+fn xy(p: &Value) -> String {
+    format!("{},{}", s(&p["x"]), s(&p["y"]))
+}
+
+/// A distance in map millimetres, not negative.
+fn parse_mm(lang: &Lang, value: &str) -> Result<f64, Failure> {
+    value
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|d| d.is_finite() && *d >= 0.0)
+        .ok_or_else(|| {
+            Failure::Usage(text(
+                lang,
+                "cli-score-bad-distance",
+                &[("value", FluentValue::from(value.to_owned()))],
+            ))
+        })
+}
+
+/// The two runner lines of a length report and the misses, one sentence each.
+fn print_length(lang: &Lang, length: &Value) {
+    if length["good"].is_null() {
+        return;
+    }
+    say(
+        lang,
+        "cli-score-length-good",
+        &[
+            ("points", s(&length["good"]["points"])),
+            ("all", s(&length["all_points"])),
+            ("percent", s(&length["good"]["percent"])),
+            ("low", s(&length["good"]["band_percent"][0])),
+            ("high", s(&length["good"]["band_percent"][1])),
+        ],
+    );
+    say(
+        lang,
+        "cli-score-length-very-good",
+        &[
+            ("points", s(&length["very_good"]["points"])),
+            ("percent", s(&length["very_good"]["finish_percent"])),
+            ("low", s(&length["very_good"]["band_percent"][0])),
+            ("high", s(&length["very_good"]["band_percent"][1])),
+        ],
+    );
+    for issue in items(length, "issues") {
+        println!("{}", s(&issue["text"]));
+    }
+    if length["ok"] == true {
+        say(lang, "cli-score-length-ok", &[]);
     }
 }
 

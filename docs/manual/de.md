@@ -161,7 +161,41 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
   Kategorien, Druckmaßstab, `course rename` und `course remove` gelten für beide. Mannschafts- und Staffelbahnen
   lassen sich noch nicht bearbeiten.
 - Der Export schreibt nur Einzelbahnen und nennt die ausgelassenen Score-Bahnen. Die Editor-Seite zeichnet
-  Score-Bahnen noch nicht. Vorschläge für Postenplätze und ein fertiger Entwurf folgen.
+  Score-Bahnen noch nicht.
+
+#### Vorschläge, Entwurf und Länge
+
+Diese drei Befehle lesen die Karte und suchen Wege auf einem Raster der Kartensymbole (ohne Höhen). Auf einer großen
+Karte brauchen sie deshalb einige Sekunden. Start und Ziel müssen außerhalb von Gebäuden und gesperrten Gebieten
+liegen; sonst meldet das Programm, dass Start oder Ziel nicht erreichbar ist.
+
+```sh
+freemapper-courseplan score suggest hall.courseplan.toml --limit 30
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45 --apply
+freemapper-courseplan score length hall.courseplan.toml Score45
+```
+
+- `score suggest` listet Postenplätze, die beste Routenwahl zuerst, jeweils mit Position, Symbolcode des
+  Kartenobjekts, Routenwahl und Schwierigkeit von 0 bis 1, der Zeit vom Start für den guten Läufer und dem Wert, den
+  der Posten bekäme. Es schreibt nichts. `--limit` setzt die Anzahl (standardmäßig 60, höchstens 200),
+  `--min-distance` den kleinsten Abstand in Kartenmillimetern (15 m im Gelände bei 1:4000 und größeren Maßstäben,
+  sonst 30 m). Sperr- und Gefahrengebiete sind ausgeschlossen.
+- `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
+  87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist nach 95 bis 100 Prozent des Limits
+  im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
+  `--apply` legt er die Posten an und erstellt die Score-Bahn, oder er ersetzt die Posten einer vorhandenen
+  Score-Bahn und entfernt die Posten, die nur sie nutzte. Eine Bahn anderer Art wird abgelehnt. Im Editor lässt sich
+  die Änderung rückgängig machen.
+- `--link "X,Y;X,Y"` macht zwei Positionen zu einer Pflichtverbindung; jede muss die Position eines Kandidaten aus
+  `score suggest` sein. Die Option lässt sich für weitere Verbindungen wiederholen.
+- Trifft kein Entwurf beide Bänder, endet der Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
+  Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, ein schnellerer guter Läufer
+  oder dass diese Eingaben nicht gehen.
+- `score length` analysiert eine vorhandene Bahn, zum Beispiel nachdem du einen Posten verschoben hast, und meldet
+  dieselben Bänder und Abweichungen. Es ändert die Bahn nie.
+- Dieselben Antworten liefern die Werkzeuge `score_suggest`, `score_draft` und `score_length`; `--json` gibt sie aus.
+  Der Entwurf ist bei gleichem Projekt bei jedem Lauf derselbe.
 
 ## 4. Der Editor
 

@@ -152,7 +152,39 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
 - Bends, legs, control numbers and `course controls` belong to individual courses; a score course refuses them.
   Classes, print scale, `course rename` and `course remove` work on both. Team and relay courses cannot be edited yet.
 - Export writes individual courses only and lists the score courses it skipped. The editor page does not draw score
-  courses yet. Suggestions for control sites and a complete draft follow.
+  courses yet.
+
+#### Suggestions, draft and length
+
+These three commands read the map and search routes on a raster of its symbols (no elevation), so each takes a few
+seconds on a large map. The start and the finish must lie outside buildings and blocked areas; if one does not, the
+program says the start or finish cannot be reached.
+
+```sh
+freemapper-courseplan score suggest hall.courseplan.toml --limit 30
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45
+freemapper-courseplan score draft hall.courseplan.toml Score45 --time-limit 45 --apply
+freemapper-courseplan score length hall.courseplan.toml Score45
+```
+
+- `score suggest` lists control sites, best route choice first, each with its position, the symbol code of the map
+  feature, route choice and difficulty from 0 to 1, the time from the start for the good runner and the value it
+  would get. It writes nothing. `--limit` sets the number (60 by default, at most 200), `--min-distance` the
+  smallest distance in map millimetres (15 m on the ground at 1:4000 and larger scales, else 30 m).
+  Out-of-bounds and dangerous areas are excluded.
+- `score draft` picks controls from these sites and gives them values and codes, so that the good runner scores
+  87 to 93 percent of all points within the limit and the very good runner takes every control and finishes after
+  95 to 100 percent of it. Both bands are settings of the event. Without `--apply` it only prints the draft. With
+  `--apply` it adds the controls and creates the score course, or replaces the controls of an existing score course
+  and removes the controls that only it used. A course of another kind is refused. The editor can undo the change.
+- `--link "X,Y;X,Y"` makes two positions a mandatory link; each must be the position of a candidate from `score
+  suggest`. Repeat the option for more links.
+- When no draft meets both bands, the command exits with 1. It names each missed band with the size of the miss, and
+  one hint: a longer or shorter limit, more suitable sites, a faster good runner, or that these inputs cannot work.
+- `score length` analyses a course that exists, for example after you moved a control, and reports the same bands and
+  misses. It never changes the course.
+- The same answers come from the tools `score_suggest`, `score_draft` and `score_length`; `--json` prints them.
+  The draft is the same on every run for the same project.
 
 ## 4. The editor
 

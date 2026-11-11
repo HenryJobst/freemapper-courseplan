@@ -2,6 +2,9 @@
 //! alternatives (ADR 0061). The score code talks to [`TravelTime`] only, so a fuller route analysis
 //! can replace the surface later.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+
 use freemapper_courseplan_model::MapPoint;
 
 use crate::map::MapIndex;
@@ -249,5 +252,74 @@ impl TravelTime for CostSurface {
         self.grid
             .cell_of(&p)
             .is_some_and(|c| self.grid.factor[c].is_finite())
+    }
+}
+
+/// Fastest routes by pair of points, shared by runner profiles: one search per pair serves the good and
+/// the very good runner, whose times differ by a constant factor of the surface's pace.
+pub struct SharedRoutes {
+    surface: CostSurface,
+    cache: RefCell<HashMap<[u64; 4], Result<Route, ScoreError>>>,
+}
+
+/// One runner profile on [`SharedRoutes`].
+pub struct Profile<'a> {
+    shared: &'a SharedRoutes,
+    /// Seconds of this profile per second of the surface's pace.
+    factor: f64,
+}
+
+impl SharedRoutes {
+    pub fn new(surface: CostSurface) -> SharedRoutes {
+        SharedRoutes {
+            surface,
+            cache: RefCell::new(HashMap::new()),
+        }
+    }
+
+    /// A profile whose times are `factor` times those of the surface.
+    pub fn profile(&self, factor: f64) -> Profile<'_> {
+        Profile {
+            shared: self,
+            factor,
+        }
+    }
+}
+
+fn pair_key(from: &MapPoint, to: &MapPoint) -> [u64; 4] {
+    [
+        from.x.to_bits(),
+        from.y.to_bits(),
+        to.x.to_bits(),
+        to.y.to_bits(),
+    ]
+}
+
+impl TravelTime for Profile<'_> {
+    fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
+        let mut legs = self.shared.surface.legs(from, to)?;
+        for route in &mut legs.routes {
+            route.time_s *= self.factor;
+        }
+        Ok(legs)
+    }
+
+    fn fastest(&self, from: MapPoint, to: MapPoint) -> Result<Route, ScoreError> {
+        let k = pair_key(&from, &to);
+        let cached = self.shared.cache.borrow().get(&k).cloned();
+        let mut route = match cached {
+            Some(found) => found,
+            None => {
+                let found = self.shared.surface.fastest(from, to);
+                self.shared.cache.borrow_mut().insert(k, found.clone());
+                found
+            }
+        }?;
+        route.time_s *= self.factor;
+        Ok(route)
+    }
+
+    fn passable(&self, p: MapPoint) -> bool {
+        self.shared.surface.passable(p)
     }
 }

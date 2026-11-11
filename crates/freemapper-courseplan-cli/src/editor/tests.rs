@@ -1559,6 +1559,9 @@ mod history {
     }
 }
 
+#[path = "../../tests/support/synthetic.rs"]
+mod synthetic;
+
 mod ops {
     use super::state::{numbered_project, project};
     use super::*;
@@ -1845,6 +1848,31 @@ mod ops {
         let (status, _) = history(&app, "redo", redone["revision"].as_str()).await;
         assert_eq!(status, StatusCode::CONFLICT);
         assert!(!dir_has_tmp(&path));
+    }
+
+    #[tokio::test]
+    async fn editor_dispatch_runs_draft_with_apply_and_undo_restores() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = super::synthetic::project(dir.path());
+        let app = router_for(&path);
+        let first = state(&app).await;
+        let revision = first["revision"].as_str().unwrap().to_owned();
+        let before = std::fs::read(&path).unwrap();
+        let body = json!({"name": "Sc", "time_limit_min": 6, "apply": true});
+        let (status, answer) = op(&app, "score_draft", &revision, body).await;
+        assert_eq!(status, StatusCode::OK, "{answer}");
+        assert_eq!(answer["result"]["applied"], true);
+        let after = std::fs::read(&path).unwrap();
+        assert_ne!(after, before);
+        assert!(
+            String::from_utf8(after)
+                .unwrap()
+                .contains("kind = \"score\"")
+        );
+        let revision = answer["revision"].as_str().unwrap().to_owned();
+        let (status, undone) = history(&app, "undo", Some(&revision)).await;
+        assert_eq!(status, StatusCode::OK, "{undone}");
+        assert_eq!(std::fs::read(&path).unwrap(), before);
     }
 
     #[tokio::test]

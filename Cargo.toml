@@ -44,3 +44,8 @@ unsafe_code = "forbid"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
+# The route search of the score tools is slow unoptimised (a draft on the synthetic test map took a minute
+# in a debug build), so the domain crate is optimised in dev and test builds (ADR 0068).
+[profile.dev.package.freemapper-courseplan]
+opt-level = 2

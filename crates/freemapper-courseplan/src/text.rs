@@ -1264,6 +1264,13 @@ mod tests {
             "side",
             "base",
             "base_scale",
+            "points",
+            "all",
+            "at",
+            "choice",
+            "difficulty",
+            "effort",
+            "miss",
         ]
         .iter()
         .map(|n| (*n, v("sample")))

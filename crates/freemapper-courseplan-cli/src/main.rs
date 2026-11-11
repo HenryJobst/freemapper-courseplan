@@ -738,6 +738,7 @@ mod tests {
         ("sync_cmd.rs", include_str!("sync_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
+        ("mcp/score.rs", include_str!("mcp/score.rs")),
     ];
 
     #[test]

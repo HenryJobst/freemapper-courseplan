@@ -531,3 +531,33 @@ pub(super) struct SetScoreCourseDetails {
     pub(super) penalty_per_min: Option<u32>,
     pub(super) no_penalty: Option<bool>,
 }
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreSuggest {
+    pub(super) project: String,
+    pub(super) limit: Option<u32>,
+    pub(super) min_distance_mm: Option<f64>,
+    pub(super) start: Option<Name>,
+    pub(super) finish: Option<Name>,
+}
+
+/// Two positions the draft must visit one directly after the other.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LinkEnds {
+    pub(super) a: Point,
+    pub(super) b: Point,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct ScoreDraft {
+    pub(super) project: String,
+    pub(super) name: Name,
+    pub(super) time_limit_min: u32,
+    pub(super) start: Option<Name>,
+    pub(super) finish: Option<Name>,
+    pub(super) links: Option<Vec<LinkEnds>>,
+    pub(super) apply: Option<bool>,
+}

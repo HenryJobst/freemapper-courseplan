@@ -5,9 +5,6 @@
 //! The rules read `CheckContext::score_courses`, never the individual courses. Findings sit at
 //! the course (the whole set), at a control or at a pair of controls.
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-
 use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings, SpecialObject};
 
 use super::geometry::{distance, polyline_meets_area, polylines_meet};
@@ -19,7 +16,7 @@ use crate::rules::Severity;
 use crate::score::ScoreError;
 use crate::score::code::{reads_alike_turned, value_of_code};
 use crate::score::tour::{LengthIssue, ScoredControl, analyse_length};
-use crate::score::travel::{CostSurface, LegRoutes, Pace, Route, RouteParams, TravelTime};
+use crate::score::travel::{CostSurface, LegRoutes, Pace, RouteParams, SharedRoutes, TravelTime};
 
 /// Fewest controls from which the ring and the order tests judge a set; smaller sets have no
 /// shape to speak of.
@@ -317,57 +314,6 @@ pub(super) fn obvious_order(
     }
 }
 
-/// Fastest routes by pair of points, shared by both runner profiles: one search per pair serves
-/// the good and the very good runner, whose times differ by a constant factor.
-struct Shared {
-    surface: CostSurface,
-    cache: RefCell<HashMap<[u64; 4], Result<Route, ScoreError>>>,
-}
-
-struct Profile<'a> {
-    shared: &'a Shared,
-    /// Seconds of this profile per second of the surface's pace.
-    factor: f64,
-}
-
-fn key(from: &MapPoint, to: &MapPoint) -> [u64; 4] {
-    [
-        from.x.to_bits(),
-        from.y.to_bits(),
-        to.x.to_bits(),
-        to.y.to_bits(),
-    ]
-}
-
-impl TravelTime for Profile<'_> {
-    fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
-        let mut legs = self.shared.surface.legs(from, to)?;
-        for route in &mut legs.routes {
-            route.time_s *= self.factor;
-        }
-        Ok(legs)
-    }
-
-    fn fastest(&self, from: MapPoint, to: MapPoint) -> Result<Route, ScoreError> {
-        let k = key(&from, &to);
-        let cached = self.shared.cache.borrow().get(&k).cloned();
-        let mut route = match cached {
-            Some(found) => found,
-            None => {
-                let found = self.shared.surface.fastest(from, to);
-                self.shared.cache.borrow_mut().insert(k, found.clone());
-                found
-            }
-        }?;
-        route.time_s *= self.factor;
-        Ok(route)
-    }
-
-    fn passable(&self, p: MapPoint) -> bool {
-        self.shared.surface.passable(p)
-    }
-}
-
 /// The map polygons a runner of `course` cannot cross: the out-of-bounds and dangerous areas of
 /// the event that apply to it.
 fn blocked_areas(ctx: &CheckContext<'_>, course: &ScoreCourseContext<'_>) -> Vec<Vec<MapPoint>> {
@@ -475,19 +421,12 @@ pub(super) fn length_bands(
                 continue;
             }
         };
-        let shared = Shared {
-            surface,
-            cache: RefCell::new(HashMap::new()),
-        };
-        let good = Profile {
-            shared: &shared,
-            factor: 1.0,
-        };
-        let very_good = Profile {
-            shared: &shared,
-            factor: f64::from(settings.very_good_pace_s_per_km)
+        let shared = SharedRoutes::new(surface);
+        let good = shared.profile(1.0);
+        let very_good = shared.profile(
+            f64::from(settings.very_good_pace_s_per_km)
                 / f64::from(settings.good_pace_s_per_km.max(1)),
-        };
+        );
         let scored: Vec<ScoredControl> = course
             .controls
             .iter()

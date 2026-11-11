@@ -23,8 +23,11 @@ Tell the person these limits before you start:
 - Only sprint and schoolyard maps work. Forest maps (ISOM) are refused. The map must be an `.omap` or `.xmap`.
 - Individual and score courses can be edited and checked; only individual courses are measured. Team and relay
   courses are not built. Export writes individual courses only, skips the others and says so.
-- A score course has controls with values, a time limit, a penalty and optional mandatory links. The program does not
-  suggest control sites or draft a score course yet; give it the controls.
+- A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
+  `score draft` and `score length` read the map and search routes, so they take seconds: about 1 s on a small
+  sprint map, about 5 s for `score suggest` and 7 s for `score draft` on the Luebeck map (release build). A draft
+  has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
+  The routes come from a raster of the map symbols, without elevation.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in
   Purple Pen 4.0 (checked once by the author).
 - Purple Pen must be closed for the event before a `sync`, and opened again afterwards. Otherwise Purple Pen may
@@ -126,6 +129,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
 | `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
+| `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles meet the length bands; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band exits with 1 and names each miss and what would help. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
@@ -165,6 +169,11 @@ Workflow:
    `finding accept --note` with their reason. Never invent a reason.
 5. `export --iof-xml` or `export --ppen`, or exchange with Purple Pen through `import` and `sync`.
 6. Tell the person to open the editor (`edit <project>`) to look at the result.
+
+For a score course: `special add` for start and finish outside buildings, `score settings` if the paces differ,
+`score suggest` to see the sites, then `score draft NAME --time-limit MIN` without `--apply` to read the draft,
+and with `--apply` to write it. `score length NAME` checks a course the person changed by hand. `check` tests the
+result.
 
 ## Use it through MCP
 
@@ -229,6 +238,9 @@ whole number.
 | `add_score_link`, `remove_score_link` | `name`, `a`, `b` | Mandatory link between two controls of a score course, either direction. A runner who skips it is disqualified. At most two links per control, no ring. |
 | `set_score_settings` | `value_max?`, `good_pace_s_per_km?`, `very_good_pace_s_per_km?`, `mix_hard_percent?`, `seed?` | Event-wide score settings (no `name`, takes `project` only). |
 | `set_score_course_details` | `name`, `time_limit_min?`, `penalty_per_min?`, `no_penalty?` | Time limit and penalty of a score course; `no_penalty` goes back to the default penalty. |
+| `score_suggest` | `limit?`, `min_distance_mm?`, `start?`, `finish?` | Control site candidates, best route choice first: position, `symbol_code`, `route_choice`, `difficulty`, `effort_s`, suggested `value`. Writes nothing. Takes seconds. |
+| `score_draft` | `name`, `time_limit_min`, `start?`, `finish?`, `links?`, `apply?` | Draft of a score course: controls with code, value and position, and the length report. `links` is a list of `{a: {x, y}, b: {x, y}}`, each end a position from `score_suggest`. Writes only with `apply: true`. A draft that misses a band is an error result with one sentence per miss and the hint. |
+| `score_length` | `name` | Round trips of both runner profiles on an existing score course, with the bands and each miss. Reports only. |
 | `place_numbers` | `name`, `overwrite?` | Places the control numbers automatically; call again after changing legs. |
 | `set_course_number` | `name`, `after`, `direction?`, `gap_mm?`, `clear?` | Number placement of one control in one course. |
 | `check` | none | Tests the individual and score courses against the rule profile. |
@@ -255,6 +267,9 @@ whole number.
 5. Export with `export_iof_xml` or `export_ppen`, or exchange with Purple Pen through `import_ppen` and
    `sync_ppen`.
 6. Tell the person to open the editor (`freemapper-courseplan edit <project>`) to look at the result.
+
+For a score course: `score_suggest`, then `score_draft` without `apply` to read the draft and with `apply: true` to
+write it; `score_length` checks an existing course. Each takes seconds.
 
 Rules:
 
