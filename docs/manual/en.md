@@ -51,6 +51,17 @@ The assistant reads the tool texts in the language of your system. To fix the la
 `"--lang", "en"` before `"mcp"` in the arguments, or set `FREEMAPPER_LANG=en` in the environment of the
 program. Tool names and field names stay English in every language.
 
+### Let the assistant set it up
+
+The archive holds, besides the program, the READMEs, the licence, this manual and `AGENTS.md`, instructions for AI
+assistants. An assistant that can run commands on your computer (such as Claude Code or Codex) can download the
+program, check and unpack it and register it with the steps in that file. Tell it:
+
+> Read AGENTS.md from github.com/HenryJobst/freemapper-courseplan and set up freemapper-courseplan.
+
+On a Mac it removes the block on unsigned programs and tells you so. Depending on its settings it asks before each
+command. Claude Desktop runs no commands; there you register the program by hand as described above.
+
 ### Set a course
 
 The assistant does not see the map. It can ask for the extent of the map and, for a point, for the map objects

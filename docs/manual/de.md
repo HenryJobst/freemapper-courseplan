@@ -53,6 +53,18 @@ Der Assistent liest die Werkzeugtexte in der Sprache deines Systems. Willst du d
 `"--lang", "de"` vor `"mcp"` in die Argumente oder setze `FREEMAPPER_LANG=de` in der Umgebung des Programms.
 Werkzeugnamen und Feldnamen bleiben in jeder Sprache Englisch.
 
+### Vom Assistenten einrichten lassen
+
+Das Archiv enthält neben dem Programm die READMEs, die Lizenz, dieses Handbuch und `AGENTS.md`, eine Anleitung für
+KI-Assistenten. Ein Assistent, der Befehle auf deinem Computer ausführen kann (etwa Claude Code oder Codex), lädt
+das Programm herunter, prüft und entpackt es und trägt es nach den Schritten dieser Datei ein. Sag ihm:
+
+> Lies AGENTS.md von github.com/HenryJobst/freemapper-courseplan und richte freemapper-courseplan ein.
+
+Auf einem Mac entfernt er die Sperre für nicht signierte Programme und sagt dir das. Je nach Einstellung fragt er
+vor jedem Befehl. Claude Desktop führt keine Befehle aus; dort trägst du das Programm von Hand ein, wie oben
+beschrieben.
+
 ### Eine Bahn legen
 
 Der Assistent sieht die Karte nicht. Er kann ihre Ausdehnung abfragen und für einen Punkt die Kartenobjekte im
