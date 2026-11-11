@@ -72,7 +72,8 @@ Source: final review of plan M2b; controller ruling R29, 2026-11-09.
   the name of a course. MCP has the same as `set_control_code` and `rename_course` (`from`, `to`), and the editor
   runs both as operations. The library functions `change_code` and `change_course_name` check first and then call
   `rename_control` and `rename_course`, which the Purple Pen sync already used. So courses of every kind, the
-  course lists of special objects, accepted findings and their legs follow the new name.
+  course lists of special objects, accepted findings and their legs, and the stored sync decisions follow the new
+  name (ADR 0050).
 - A code or name that another control or course has is refused (`CodeTaken`, `NameTaken`). A new value that is
   empty, padded with white space or longer than the project limits (64 characters for a code, 200 for a name) is
   refused with the localized validation errors. Naming the current value is no change. Each refusal leaves the

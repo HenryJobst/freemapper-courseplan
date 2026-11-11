@@ -42,10 +42,21 @@ export function nextId(kind, taken) {
 
 const round2 = (v) => Math.round(v * 100) / 100;
 
+// The points without a point that lies closer than `min` mm to the one before it: a double click or a click
+// and Enter must not leave a pair of equal points. Order and the first of each run stay.
+export function withoutRepeats(points, min = 0.05) {
+  const out = [];
+  for (const p of points) {
+    const last = out.at(-1);
+    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= min) out.push(p);
+  }
+  return out;
+}
+
 // The body of add_special for `points` (map mm pairs): `at` for a point kind, `points` for the others.
 export function addBody(kind, id, points) {
   const entry = info(kind);
-  const list = points.map((p) => ({ x: round2(p[0]), y: round2(p[1]) }));
+  const list = withoutRepeats(points).map((p) => ({ x: round2(p[0]), y: round2(p[1]) }));
   return entry.shape === "point" ? { kind: entry.tool, id, at: list[0] } : { kind: entry.tool, id, points: list };
 }
 

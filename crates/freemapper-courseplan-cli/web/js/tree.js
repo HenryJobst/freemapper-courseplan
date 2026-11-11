@@ -8,6 +8,8 @@ const collapsed = new Set();
 export function buildTree(root, groups, onSelect) {
   const keep = root.querySelector("[tabindex='0']")?.dataset.key ?? null;
   const selected = root.querySelector("[aria-selected='true']")?.dataset.key ?? null;
+  // A rebuild after an operation keeps the keyboard focus on the item it was on.
+  const refocus = root.contains(document.activeElement) ? (document.activeElement.dataset?.key ?? null) : null;
   root.replaceChildren();
   const list = document.createElement("ul");
   list.setAttribute("role", "tree");
@@ -53,6 +55,12 @@ export function buildTree(root, groups, onSelect) {
   };
   const start = visible().find((li) => li.dataset.key === keep) ?? visible()[0];
   if (start) start.tabIndex = 0;
+  const focused = refocus ? visible().find((li) => li.dataset.key === refocus) : null;
+  if (focused) {
+    for (const other of list.querySelectorAll("[tabindex='0']")) other.tabIndex = -1;
+    focused.tabIndex = 0;
+    focused.focus();
+  }
 
   function toggle(head, open) {
     const id = head.dataset.key.slice("group:".length);

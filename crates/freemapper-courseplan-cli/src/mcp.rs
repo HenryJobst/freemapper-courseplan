@@ -1714,8 +1714,18 @@ impl CoursePlanServer {
 
     fn set_start_window_op(&self, req: SetStartWindow) -> Answer {
         self.edit(&req.project, |file| {
-            edit::set_start_window(&mut file.event, req.minutes).map_err(|e| self.refused(e))?;
-            Ok(json!({ "start_window_min": req.minutes }))
+            match (req.minutes, flag(req.no_start_window)) {
+                (Some(minutes), false) => {
+                    edit::set_start_window(&mut file.event, minutes)
+                        .map_err(|e| self.refused(e))?;
+                    Ok(json!({ "start_window_min": minutes }))
+                }
+                (None, true) => {
+                    edit::clear_start_window(&mut file.event).map_err(|e| self.refused(e))?;
+                    Ok(json!({ "start_window_min": Value::Null }))
+                }
+                _ => Err(text(&self.lang, "mcp-error-start-window-choice", &[])),
+            }
         })
     }
 

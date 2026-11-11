@@ -203,8 +203,8 @@ why.
   empty field removes the value. "Delete category" removes it. The editor refuses this while a course still uses
   it, and says so above the map.
 - **Event.** "Event settings" in the tree shows the discipline, which you cannot change here, the rule profile with
-  its overlays (separated by commas) and the start window in minutes. The server checks the names of the
-  profiles.
+  its overlays, both as lists of the profiles the program knows, and the start window in minutes. An empty start
+  window removes it.
 
 ### Legs and bends
 

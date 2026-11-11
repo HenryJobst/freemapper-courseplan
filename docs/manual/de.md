@@ -211,8 +211,8 @@ die Datei, wie sie war, und eine Meldung nennt den Grund.
   erwarteten Starter; ein leeres Feld entfernt den Wert. „Kategorie löschen“ entfernt sie. Solange eine Bahn sie noch
   nutzt, lehnt der Editor das ab und sagt es über der Karte.
 - **Veranstaltung.** „Einstellungen“ unter „Veranstaltung“ im Baum zeigen die Disziplin, die du hier nicht ändern
-  kannst, das Regelprofil mit seinen Overlays (durch Kommas getrennt) und das Startfenster in Minuten. Der Server
-  prüft die Namen der Profile.
+  kannst, das Regelprofil mit seinen Overlays, beides als Liste der Profile, die das Programm kennt, und das Startfenster
+  in Minuten. Ein leeres Startfenster entfernt es.
 
 ### Strecken und Knicke
 

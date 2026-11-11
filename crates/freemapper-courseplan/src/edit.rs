@@ -793,6 +793,14 @@ pub fn set_start_window(event: &mut Event, minutes: u32) -> Result<(), EditError
     })
 }
 
+/// Removes the start window of the event; the start capacity check is skipped without one.
+pub fn clear_start_window(event: &mut Event) -> Result<(), EditError> {
+    apply(event, |e| {
+        e.event.start_window_min = None;
+        Ok(())
+    })
+}
+
 /// Changes the rule category or the expected number of starters of a class. `None` leaves a
 /// value as it is; `Some(None)` clears it. A category is trimmed, and an empty one is refused.
 pub fn set_class(

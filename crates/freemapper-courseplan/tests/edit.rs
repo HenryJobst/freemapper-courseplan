@@ -1084,6 +1084,16 @@ fn the_start_window_is_at_least_one_minute() {
 }
 
 #[test]
+fn the_start_window_can_be_cleared() {
+    let mut e = event();
+    set_start_window(&mut e, 90).unwrap();
+    clear_start_window(&mut e).unwrap();
+    assert_eq!(e.event.start_window_min, None);
+    // Clearing what is not set is fine.
+    clear_start_window(&mut e).unwrap();
+}
+
+#[test]
 fn a_class_gets_and_loses_its_category_and_starters() {
     let mut e = event();
     set_class(

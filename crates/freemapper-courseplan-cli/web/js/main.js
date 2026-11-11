@@ -15,6 +15,8 @@ import * as specials from "./specials.js";
 const POLL_MS = 2000;
 const PAN_STEP = 0.1;
 const DRAG_PIXELS = 4;
+// A click within this many screen pixels of the last point of a drawing repeats it and adds nothing.
+const DUPLICATE_PIXELS = 3;
 
 // What the page holds. selection = { kind: "control"|"course"|"special"|"leg"|"number"|"bend"|"class", id, course?, index? }
 const state = {
@@ -29,6 +31,8 @@ const state = {
   seen: null,
   closed: false,
   revision: null,
+  // The answer of api/rules (profiles, overlays, categories), or null while unknown: the panels then take text.
+  rules: null,
 };
 const NEAR_RADIUS_MM = 3;
 let pollTimer = null;
@@ -384,6 +388,9 @@ function specialClick(at) {
     return;
   }
   draft ??= { kind: entry.kind, shape: entry.shape, points: [], cursor: null };
+  // The second click of a double click lands on the point the first one set: it adds nothing.
+  const last = draft.points.at(-1);
+  if (last && Math.hypot(at[0] - last[0], at[1] - last[1]) < Math.max(DUPLICATE_PIXELS / state.view.scale, 0.01)) return;
   draft.points.push(at);
   showOverlay();
   draftHint();
@@ -474,7 +481,8 @@ const removeCourse = (name) => runAndSay("remove_course", { name }, "editor-stat
 const setClass = (name, body) => runAndSay("set_class", { name, ...body }, "editor-status-class-changed");
 const removeClass = (name) => runAndSay("remove_class", { name }, "editor-status-class-deleted", () => selectKey("all"));
 const setProfile = (base, overlays) => runAndSay("set_rule_profile", { base, overlays }, "editor-status-profile-changed");
-const setWindow = (minutes) => runAndSay("set_start_window", { minutes }, "editor-status-window-changed");
+const setWindow = (minutes) =>
+  runAndSay("set_start_window", minutes === null ? { no_start_window: true } : { minutes }, "editor-status-window-changed");
 
 // One set_leg per gesture: the leg's whole bend list and its taped flag.
 async function setLeg(after, list, taped, messageId) {
@@ -521,7 +529,9 @@ async function dropNumber(n, centre) {
   if (!done) return;
   // A number set for this course comes before the one on the control, so the box does not move.
   const shadowed = numbers.options.forAll && n.source === "course";
-  status.say(shadowed ? "editor-status-number-shadowed" : "editor-status-number-moved");
+  const id = shadowed ? "editor-status-number-shadowed" : "editor-status-number-moved";
+  // A box dropped over the circle or very far away is stored with the nearest gap that is allowed.
+  status.say(found.clamped ? `${t(id)} ${t("editor-status-number-clamped")}` : id, !!found.clamped);
 }
 
 async function placeNumbers() {
@@ -531,6 +541,7 @@ async function placeNumbers() {
 }
 
 const propActions = {
+  rules: () => state.rules,
   placeNumbers,
   move: moveControl,
   remove: requestDelete,
@@ -1048,6 +1059,8 @@ function bindMapInput() {
     cancelDrag();
     press = null;
   };
+  // A reload that waited for the gesture to end runs now.
+  svg.addEventListener("pointerup", () => setTimeout(poll, 300));
   svg.addEventListener("pointercancel", (evt) => {
     if (ours(evt)) abandon();
   });
@@ -1055,11 +1068,9 @@ function bindMapInput() {
     if (ours(evt)) abandon();
   });
   svg.addEventListener("pointerleave", () => status.setCursor(null));
-  // The second click of a double click has added a point of its own: it is taken back, then the drawing ends.
+  // A double click ends the drawing; its clicks added their point once (specialClick ignores a repeat).
   svg.addEventListener("dblclick", () => {
-    if (!draft) return;
-    draft.points.pop();
-    finishDraft();
+    if (draft) finishDraft();
   });
   svg.addEventListener("wheel", (evt) => {
     evt.preventDefault();
@@ -1074,7 +1085,7 @@ function bindMapInput() {
     redo: () => history(true),
     remove: requestDelete,
     cancel: () => {
-      if (drag || nudge || legDrag) {
+      if (drag || nudge || legDrag || numberDrag) {
         if (nudge) {
           setCircle(nudge.code, nudge.orig);
           nudge = null;
@@ -1105,8 +1116,11 @@ function bindMapInput() {
 
 // Polling (plan D8): every two seconds while the page is visible, and at once when it gets the focus.
 let polling = false;
+// Whether a press holds map data of the loaded state: a reload would replace what the gesture moves.
+const gestureActive = () => !!(drag || nudge || legDrag || numberDrag);
+
 async function poll() {
-  if (polling || document.hidden || state.closed) return;
+  if (polling || document.hidden || state.closed || gestureActive()) return;
   polling = true;
   try {
     const answer = await get("api/revision");
@@ -1136,6 +1150,8 @@ try {
   tools.bind();
   keys.fillHelp(document.getElementById("help-keys"));
   status.say("editor-status-ready");
+  const known = await get("api/rules");
+  if (known.ok && known.data?.profiles) state.rules = known.data;
   const first = await get("api/revision");
   state.seen = first.ok ? first.data : null;
   if (await loadState(false)) {

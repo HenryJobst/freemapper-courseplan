@@ -23,8 +23,12 @@ must convert one into the other. It must not differ from what the CLI and the MC
   0.01 mm. A drop that is not exactly west therefore stores 180.13, not 180.
 - **`index`** *(Claude's call)*. It counts positions from 1, crossing points included, like `numbers[].index` in the
   overlay and `after` in the MCP tools. The mapping sits in `web/js/numbers.js` only.
-- **Out-of-range gaps are stored** *(Claude's call)*. A gap outside the rule range is saved as dropped and left to
-  `check`, as on the command line. The editor shows no warning marker before the findings panel exists.
+- **The gap stays in the storable range** *(Claude's call, changed after the stage 3 review)*. The operations
+  store a gap of more than 0 and at most 10 mm; a gap outside the rule range of the profile is still stored and
+  left to `check`, but one outside 0 to 10 is refused. A box dropped over the circle has a negative gap, a far drop
+  a huge one, and 0.004 rounds to 0.00. `api/number-at` therefore keeps the gap in 0.01 to 10 mm and adds
+  `"clamped": true` when it moved it. The page says so in the status bar instead of showing the refusal. The
+  editor shows no warning marker before the findings panel exists.
 - **Place numbers** *(Claude's call)*. The button runs `place_numbers`. It leaves placed numbers alone unless
   "also replace placed numbers" sets `overwrite`.
 

@@ -462,5 +462,6 @@ pub(super) struct SetRuleProfile {
 #[serde(deny_unknown_fields)]
 pub(super) struct SetStartWindow {
     pub(super) project: String,
-    pub(super) minutes: u32,
+    pub(super) minutes: Option<u32>,
+    pub(super) no_start_window: Option<bool>,
 }

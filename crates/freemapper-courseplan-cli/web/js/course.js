@@ -8,6 +8,13 @@ export const MAX_NAME_CHARS = 200;
 
 // Whether a code or name is fit to commit: not empty, no white space at its ends, within the limit, and not
 // the text of another entry. The server checks the same and has the last word.
+// The rule categories of a profile and its overlays, sorted; `known` is the answer of api/rules.
+export function categoriesOf(known, profile, overlays) {
+  const found = new Set();
+  for (const id of [profile, ...overlays]) for (const c of known.categories?.[id] ?? []) found.add(c);
+  return found.size === 0 ? null : [...found].sort();
+}
+
 export function nameProblem(text, limit, others) {
   if (text === "" || text.trim() !== text) return true;
   return [...text].length > limit || others.includes(text);
@@ -86,7 +93,8 @@ export function askName({ titleId, labelId, errorId, others }) {
 
 // --- Property fields ---------------------------------------------------------------------------------------------
 
-// A labelled text input in a definition list; the cell also holds a hidden message the input points to.
+// A labelled text input in a definition list; with an `errorId` the cell also holds a hidden message the input
+// points to, which the field's own check shows.
 function inputRow(list, { id, labelId, value, numeric, errorId }) {
   const term = document.createElement("dt");
   const label = document.createElement("label");
@@ -100,19 +108,50 @@ function inputRow(list, { id, labelId, value, numeric, errorId }) {
   if (numeric) input.inputMode = "numeric";
   input.autocomplete = "off";
   input.value = value;
-  const error = document.createElement("p");
-  error.id = `${id}-error`;
-  error.className = "field-error";
-  error.hidden = true;
-  error.textContent = t(errorId);
-  input.setAttribute("aria-describedby", error.id);
+  let error = null;
+  if (errorId) {
+    error = document.createElement("p");
+    error.id = `${id}-error`;
+    error.className = "field-error";
+    error.hidden = true;
+    error.textContent = t(errorId);
+    input.setAttribute("aria-describedby", error.id);
+  }
   // Text typed but not yet committed must survive a reload of the page's data.
   input.addEventListener("input", () => {
     input.dataset.dirty = "1";
   });
-  detail.append(input, error);
+  detail.append(input);
+  if (error) detail.append(error);
   list.append(term, detail);
   return { input, error };
+}
+
+// A labelled drop-down list. `options` is [{ value, label }]; `chosen` the selected values. A chosen value the
+// list does not know (a file edited by hand) is kept as an entry of its own, so it shows and is not lost.
+function selectRow(list, { id, labelId, options, chosen, multiple }) {
+  const term = document.createElement("dt");
+  const label = document.createElement("label");
+  label.htmlFor = id;
+  label.textContent = t(labelId);
+  term.append(label);
+  const detail = document.createElement("dd");
+  const select = document.createElement("select");
+  select.id = id;
+  select.multiple = !!multiple;
+  const known = new Set(options.map((o) => o.value));
+  const all = [...options, ...chosen.filter((v) => v !== "" && !known.has(v)).map((v) => ({ value: v, label: v }))];
+  for (const entry of all) {
+    const option = document.createElement("option");
+    option.value = entry.value;
+    option.textContent = entry.label;
+    option.selected = chosen.includes(entry.value);
+    select.append(option);
+  }
+  if (multiple) select.size = Math.min(4, Math.max(2, all.length));
+  detail.append(select);
+  list.append(term, detail);
+  return select;
 }
 
 // An optional whole number: empty means "none" (commit(null)), a number is committed when it differs.
@@ -258,18 +297,33 @@ export function classPanel(host, list, state, name, actions) {
   const detail = document.createElement("dd");
   detail.textContent = cls.name;
   list.append(term, detail);
-  const { input } = inputRow(list, {
-    id: "prop-rule-category",
-    labelId: "editor-prop-rule-category",
-    value: cls.rule_category ?? "",
-    errorId: "editor-error-count",
-  });
-  input.addEventListener("change", () => {
-    delete input.dataset.dirty;
-    const text = input.value.trim();
-    if (text === (cls.rule_category ?? "")) return;
-    actions.setClass(name, text === "" ? { no_rule_category: true } : { rule_category: text });
-  });
+  const known = actions.rules?.() ?? null;
+  const meta = state.event.event;
+  const names = known ? categoriesOf(known, meta.rule_profile, meta.rule_overlays ?? []) : null;
+  if (names) {
+    const select = selectRow(list, {
+      id: "prop-rule-category",
+      labelId: "editor-prop-rule-category",
+      options: [{ value: "", label: t("editor-none") }, ...names.map((n) => ({ value: n, label: n }))],
+      chosen: [cls.rule_category ?? ""],
+    });
+    select.addEventListener("change", () => {
+      if (select.value === (cls.rule_category ?? "")) return;
+      actions.setClass(name, select.value === "" ? { no_rule_category: true } : { rule_category: select.value });
+    });
+  } else {
+    const { input } = inputRow(list, {
+      id: "prop-rule-category",
+      labelId: "editor-prop-rule-category",
+      value: cls.rule_category ?? "",
+    });
+    input.addEventListener("change", () => {
+      delete input.dataset.dirty;
+      const text = input.value.trim();
+      if (text === (cls.rule_category ?? "")) return;
+      actions.setClass(name, text === "" ? { no_rule_category: true } : { rule_category: text });
+    });
+  }
   countRow(list, {
     id: "prop-starters",
     labelId: "editor-prop-starters",
@@ -295,26 +349,47 @@ export function eventPanel(host, list, state, actions) {
   const detail = document.createElement("dd");
   detail.textContent = meta.discipline;
   list.append(term, detail);
-  const base = inputRow(list, {
-    id: "prop-rule-profile", labelId: "editor-prop-rule-profile", value: meta.rule_profile, errorId: "editor-error-count",
-  });
-  const overlays = inputRow(list, {
-    id: "prop-rule-overlays",
-    labelId: "editor-prop-rule-overlays",
-    value: (meta.rule_overlays ?? []).join(", "),
-    errorId: "editor-error-count",
-  });
-  const commitProfile = () => {
-    delete base.input.dataset.dirty;
-    delete overlays.input.dataset.dirty;
-    const name = base.input.value.trim();
-    const names = overlays.input.value.split(",").map((s) => s.trim()).filter((s) => s !== "");
-    const same = name === meta.rule_profile && names.join(",") === (meta.rule_overlays ?? []).join(",");
-    if (name === "" || same) return;
-    actions.setProfile(name, names);
-  };
-  base.input.addEventListener("change", commitProfile);
-  overlays.input.addEventListener("change", commitProfile);
+  const known = actions.rules?.() ?? null;
+  if (known) {
+    const profile = selectRow(list, {
+      id: "prop-rule-profile",
+      labelId: "editor-prop-rule-profile",
+      options: known.profiles.map((p) => ({ value: p.id, label: p.id })),
+      chosen: [meta.rule_profile],
+    });
+    const overlays = selectRow(list, {
+      id: "prop-rule-overlays",
+      labelId: "editor-prop-rule-overlays",
+      options: known.overlays.map((o) => ({ value: o.id, label: o.id })),
+      chosen: meta.rule_overlays ?? [],
+      multiple: true,
+    });
+    const commit = () => {
+      const names = [...overlays.selectedOptions].map((o) => o.value);
+      if (profile.value === meta.rule_profile && names.join(",") === (meta.rule_overlays ?? []).join(",")) return;
+      actions.setProfile(profile.value, names);
+    };
+    profile.addEventListener("change", commit);
+    overlays.addEventListener("change", commit);
+  } else {
+    const base = inputRow(list, { id: "prop-rule-profile", labelId: "editor-prop-rule-profile", value: meta.rule_profile });
+    const overlays = inputRow(list, {
+      id: "prop-rule-overlays",
+      labelId: "editor-prop-rule-overlays",
+      value: (meta.rule_overlays ?? []).join(", "),
+    });
+    const commitProfile = () => {
+      delete base.input.dataset.dirty;
+      delete overlays.input.dataset.dirty;
+      const name = base.input.value.trim();
+      const names = overlays.input.value.split(",").map((s) => s.trim()).filter((s) => s !== "");
+      const same = name === meta.rule_profile && names.join(",") === (meta.rule_overlays ?? []).join(",");
+      if (name === "" || same) return;
+      actions.setProfile(name, names);
+    };
+    base.input.addEventListener("change", commitProfile);
+    overlays.input.addEventListener("change", commitProfile);
+  }
   const startWin = inputRow(list, {
     id: "prop-start-window",
     labelId: "editor-prop-start-window",
@@ -324,11 +399,13 @@ export function eventPanel(host, list, state, actions) {
   });
   startWin.input.addEventListener("change", () => {
     delete startWin.input.dataset.dirty;
-    const n = parseCount(startWin.input.value);
-    const bad = n === null;
+    // Empty removes the window; a number sets it.
+    const text = startWin.input.value.trim();
+    const n = text === "" ? null : parseCount(text);
+    const bad = text !== "" && n === null;
     startWin.input.setAttribute("aria-invalid", String(bad));
     startWin.error.hidden = !bad;
-    if (!bad && n !== meta.start_window_min) actions.setWindow(n);
+    if (!bad && n !== (meta.start_window_min ?? null)) actions.setWindow(n);
   });
   host.append(list);
 }

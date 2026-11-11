@@ -22,8 +22,10 @@ dangerous area) are drawn in the editor. The three interfaces have `add_special`
 - **Drawn from the overlay** *(Claude's call)*. The server's overlay already returns every kind with its points,
   so the page adds no geometry. Each kind also carries a letter or sign (M, OB, !, W, plus, cross) so that colour is
   not the only cue.
-- **Double click** *(Claude's call)*. A double click right after a click at the same spot can leave a near-duplicate
-  last point. The editor does not filter it; the user deletes the point with Delete before finishing.
+- **Double click** *(Claude's call, changed after the stage 3 review)*. A click within 3 screen pixels of the last
+  point of a drawing adds nothing, so the clicks of a double click set their point once, and the `dblclick`
+  event only finishes the drawing. `addBody` also drops a point closer than 0.05 mm to the one before it, which
+  covers Enter after a double click. No near-duplicate point is left for the user to delete.
 
 ## Consequences
 - Moving an object costs a delete and a redraw, and a second undo step.

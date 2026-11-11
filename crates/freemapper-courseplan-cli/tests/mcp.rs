@@ -1124,10 +1124,23 @@ fn an_acceptance_that_matches_nothing_is_returned_as_unmatched() {
             "legs": [{ "course": "A", "after": 1 }], "note": "kept"
         }),
     );
-    session.ok(
+    // The edit drops the acceptance of a leg that no longer exists and says so.
+    let reordered = session.ok(
         "set_course_controls",
         json!({ "project": project, "name": "A", "codes": [32, 31] }),
     );
+    assert_eq!(
+        reordered["dropped_acceptances"],
+        json!([{ "course": "A", "after": 1, "from": "31", "to": "32" }])
+    );
+    let report = session.ok("check", json!({ "project": project }));
+    assert_eq!(report["summary"]["unmatched"], 0, "{report}");
+    // A file edited by hand can still hold an acceptance of a leg that is gone.
+    let mut text = std::fs::read_to_string(&project).unwrap();
+    text.push_str(
+        "\n[[accepted_findings]]\nrule = \"wkb2026.leg.through_control\"\nlegs = [{ course = \"A\", after = 1, from = \"31\", to = \"32\" }]\nnote = \"kept\"\n",
+    );
+    std::fs::write(&project, text).unwrap();
     let report = session.ok("check", json!({ "project": project }));
     assert_eq!(report["summary"]["unmatched"], 1, "{report}");
     assert_eq!(report["summary"]["errors"], 0);
@@ -1187,6 +1200,27 @@ fn start_window_and_class_settings() {
         json!({ "project": project, "minutes": 90 }),
     );
     assert_eq!(set["start_window_min"], 90);
+    let cleared = session.ok(
+        "set_start_window",
+        json!({ "project": project, "no_start_window": true }),
+    );
+    assert_eq!(cleared["start_window_min"], Value::Null);
+    assert!(
+        !std::fs::read_to_string(&project)
+            .unwrap()
+            .contains("start_window_min")
+    );
+    for args in [
+        json!({ "project": project }),
+        json!({ "project": project, "minutes": 5, "no_start_window": true }),
+    ] {
+        let (error, text) = session.call("set_start_window", args);
+        assert!(error && text.contains("no_start_window"), "{text}");
+    }
+    session.ok(
+        "set_start_window",
+        json!({ "project": project, "minutes": 90 }),
+    );
     session.ok("add_class", json!({ "project": project, "name": "H21" }));
     let class = session.ok(
         "set_class",
