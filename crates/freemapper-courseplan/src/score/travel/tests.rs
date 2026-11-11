@@ -431,3 +431,14 @@ fn luebeck_build_time() {
         routes.map(|r| r.routes.len())
     );
 }
+
+#[test]
+fn fastest_is_the_first_of_the_legs() {
+    let s = surface(
+        &framed(vec![line("515", &[(100.0, 20.0), (100.0, 180.0)])]),
+        &[],
+    );
+    let (a, b) = (p(20.0, 100.0), p(180.0, 100.0));
+    let first = s.legs(a.clone(), b.clone()).unwrap().routes.remove(0);
+    assert_eq!(s.fastest(a, b).unwrap(), first);
+}

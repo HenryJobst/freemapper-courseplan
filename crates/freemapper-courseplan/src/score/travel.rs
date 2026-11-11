@@ -61,6 +61,19 @@ pub struct LegRoutes {
 pub trait TravelTime {
     /// The fastest route and clearly different alternatives from `from` to `to`.
     fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError>;
+    /// Only the fastest route. The default takes it from [`TravelTime::legs`]; a surface that can find it
+    /// without the alternatives answers faster.
+    fn fastest(&self, from: MapPoint, to: MapPoint) -> Result<Route, ScoreError> {
+        let unreachable = ScoreError::Unreachable {
+            from: from.clone(),
+            to: to.clone(),
+        };
+        self.legs(from, to)?
+            .routes
+            .into_iter()
+            .next()
+            .ok_or(unreachable)
+    }
     /// Whether a runner can stand at `p`: inside the raster and not in a blocked cell. `legs`
     /// is more forgiving: an end point in a blocked cell moves to a free cell within three cells
     /// that a straight line over free cells reaches, and fails with `Unreachable` if there is none.
@@ -216,6 +229,20 @@ impl TravelTime for CostSurface {
             .map(|path| self.route(&search, path, &from, &to))
             .collect();
         Ok(LegRoutes { routes })
+    }
+
+    fn fastest(&self, from: MapPoint, to: MapPoint) -> Result<Route, ScoreError> {
+        let unreachable = || ScoreError::Unreachable {
+            from: from.clone(),
+            to: to.clone(),
+        };
+        let (s, t) = (
+            self.cell_for(&from).ok_or_else(unreachable)?,
+            self.cell_for(&to).ok_or_else(unreachable)?,
+        );
+        let mut search = Searcher::new(&self.grid, self.params.cell_m);
+        let path = search.shortest(s, t, None).ok_or_else(unreachable)?;
+        Ok(self.route(&search, &path, &from, &to))
     }
 
     fn passable(&self, p: MapPoint) -> bool {

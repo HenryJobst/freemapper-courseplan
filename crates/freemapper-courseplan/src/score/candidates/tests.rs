@@ -1,5 +1,7 @@
 use freemapper_courseplan_model::{MapPoint, SpecialObject};
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use super::*;
 use crate::map::{FeatureGeometry, MapFeature};
 use crate::score::travel::{LegRoutes, Route};
@@ -32,8 +34,14 @@ fn route(len: f64) -> Route {
 /// passable and legs to or from `lost` points fail.
 struct Fake {
     many: Vec<MapPoint>,
-    blocked: Vec<MapPoint>,
+    /// Discs (centre, radius in map mm) that are not passable.
+    blocked: Vec<(MapPoint, f64)>,
     lost: Vec<MapPoint>,
+    /// Legs between two candidates fail; legs from the start and to the finish still work.
+    pairs_lost: bool,
+    calls: AtomicUsize,
+    /// Sites the start leg was asked for, in order.
+    probed: std::sync::Mutex<Vec<MapPoint>>,
 }
 
 impl Fake {
@@ -42,13 +50,24 @@ impl Fake {
             many: vec![],
             blocked: vec![],
             lost: vec![],
+            pairs_lost: false,
+            calls: AtomicUsize::new(0),
+            probed: std::sync::Mutex::new(vec![]),
         }
     }
 }
 
 impl TravelTime for Fake {
     fn legs(&self, from: MapPoint, to: MapPoint) -> Result<LegRoutes, ScoreError> {
-        if self.lost.contains(&from) || self.lost.contains(&to) {
+        self.calls.fetch_add(1, Ordering::Relaxed);
+        if from == p(0.0, 0.0) {
+            self.probed.lock().unwrap().push(to.clone());
+        }
+        let end = |q: &MapPoint| *q == p(0.0, 0.0) || *q == p(100.0, 0.0);
+        if self.lost.contains(&from)
+            || self.lost.contains(&to)
+            || (self.pairs_lost && !end(&from) && !end(&to))
+        {
             return Err(ScoreError::Unreachable { from, to });
         }
         let len = (from.x - to.x).hypot(from.y - to.y).max(1.0);
@@ -65,7 +84,10 @@ impl TravelTime for Fake {
     }
 
     fn passable(&self, at: MapPoint) -> bool {
-        !self.blocked.contains(&at)
+        !self
+            .blocked
+            .iter()
+            .any(|(c, r)| (c.x - at.x).hypot(c.y - at.y) <= *r)
     }
 }
 
@@ -146,7 +168,7 @@ fn blocked_and_out_of_bounds_are_excluded() {
         courses: vec![],
     }];
     let travel = Fake {
-        blocked: vec![p(20.0, 20.0)],
+        blocked: vec![(p(20.0, 20.0), 0.0)],
         lost: vec![p(60.0, 20.0)],
         ..Fake::plain()
     };
@@ -262,7 +284,7 @@ fn limit_cuts_the_list() {
 
 #[test]
 fn many_sites_stay_bounded_and_deterministic() {
-    // 400 boulders: only `limit * 4` are looked at, and two runs agree.
+    // 400 boulders: only a bounded number of legs are computed, and two runs agree.
     let index = MapIndex::from_features(
         (0..400)
             .map(|i| boulder(5.0 + 3.0 * f64::from(i % 20), 5.0 + 3.0 * f64::from(i / 20)))
@@ -270,15 +292,199 @@ fn many_sites_stay_bounded_and_deterministic() {
     );
     let mut c = ctx(&[], &[]);
     c.limit = 5;
-    let a = suggest(&index, &Fake::plain(), &c).unwrap();
+    let fake = Fake::plain();
+    let a = suggest(&index, &fake, &c).unwrap();
     assert_eq!(a.len(), 5);
+    // Wanted: 2 * limit = 10 sites, each with a start leg, a finish leg and 4 neighbour legs, plus the
+    // two end checks (passable here, so no probe).
+    let calls = fake.calls.load(Ordering::Relaxed);
+    assert!(calls <= 10 * 6, "{calls} legs");
     assert_eq!(a, suggest(&index, &Fake::plain(), &c).unwrap());
+}
+
+#[test]
+fn the_selection_spreads_over_a_wide_map() {
+    // 10 rows of 40 boulders on a 400 mm wide, flat map.
+    let index = MapIndex::from_features(
+        (0..400)
+            .map(|i| {
+                boulder(
+                    5.0 + 10.0 * f64::from(i % 40),
+                    5.0 + 10.0 * f64::from(i / 40),
+                )
+            })
+            .collect(),
+    );
+    let mut c = ctx(&[], &[]);
+    c.limit = 8;
+    let fake = Fake::plain();
+    suggest(&index, &fake, &c).unwrap();
+    // The 16 sites picked for routing, before the cut by route choice.
+    let mut picked = fake.probed.lock().unwrap().clone();
+    picked.sort_by(|a, b| a.x.total_cmp(&b.x).then(a.y.total_cmp(&b.y)));
+    picked.dedup();
+    let west = picked.iter().filter(|q| q.x < 200.0).count();
+    assert_eq!(picked.len(), 16);
+    assert!((5..=11).contains(&west), "{west} of 16 in the west half");
+    assert!(picked.iter().any(|q| q.y < 30.0) && picked.iter().any(|q| q.y > 70.0));
+}
+
+#[test]
+fn unreachable_candidates_are_replaced_by_further_sites() {
+    let features: Vec<_> = (0..12)
+        .map(|i| boulder(10.0 + 20.0 * f64::from(i), 40.0))
+        .collect();
+    let lost: Vec<_> = (0..6)
+        .map(|i| p(10.0 + 20.0 * f64::from(i), 40.0))
+        .collect();
+    let index = MapIndex::from_features(features);
+    let travel = Fake {
+        lost,
+        ..Fake::plain()
+    };
+    let mut c = ctx(&[], &[]);
+    c.limit = 3;
+    let found = suggest(&index, &travel, &c).unwrap();
+    assert_eq!(found.len(), 3);
+    assert!(found.iter().all(|c| c.at.x > 110.0));
+}
+
+#[test]
+fn a_corner_on_a_blocked_cell_stays_when_a_free_place_is_near() {
+    let building = feature(
+        "521",
+        FeatureGeometry::Area(vec![vec![
+            p(40.0, 40.0),
+            p(60.0, 40.0),
+            p(60.0, 60.0),
+            p(40.0, 60.0),
+        ]]),
+    );
+    let index = MapIndex::from_features(vec![building]);
+    let near = Fake {
+        blocked: vec![(p(40.0, 40.0), 0.7)],
+        ..Fake::plain()
+    };
+    let found = suggest(&index, &near, &ctx(&[], &[])).unwrap();
+    assert!(found.iter().any(|c| c.at == p(40.0, 40.0)));
+    let walled = Fake {
+        blocked: vec![(p(40.0, 40.0), 5.0)],
+        ..Fake::plain()
+    };
+    let found = suggest(&index, &walled, &ctx(&[], &[])).unwrap();
+    assert!(!found.iter().any(|c| c.at == p(40.0, 40.0)));
+    assert_eq!(found.len(), 3);
+}
+
+#[test]
+fn unreachable_start_and_finish_are_errors() {
+    let index = MapIndex::from_features(vec![boulder(30.0, 30.0)]);
+    let no_start = Fake {
+        blocked: vec![(p(0.0, 0.0), 0.0)],
+        lost: vec![p(0.0, 0.0)],
+        ..Fake::plain()
+    };
+    assert_eq!(
+        suggest(&index, &no_start, &ctx(&[], &[])),
+        Err(ScoreError::StartUnreachable { at: p(0.0, 0.0) })
+    );
+    let no_finish = Fake {
+        blocked: vec![(p(100.0, 0.0), 0.0)],
+        lost: vec![p(100.0, 0.0)],
+        ..Fake::plain()
+    };
+    assert_eq!(
+        suggest(&index, &no_finish, &ctx(&[], &[])),
+        Err(ScoreError::FinishUnreachable { at: p(100.0, 0.0) })
+    );
+}
+
+fn surface(index: &MapIndex) -> crate::score::travel::CostSurface {
+    use crate::score::travel::{CostSurface, Pace, RouteParams};
+    CostSurface::build(index, 1000, &[], Pace(360), &RouteParams::default()).unwrap()
+}
+
+fn open_field() -> MapFeature {
+    feature(
+        "401",
+        FeatureGeometry::Area(vec![vec![
+            p(0.0, 0.0),
+            p(200.0, 0.0),
+            p(200.0, 200.0),
+            p(0.0, 200.0),
+        ]]),
+    )
+}
+
+#[test]
+fn a_start_on_a_thin_wall_snaps_and_one_inside_a_building_fails() {
+    let wall = feature(
+        "515",
+        FeatureGeometry::Line(vec![p(100.0, 0.0), p(100.0, 200.0)]),
+    );
+    let building = feature(
+        "521",
+        FeatureGeometry::Area(vec![vec![
+            p(140.0, 140.0),
+            p(190.0, 140.0),
+            p(190.0, 190.0),
+            p(140.0, 190.0),
+        ]]),
+    );
+    let index = MapIndex::from_features(vec![open_field(), wall, building, boulder(50.0, 100.0)]);
+    let s = surface(&index);
+    let mut c = ctx(&[], &[]);
+    c.start = p(100.0, 100.0);
+    c.finish = p(30.0, 30.0);
+    c.min_distance_mm = 5.0;
+    assert!(!s.passable(c.start.clone()), "the wall cell is blocked");
+    assert!(suggest(&index, &s, &c).is_ok());
+    c.start = p(165.0, 165.0);
+    assert_eq!(
+        suggest(&index, &s, &c),
+        Err(ScoreError::StartUnreachable {
+            at: p(165.0, 165.0)
+        })
+    );
+}
+
+fn routes(lengths: &[f64]) -> LegRoutes {
+    LegRoutes {
+        routes: lengths.iter().map(|&l| route(l)).collect(),
+    }
+}
+
+#[test]
+fn route_choice_of_one_leg() {
+    assert_eq!(leg_choice(&routes(&[100.0]), 1.25), 0.0);
+    // Two equal routes: half the richness, no penalty.
+    assert!((leg_choice(&routes(&[100.0, 100.0]), 1.25) - 0.5).abs() < 1e-12);
+    // The second route is beyond the ratio: it counts for nothing.
+    assert_eq!(leg_choice(&routes(&[100.0, 130.0]), 1.25), 0.0);
+    // Three equal routes: full; a second route at the limit halves it.
+    assert!((leg_choice(&routes(&[100.0, 100.0, 100.0]), 1.25) - 1.0).abs() < 1e-12);
+    assert!((leg_choice(&routes(&[100.0, 125.0, 125.0]), 1.25) - 0.5).abs() < 1e-12);
+}
+
+#[test]
+fn candidates_with_unreachable_pair_legs_keep_the_start_leg() {
+    let index = MapIndex::from_features(vec![boulder(30.0, 30.0), boulder(60.0, 60.0)]);
+    let travel = Fake {
+        pairs_lost: true,
+        many: vec![p(30.0, 30.0)],
+        ..Fake::plain()
+    };
+    let found = suggest(&index, &travel, &ctx(&[], &[])).unwrap();
+    assert_eq!(found.len(), 2);
+    assert!(found.iter().all(|c| c.route_choice.is_finite()));
+    assert!(found[0].route_choice > 0.9 && found[1].route_choice == 0.0);
 }
 
 /// Run time on the Lübeck example map: `cargo test --release -- --ignored luebeck_timing --nocapture`.
 #[test]
 #[ignore = "timing run, prints the duration"]
 fn luebeck_timing_for_limit_60() {
+    const COARSE_CELL_M: f64 = 8.0;
     use crate::score::travel::{CostSurface, Pace, RouteParams};
     let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
     let project = freemapper_courseplan_model::ProjectFile::load(std::path::Path::new(&format!(
@@ -302,14 +508,14 @@ fn luebeck_timing_for_limit_60() {
             .unwrap()
     };
     let t0 = std::time::Instant::now();
-    let surface = CostSurface::build(
-        &index,
-        doc.georef.scale_denominator,
-        &[],
-        Pace(360),
-        &RouteParams::default(),
-    )
-    .unwrap();
+    let scale = doc.georef.scale_denominator;
+    let surface =
+        CostSurface::build(&index, scale, &[], Pace(360), &RouteParams::default()).unwrap();
+    let coarse_params = RouteParams {
+        cell_m: COARSE_CELL_M,
+        ..RouteParams::default()
+    };
+    let coarse = CostSurface::build(&index, scale, &[], Pace(360), &coarse_params).unwrap();
     let built = t0.elapsed();
     let c = SuggestContext {
         // The example's start flag stands where the surface is blocked; use a passable control instead.
@@ -327,7 +533,7 @@ fn luebeck_timing_for_limit_60() {
         limit: 60,
     };
     let t1 = std::time::Instant::now();
-    let found = suggest(&index, &surface, &c).unwrap();
+    let found = suggest_with(&index, &surface, &coarse, &c).unwrap();
     println!(
         "surface {built:?}, suggest {:?}, {} candidates",
         t1.elapsed(),

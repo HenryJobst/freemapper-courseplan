@@ -51,12 +51,14 @@ const CORNER_DEGREES: f64 = 45.0;
 const FULL_CHOICE_ROUTES: usize = 3;
 /// Share of the route-choice value lost when the second route is as long as the limit allows.
 const CLEARER_PENALTY: f64 = 0.5;
-/// Raw sites kept per wanted candidate before any route is computed.
-const PREFILTER_FACTOR: usize = 2;
-/// Legs per candidate besides the start: nearest and seeded-pseudo-random others.
+/// Reachable candidates wanted per `limit`, so the best `limit` can be picked from them.
+const SITES_PER_LIMIT: usize = 2;
+/// Sites tried per `limit` at most (unreachable ones are replaced by further sites).
+const ATTEMPTS_PER_LIMIT: usize = 4;
+/// Other candidates each candidate gets a leg to.
 const NEAREST_LEGS: usize = 4;
-const RANDOM_LEGS: usize = 2;
-const SAMPLE_SEED: u64 = 0x5EED_C0DE_2026_1111;
+/// A corner may lie in the blocked cell of its wall; it needs a free place at one of these distances (map mm).
+const CORNER_PROBE_MM: [f64; 3] = [0.5, 1.0, 1.5];
 
 struct Classes(Vec<(String, bool, f64)>);
 
@@ -227,113 +229,155 @@ fn leg_choice(legs: &LegRoutes, max_ratio: f64) -> f64 {
     richness * (1.0 - CLEARER_PENALTY * spread)
 }
 
-/// The legs of candidate `i` that are looked at: the start (`n`), the nearest others, seeded-random others.
-fn sample(i: usize, sites: &[Site]) -> Vec<usize> {
-    let n = sites.len();
-    let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
-    others.sort_by(|&a, &b| {
-        dist(&sites[i].at, &sites[a].at)
-            .total_cmp(&dist(&sites[i].at, &sites[b].at))
-            .then(a.cmp(&b))
-    });
-    let mut chosen: Vec<usize> = others.iter().copied().take(NEAREST_LEGS).collect();
-    let rest = &others[chosen.len()..];
-    if !rest.is_empty() {
-        let mut state = SAMPLE_SEED ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        let mut tries = 0;
-        let want = RANDOM_LEGS.min(rest.len());
-        let mut picked = 0;
-        while picked < want && tries < want * 8 {
-            state = state
-                .wrapping_mul(6_364_136_223_846_793_005)
-                .wrapping_add(1_442_695_040_888_963_407);
-            let j = rest[((state >> 33) as usize) % rest.len()];
-            if !chosen.contains(&j) {
-                chosen.push(j);
-                picked += 1;
-            }
-            tries += 1;
-        }
+/// Where routes to and from a site end: the site itself when a runner can stand there, else (corners
+/// only) the nearest free place within `CORNER_PROBE_MM`; none when there is no standing room.
+fn route_end(travel: &dyn TravelTime, site: &Site) -> Option<MapPoint> {
+    if travel.passable(site.at.clone()) {
+        return Some(site.at.clone());
     }
-    chosen.push(n);
-    chosen
+    if !site.corner {
+        return None;
+    }
+    CORNER_PROBE_MM.iter().find_map(|r| {
+        (0..8).find_map(|k| {
+            let a = f64::from(k) * std::f64::consts::FRAC_PI_4;
+            let q = MapPoint {
+                x: site.at.x + r * a.cos(),
+                y: site.at.y + r * a.sin(),
+            };
+            travel.passable(q.clone()).then_some(q)
+        })
+    })
 }
 
-/// The candidates for control sites, best route choice first, ties by position.
+/// Start or finish must be reachable: a point in a blocked cell gets one probe leg, which snaps it.
+fn check_end(
+    travel: &dyn TravelTime,
+    at: &MapPoint,
+    error: fn(MapPoint) -> ScoreError,
+) -> Result<(), ScoreError> {
+    if travel.passable(at.clone()) {
+        return Ok(());
+    }
+    match travel.legs(at.clone(), at.clone()) {
+        Ok(_) => Ok(()),
+        Err(ScoreError::Unreachable { .. }) => Err(error(at.clone())),
+        Err(e) => Err(e),
+    }
+}
+
+/// Route choice of the leg between two points; none when the surface finds no route.
+fn choice_of(
+    travel: &dyn TravelTime,
+    from: &MapPoint,
+    to: &MapPoint,
+    max_ratio: f64,
+) -> Result<Option<f64>, ScoreError> {
+    match travel.legs(from.clone(), to.clone()) {
+        Ok(legs) => Ok(Some(leg_choice(&legs, max_ratio))),
+        Err(ScoreError::Unreachable { .. }) => Ok(None),
+        Err(e) => Err(e),
+    }
+}
+
+/// The candidates for control sites, best route choice first, ties by position. See [`suggest_with`].
 pub fn suggest(
     index: &MapIndex,
     travel: &dyn TravelTime,
     ctx: &SuggestContext<'_>,
 ) -> Result<Vec<Candidate>, ScoreError> {
+    suggest_with(index, travel, travel, ctx)
+}
+
+/// Like [`suggest`] with two surfaces: `fine` for the time from the start (effort), `coarse` (a larger
+/// cell) for the finish probe and every leg that gets alternatives, which dominate the run time.
+pub fn suggest_with(
+    index: &MapIndex,
+    fine: &dyn TravelTime,
+    coarse: &dyn TravelTime,
+    ctx: &SuggestContext<'_>,
+) -> Result<Vec<Candidate>, ScoreError> {
     if ctx.limit == 0 {
         return Ok(Vec::new());
     }
+    check_end(fine, &ctx.start, |at| ScoreError::StartUnreachable { at })?;
+    check_end(fine, &ctx.finish, |at| ScoreError::FinishUnreachable { at })?;
     let raw = raw_sites(index);
-    // Cheap rules: minimum distances, forbidden areas, standing room for point sites.
-    let mut usable: Vec<Site> = raw
+    // The pool: sites outside forbidden areas with standing room.
+    let pool: Vec<(&Site, MapPoint)> = raw
         .iter()
-        .filter(|s| {
-            let far = |p: &MapPoint| dist(&s.at, p) >= ctx.min_distance_mm;
-            far(&ctx.start)
-                && far(&ctx.finish)
-                && ctx.existing.iter().all(far)
-                && !forbidden(ctx.specials, &s.at)
-                && (s.corner || travel.passable(s.at.clone()))
-        })
-        .cloned()
+        .filter(|s| !forbidden(ctx.specials, &s.at))
+        .filter_map(|s| route_end(fine, s).map(|end| (s, end)))
         .collect();
-    // Clearest first, ties by position; thin out sites closer than the minimum distance to a kept one.
-    usable.sort_by(|a, b| {
-        b.clarity
-            .total_cmp(&a.clarity)
-            .then(a.at.x.total_cmp(&b.at.x))
-            .then(a.at.y.total_cmp(&b.at.y))
-    });
-    let mut sites: Vec<Site> = Vec::new();
-    for s in usable {
-        if sites.len() >= ctx.limit.saturating_mul(PREFILTER_FACTOR) {
-            break;
-        }
-        if sites
-            .iter()
-            .all(|k| dist(&k.at, &s.at) >= ctx.min_distance_mm)
-        {
-            sites.push(s);
-        }
-    }
-    // Candidates the runner cannot reach from the start drop out; the rest carry their effort.
-    let mut efforts = Vec::new();
-    let mut reachable = Vec::new();
-    for s in sites {
-        match travel.legs(ctx.start.clone(), s.at.clone()) {
-            Ok(legs) => {
-                efforts.push(legs.routes.first().map_or(0.0, |r| r.time_s));
-                reachable.push((s, legs));
+    // Distance to the nearest of start, finish, existing and kept controls: the minimum distance rule and
+    // the spread in one number.
+    let mut near: Vec<f64> = pool
+        .iter()
+        .map(|(s, _)| {
+            [&ctx.start, &ctx.finish]
+                .into_iter()
+                .chain(ctx.existing)
+                .map(|p| dist(&s.at, p))
+                .fold(f64::INFINITY, f64::min)
+        })
+        .collect();
+    let mut kept: Vec<(&Site, MapPoint, f64)> = Vec::new();
+    let mut tries = 0;
+    while kept.len() < ctx.limit.saturating_mul(SITES_PER_LIMIT)
+        && tries < ctx.limit.saturating_mul(ATTEMPTS_PER_LIMIT)
+    {
+        // Farthest point first, clear features preferred; the pool is in position order, so ties go to
+        // the lower x, then y.
+        let mut best: Option<(usize, f64)> = None;
+        for (i, (site, _)) in pool.iter().enumerate() {
+            if near[i] < ctx.min_distance_mm {
+                continue;
             }
-            Err(ScoreError::Unreachable { .. }) => {}
+            let value = near[i] * site.clarity;
+            if best.is_none_or(|(_, v)| value > v) {
+                best = Some((i, value));
+            }
+        }
+        let Some((i, _)) = best else { break };
+        tries += 1;
+        let (site, end) = pool[i].clone();
+        let reachable = match fine.fastest(ctx.start.clone(), end.clone()) {
+            Ok(route) => match coarse.fastest(end.clone(), ctx.finish.clone()) {
+                Ok(_) => Some(route.time_s),
+                Err(ScoreError::Unreachable { .. }) => None,
+                Err(e) => return Err(e),
+            },
+            Err(ScoreError::Unreachable { .. }) => None,
             Err(e) => return Err(e),
+        };
+        // A failed site still pushes the next picks away, so a walled-in yard is not tried corner by corner.
+        for (j, (other, _)) in pool.iter().enumerate() {
+            near[j] = near[j].min(dist(&other.at, &site.at));
+        }
+        if let Some(effort) = reachable {
+            kept.push((site, end, effort));
         }
     }
-    let sites: Vec<Site> = reachable.iter().map(|(s, _)| s.clone()).collect();
-    let n = sites.len();
+    let n = kept.len();
     let max_ratio = RouteParams::default().max_length_ratio;
     let mut pairs: BTreeMap<(usize, usize), Option<f64>> = BTreeMap::new();
     let mut out = Vec::with_capacity(n);
-    for (i, (site, start_legs)) in reachable.iter().enumerate() {
-        let mut values = vec![leg_choice(start_legs, max_ratio)];
-        for j in sample(i, &sites) {
-            if j == n {
-                continue;
-            }
+    for (i, (site, end, effort_s)) in kept.iter().enumerate() {
+        let mut values: Vec<f64> = choice_of(coarse, &ctx.start, end, max_ratio)?
+            .into_iter()
+            .collect();
+        let mut others: Vec<usize> = (0..n).filter(|&j| j != i).collect();
+        others.sort_by(|&a, &b| {
+            dist(&site.at, &kept[a].0.at)
+                .total_cmp(&dist(&site.at, &kept[b].0.at))
+                .then(a.cmp(&b))
+        });
+        for j in others.into_iter().take(NEAREST_LEGS) {
             let key = (i.min(j), i.max(j));
             let value = match pairs.get(&key) {
                 Some(v) => *v,
                 None => {
-                    let v = match travel.legs(sites[key.0].at.clone(), sites[key.1].at.clone()) {
-                        Ok(legs) => Some(leg_choice(&legs, max_ratio)),
-                        Err(ScoreError::Unreachable { .. }) => None,
-                        Err(e) => return Err(e),
-                    };
+                    let v = choice_of(coarse, &kept[key.0].1, &kept[key.1].1, max_ratio)?;
                     pairs.insert(key, v);
                     v
                 }
@@ -355,7 +399,7 @@ pub fn suggest(
             symbol_code: Some(site.symbol.clone()),
             route_choice,
             difficulty,
-            effort_s: efforts[i],
+            effort_s: *effort_s,
         });
     }
     out.sort_by(|a, b| {

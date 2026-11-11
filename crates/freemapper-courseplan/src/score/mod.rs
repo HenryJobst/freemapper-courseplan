@@ -13,6 +13,14 @@ pub enum ScoreError {
         from: freemapper_courseplan_model::MapPoint,
         to: freemapper_courseplan_model::MapPoint,
     },
+    #[error("the start at ({}, {}) cannot be reached: it lies in a blocked area", at.x, at.y)]
+    StartUnreachable {
+        at: freemapper_courseplan_model::MapPoint,
+    },
+    #[error("the finish at ({}, {}) cannot be reached: it lies in a blocked area", at.x, at.y)]
+    FinishUnreachable {
+        at: freemapper_courseplan_model::MapPoint,
+    },
     #[error("the map has no objects, so there is nothing to search routes on")]
     MapEmpty,
     #[error("route setting {name} is out of range: {value}")]
