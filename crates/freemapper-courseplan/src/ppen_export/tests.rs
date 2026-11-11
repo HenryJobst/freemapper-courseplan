@@ -547,6 +547,7 @@ fn team_relay_score_are_skipped_and_named() {
             code: code("31"),
             value: 10,
         }],
+        links: vec![],
     };
     let mut ev = event(
         &[("31", 10.0, 10.0)],

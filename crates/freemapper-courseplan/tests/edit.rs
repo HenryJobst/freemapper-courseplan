@@ -97,6 +97,7 @@ fn event() -> Event {
         ],
         accepted_findings: vec![],
         sync: None,
+        score: None,
     }
 }
 
@@ -206,6 +207,7 @@ fn remove_control_used_by_score_course_is_refused() {
                 code: code("32"),
                 value: 10,
             }],
+            links: vec![],
         },
     ));
     let before = e.clone();

@@ -1301,6 +1301,7 @@ map = "m.omap"
                         code: code("36"),
                         value: 10,
                     }],
+                    links: vec![],
                 },
             ),
         ];

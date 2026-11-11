@@ -1210,6 +1210,7 @@ mod tests {
             courses: imp.courses.clone(),
             accepted_findings: vec![],
             sync: None,
+            score: None,
         }
     }
 

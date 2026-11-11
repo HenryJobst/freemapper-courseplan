@@ -30,7 +30,10 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Pflichtposten | mandatory control | Posten einer Mannschaftsbahn, den jedes Mitglied in vorgegebener Reihenfolge anläuft. Gekennzeichnet mit A, B, C … | `MandatoryControl` |
 | Wahlposten | free control | Posten einer Mannschaftsbahn, den mindestens ein Mitglied anläuft, nur zwischen erstem und letztem Pflichtposten. In OE „Aufteilposten“. | `FreeControl` |
 | Staffelbahn | relay course | Bahnfamilie mit gemeinsamen Teilen und Gabelungsvarianten, verteilt auf Strecken und Teams. | `CourseKind::Relay` |
-| Score-Bahn | score course | Menge von Posten mit Werten, Zeitlimit und Strafe; Reihenfolge frei. | `CourseKind::Score` |
+| Score-Bahn | score course | Menge von Posten mit Werten, Zeitlimit und Strafe; Reihenfolge frei. Kann Pflichtverbindungen haben; Einstellungen in `[score]`. | `CourseKind::Score` |
+| Postenwert | control value | Punkte eines Postens der Score-Bahn. Der Code trägt ihn: bei zweistelligem Code die zweite Ziffer (31 gibt 1), bei längerem die letzte (ADR 0060). | `ScoreControl::value` |
+| Pflichtverbindung | mandatory link | Paar von Posten einer Score-Bahn, das direkt nacheinander angelaufen werden muss, in beliebiger Richtung. Wer es nicht tut, wird disqualifiziert. Verbindungen bilden Ketten: an einem Posten treffen höchstens zwei. | `ScoreLink` |
+| Läuferprofil | runner profile | Pace eines guten (Standard 4:10 min/km) und eines sehr guten Läufers (3:45), mit der Punktequote bzw. Zeitquote, die jeder auf der Bahn erreichen soll. Einstellungen in `[score]`. | `ScoreSettings` |
 | Bahnposten | course control | Ein Posten in einer Bahn, mit eigener Nummernlage und eigenen Knickpunkten der folgenden Strecke. | `CourseControl` |
 | geplanter Druckmaßstab | planned print scale | Maßstab, für den die Bahn gelegt wird. Grundlage für maßstabsabhängige Prüfungen; für freemapper-print nur ein Vorgabewert. | `planned_print_scale` |
 | Sonderobjekt | special object | Bahnobjekt außer Posten: Start, Ziel, Pflichtstrecke, Sperrgebiet, verbotene Route, Gefahrenbereich, Erste-Hilfe-Stelle, Verpflegungsstelle. | `SpecialObject` |

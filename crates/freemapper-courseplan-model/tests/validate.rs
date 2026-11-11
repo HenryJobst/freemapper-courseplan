@@ -301,3 +301,117 @@ fn control_and_invisible_characters_in_names_are_refused() {
     e.courses[0].name = "Lang B ä 🙂".to_owned();
     assert_eq!(validate(&e), vec![]);
 }
+
+fn score(links: &str) -> String {
+    format!(
+        r#"
+[[controls]]
+code = 33
+map_mm = [30.0, 30.0]
+
+[[controls]]
+code = 34
+map_mm = [35.0, 30.0]
+
+[[courses]]
+name = "S"
+kind = "score"
+start = "S1"
+finish = "F1"
+time_limit_min = 45
+penalty_per_min = 5
+controls = [{{ code = 31, value = 1 }}, {{ code = 32, value = 2 }}, {{ code = 33, value = 3 }}, {{ code = 34, value = 4 }}]
+{links}
+"#
+    )
+}
+
+fn code(s: &str) -> ControlCode {
+    ControlCode(s.to_owned())
+}
+
+#[test]
+fn valid_links_are_consistent() {
+    let ok = event(&score("links = [{ a = 31, b = 32 }, { a = 32, b = 33 }]"));
+    assert_eq!(validate(&ok), vec![]);
+}
+
+#[test]
+fn link_to_unknown_control_is_refused() {
+    let errors = validate(&event(&score("links = [{ a = 31, b = 99 }]")));
+    assert_eq!(
+        errors,
+        vec![ModelError::LinkToUnknownControl {
+            course: "S".into(),
+            a: code("31"),
+            b: code("99"),
+            code: code("99"),
+        }]
+    );
+}
+
+#[test]
+fn link_to_itself_is_refused() {
+    let errors = validate(&event(&score("links = [{ a = 31, b = 31 }]")));
+    assert_eq!(
+        errors,
+        vec![ModelError::LinkToItself {
+            course: "S".into(),
+            code: code("31"),
+        }]
+    );
+}
+
+#[test]
+fn duplicate_link_in_either_direction_is_refused() {
+    let errors = validate(&event(&score(
+        "links = [{ a = 31, b = 32 }, { a = 32, b = 31 }]",
+    )));
+    assert_eq!(
+        errors,
+        vec![ModelError::DuplicateLink {
+            course: "S".into(),
+            a: code("32"),
+            b: code("31"),
+        }]
+    );
+}
+
+#[test]
+fn link_chain_may_not_branch() {
+    let errors = validate(&event(&score(
+        "links = [{ a = 31, b = 32 }, { a = 31, b = 33 }, { a = 31, b = 34 }]",
+    )));
+    assert_eq!(
+        errors,
+        vec![ModelError::LinkBranches {
+            course: "S".into(),
+            code: code("31"),
+        }]
+    );
+}
+
+#[test]
+fn settings_out_of_range_are_refused() {
+    let bad = |settings: &str| validate(&event(&format!("\n[score]\n{settings}\n")));
+    assert_eq!(validate(&event("\n[score]\n")), vec![]);
+    for (settings, what) in [
+        ("value_max = 0", "value_max"),
+        ("value_max = 10", "value_max"),
+        ("good_band_percent = [93, 87]", "good_band_percent"),
+        (
+            "very_good_band_percent = [95, 101]",
+            "very_good_band_percent",
+        ),
+        ("good_pace_s_per_km = 0", "good_pace_s_per_km"),
+        ("very_good_pace_s_per_km = 0", "very_good_pace_s_per_km"),
+        ("mix_hard_percent = 101", "mix_hard_percent"),
+    ] {
+        let errors = bad(settings);
+        assert_eq!(errors.len(), 1, "{settings}: {errors:?}");
+        assert!(
+            matches!(&errors[0], ModelError::ScoreSettingOutOfRange { what: w, .. } if *w == what),
+            "{settings}: {errors:?}"
+        );
+    }
+}

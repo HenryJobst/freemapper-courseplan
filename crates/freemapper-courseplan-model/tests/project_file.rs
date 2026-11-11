@@ -2,7 +2,8 @@ use std::path::{Path, PathBuf};
 
 use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, ControlKind, CourseKind, Event, LegRef, MapPoint, ModelError,
-    PrintArea, ProjectError, ProjectFile, Side, SpecialObject, SyncDecision, SyncState,
+    PrintArea, ProjectError, ProjectFile, ScoreSettings, Side, SpecialObject, SyncDecision,
+    SyncState,
 };
 
 fn fixture(name: &str) -> PathBuf {
@@ -1127,4 +1128,84 @@ fn write_atomic_does_not_follow_a_symlink_at_the_tmp_name_and_keeps_the_mode() {
     let mode = std::fs::metadata(&target).unwrap().permissions().mode() & 0o777;
     assert_eq!(mode, 0o640);
     assert!(!dir.path().join("event.toml.tmp").exists());
+}
+
+const SCORE_COURSE: &str = r#"
+[[courses]]
+name = "S"
+kind = "score"
+start = "S1"
+finish = "F1"
+time_limit_min = 45
+penalty_per_min = 5
+controls = [{ code = 31, value = 1 }, { code = 32, value = 2 }]
+"#;
+
+#[test]
+fn score_links_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = format!(
+        "{}{SCORE_COURSE}links = [{{ a = 31, b = 32 }}]\n",
+        event_text("", "", "")
+    );
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    let CourseKind::Score { links, .. } = &project.event.courses[1].kind else {
+        panic!("not a score course");
+    };
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].a, code("31"));
+    assert_eq!(links[0].b, code("32"));
+    project.event.event.title = "Other".to_owned();
+    project.save().unwrap();
+    let again = ProjectFile::load(&file).unwrap();
+    assert_eq!(again.event.courses[1].kind, project.event.courses[1].kind);
+    assert!(std::fs::read_to_string(&file).unwrap().contains("links"));
+}
+
+#[test]
+fn older_files_without_links_load() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = format!("{}{SCORE_COURSE}", event_text("", "", ""));
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    let CourseKind::Score { links, .. } = &project.event.courses[1].kind else {
+        panic!("not a score course");
+    };
+    assert!(links.is_empty());
+    project.event.event.title = "Other".to_owned();
+    project.save().unwrap();
+    assert!(!std::fs::read_to_string(&file).unwrap().contains("links"));
+}
+
+#[test]
+fn score_settings_round_trip_and_default_absent() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(dir.path(), &event_text("", "", ""));
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(project.event.score, None);
+    assert_eq!(project.event.score_settings(), ScoreSettings::default());
+    let defaults = ScoreSettings::default();
+    assert_eq!(defaults.value_max, 5);
+    assert_eq!(defaults.good_pace_s_per_km, 250);
+    assert_eq!(defaults.very_good_pace_s_per_km, 225);
+    assert_eq!(defaults.good_band_percent, (87, 93));
+    assert_eq!(defaults.very_good_band_percent, (95, 100));
+    assert_eq!(defaults.mix_hard_percent, 40);
+    assert_eq!(defaults.seed, 1);
+    project.save().unwrap();
+    assert!(!std::fs::read_to_string(&file).unwrap().contains("[score]"));
+
+    let custom = ScoreSettings {
+        value_max: 9,
+        seed: 7,
+        ..ScoreSettings::default()
+    };
+    project.event.score = Some(custom.clone());
+    project.save().unwrap();
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(text.contains("[score]"), "{text}");
+    let again = ProjectFile::load(&file).unwrap();
+    assert_eq!(again.event.score, Some(custom.clone()));
+    assert_eq!(again.event.score_settings(), custom);
 }

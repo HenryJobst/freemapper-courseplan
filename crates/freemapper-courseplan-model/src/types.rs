@@ -301,6 +301,14 @@ pub struct ScoreControl {
     pub value: u32,
 }
 
+/// A mandatory link of a score course: the two controls have to be visited directly one after the other,
+/// in either direction (ADR 0060).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScoreLink {
+    pub a: ControlCode,
+    pub b: ControlCode,
+}
+
 /// A part of a relay course: shared by all runners or split into fork variants.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -329,6 +337,9 @@ pub enum CourseKind {
         time_limit_min: u32,
         penalty_per_min: u32,
         controls: Vec<ScoreControl>,
+        /// Pairs of controls to run directly after each other; a runner who does not is disqualified.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        links: Vec<ScoreLink>,
     },
 }
 
@@ -536,6 +547,40 @@ pub struct EventMeta {
     pub start_window_min: Option<u32>,
 }
 
+/// The `[score]` table: settings that all score courses of the event share (ADR 0060).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ScoreSettings {
+    /// Highest control value; values run from 1 to this (the code carries the value, ADR 0060).
+    pub value_max: u8,
+    /// Pace of a good runner, seconds per kilometre.
+    pub good_pace_s_per_km: u32,
+    /// Pace of a very good runner, seconds per kilometre.
+    pub very_good_pace_s_per_km: u32,
+    /// Share of all points the good runner scores within the limit, low and high, in percent.
+    pub good_band_percent: (u8, u8),
+    /// Share of the time limit the very good runner finishes in, low and high, in percent.
+    pub very_good_band_percent: (u8, u8),
+    /// Share of hard controls in the mix, in percent.
+    pub mix_hard_percent: u8,
+    /// Seed of the draft search, so that every run gives the same answer.
+    pub seed: u64,
+}
+
+impl Default for ScoreSettings {
+    fn default() -> Self {
+        ScoreSettings {
+            value_max: 5,
+            good_pace_s_per_km: 250,
+            very_good_pace_s_per_km: 225,
+            good_band_percent: (87, 93),
+            very_good_band_percent: (95, 100),
+            mix_hard_percent: 40,
+            seed: 1,
+        }
+    }
+}
+
 /// Input files of the event. Paths are relative to the project file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Sources {
@@ -563,6 +608,16 @@ pub struct Event {
     /// State of the three-way sync with the linked `.ppen`; absent until a sync ran (ADR 0040).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sync: Option<SyncState>,
+    /// Score settings; absent until set (ADR 0060).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub score: Option<ScoreSettings>,
+}
+
+impl Event {
+    /// The score settings of the event, or the defaults while none are set.
+    pub fn score_settings(&self) -> ScoreSettings {
+        self.score.clone().unwrap_or_default()
+    }
 }
 
 /// The side of a sync conflict a user picked.
@@ -782,6 +837,10 @@ mod tests {
                                 value: 40,
                             },
                         ],
+                        links: vec![ScoreLink {
+                            a: code("31"),
+                            b: code("32"),
+                        }],
                     },
                 ),
             ],
@@ -798,6 +857,7 @@ mod tests {
                 note: "Checked on site.".to_owned(),
             }],
             sync: None,
+            score: Some(ScoreSettings::default()),
         };
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();

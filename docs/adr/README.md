@@ -103,3 +103,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0057](0057-print-preview-and-overlay-parity.md) | Editor: print preview and overlay parity | Accepted | 2026-11-11 |
 | [0058](0058-course-factor-from-the-print-rules.md) | The course factor comes from the print rules | Accepted | 2026-11-11 |
 | [0059](0059-cli-and-mcp-share-ops.md) | The command line runs the MCP operations | Accepted | 2026-11-11 |
+| [0060](0060-score-settings-links-and-code-value.md) | Score settings, mandatory links and the value in the code | Accepted | 2026-11-11 |

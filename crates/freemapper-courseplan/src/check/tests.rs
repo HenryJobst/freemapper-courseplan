@@ -376,6 +376,7 @@ fn courses_of_other_kinds_are_skipped_once() {
         time_limit_min: 45,
         penalty_per_min: 10,
         controls: vec![],
+        links: vec![],
     };
     let rules = rule_set(vec![(fake_rule(), "base")]);
     let report = run(&event, &rules);

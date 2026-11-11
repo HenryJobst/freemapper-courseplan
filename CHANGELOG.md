@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Score-Bahnen: Das Projekt kennt jetzt den Abschnitt `[score]` mit Wertebereich, Läuferprofilen und Seed, und eine Score-Bahn kann Pflichtverbindungen zwischen zwei Posten nennen. Die Prüfung der Projektdatei lehnt unbekannte Posten, doppelte Verbindungen und verzweigte Ketten ab (ADR 0060).
+
 ### Geändert
 
 - Intern: Kartenart, Sidecar-Leser und Objektklasse kommen aus `freemapper-core` v0.19.0 (`freemapper-contract`) statt aus eigenen Kopien. Namen und Ausgaben bleiben gleich.

@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Score courses: the project has a `[score]` table with the value range, runner profiles and seed, and a score course can name mandatory links between two controls. Loading a project refuses links to unknown controls, duplicate links and branching chains (ADR 0060).
+
 ### Changed
 
 - Internal: the map kind, the sidecar reader and the object class now come from `freemapper-core` v0.19.0 (`freemapper-contract`) instead of local copies. Names and output stay the same.

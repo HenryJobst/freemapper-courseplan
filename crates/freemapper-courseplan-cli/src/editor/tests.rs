@@ -546,6 +546,7 @@ mod overlay {
             }],
             accepted_findings: vec![],
             sync: None,
+            score: None,
         }
     }
 
@@ -938,6 +939,7 @@ mod state {
             courses: vec![],
             accepted_findings: vec![],
             sync: None,
+            score: None,
         };
         change(&mut event);
         ProjectFile::create(&path, event).unwrap();

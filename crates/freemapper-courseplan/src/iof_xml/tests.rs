@@ -94,6 +94,7 @@ fn event() -> Event {
         courses: vec![],
         accepted_findings: vec![],
         sync: None,
+        score: None,
     }
 }
 

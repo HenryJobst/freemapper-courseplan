@@ -253,6 +253,7 @@ fn event_of(stops: &[Stop], start: Pt, finish: Pt, start_bends: &[Pt]) -> Event 
         }],
         accepted_findings: vec![],
         sync: None,
+        score: None,
     }
 }
 

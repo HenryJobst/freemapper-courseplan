@@ -200,6 +200,39 @@ impl Localize for ModelError {
                     ],
                 )
             }
+            ModelError::LinkToUnknownControl { course, a, b, code } => text(
+                lang,
+                "error-model-link-to-unknown-control",
+                &[
+                    ("course", v(course)),
+                    ("a", v(a)),
+                    ("b", v(b)),
+                    ("code", v(code)),
+                ],
+            ),
+            ModelError::LinkToItself { course, code } => text(
+                lang,
+                "error-model-link-to-itself",
+                &[("course", v(course)), ("code", v(code))],
+            ),
+            ModelError::DuplicateLink { course, a, b } => text(
+                lang,
+                "error-model-duplicate-link",
+                &[("course", v(course)), ("a", v(a)), ("b", v(b))],
+            ),
+            ModelError::LinkBranches { course, code } => text(
+                lang,
+                "error-model-link-branches",
+                &[("course", v(course)), ("code", v(code))],
+            ),
+            ModelError::ScoreSettingOutOfRange { what, reason } => text(
+                lang,
+                "error-model-score-setting-out-of-range",
+                &[
+                    ("what", v(what)),
+                    ("reason", v(word(lang, "word-score-problem", reason))),
+                ],
+            ),
             ModelError::DateNotADate(date) => {
                 text(lang, "error-model-date-not-a-date", &[("date", v(date))])
             }
@@ -969,6 +1002,8 @@ mod tests {
             "code",
             "name",
             "id",
+            "a",
+            "b",
             "course",
             "team_size",
             "date",
@@ -1156,6 +1191,7 @@ mod tests {
             "word-what",
             "word-name",
             "word-special",
+            "word-score-problem",
             "word-import-why",
             "word-import-special",
             "word-export-why",
@@ -1272,6 +1308,14 @@ mod tests {
             "class-name",
         ] {
             ids.insert(format!("word-name-{what}"));
+        }
+        for problem in [
+            "must-be-1-to-9",
+            "must-be-more-than-0",
+            "low-is-above-high",
+            "must-not-exceed-100",
+        ] {
+            ids.insert(format!("word-score-problem-{problem}"));
         }
         for place in Place::ALL {
             ids.insert(format!("word-place-{}", place.as_str()));
