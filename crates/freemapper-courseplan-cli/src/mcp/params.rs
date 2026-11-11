@@ -528,6 +528,11 @@ pub(super) struct SetScoreSettings {
     pub(super) very_good_pace_s_per_km: Option<u32>,
     pub(super) mix_hard_percent: Option<u8>,
     pub(super) seed: Option<u32>,
+    pub(super) value1_min_m: Option<u32>,
+    pub(super) min_gap_m: Option<u32>,
+    pub(super) max_reach_m: Option<u32>,
+    pub(super) auto_reach: Option<bool>,
+    pub(super) high_value_gap_m: Option<u32>,
 }
 
 #[derive(Deserialize, JsonSchema)]

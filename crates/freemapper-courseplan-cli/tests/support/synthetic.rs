@@ -47,6 +47,9 @@ pub fn write_map(dir: &Path) -> PathBuf {
 }
 
 /// Writes the map and a project with start S1 and finish F1 at the given positions; returns the project path.
+/// The runner bands are wide open: the score settings keep controls 100 m apart, which leaves this small map
+/// few sites, so a draft cannot hit the narrow default bands. The reach is wide too, so a draft sees the sites that
+/// `score suggest` lists without a course. The tests here check the plumbing, not the bands.
 pub fn write_project(dir: &Path, start: (f64, f64), finish: (f64, f64)) -> PathBuf {
     write_map(dir);
     let project = dir.join("event.courseplan.toml");
@@ -56,7 +59,8 @@ pub fn write_project(dir: &Path, start: (f64, f64), finish: (f64, f64)) -> PathB
             "format = 1\n\n[event]\ntitle = \"Synthetic\"\ndiscipline = \"training\"\nrule_profile = \"wkb-2026\"\n\n\
              [sources]\nmap = \"synthetic.omap\"\n\n\
              [[specials]]\nkind = \"start\"\nid = \"S1\"\nmap_mm = [{}, {}]\n\n\
-             [[specials]]\nkind = \"finish\"\nid = \"F1\"\nmap_mm = [{}, {}]\n",
+             [[specials]]\nkind = \"finish\"\nid = \"F1\"\nmap_mm = [{}, {}]\n\n\
+             [score]\ngood_band_percent = [0, 100]\nvery_good_band_percent = [0, 100]\nmax_reach_m = 5000\n",
             start.0, start.1, finish.0, finish.1
         ),
     )

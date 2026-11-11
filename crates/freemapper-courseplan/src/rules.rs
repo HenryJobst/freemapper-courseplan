@@ -175,6 +175,16 @@ pub static SCHEMA: Schema = Schema {
             values: None,
             without_filters: &[],
         },
+        KeySchema {
+            key: "score_min_gap",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "score_high_gap",
+            values: None,
+            without_filters: &[],
+        },
     ],
     units: &["metres", "mm", "degrees", "percent", "factor", "minutes"],
     tables: &[

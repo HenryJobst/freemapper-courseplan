@@ -93,6 +93,8 @@ the findings that were accepted for it are reported again.
 | `score_limit_and_penalty` | Time limit and penalty of the score course |
 | `score_link_valid` | Mandatory links of the score course |
 | `score_mix` | Share of hard score controls |
+| `score_min_gap` | Two controls of a score course closer than `min_gap_m` of the score settings |
+| `score_high_gap` | Two high-valued controls of a score course closer than `high_value_gap_m` |
 
 The thresholds of the score rules (ring, order, mix) are proposals of this program, not values from a source.
 

@@ -33,9 +33,6 @@ const COARSE_CELL_M: f64 = 4.0;
 const DEFAULT_LIMIT: usize = 60;
 /// Most candidates one call returns.
 const LIMIT_MAX: usize = 200;
-/// Distance in metres between controls that WKB26 B 7.2.1 asks at print scales of 1:5000 and
-/// smaller, and the half of it from 1:4000 and larger.
-const MIN_DISTANCE_M_COARSE: f64 = 30.0;
 
 /// The map of a project as the route search needs it.
 struct World {
@@ -94,6 +91,11 @@ struct DraftWrite<'a> {
     extent: Option<(MapPoint, MapPoint)>,
     controls: Vec<(ControlCode, u32, MapPoint)>,
     links: Vec<(ControlCode, ControlCode)>,
+}
+
+/// Ground metres in map millimetres at map scale 1:`scale`.
+fn metres_to_mm(metres: f64, scale: u32) -> f64 {
+    metres * 1000.0 / f64::from(scale.max(1))
 }
 
 /// The forbidden-route margin of the candidates in map millimetres.
@@ -255,7 +257,12 @@ impl CoursePlanServer {
         })
     }
 
-    fn min_distance_mm(&self, given: Option<f64>, scale: u32) -> Result<f64, String> {
+    fn min_distance_mm(
+        &self,
+        given: Option<f64>,
+        scale: u32,
+        settings: &ScoreSettings,
+    ) -> Result<f64, String> {
         match given {
             Some(d) if !(d.is_finite() && d >= 0.0) => Err(text(
                 &self.lang,
@@ -263,14 +270,7 @@ impl CoursePlanServer {
                 &[("value", v(d.to_string()))],
             )),
             Some(d) => Ok(d),
-            None => {
-                let metres = if scale <= 4000 {
-                    MIN_DISTANCE_M_COARSE / 2.0
-                } else {
-                    MIN_DISTANCE_M_COARSE
-                };
-                Ok(metres * 1000.0 / f64::from(scale.max(1)))
-            }
+            None => Ok(metres_to_mm(f64::from(settings.min_gap_m), scale)),
         }
     }
 
@@ -279,10 +279,15 @@ impl CoursePlanServer {
         let world = self.score_world(&file)?;
         let event = &file.event;
         let settings = event.score_settings();
-        // A course names its own start and finish; given ids win over it.
+        // A course names its own start and finish; given ids win over it. Its time limit sets the
+        // automatic reach; without a course there is no maximum.
+        let mut limit_min = None;
         let (course_start, course_finish) = match &req.course {
             Some(name) => match event.courses.iter().find(|c| c.name == name.0) {
                 Some(c) if matches!(c.kind, CourseKind::Score { .. }) => {
+                    if let CourseKind::Score { time_limit_min, .. } = &c.kind {
+                        limit_min = Some(*time_limit_min);
+                    }
                     (Some(c.start.clone()), Some(c.finish.clone()))
                 }
                 Some(_) => {
@@ -306,7 +311,7 @@ impl CoursePlanServer {
         let specials = area_specials(event, req.course.as_ref().map(|n| n.0.as_str()));
         let surfaces = self.surfaces(&world, &settings, &polygons(&specials))?;
         let existing: Vec<MapPoint> = event.controls.iter().map(|c| c.map_mm.clone()).collect();
-        let min_distance_mm = self.min_distance_mm(req.min_distance_mm, world.scale)?;
+        let min_distance_mm = self.min_distance_mm(req.min_distance_mm, world.scale, &settings)?;
         let limit = req
             .limit
             .map_or(DEFAULT_LIMIT, |l| l as usize)
@@ -320,6 +325,10 @@ impl CoursePlanServer {
                 finish: finish.clone(),
                 specials: &specials,
                 min_distance_mm,
+                min_end_distance_mm: metres_to_mm(f64::from(settings.value1_min_m), world.scale),
+                max_reach_mm: settings
+                    .reach_m(limit_min)
+                    .map(|m| metres_to_mm(m, world.scale)),
                 existing: &existing,
                 limit,
                 line_margin_mm: line_margin_mm(world.scale),
@@ -646,7 +655,7 @@ impl CoursePlanServer {
         let settings = event.score_settings();
         let specials = area_specials(event, Some(name));
         let surfaces = self.surfaces(&world, &settings, &polygons(&specials))?;
-        let min_distance_mm = self.min_distance_mm(None, world.scale)?;
+        let min_distance_mm = self.min_distance_mm(None, world.scale, &settings)?;
         let candidates = suggest_with(
             &world.index,
             &surfaces.fine,
@@ -656,6 +665,10 @@ impl CoursePlanServer {
                 finish: finish.clone(),
                 specials: &specials,
                 min_distance_mm,
+                min_end_distance_mm: metres_to_mm(f64::from(settings.value1_min_m), world.scale),
+                max_reach_mm: settings
+                    .reach_m(Some(req.time_limit_min))
+                    .map(|m| metres_to_mm(m, world.scale)),
                 existing: &existing,
                 limit: DEFAULT_LIMIT,
                 line_margin_mm: line_margin_mm(world.scale),
@@ -695,6 +708,7 @@ impl CoursePlanServer {
             links: &links,
             settings: &settings,
             taken: &taken,
+            scale: world.scale,
         })
         .map_err(Box::new);
         Ok(Computed {

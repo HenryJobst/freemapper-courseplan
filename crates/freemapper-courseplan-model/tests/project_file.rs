@@ -1223,6 +1223,10 @@ fn custom_score_settings_with_a_large_seed_round_trip() {
         very_good_band_percent: (96, 99),
         mix_hard_percent: 25,
         seed: u32::MAX,
+        value1_min_m: 120,
+        min_gap_m: 110,
+        max_reach_m: Some(800),
+        high_value_gap_m: 200,
     };
     project.event.score = Some(custom.clone());
     project.save().unwrap();
@@ -1297,4 +1301,53 @@ fn score_penalty_is_optional_and_none_means_the_default() {
             .unwrap()
             .contains("penalty_per_min")
     );
+}
+
+#[test]
+fn an_old_score_table_loads_with_the_distance_defaults() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = write_event(
+        dir.path(),
+        &format!(
+            "{}\n[score]\nvalue_max = 7\nseed = 3\n",
+            event_text("", "", "")
+        ),
+    );
+    let s = ProjectFile::load(&file).unwrap().event.score_settings();
+    assert_eq!((s.value_max, s.seed), (7, 3));
+    assert_eq!(
+        (
+            s.value1_min_m,
+            s.min_gap_m,
+            s.max_reach_m,
+            s.high_value_gap_m
+        ),
+        (150, 100, None, 200)
+    );
+}
+
+#[test]
+fn reach_is_a_quarter_of_the_good_runners_ground() {
+    let s = ScoreSettings::default();
+    // 15 min at 250 s/km cover 3.6 km; a quarter is 900 m.
+    assert_eq!(s.reach_m(Some(15)), Some(900.0));
+    assert_eq!(s.reach_m(None), None);
+    let set = ScoreSettings {
+        max_reach_m: Some(500),
+        ..s
+    };
+    assert_eq!(set.reach_m(Some(15)), Some(500.0));
+    assert_eq!(set.reach_m(None), Some(500.0));
+}
+
+#[test]
+fn high_values_start_at_sixty_percent_of_the_maximum() {
+    let high = |m: u8| {
+        ScoreSettings {
+            value_max: m,
+            ..ScoreSettings::default()
+        }
+        .high_from()
+    };
+    assert_eq!((high(5), high(9), high(1)), (4, 6, 1));
 }

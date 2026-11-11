@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Four distance settings for score courses, in metres on the ground: `value1_min_m` (150) keeps every control away from start and finish, so value 1 starts there; `min_gap_m` (100, not lower) is the least distance between two controls and replaces the scale-derived default of `score suggest`; `max_reach_m` limits the distance from the start (automatic: a quarter of the ground the good runner covers in the time limit); `high_value_gap_m` (200) is the least distance between two high-valued controls, the values above 0.6 of the highest. `score settings` (`--value1-min`, `--min-gap`, `--max-reach`, `--auto-reach`, `--high-value-gap`), the tool `set_score_settings` and the editor's Score panel set them; older project files load with the defaults. The draft keeps the high-value gap, and `check` warns when a score course falls below either gap (`score_min_gap`, `score_high_gap`; ADR 0072).
+
 ### Fixed
 
 - Score suggestions sit less at the rim of the map and closer to the start: the pick spaces sites more densely near the start and weighs down sites at the rim. On the Lübeck example the candidates within 48 m of the rim fell from 21 of 60 to 3, and the value-1 controls moved from 360 m to 230 m from the start (ADR 0071).

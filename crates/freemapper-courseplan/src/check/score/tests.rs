@@ -426,6 +426,61 @@ fn a_course_of_hard_controls_misses_the_mix() {
     );
 }
 
+// score_min_gap and score_high_gap
+
+#[test]
+fn controls_closer_than_the_minimum_gap_are_flagged() {
+    // Scale 1:4000: 100 m are 25 mm. 31 and 42 stand 20 mm (80 m) apart, 53 is far away.
+    let e = score_event(
+        &[
+            ("31", 1, 20.0, 20.0),
+            ("42", 2, 40.0, 20.0),
+            ("53", 3, 90.0, 20.0),
+        ],
+        60,
+        30,
+        &[],
+    );
+    let r = run_rule(&e, "score_min_gap", "");
+    assert_eq!(ids(&r), ["check-score-min-gap"]);
+    assert!(
+        en(&r.findings[0]).contains("80 m"),
+        "{}",
+        en(&r.findings[0])
+    );
+    let spread = score_event(
+        &[
+            ("31", 1, 20.0, 20.0),
+            ("42", 2, 70.0, 20.0),
+            ("53", 3, 20.0, 70.0),
+        ],
+        60,
+        30,
+        &[],
+    );
+    let far = run_rule(&spread, "score_min_gap", "");
+    assert!(far.findings.is_empty(), "{:?}", far.findings);
+}
+
+#[test]
+fn only_high_valued_pairs_need_the_high_value_gap() {
+    // 200 m are 50 mm. 64 and 75 are high (4, 5 of 5) and 30 mm (120 m) apart; 31 and 42 are low.
+    let e = score_event(
+        &[
+            ("31", 1, 20.0, 20.0),
+            ("42", 2, 30.0, 20.0),
+            ("64", 4, 20.0, 60.0),
+            ("75", 5, 50.0, 60.0),
+        ],
+        60,
+        30,
+        &[],
+    );
+    let r = run_rule(&e, "score_high_gap", "");
+    assert_eq!(ids(&r), ["check-score-high-gap"]);
+    assert!(en(&r.findings[0]).contains("64"), "{}", en(&r.findings[0]));
+}
+
 // the engine
 
 #[test]

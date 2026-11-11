@@ -406,6 +406,11 @@ fn settings_out_of_range_are_refused() {
         ("good_pace_s_per_km = 0", "good_pace_s_per_km"),
         ("very_good_pace_s_per_km = 0", "very_good_pace_s_per_km"),
         ("mix_hard_percent = 101", "mix_hard_percent"),
+        ("value1_min_m = 0", "value1_min_m"),
+        ("min_gap_m = 99", "min_gap_m"),
+        ("max_reach_m = 0", "max_reach_m"),
+        ("max_reach_m = 100", "max_reach_m"),
+        ("high_value_gap_m = 99", "high_value_gap_m"),
     ] {
         let errors = bad(settings);
         assert_eq!(errors.len(), 1, "{settings}: {errors:?}");

@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Vier Abstandseinstellungen für Score-Bahnen, in Metern im Gelände: `value1_min_m` (150) hält jeden Posten von Start und Ziel fern, Wert 1 beginnt also dort; `min_gap_m` (100, nicht kleiner) ist der kleinste Abstand zweier Posten und ersetzt den vom Maßstab abgeleiteten Standard von `score suggest`; `max_reach_m` begrenzt den Abstand vom Start (automatisch ein Viertel der Strecke, die der gute Läufer im Zeitlimit schafft); `high_value_gap_m` (200) ist der kleinste Abstand zweier hochwertiger Posten, also der Werte über 0,6 des höchsten. `score settings` (`--value1-min`, `--min-gap`, `--max-reach`, `--auto-reach`, `--high-value-gap`), das Werkzeug `set_score_settings` und das Score-Fenster des Editors setzen sie; ältere Projektdateien laden mit den Standardwerten. Der Entwurf hält den Abstand hochwertiger Posten ein, und `check` warnt, wenn eine Score-Bahn einen der Abstände unterschreitet (`score_min_gap`, `score_high_gap`; ADR 0072).
+
 ### Behoben
 
 - Score-Vorschläge liegen seltener am Kartenrand und näher am Start: Die Auswahl setzt Stellen nahe dem Start dichter und wertet Stellen am Rand ab. Im Lübecker Beispiel sanken die Kandidaten bis 48 m vom Rand von 21 auf 3 von 60, und die Posten mit Wert 1 rückten von 360 m auf 230 m an den Start (ADR 0071).

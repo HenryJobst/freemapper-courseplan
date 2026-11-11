@@ -98,6 +98,8 @@ Schlüssel:
 | `score_limit_and_penalty` | Zeitlimit und Strafe der Score-Bahn |
 | `score_link_valid` | Pflichtverbindungen der Score-Bahn |
 | `score_mix` | Anteil schwerer Score-Posten |
+| `score_min_gap` | Zwei Posten einer Score-Bahn näher als `min_gap_m` der Score-Einstellungen |
+| `score_high_gap` | Zwei hochwertige Posten einer Score-Bahn näher als `high_value_gap_m` |
 
 Die Schwellen der Score-Regeln (Ring, Reihenfolge, Mischung) sind Vorschläge dieses Programms, keine Werte einer Quelle.
 

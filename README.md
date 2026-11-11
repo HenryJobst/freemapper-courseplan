@@ -92,8 +92,8 @@ Pflichtverbindungen, die man direkt nacheinander laufen muss. Der Code trägt de
 `score course set` bearbeiten sie. `score suggest` ordnet Postenstellen auf der Karte nach Routenwahl,
 `score draft` wählt Posten, Werte und Codes so, dass ein guter Läufer etwa 90 Prozent der Punkte holt und ein sehr
 guter Läufer gerade alle im Limit schafft, und `score length` misst eine Bahn nach, die du geändert hast. Der
-Entwurf schreibt erst mit `--apply`. Acht Regeln von `check` lesen Score-Bahnen (Wert und Code, ähnliche Codes,
-Ring und offensichtliche Reihenfolge, Längenbänder, Limit und Abzug, Verbindungen, Anteil schwerer Posten), der
+Entwurf schreibt erst mit `--apply`. Zehn Regeln von `check` lesen Score-Bahnen (Wert und Code, ähnliche Codes,
+Ring und offensichtliche Reihenfolge, Längenbänder, Limit und Abzug, Verbindungen, Anteil schwerer Posten, Abstände der Posten), der
 Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben die Postenliste und den
 Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferprofile sind eine
 erste Fassung; nimm die Längenbänder als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der

@@ -31,6 +31,11 @@ pub struct SuggestContext<'a> {
     pub specials: &'a [SpecialObject],
     /// Smallest distance in map millimetres between two controls and to start and finish.
     pub min_distance_mm: f64,
+    /// Sites closer than this to the start or the finish are left out, in map millimetres, so value 1
+    /// starts at that distance (ADR 0072). Zero keeps all.
+    pub min_end_distance_mm: f64,
+    /// Sites farther than this from the start are left out, in map millimetres; none keeps all.
+    pub max_reach_mm: Option<f64>,
     /// Controls that stand already.
     pub existing: &'a [MapPoint],
     /// Most candidates returned.
@@ -370,6 +375,14 @@ pub fn suggest_with(
     let pool: Vec<(&Site, MapPoint)> = raw
         .iter()
         .filter(|s| !forbidden(ctx.specials, &s.at, ctx.line_margin_mm))
+        .filter(|s| {
+            dist(&s.at, &ctx.start) >= ctx.min_end_distance_mm
+                && dist(&s.at, &ctx.finish) >= ctx.min_end_distance_mm
+        })
+        .filter(|s| {
+            ctx.max_reach_mm
+                .is_none_or(|reach| dist(&s.at, &ctx.start) <= reach)
+        })
         .filter_map(|s| route_end(fine, s).map(|end| (s, end)))
         .collect();
     // Distance to the nearest of start, finish, existing and kept controls: the minimum distance rule and

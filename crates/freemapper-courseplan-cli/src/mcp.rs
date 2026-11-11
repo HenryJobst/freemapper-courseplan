@@ -1708,7 +1708,25 @@ impl CoursePlanServer {
                 very_good_pace_s_per_km: req.very_good_pace_s_per_km,
                 mix_hard_percent: req.mix_hard_percent,
                 seed: req.seed,
+                value1_min_m: req.value1_min_m,
+                min_gap_m: req.min_gap_m,
+                max_reach_m: if flag(req.auto_reach) {
+                    Some(None)
+                } else {
+                    req.max_reach_m.map(Some)
+                },
+                high_value_gap_m: req.high_value_gap_m,
             };
+            if flag(req.auto_reach) && req.max_reach_m.is_some() {
+                return Err(text(
+                    &self.lang,
+                    "cli-parse-argument-conflict",
+                    &[
+                        ("arg", FluentValue::from("max_reach_m".to_owned())),
+                        ("other", FluentValue::from("auto_reach".to_owned())),
+                    ],
+                ));
+            }
             if change.is_empty() {
                 return Err(text(&self.lang, "mcp-error-no-score-settings-change", &[]));
             }
