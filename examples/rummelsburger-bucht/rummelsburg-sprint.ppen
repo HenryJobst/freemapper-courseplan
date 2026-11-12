@@ -8,10 +8,10 @@
     <descriptions lang="de" />
   </event>
   <control id="1" kind="start">
-    <location x="-120" y="75" />
+    <location x="-85" y="68" />
   </control>
   <control id="2" kind="finish">
-    <location x="48" y="-69" />
+    <location x="95" y="0" />
     <description box="all" iof-2004-ref="14.3" />
   </control>
   <control id="3" kind="normal">
@@ -20,15 +20,19 @@
   </control>
   <control id="4" kind="normal">
     <code>32</code>
-    <location x="9" y="6.85" />
+    <location x="-13.67" y="-7.12" />
   </control>
   <control id="5" kind="normal">
     <code>33</code>
-    <location x="-13.67" y="-7.12" />
+    <location x="23.39" y="-76.2" />
   </control>
   <control id="6" kind="normal">
     <code>34</code>
-    <location x="6.42" y="-37.92" />
+    <location x="60.73" y="-73.78" />
+  </control>
+  <control id="7" kind="normal">
+    <code>35</code>
+    <location x="67.69" y="-27.2" />
   </control>
   <course id="1" kind="normal" order="1">
     <name>A</name>
@@ -40,42 +44,27 @@
   </course-control>
   <course-control id="2" control="3">
     <next course-control="3" />
-    <number-location x="3.3024535" y="-6.8927526" />
+    <number-location x="-3.6502163" y="-5.0611496" />
   </course-control>
   <course-control id="3" control="4">
     <next course-control="4" />
-    <number-location x="8.103499" y="3.5740693" />
+    <number-location x="0.8202209" y="7.675" />
   </course-control>
   <course-control id="4" control="5">
     <next course-control="5" />
-    <number-location x="-4.510494" y="4.2653623" />
+    <number-location x="3.6288676" y="-6.7678094" />
   </course-control>
   <course-control id="5" control="6">
     <next course-control="6" />
-    <number-location x="-5.2145467" y="2.7493186" />
+    <number-location x="5.2917495" y="0.3422021" />
   </course-control>
-  <course-control id="6" control="2" />
-  <leg id="1" start-control="3" end-control="4">
-    <bends>
-      <location x="-57" y="43" />
-      <location x="-50" y="50" />
-    </bends>
-  </leg>
-  <leg id="2" start-control="5" end-control="6">
-    <bends>
-      <location x="6" y="-27" />
-    </bends>
-  </leg>
-  <leg id="3" start-control="6" end-control="2">
-    <flagging kind="all" />
-    <bends>
-      <location x="6" y="-41" />
-      <location x="13" y="-34" />
-      <location x="20" y="-50" />
-    </bends>
-  </leg>
+  <course-control id="6" control="7">
+    <next course-control="7" />
+    <number-location x="-8.114445" y="3.528261" />
+  </course-control>
+  <course-control id="7" control="2" />
   <special-object id="1" kind="first-aid">
-    <location x="-112" y="68" />
+    <location x="-93" y="70" />
     <courses all="true" />
   </special-object>
 </course-scribe-event>

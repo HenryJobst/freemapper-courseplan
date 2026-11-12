@@ -12,5 +12,5 @@ noch nicht; das Druck-PDF von freemapper-print kommt später dazu.
 
 | Beispiel | Karte |
 |---|---|
-| [Sprinttraining Rummelsburger Bucht](rummelsburger-bucht/) | Rummelsburger Bucht, 1:4000, 1,2 mal 1,0 km; Sprintbahn mit vier Posten, Knickpunkten, markierter Strecke und Erste-Hilfe-Posten |
+| [Sprinttraining Rummelsburger Bucht](rummelsburger-bucht/) | Rummelsburger Bucht, 1:4000, 1,2 mal 1,0 km; Sprintbahn mit fünf Posten, geraden Strecken und Erste-Hilfe-Posten |
 | [Score-Bahn 33 Minuten, Gleisdreieck](gleisdreieck/) | Gleisdreieck, 1:4000, 1,2 mal 1,8 km; 27 Posten mit 83 Punkten |

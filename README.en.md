@@ -49,8 +49,8 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 ## Example
 
-A sprint course with four controls on the map "Rummelsburger Bucht", set with the command line only, with bends,
-a marked leg and a first aid post. Also a 33-minute score course (27 controls, 83 points) on the map "Gleisdreieck".
+A sprint course with five controls on the map "Rummelsburger Bucht", set with the command line only, with straight
+legs and a first aid post. Also a 33-minute score course (27 controls, 83 points) on the map "Gleisdreieck".
 Both maps are by Remo Madella (MOO Challenge Berlin 2025); he released them on 2026-11-12 for use within the
 freemapper suite, not under an open licence. Commands, project files and output are in
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) and [`examples/gleisdreieck`](examples/gleisdreieck/);
@@ -61,8 +61,8 @@ size for adults, on either map; on Gleisdreieck it reaches 33.
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
 title: Sprint training Rummelsburger Bucht
 map kind: sprint
-controls: 4, crossing points: 0
-course A: 4 controls, 1.1 km, climb – m
+controls: 5, crossing points: 0
+course A: 5 controls, 1.2 km, climb – m
 ```
 
 ## Installing
