@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.14.0] - 2026-11-12
+
 ### Hinzugefügt
 
 - Selbstaktualisierung (ADR 0076). `freemapper-courseplan update` ersetzt das Programm nach Rückfrage an Ort und Stelle durch die neueste signierte Version (`--check` endet mit 10, wenn es eine neuere Version gibt, `--yes`, `--version X.Y.Z`, `--rollback`, `--mode notify|install|off`). Die Version wird mit minisign gegen einen im Programm eingebauten Schlüssel geprüft, dann per SHA-256 des Downloads und der entpackten Datei, und die neue Datei muss auf `--version` antworten, bevor etwas ausgetauscht wird. Die alte Datei bleibt als `freemapper-courseplan.previous`. Ein Release-Build sucht höchstens einmal am Tag nach einer neueren Version, nach `info` und beim Start des Editors, und gibt eine Zeile auf stderr aus; der Editor zeigt sie in der Statusleiste. Die MCP-Werkzeuge `check_update` und `install_update` (nur mit `confirm: true`) sagen es dem Assistenten, der dich vorher fragt; das erste Werkzeugergebnis trägt einmal einen Hinweis. Aus dem Quellcode gebaute Programme aktualisieren sich nie. Das Programm sendet nur einen festen User-Agent an die GitHub-Server der Releases. Der Release-Workflow signiert jetzt ein Manifest mit den Secrets `MINISIGN_SECRET_KEY` und `MINISIGN_PASSWORD` der Umgebung `release`; die Umgebung hat einen Pflicht-Reviewer, ein Release fragt also einmal nach Freigabe, bevor er signiert und veröffentlicht wird. Von Hand entpacken bleibt der Weg zur ersten Version mit der Aktualisierung. Handbuch, Kapitel 2.
