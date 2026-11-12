@@ -50,8 +50,8 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 ## Beispiel
 
-Eine Sprintbahn mit fünf Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
-geraden Strecken und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 34 Minuten
+Eine Sprintbahn mit vier Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
+geraden Strecken und einem Erste-Hilfe-Posten, Start und Ziel im Park. Dazu eine Score-Bahn von 34 Minuten
 (33 Posten, 95 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
 hat sie am 12.11.2026 für die freemapper-Suite freigegeben, nicht unter einer offenen Lizenz. Befehle, Projektdateien und Ausgaben stehen unter
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) und [`examples/gleisdreieck`](examples/gleisdreieck/);
@@ -62,8 +62,8 @@ schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
 Titel: Sprinttraining Rummelsburger Bucht
 Kartenart: Sprintkarte
-Posten: 5, Querungsstellen: 0
-Bahn A: 5 Posten, 1,2 km, Anstieg – m
+Posten: 4, Querungsstellen: 0
+Bahn A: 4 Posten, 0,9 km, Anstieg – m
 ```
 
 ## Installieren

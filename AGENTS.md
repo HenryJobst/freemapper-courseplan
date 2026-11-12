@@ -24,7 +24,7 @@ Tell the person these limits before you start:
 - Individual and score courses can be edited and checked. `info` gives a length for individual courses only; a
   score course is measured with `score length`. Team and relay courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
-  `score draft` and `score length` read the map and search routes, so they take seconds: about 2 to 4 s for a draft on the 1.2 x 1.0 km Rummelsburger Bucht map (`score suggest` 2.3 s, a 15-minute draft 2.4 s, a 20-minute draft 3.6 s), and about 2 s for `score suggest`, 15 s for a 34-minute `score draft` and 2 s for `score length` on the 1.2 x 1.8 km Gleisdreieck map (release build, measured 2026-11-12 on a busy shared machine, so an idle one may be faster; a draft that misses the targets can take as long or longer). Neither map reaches the usual 45 minutes. The largest limit reached on Gleisdreieck is 34 minutes with the good runner 1.7 points above its band, so near the target; the largest with both runners inside their bands is 31. The Rummelsburger Bucht reaches about 20; a 45-minute score course needs a larger map than either. `examples/gleisdreieck` holds the 34-minute course. A draft
+  `score draft` and `score length` read the map and search routes, so they take seconds: about 1 to 2 s for a draft on the 1.2 x 1.0 km Rummelsburger Bucht map (`score suggest` 0.9 s, a 15-minute draft 1.2 s, a 45-minute draft that misses its targets 1.5 s), and about 2 s for `score suggest`, 15 s for a 34-minute `score draft` and 2 s for `score length` on the 1.2 x 1.8 km Gleisdreieck map (release build, measured 2026-11-12 on a busy shared machine, so an idle one may be faster; a draft that misses the targets can take as long or longer). Neither map reaches the usual 45 minutes. The largest limit reached on Gleisdreieck is 34 minutes with the good runner 1.7 points above its band, so near the target; the largest with both runners inside their bands is 31. The Rummelsburger Bucht reaches 16 minutes with both runners inside their bands and 17 near the target; a 45-minute score course needs a larger map than either. `examples/gleisdreieck` holds the 34-minute course. A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
   The length bands are targets with a tolerance (ADR 0083): the good runner scores 87 to 93 percent of all points, the
@@ -53,10 +53,13 @@ Tell the person these limits before you start:
   checked and shows among the rules that were not checked. A straight leg across such an area gets no finding: the
   line between controls is not the running route (ADR 0080). `check` does report a control that stands inside an
   out-of-bounds area, either a special object of its course or a map area with the symbol 520, 709 or 714 (709 and
-  520 on forest maps), as an error (ADR 0081). It does not test start, finish, crossing points or controls that are on
-  no course; look at those yourself.
+  520 on forest maps), as an error (ADR 0081). It also reports a start, finish, control or crossing point that lies in the blank part of
+  the sheet, with no map object within 40 m, as an error (rule `wkb2026.map.inside`, ADR 0084); the map frame and layout
+  symbols such as the north lines pattern do not count as objects. It does not test start, finish or crossing points
+  against out-of-bounds areas, nor controls that are on no course; look at those yourself.
 - OCAD is not needed and not tested.
-- `check` tests distances, angles, codes and out-of-bounds areas, not whether a control stands at the right feature.
+- `check` tests distances, angles, codes, out-of-bounds areas and the mapped area, not whether a control stands at the
+  right feature.
   The person looks at every position on the map.
 
 ## Install

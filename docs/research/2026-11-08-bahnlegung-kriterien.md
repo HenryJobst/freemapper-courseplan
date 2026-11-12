@@ -100,7 +100,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Objekt sichtbar innerhalb von 10 m oder 10 % der Distanz vom Angriffspunkt | – | BOF B6.2.1 | A (Distanz) + B |
 | Spitzer Winkel: Abgehende führen Ankommende zum Posten | DE-Bundesland: < 90° vermeiden | IOF-A2 3.5.4; BL12 | A |
 | Sprint: nicht durch unpassierbare Objekte hindurch stempelbar | – | IOF-SG; BOF B10.9.8 | A/B |
-| Posten nicht zu nah am Kartenrand | – | BL02 | A |
+| Posten nicht zu nah am Kartenrand | – | BL02 | A; geprüft (`map_edge`, 10 m zum Rechteck um die Kartenobjekte) |
 | Viel angelaufene Posten: mehrere Stationen | – | WKB26 B 7.2.10 | A (Frequenz aus Bahnen × Teilnehmer) |
 
 ### 3.2 Schenkel und Bahnaufbau
@@ -112,7 +112,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Hundeknochen (Dogleg) vermeiden: spitzer Winkel, gleicher Weg hin und zurück; drei Posten in einer Linie hinterfragen | – | SOA; BL12 | A |
 | Optimale Route nicht durch Sperrgebiete oder Kulturland | – | WKB26 B 7.2.6; IOF-A2 3.4.2 | A (Routing); nur mit Routenberechnung prüfbar, nicht an der Postenverbindung (Luftlinie); die frühere Prüfung der Geraden ist am 12.11.2026 auf Wunsch des Nutzers entfallen (ADR 0080) |
 | Kreuzungen sind mit elektronischer Kontrolle erlaubt | – | WKB26 B 7.2.6 | A |
-| Route nicht über Start, Ziel, andere Posten oder außerhalb der Karte | – | BL02 | A |
+| Route nicht über Start, Ziel, andere Posten oder außerhalb der Karte | – | BL02 | A; die Route selbst nicht geprüft. Start, Ziel, Posten und Querungsstellen auf der kartierten Fläche seit 12.11.2026 geprüft (`inside_map`, ADR 0084): höchstens 40 m zum nächsten Kartenobjekt, Blattrahmen und Layoutsymbole 601/602 zählen nicht; Nutzervorgabe, der Wortlaut zu Start und Ziel liegt uns nicht vor |
 | Abwechslung bei Länge, Typ, Richtung und Schwierigkeit der Schenkel | – | IOF-A2 3.4.1 | A (Statistik) + B |
 | Mitteldistanz: Richtungswechsel an jedem Posten | – | IOF-FG 4.1 | A |
 | Langdistanz: mindestens 2 lange Schenkel von 1,5–3,5 km, typisch 10–15 % der Bahnlänge | – | IOF-A6 3.2; IOF-FG | A |

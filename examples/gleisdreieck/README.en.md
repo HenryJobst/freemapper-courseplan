@@ -2,12 +2,14 @@
 
 [Deutsch](README.md) · [All examples](../README.en.md)
 
+<p align="center"><a href="../../docs/manual/images/gleisdreieck-course.jpg"><img src="../../docs/manual/images/gleisdreieck-course.jpg" alt="The score course on the map Gleisdreieck in the editor; start and finish at the top right" width="520"></a><br><sub>The course in the editor; start and finish at the top right, 60 m apart. Map: Remo Madella, MOO Challenge Berlin 2025.</sub></p>
+
 A score course with a 34-minute time limit on the map "Gleisdreieck" by Remo Madella (MOO Challenge Berlin 2025,
 1:4000, 297 by 441 map millimetres, about 1.2 by 1.8 km). The course has 33 controls worth 95 points. It was set with
 the command line only, and the controls come from `score draft`. The map sits here as `gleisdreieck.omap`. Remo
 Madella released it on 2026-11-12 for use within the freemapper suite; that is not an open licence. The details are in
-[`ATTRIBUTION.txt`](ATTRIBUTION.txt) and below. There is no preview image; you can see the course on the map in the
-editor (`freemapper-courseplan edit gleisdreieck-score.courseplan.toml`).
+[`ATTRIBUTION.txt`](ATTRIBUTION.txt) and below. The picture is a capture of the editor; a printed PDF from freemapper-print
+will follow. You can see the course on the map in the editor (`freemapper-courseplan edit gleisdreieck-score.courseplan.toml`).
 
 **The program cannot reach 45 minutes, the usual size for adults, on this map.** See "Why 34 and not 45 minutes". At 34 minutes the good runner is near the target, not inside the band; see "Numbers".
 
@@ -38,7 +40,8 @@ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-34
 
 `map extent` gave an extent of -138.9 to 157.8 mm in x and -330.4 to 110.9 mm in y. Start and finish lie in the north of
 the map, 15 mm (60 m) apart. The draft reached both; in a building or a blocked area it would stop with "cannot be
-reached". `map near` gives distances but does not say whether a point lies inside an area; look at both positions on
+reached". Both lie on the mapped area, like all controls; `check` tests that since ADR 0084 (rule
+`wkb2026.map.inside`). `map near` gives distances but does not say whether a point lies inside an area; look at both positions on
 the map. `transcript.en.txt` has every command with its output.
 
 ## Numbers

@@ -6,6 +6,20 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `check` reports a start, finish, control or crossing point in the blank part of the sheet as an error. The new rule `wkb2026.map.inside` (source BL02, as the research file cites it) measures against the map objects themselves: a position counts as mapped when a map object lies within 40 m of it. The sheet frame (an axis-aligned rectangle line that spans 80 percent of the terrain) and layout symbols such as the north lines pattern (601, 602) do not count as objects. The message names the position, the nearest object and the limit. `map_edge` stays as it was; it measures against the box around the map objects and did not see a position in the blank corner of a diagonal map. Score courses are tested with start, controls and finish. See ADR 0084.
+- The pictures of the examples: the examples page and both example READMEs show the course in the editor, with start and finish on the map. The Gleisdreieck picture is new (`docs/manual/images/gleisdreieck-course.jpg`).
+
+### Changed
+
+- The score draft keeps its sites off the sheet frame by the same test as the new rule, with the extent of the terrain objects instead of the extent of all objects. On the Rummelsburger Bucht the frame was not recognised before, so a draft could take sites at its corners. The largest draft with both runners in their bands on that map is now 16 minutes (17 near the target). See ADR 0084.
+- The README of the Rummelsburger Bucht example and the manual (captions, section "Checking") follow the new course, and the manual pictures of the example are new.
+
+### Fixed
+
+- The example "Rummelsburger Bucht" had its finish in the blank part of the sheet, beside the map, and its start far from it. Start and finish now stand in the park in the middle, 34 m apart, and the course is a loop of four controls and 905 m (before: five controls, 1226 m). Project file, IOF XML, Purple Pen file, outputs, READMEs and all editor pictures of the example follow. `check` is clean. The example "Gleisdreieck" was checked: its start and finish (60 m apart) and all controls lie on the map.
+
 ## [0.15.0] - 2026-11-12
 
 ### Added

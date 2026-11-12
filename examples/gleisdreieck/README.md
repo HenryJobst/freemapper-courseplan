@@ -2,12 +2,14 @@
 
 [English](README.en.md) · [Alle Beispiele](../README.md)
 
+<p align="center"><a href="../../docs/manual/images/gleisdreieck-course.jpg"><img src="../../docs/manual/images/gleisdreieck-course.jpg" alt="Die Score-Bahn auf der Karte Gleisdreieck im Editor; Start und Ziel liegen oben rechts" width="520"></a><br><sub>Die Bahn im Editor; Start und Ziel oben rechts, 60 m auseinander. Karte: Remo Madella, MOO Challenge Berlin 2025.</sub></p>
+
 Eine Score-Bahn mit 34 Minuten Zeitlimit auf der Karte „Gleisdreieck“ von Remo Madella (MOO Challenge Berlin 2025,
 1:4000, 297 mal 441 Kartenmillimeter, also etwa 1,2 mal 1,8 km). Die Bahn hat 33 Posten mit 95 Punkten. Sie wurde nur
 mit der Kommandozeile gelegt, und die Posten stammen aus `score draft`. Die Karte liegt hier als `gleisdreieck.omap`.
 Remo Madella hat sie am 12.11.2026 für die freemapper-Suite freigegeben; das ist keine offene Lizenz, Einzelheiten
-stehen in [`ATTRIBUTION.txt`](ATTRIBUTION.txt) und unten. Ein Vorschaubild gibt es nicht; die Bahn auf der Karte
-siehst du im Editor (`freemapper-courseplan edit gleisdreieck-score.courseplan.toml`).
+stehen in [`ATTRIBUTION.txt`](ATTRIBUTION.txt) und unten. Das Bild ist eine Aufnahme des Editors; ein gedrucktes PDF von
+freemapper-print folgt. Die Bahn auf der Karte siehst du im Editor (`freemapper-courseplan edit gleisdreieck-score.courseplan.toml`).
 
 **45 Minuten, die übliche Größe für Erwachsene, schafft das Programm auf dieser Karte nicht.** Siehe „Warum 34 und nicht 45 Minuten“. Bei 34 Minuten liegt der gute Läufer nahe am Ziel, nicht im Band; siehe „Zahlen“.
 
@@ -38,7 +40,8 @@ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-34
 
 `map extent` ergab eine Ausdehnung von -138,9 bis 157,8 mm in x und -330,4 bis 110,9 mm in y. Start und Ziel liegen im
 Norden der Karte, 15 mm (60 m) auseinander. Der Entwurf hat beide erreicht; in einem Gebäude oder gesperrten Gebiet
-bräche er mit „nicht erreichbar“ ab. `map near` nennt Abstände, sagt aber nicht, ob ein Punkt in einer Fläche liegt;
+bräche er mit „nicht erreichbar“ ab. Beide liegen auf der kartierten Fläche, wie alle Posten; das prüft `check` seit
+ADR 0084 (Regel `wkb2026.map.inside`). `map near` nennt Abstände, sagt aber nicht, ob ein Punkt in einer Fläche liegt;
 sieh dir beide Positionen auf der Karte an. `transcript.de.txt` hat jeden Befehl mit seiner Ausgabe.
 
 ## Zahlen

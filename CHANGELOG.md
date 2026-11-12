@@ -6,6 +6,20 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `check` meldet Start, Ziel, Posten und Querungsstellen im weißen Teil des Blatts als Fehler. Die neue Regel `wkb2026.map.inside` (Quelle BL02, wie die Forschungsdatei sie nennt) misst gegen die Kartenobjekte selbst: Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 40 m entfernt liegt. Der Blattrahmen (eine achsenparallele Rechtecklinie, die 80 Prozent des Geländes überspannt) und Layoutsymbole wie das Nordlinienmuster (601, 602) zählen nicht als Objekte. Die Meldung nennt die Stelle, das nächste Objekt und die Grenze. `map_edge` bleibt, wie es war; es misst gegen das Rechteck um die Kartenobjekte und sah eine Stelle in der leeren Ecke einer schrägen Karte nicht. Score-Bahnen werden mit Start, Posten und Ziel geprüft. Siehe ADR 0084.
+- Bilder bei den Beispielen: Die Beispielseite und beide Beispiel-READMEs zeigen die Bahn im Editor, Start und Ziel auf der Karte. Das Gleisdreieck-Bild ist neu (`docs/manual/images/gleisdreieck-course.jpg`).
+
+### Geändert
+
+- Der Score-Entwurf hält seine Stellen mit demselben Test wie die neue Regel vom Blattrahmen fern, mit der Ausdehnung der Geländeobjekte statt der aller Objekte. Auf der Rummelsburger Bucht wurde der Rahmen vorher nicht erkannt, ein Entwurf konnte also Stellen in seinen Ecken nehmen. Der größte Entwurf mit beiden Läufern im Band ist auf dieser Karte jetzt 16 Minuten (17 nahe am Ziel). Siehe ADR 0084.
+- Das README des Beispiels Rummelsburger Bucht und das Handbuch (Bildunterschriften, Abschnitt „Prüfen“) folgen der neuen Bahn, und die Handbuchbilder des Beispiels sind neu.
+
+### Behoben
+
+- Das Beispiel „Rummelsburger Bucht“ hatte sein Ziel im weißen Teil des Blatts neben der Karte und den Start weit davon entfernt. Start und Ziel stehen jetzt im Park in der Mitte, 34 m auseinander, und die Bahn ist eine Runde mit vier Posten und 905 m (vorher fünf Posten, 1226 m). Projektdatei, IOF-XML, Purple-Pen-Datei, Ausgaben, READMEs und alle Editorbilder des Beispiels folgen. `check` ist sauber. Das Beispiel „Gleisdreieck“ wurde geprüft: Start und Ziel (60 m auseinander) und alle Posten liegen auf der Karte.
+
 ## [0.15.0] - 2026-11-12
 
 ### Hinzugefügt
