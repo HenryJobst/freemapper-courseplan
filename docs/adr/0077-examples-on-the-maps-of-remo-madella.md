@@ -31,18 +31,16 @@ freemapper suite. The project owner passed this on on 2026-11-12.
   quiet apart from the accepted code pair, and the note of that acceptance (the two controls stand about 260 m apart)
   tested against the project's coordinates.
 
-## Risk: the scope of the permission
+## The scope of the permission
 
-*Open question, with cost if wrong.* The permission was given "for use within the freemapper suite". It is not known
-whether that covers redistributing the `.omap` files in a public repository (GitHub, and the private GitLab mirror) and
-in release archives. The release workflow packs the README, the licence, AGENTS.md and the manual, not `examples/`, so
-archives do not carry the maps today; the public repository does.
+*(user, 2026-11-12)* The owner asked Remo Madella by e-mail whether the maps may be used in the project as example
+maps, for layout and course setting, and linked the public freemapper repository. He answered the same day: "yes of
+course you can use them - enjoy!". That covers the examples in the public repositories (GitHub, and the private GitLab
+mirror). It is a permission by e-mail, not an open licence: nothing here allows use outside the project, and
+`ATTRIBUTION.txt` says so. Release archives do not carry the maps; the repository does.
 
-Cost if wrong: Remo Madella could ask for removal. The maps would then have to go out of the repository, and the
-history would still hold them unless rewritten, which the project does not do (no force-push). The examples would fall
-back to maps made by freemapper from open data. The score and sprint examples are small to rebuild, but the numbers in
-the READMEs and the test would have to be redone. The mitigation is to ask him, in writing, whether the public
-repository is covered. Until he answers, nothing in the project calls the maps open.
+Cost if wrong: Remo Madella could still ask for removal. The maps would then go out of the repository, the history
+would keep them (no force-push), and the examples would fall back to maps made by freemapper from open data.
 
 ## Consequences
 
