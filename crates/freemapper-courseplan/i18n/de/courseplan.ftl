@@ -161,6 +161,7 @@ check-skip-course-kind = { $kind ->
 check-skip-course-unresolved = Die Bahn nennt { $id }, das die Veranstaltung nicht definiert; sie wird nicht geprüft
 check-skip-class-not-mapped = Kategorie { $name } ist keiner Regelkategorie zugeordnet; class set --rule-category ordnet ihr eine zu
 check-skip-climb-missing = Für die Bahn ist kein Anstieg angegeben
+check-skip-needs-route-analysis = Die Regel betrifft die Laufroute, und die Routenanalyse fehlt; die gerade Linie zwischen Posten wird nicht geprüft
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
 check-skip-score-no-map = Die Karte hat keine Objekte, daher lassen sich keine Laufzeiten berechnen
@@ -203,8 +204,6 @@ check-leg-through-control = { $metres ->
            *[control] am Posten
         } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
     }
-check-leg-out-of-bounds = Die gerade Strecke quert das Sperrgebiet { $id }; die Optimalroute könnte hindurchführen
-check-leg-out-of-bounds-symbol = Die gerade Strecke quert das Kartensymbol { $code } (Sperrgebiet); die Optimalroute könnte hindurchführen
 check-acute-angle = Die Strecken { $stop_kind ->
         [crossing] an der Querungsstelle
        *[control] am Posten

@@ -6,6 +6,12 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- `check` no longer tests the straight line between two controls against out-of-bounds areas. The warning "the straight leg crosses ..." is gone: WKB26 B 7.2.6 is about the running route, and a straight line over an out-of-bounds area is normal. The rules `wkb2026.leg.through_forbidden` and `wkb2026.leg.through_forbidden_sprint` stay in the rule profile and now appear in `check --all` among the rules that were not checked, until the route analysis exists. If you accepted a finding of these rules, the exception stays valid and shows at most among the acceptances that match no finding. See ADR 0080.
+- The example "Rummelsburger Bucht" now has five controls and only straight legs, with no bends and no marked leg. A leg is the straight line from control to control, and bends are the exception. IOF XML, the Purple Pen file, the outputs and both READMEs follow the new course.
+- The screenshots in the manual show the new course. The picture for bends has bends for illustration only, and its caption says so. The findings pictures show three angle hints that came from moved controls in a working copy. The section "Legs and bends" now says that a leg is straight until you bend it.
+
 ## [0.14.1] - 2026-11-12
 
 ### Added

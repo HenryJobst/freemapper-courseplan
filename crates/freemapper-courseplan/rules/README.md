@@ -76,7 +76,7 @@ Schlüssel:
 | `similar_features` | Zwei Posten auf ähnlichen Objekten näher als `metres` |
 | `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
 | `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
-| `leg_through_forbidden` | Eine gerade Strecke quert ein Sperrgebiet, die Optimalroute könnte hindurchführen |
+| `leg_through_forbidden` | Die optimale Laufroute führt durch ein Sperrgebiet; ungeprüft, bis es die Routenanalyse gibt, die Regel steht deshalb unter den nicht geprüften Regeln |
 | `acute_angle` | Winkel zwischen den Strecken an einem Posten unter `degrees` |
 | `straight_angle` | Winkel zwischen den Strecken an einem Posten über `degrees`, fast geradeaus |
 | `number_gap` | Abstand der Nummer zum Kreis unter `min_gap_mm` oder über `max_gap_mm`; jeder Wert darf fehlen |
@@ -221,6 +221,8 @@ sind nur ähnlich, wenn eine Gruppe sie nennt, denn Höhenlinien, Vegetationsgre
 Gebäudeumrisse gibt es überall. Sporn und Rinne (BOF B6.1.4) entstehen aus Höhenlinien und haben
 kein eigenes Symbol; keine Gruppe enthält sie.
 
-`leg_through_forbidden` betrachtet nur diese Sperrgebiet-Symbole und die Sperrgebiete der Bahn.
-Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune, Gebäude, Brücken) und verbotene
-Routen bleiben der späteren Routenanalyse überlassen.
+`leg_through_forbidden` hält diese Sperrgebiet-Symbole für die Routenanalyse bereit. Seit dem 12.11.2026
+prüft das Programm die gerade Linie zwischen zwei Posten nicht mehr dagegen (ADR 0080): WKB26 B 7.2.6 betrifft die
+Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Bis es die Routenanalyse gibt, führt `check --all`
+die Regel unter den nicht geprüften Regeln auf. Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune,
+Gebäude, Brücken) und verbotene Routen warten ebenfalls auf die Routenanalyse.

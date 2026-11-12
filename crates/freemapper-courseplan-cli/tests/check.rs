@@ -574,7 +574,7 @@ fn an_acceptance_whose_leg_changed_is_listed_as_not_matched() {
         "removed accepted finding wkb2026.leg.through_control at course A, leg 31–32"
     );
     let after = stdout(&run(d, &["check", p]));
-    assert!(after.contains("0 accepted, 5 skipped"), "{after}");
+    assert!(after.contains("0 accepted, 6 skipped"), "{after}");
 }
 
 #[test]

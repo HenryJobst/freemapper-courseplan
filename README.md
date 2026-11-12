@@ -48,8 +48,8 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 ## Beispiel
 
-Eine Sprintbahn mit vier Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
-Knickpunkten, einer markierten Strecke und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 33 Minuten
+Eine Sprintbahn mit fünf Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
+geraden Strecken und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 33 Minuten
 (27 Posten, 83 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
 hat sie am 12.11.2026 für die freemapper-Suite freigegeben, nicht unter einer offenen Lizenz. Befehle, Projektdateien und Ausgaben stehen unter
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) und [`examples/gleisdreieck`](examples/gleisdreieck/);
@@ -60,8 +60,8 @@ schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
 Titel: Sprinttraining Rummelsburger Bucht
 Kartenart: Sprintkarte
-Posten: 4, Querungsstellen: 0
-Bahn A: 4 Posten, 1,1 km, Anstieg – m
+Posten: 5, Querungsstellen: 0
+Bahn A: 5 Posten, 1,2 km, Anstieg – m
 ```
 
 ## Installieren
@@ -119,8 +119,9 @@ Ausnahmen, zu denen kein Befund mehr passt, und die übersprungenen Prüfregeln.
 tragen Startfenster, Regelkategorien und erwartete Starter nach, die manche Prüfungen brauchen. Das Handbuch erklärt
 es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründen), und der KI-Assistent hat dafür die
 Werkzeuge `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`, `set_start_window` und
-`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht, und die Routenanalyse
-fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
+`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht. Die Routenanalyse
+fehlt, deshalb bleibt die Regel, dass die beste Route nicht durch ein Sperrgebiet führen darf, ungeprüft; eine
+gerade Strecke über ein Sperrgebiet bekommt keinen Befund (ADR 0080).
 
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzel- und Score-Bahnen als IOF-XML 3.0 für die
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema

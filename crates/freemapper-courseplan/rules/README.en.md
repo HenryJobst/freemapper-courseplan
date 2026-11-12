@@ -71,7 +71,7 @@ the findings that were accepted for it are reported again.
 | `similar_features` | Two controls on similar features closer than `metres` |
 | `map_edge` | A control, start or finish closer than `metres` to the map edge |
 | `leg_through_control` | A leg passing through another control of the same course |
-| `leg_through_forbidden` | A straight leg crossing an out-of-bounds area, so the best route may lead through it |
+| `leg_through_forbidden` | The best running route leads through an out-of-bounds area; not checked until the route analysis exists, so the rule shows among the rules that were not checked |
 | `acute_angle` | The angle between the legs at a control below `degrees` |
 | `straight_angle` | Angle between the legs at a control above `degrees`, almost straight on |
 | `number_gap` | Distance of the number from the circle below `min_gap_mm` or above `max_gap_mm`; either value may be missing |
@@ -211,6 +211,8 @@ similar only when a group lists them, since contours, vegetation edges and build
 everywhere. Spur and re-entrant (BOF B6.1.4) are drawn with contours and have no symbol of their
 own, so no group contains them.
 
-`leg_through_forbidden` looks only at these out-of-bounds symbols and at out-of-bounds areas of
-the course. Uncrossable lines and objects (cliffs, water, walls, fences, buildings, bridges) and
-forbidden routes are left to the later route analysis.
+`leg_through_forbidden` keeps these out-of-bounds symbols for the route analysis. Since 2026-11-12 the
+program no longer tests the straight line between two controls against them (ADR 0080): WKB26 B 7.2.6 is about the
+running route, and a straight line over an out-of-bounds area is normal. Until the route analysis exists,
+`check --all` lists the rule among the rules that were not checked. Uncrossable lines and objects (cliffs, water,
+walls, fences, buildings, bridges) and forbidden routes wait for the route analysis as well.

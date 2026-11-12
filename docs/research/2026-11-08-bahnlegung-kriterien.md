@@ -110,7 +110,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Reihenfolge vorgeben (Ausnahme: „spezielle Formate“) | – | WKB26 A1, B 7.2.1 | A |
 | Gegenlauf (längere gegenläufige Teilstrecken) vermeiden | – | WKB26 B 7.2.6; SOFT | A |
 | Hundeknochen (Dogleg) vermeiden: spitzer Winkel, gleicher Weg hin und zurück; drei Posten in einer Linie hinterfragen | – | SOA; BL12 | A |
-| Optimale Route nicht durch Sperrgebiete oder Kulturland | – | WKB26 B 7.2.6; IOF-A2 3.4.2 | A (Routing) |
+| Optimale Route nicht durch Sperrgebiete oder Kulturland | – | WKB26 B 7.2.6; IOF-A2 3.4.2 | A (Routing); nur mit Routenberechnung prüfbar, nicht an der Postenverbindung (Luftlinie); die frühere Prüfung der Geraden ist am 12.11.2026 auf Wunsch des Nutzers entfallen (ADR 0080) |
 | Kreuzungen sind mit elektronischer Kontrolle erlaubt | – | WKB26 B 7.2.6 | A |
 | Route nicht über Start, Ziel, andere Posten oder außerhalb der Karte | – | BL02 | A |
 | Abwechslung bei Länge, Typ, Richtung und Schwierigkeit der Schenkel | – | IOF-A2 3.4.1 | A (Statistik) + B |

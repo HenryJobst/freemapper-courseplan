@@ -1,6 +1,6 @@
 //! Map-based distance checks (plan M2b, Task 4): controls too close to each other or to similar
-//! features, controls near the map edge, legs through other controls and through out-of-bounds
-//! areas.
+//! features, controls near the map edge and legs through other controls. The rule about legs through
+//! out-of-bounds areas is not checked here: it needs the running route (ADR 0080).
 //!
 //! Distances are measured in map mm and compared in metres on the ground. Measured values in the
 //! texts are rounded down to whole metres, so a value below the limit never shows as the limit.
@@ -10,14 +10,13 @@
 
 use std::collections::HashSet;
 
-use freemapper_courseplan_model::SpecialObject;
 use freemapper_courseplan_model::{AcceptedFinding, ControlCode, MapPoint};
 
-use super::geometry::{distance, drawn_part, polyline_meets_area, polylines_meet};
+use super::geometry::{distance, drawn_part};
 use super::stops::{Stop, StopKind, stops_of};
 use super::{
-    ArgValue, Args, CheckContext, Finding, Location, RuleRun, SKIP_NO_MAP_EXTENT,
-    SKIP_VALUE_MISSING, Skipped, below, number, symbol_matches,
+    ArgValue, Args, CheckContext, Finding, Location, RuleRun, SKIP_NEEDS_ROUTE_ANALYSIS,
+    SKIP_NO_MAP_EXTENT, Skipped, below, number, symbol_matches,
 };
 use crate::map::{FeatureGeometry, MapFeature, distance_to_polyline};
 
@@ -30,19 +29,6 @@ fn texts(value: &toml::Value) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-/// A list of symbol codes of the rule's values; a missing one skips the rule with the reason.
-fn codes(run: &RuleRun<'_>, name: &'static str, skipped: &mut Vec<Skipped>) -> Option<Vec<String>> {
-    let value = run.rule().values.get(name).map(texts);
-    if value.is_none() {
-        skipped.push(run.skipped(
-            Location::Event,
-            SKIP_VALUE_MISSING,
-            vec![("name", ArgValue::Text(name.to_owned()))],
-        ));
-    }
-    value
 }
 
 /// Whether a map code matches one of the rule codes.
@@ -320,107 +306,18 @@ pub(super) fn leg_through_control(
     }
 }
 
-/// An out-of-bounds area the straight leg should not cross.
-enum Obstacle<'a> {
-    OutOfBounds {
-        id: &'a str,
-        /// The polygon as the one ring of an area.
-        rings: Vec<Vec<MapPoint>>,
-    },
-    Symbol {
-        code: &'a str,
-        geometry: &'a FeatureGeometry,
-    },
-}
-
-impl Obstacle<'_> {
-    fn met_by(&self, leg: &[MapPoint]) -> bool {
-        match self {
-            Obstacle::OutOfBounds { rings, .. } => polyline_meets_area(leg, rings),
-            Obstacle::Symbol { geometry, .. } => match geometry {
-                // A point symbol has no extent a leg could cross.
-                FeatureGeometry::Point(_) => false,
-                FeatureGeometry::Line(points) => polylines_meet(leg, points, false),
-                FeatureGeometry::Area(rings) => polyline_meets_area(leg, rings),
-            },
-        }
-    }
-
-    fn finding(&self, run: &RuleRun<'_>, location: Location) -> Finding {
-        let (id, args) = match self {
-            Obstacle::OutOfBounds { id, .. } => ("check-leg-out-of-bounds", ("id", id)),
-            Obstacle::Symbol { code, .. } => ("check-leg-out-of-bounds-symbol", ("code", code)),
-        };
-        run.finding(
-            location,
-            id,
-            vec![(args.0, ArgValue::Text((*args.1).to_owned()))],
-        )
-    }
-}
-
-/// `leg_through_forbidden`: the drawn part of a straight leg crosses an out-of-bounds area special
-/// of the course, or a map feature whose symbol is in `impassable` (520, 708, 709, 714 in WKB
-/// 2026). The straight leg stands in for the best route, which WKB26 B 7.2.6 says must not tempt
-/// runners through out-of-bounds areas; it is a hint, not proof. Uncrossable lines and objects,
-/// and forbidden routes (they may be crossed, IOF-R 17.2), need the route analysis and are not
-/// checked. Taped legs are exempt. One finding per leg, naming the first area.
+/// `leg_through_forbidden`: WKB26 B 7.2.6 is about the best running route, and the line between two
+/// controls is not that route. The straight leg is therefore no subject of this rule (ADR 0080,
+/// *(user, 2026-11-12)*): it gives no finding, not even as an approximation. The rule stays in the
+/// profile for the route analysis and shows among the rules that were not checked.
 pub(super) fn leg_through_forbidden(
-    ctx: &CheckContext<'_>,
+    _: &CheckContext<'_>,
     run: &RuleRun<'_>,
-    findings: &mut Vec<Finding>,
+    _: &mut Vec<Finding>,
     skipped: &mut Vec<Skipped>,
 ) {
-    // Without the symbol list the rule is skipped as a whole, specials included, so a broken
-    // profile shows as a skip and never as a partial pass.
-    let Some(impassable) = codes(run, "impassable", skipped) else {
-        return;
-    };
-    let symbols: Vec<Obstacle<'_>> = ctx
-        .index
-        .features()
-        .iter()
-        .filter_map(|f| {
-            let code = f.symbol_code.as_deref()?;
-            matches_any(code, &impassable).then_some(Obstacle::Symbol {
-                code,
-                geometry: &f.geometry,
-            })
-        })
-        .collect();
-    let radius = ctx.circle_radius_mm();
-    for course in &run.courses {
-        let name = &course.course.name;
-        let for_course = |courses: &[String]| courses.is_empty() || courses.contains(name);
-        let obstacles: Vec<Obstacle<'_>> = ctx
-            .event
-            .specials
-            .iter()
-            .filter_map(|special| match special {
-                SpecialObject::OutOfBoundsArea {
-                    id,
-                    polygon,
-                    courses,
-                    ..
-                } if for_course(courses) => Some(Obstacle::OutOfBounds {
-                    id,
-                    rings: vec![polygon.clone()],
-                }),
-                _ => None,
-            })
-            .collect();
-        for (i, leg) in course.legs.iter().enumerate() {
-            if leg.taped {
-                continue;
-            }
-            let drawn = drawn_part(&leg.points, radius);
-            if drawn.is_empty() {
-                continue;
-            }
-            if let Some(hit) = obstacles.iter().chain(&symbols).find(|o| o.met_by(&drawn)) {
-                findings.push(hit.finding(run, course.leg_location(i)));
-            }
-        }
+    if !run.courses.is_empty() {
+        skipped.push(run.skipped(Location::Event, SKIP_NEEDS_ROUTE_ANALYSIS, Vec::new()));
     }
 }
 

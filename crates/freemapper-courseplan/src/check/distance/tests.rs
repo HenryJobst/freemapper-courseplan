@@ -1,7 +1,7 @@
 //! Tests of the distance checks. Maps are 1:4000 sprint maps unless named otherwise, so one map
 //! mm is 4 m and the control circle radius is 3 mm (12 m).
 
-use freemapper_courseplan_model::{Course, Event, SpecialObject};
+use freemapper_courseplan_model::{AcceptedFinding, Event, SpecialObject};
 
 use super::super::testing::*;
 use super::super::*;
@@ -615,19 +615,7 @@ fn a_short_leg_inside_the_circles_is_not_drawn() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// leg_through_forbidden
-
-/// Out-of-bounds symbols as in the profile, plus 505 to test sub-codes.
-fn forbidden_rule() -> Rule {
-    with_values(
-        rule(
-            "t.leg.forbidden",
-            "leg_through_forbidden",
-            Severity::Warning,
-        ),
-        "impassable = [\"520\", \"708\", \"709\", \"505\"]",
-    )
-}
+// leg_through_forbidden: the line between controls is no subject (ADR 0080)
 
 /// A 709 out-of-bounds area across the leg from (10, 30) to (50, 30).
 fn blocked() -> MapObject {
@@ -637,151 +625,11 @@ fn blocked() -> MapObject {
     )
 }
 
-fn two_controls(courses: Vec<Course>) -> Event {
-    event(&[("31", 10.0, 30.0), ("32", 50.0, 30.0)], courses)
-}
-
-#[test]
-fn a_leg_through_an_out_of_bounds_symbol_is_found() {
-    let e = two_controls(vec![course("A", &["31", "32"])]);
-    let r = report(&e, &map(4000, vec![blocked()]), vec![forbidden_rule()]);
-    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
-    let f = &r.findings[0];
-    assert_eq!(f.severity, Severity::Warning);
-    assert_eq!(f.location, leg("A", 1));
-    assert_eq!(
-        en(f),
-        "the straight leg crosses map symbol 709 (out of bounds), so the best route may lead through it"
-    );
-    assert_eq!(
-        de(f),
-        "Die gerade Strecke quert das Kartensymbol 709 (Sperrgebiet); die Optimalroute könnte hindurchführen"
-    );
-}
-
-#[test]
-fn the_wkb_profile_warns_about_out_of_bounds_areas_but_not_buildings() {
-    let rules = load_rule_set("wkb-2026", &[]).unwrap();
-    let forbidden = |map: &MapDocument| {
-        let e = two_controls(vec![course("A", &["31", "32"])]);
-        let r = run_checks(&CheckContext::new(&e, map), &rules, CHECKS);
-        r.findings
-            .into_iter()
-            .filter(|f| f.rule.starts_with("wkb2026.leg.through_forbidden"))
-            .collect::<Vec<_>>()
-    };
-    let building = area_object(
-        AREA_521,
-        &[(28.0, 20.0), (32.0, 20.0), (32.0, 40.0), (28.0, 40.0)],
-    );
-    let fence = line_object(LINE_518, &[(40.0, 0.0), (40.0, 60.0)]);
-    assert!(forbidden(&map(4000, vec![building, fence])).is_empty());
-    let found = forbidden(&map(4000, vec![blocked()]));
-    assert_eq!(found.len(), 1, "{found:?}");
-    assert_eq!(found[0].rule, "wkb2026.leg.through_forbidden_sprint");
-    assert_eq!(found[0].severity, Severity::Warning);
-}
-
-#[test]
-fn a_taped_leg_or_a_bend_around_the_area_gives_no_finding() {
-    let mut taped = course("A", &["31", "32"]);
-    taped_after(&mut taped, 0);
-    let mut around = course("B", &["31", "32"]);
-    bend_after(&mut around, 0, 30.0, 45.0);
-    let mut e = two_controls(vec![taped, around]);
-    e.specials.push(SpecialObject::OutOfBoundsArea {
-        id: "oob".to_owned(),
-        ppen_id: None,
-        polygon: vec![
-            pt(28.0, 20.0),
-            pt(32.0, 20.0),
-            pt(32.0, 40.0),
-            pt(28.0, 40.0),
-        ],
-        courses: vec![],
-    });
-    let r = report(&e, &map(4000, vec![blocked()]), vec![forbidden_rule()]);
-    assert!(r.findings.is_empty(), "{:?}", r.findings);
-}
-
-#[test]
-fn both_legs_of_a_butterfly_loop_through_an_area_are_found() {
-    // A runs S1, 31, 32, 31, 33, F1; the area lies between 31 and 32.
-    let e = event(
-        &[("31", 10.0, 30.0), ("32", 50.0, 30.0), ("33", 10.0, 60.0)],
-        vec![course("A", &["31", "32", "31", "33"])],
-    );
-    let r = report(&e, &map(4000, vec![blocked()]), vec![forbidden_rule()]);
-    let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
-    assert_eq!(places, [&leg("A", 1), &leg("A", 2)], "{:?}", r.findings);
-}
-
-#[test]
-fn a_rule_without_its_symbol_list_is_skipped() {
-    let mut e = two_controls(vec![course("A", &["31", "32"])]);
-    e.specials.push(SpecialObject::OutOfBoundsArea {
-        id: "oob".to_owned(),
-        ppen_id: None,
-        polygon: vec![
-            pt(28.0, 20.0),
-            pt(32.0, 20.0),
-            pt(32.0, 40.0),
-            pt(28.0, 40.0),
-        ],
-        courses: vec![],
-    });
-    let bare = rule(
-        "t.leg.forbidden",
-        "leg_through_forbidden",
-        Severity::Warning,
-    );
-    let r = report(&e, &map(4000, vec![blocked()]), vec![bare]);
-    // The whole rule is skipped, the special included.
-    assert!(r.findings.is_empty(), "{:?}", r.findings);
-    assert_eq!(r.skipped.len(), 1);
-    assert_eq!(
-        r.skipped[0].text(&lang_of("en")),
-        "the rule has no value impassable"
-    );
-}
-
-#[test]
-fn a_crossing_point_lets_a_leg_through_an_out_of_bounds_boundary() {
-    let boundary = line_object(LINE_708, &[(30.0, 0.0), (30.0, 60.0)]);
+fn crossed_event() -> Event {
     let mut e = event(
-        &[("31", 10.0, 30.0), ("32", 50.0, 30.0), ("35", 30.0, 30.0)],
-        vec![course("A", &["31", "35", "32"]), course("B", &["31", "32"])],
+        &[("31", 10.0, 30.0), ("32", 50.0, 30.0)],
+        vec![course("A", &["31", "32"])],
     );
-    crossing(&mut e, "35");
-    let r = report(&e, &map(4000, vec![boundary]), vec![forbidden_rule()]);
-    let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
-    assert_eq!(places, [&leg("B", 1)], "{:?}", r.findings);
-    assert!(en(&r.findings[0]).contains("708"));
-}
-
-#[test]
-fn sub_codes_of_listed_symbols_match() {
-    let e = two_controls(vec![course("A", &["31", "32"])]);
-    let across = [(30.0, 25.0), (30.0, 35.0)];
-    let r = report(
-        &e,
-        &map(4000, vec![line_object(LINE_505_1, &across)]),
-        vec![forbidden_rule()],
-    );
-    assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
-    assert!(en(&r.findings[0]).contains("505.1"));
-    // 5051 is not a sub-code of 505.
-    let r = report(
-        &e,
-        &map(4000, vec![line_object(LINE_5051, &across)]),
-        vec![forbidden_rule()],
-    );
-    assert!(r.findings.is_empty(), "{:?}", r.findings);
-}
-
-#[test]
-fn out_of_bounds_specials_apply_to_their_courses_forbidden_routes_to_none() {
-    let mut e = two_controls(vec![course("A", &["31", "32"]), course("B", &["31", "32"])]);
     e.specials.push(SpecialObject::OutOfBoundsArea {
         id: "oob".to_owned(),
         ppen_id: None,
@@ -791,115 +639,101 @@ fn out_of_bounds_specials_apply_to_their_courses_forbidden_routes_to_none() {
             pt(32.0, 40.0),
             pt(28.0, 40.0),
         ],
-        courses: vec!["B".to_owned()],
-    });
-    // A forbidden route may be crossed (IOF-R 17.2); running along it needs the route analysis.
-    e.specials.push(SpecialObject::ForbiddenRoute {
-        id: "road".to_owned(),
-        ppen_id: None,
-        points: vec![pt(40.0, 0.0), pt(40.0, 60.0)],
         courses: vec![],
     });
-    let r = report(&e, &map(4000, vec![]), vec![forbidden_rule()]);
-    let found: Vec<(LegAt, String)> = r
-        .findings
-        .iter()
-        .map(|f| (leg_of(&f.location), en(f)))
-        .collect();
-    assert_eq!(
-        found,
-        [(
-            leg("B", 1),
-            "the straight leg crosses out-of-bounds area oob, so the best route may lead through it"
-                .to_owned()
-        )]
-    );
-    assert_eq!(
-        de(&r.findings[0]),
-        "Die gerade Strecke quert das Sperrgebiet oob; die Optimalroute könnte hindurchführen"
-    );
-
-    // A special without courses applies to all of them.
-    for special in &mut e.specials {
-        if let SpecialObject::OutOfBoundsArea { courses, .. } = special {
-            courses.clear();
-        }
-    }
-    let r = report(&e, &map(4000, vec![]), vec![forbidden_rule()]);
-    assert_eq!(r.findings.len(), 2, "{:?}", r.findings);
+    e
 }
 
 #[test]
-fn forbidden_routes_and_711_on_a_forest_map_give_no_finding() {
-    let mut e = two_controls(vec![course("A", &["31", "32"])]);
-    e.specials.push(SpecialObject::ForbiddenRoute {
-        id: "road".to_owned(),
-        ppen_id: None,
-        points: vec![pt(40.0, 0.0), pt(40.0, 60.0)],
-        courses: vec![],
-    });
-    let route = line_object(FOREST_LINE_711, &[(20.0, 0.0), (20.0, 60.0)]);
-    let map = forest_map(10000, vec![route]);
+fn a_leg_across_an_out_of_bounds_area_gives_no_finding_and_the_rule_is_not_checked() {
+    let e = crossed_event();
     let rules = load_rule_set("wkb-2026", &[]).unwrap();
-    let r = run_checks(&CheckContext::new(&e, &map), &rules, CHECKS);
+    let r = run_checks(
+        &CheckContext::new(&e, &map(4000, vec![blocked()])),
+        &rules,
+        CHECKS,
+    );
     assert!(
-        !r.findings
-            .iter()
-            .any(|f| f.rule.starts_with("wkb2026.leg.through_forbidden")),
+        !r.findings.iter().any(|f| f.rule.contains("forbidden")),
         "{:?}",
         r.findings
     );
-    // The forest rule ran: it is not among the skipped rules.
+    let skipped: Vec<_> = r
+        .skipped
+        .iter()
+        .filter(|s| s.rule.as_deref() == Some("wkb2026.leg.through_forbidden_sprint"))
+        .collect();
+    assert_eq!(skipped.len(), 1, "{:?}", r.skipped);
+    assert_eq!(skipped[0].reason_id, SKIP_NEEDS_ROUTE_ANALYSIS);
+    assert_eq!(
+        skipped[0].text(&lang_of("en")),
+        "the rule is about the running route, and the route analysis is missing; a straight line between controls is not checked"
+    );
+}
+
+#[test]
+fn the_forest_rule_is_not_checked_either() {
+    let e = crossed_event();
+    let rules = load_rule_set("wkb-2026", &[]).unwrap();
+    let r = run_checks(
+        &CheckContext::new(&e, &forest_map(10000, vec![])),
+        &rules,
+        CHECKS,
+    );
     assert!(
-        !r.skipped
-            .iter()
-            .any(|s| s.rule.as_deref() == Some("wkb2026.leg.through_forbidden")),
+        r.skipped.iter().any(
+            |s| s.rule.as_deref() == Some("wkb2026.leg.through_forbidden")
+                && s.reason_id == SKIP_NEEDS_ROUTE_ANALYSIS
+        ),
         "{:?}",
         r.skipped
     );
+    assert!(r.findings.is_empty(), "{:?}", r.findings);
 }
 
 #[test]
-fn the_leg_from_the_start_of_a_one_control_course_is_checked() {
-    // S1 at (0, 0) to 31.
-    let e = event(
-        &[("31", 40.0, 0.0)],
-        vec![course("A", &["31"]), course("B", &[])],
+fn an_acceptance_of_the_rule_stays_valid_and_shows_as_unmatched() {
+    let mut e = crossed_event();
+    e.accepted_findings.push(AcceptedFinding {
+        rule: "wkb2026.leg.through_forbidden_sprint".to_owned(),
+        controls: vec![],
+        course: None,
+        legs: vec![],
+        note: "from an older version".to_owned(),
+    });
+    let rules = load_rule_set("wkb-2026", &[]).unwrap();
+    let r = run_checks(
+        &CheckContext::new(&e, &map(4000, vec![blocked()])),
+        &rules,
+        CHECKS,
     );
-    let boundary = line_object(LINE_708, &[(20.0, -10.0), (20.0, 10.0)]);
-    let r = report(&e, &map(4000, vec![boundary]), vec![forbidden_rule()]);
-    let places: Vec<&Location> = r.findings.iter().map(|f| &f.location).collect();
-    // B runs from S1 straight to F1 at (100, 0), through the boundary as well.
-    assert_eq!(places, [&leg("A", 0), &leg("B", 0)], "{:?}", r.findings);
+    assert!(r.accepted.is_empty());
+    assert_eq!(r.unmatched.len(), 1, "{:?}", r.unmatched);
 }
 
 #[test]
 fn sheet_objects_never_trigger_a_finding() {
-    // Objects as in the tests above, tagged as sheet content: a forbidden area across a leg, a
-    // knoll at two controls, and the map edge they would make.
+    // Objects as in the tests above, tagged as sheet content: a knoll at two controls and the
+    // map edge they would make.
     let e = event(
         &[("31", 10.0, 30.0), ("32", 12.0, 30.0), ("33", 50.0, 30.0)],
         vec![course("A", &["31", "32", "33"])],
     );
     let objects = vec![
-        area_object(
-            AREA_520,
-            &[(28.0, 20.0), (32.0, 20.0), (32.0, 40.0), (28.0, 40.0)],
-        ),
         point_object(POINT_109, 10.0, 30.0),
         point_object(POINT_110, 12.0, 30.0),
     ];
-    let rules = || vec![forbidden_rule(), similar_rule(), edge_rule()];
+    let rules = || vec![similar_rule(), edge_rule()];
     let tagged = map(4000, objects.iter().cloned().map(sheet).collect());
     let r = report(&e, &tagged, rules());
     assert!(r.findings.is_empty(), "{:?}", r.findings);
-    // Untagged, the same objects give findings of all three rules.
+    // Untagged, the same objects give findings of both rules.
     let r = report(&e, &map(4000, objects), rules());
     let mut keys: Vec<&str> = r.findings.iter().map(|f| f.rule.as_str()).collect();
     keys.dedup();
     assert_eq!(
         keys,
-        ["t.leg.forbidden", "t.distance.similar", "t.map.edge"],
+        ["t.distance.similar", "t.map.edge"],
         "{:?}",
         r.findings
     );

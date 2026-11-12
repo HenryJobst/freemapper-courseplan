@@ -6,6 +6,12 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- `check` prüft die gerade Linie zwischen zwei Posten nicht mehr gegen Sperrgebiete. Die Warnung „Die gerade Strecke quert das Sperrgebiet …“ entfällt, denn WKB26 B 7.2.6 betrifft die Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Die Regeln `wkb2026.leg.through_forbidden` und `wkb2026.leg.through_forbidden_sprint` bleiben im Regelprofil und stehen jetzt in `check --all` unter den nicht geprüften Regeln, bis es die Routenanalyse gibt. Hast du einen Befund dieser Regeln akzeptiert, bleibt die Ausnahme gültig und erscheint höchstens unter den Ausnahmen ohne Befund. Siehe ADR 0080.
+- Das Beispiel „Rummelsburger Bucht“ hat jetzt fünf Posten und nur gerade Strecken, ohne Knickpunkte und ohne markierte Strecke. Eine Strecke ist die Luftlinie von Posten zu Posten, Knickpunkte sind die Ausnahme. IOF-XML, Purple-Pen-Datei, Ausgaben und beide READMEs folgen der neuen Bahn.
+- Die Bildschirmfotos im Handbuch zeigen die neue Bahn. Das Bild zu den Knicken hat Knicke nur zur Anschauung, die Bildunterschrift sagt das. Die Befundbilder zeigen drei Winkelhinweise, die durch verschobene Posten in einer Arbeitskopie entstanden. Der Abschnitt „Strecken und Knicke“ sagt jetzt, dass eine Strecke gerade ist, bis du sie knickst.
+
 ## [0.14.1] - 2026-11-12
 
 ### Hinzugefügt

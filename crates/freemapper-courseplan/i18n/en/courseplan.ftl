@@ -161,6 +161,7 @@ check-skip-course-kind = { $kind ->
 check-skip-course-unresolved = the course refers to { $id }, which the event does not define; it is not checked
 check-skip-class-not-mapped = class { $name } has no rule category; class set --rule-category assigns one
 check-skip-climb-missing = the course has no climb
+check-skip-needs-route-analysis = the rule is about the running route, and the route analysis is missing; a straight line between controls is not checked
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
 check-skip-score-no-map = the map has no objects, so no route times can be computed
@@ -203,8 +204,6 @@ check-leg-through-control = { $metres ->
            *[control] control
         } { $stop }, inside its circle radius of { $limit } m
     }
-check-leg-out-of-bounds = the straight leg crosses out-of-bounds area { $id }, so the best route may lead through it
-check-leg-out-of-bounds-symbol = the straight leg crosses map symbol { $code } (out of bounds), so the best route may lead through it
 check-acute-angle = the legs at { $stop_kind ->
         [crossing] crossing point
        *[control] control
