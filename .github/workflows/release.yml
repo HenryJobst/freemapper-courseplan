@@ -30,12 +30,23 @@ env:
   REF: ${{ inputs.dry_run && github.sha || github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  # The one approval of a release, before anything is built (user, 2026-11-12). The environment has a
+  # required reviewer and no secrets; `release` holds the secrets and has no reviewer, so a release
+  # asks once, not twice.
+  approve:
+    runs-on: ubuntu-latest
+    environment: release-approval
+    permissions: {}
+    steps:
+      - run: echo "Release approved."
+
   # Tells the build whether this release is signed, before anything is compiled: a program built with
   # the updater whose release has no manifest would tell every user "no manifest". Same gate as
   # freemapper-print (ADR 0060 there).
   gate:
+    needs: approve
     runs-on: ubuntu-latest
-    # The environment that holds the signing secrets; the approval happens here, before the builds.
+    # The environment that holds the signing secrets. It has no reviewer: the one approval is `approve`.
     environment: release
     permissions:
       contents: read
@@ -162,7 +173,7 @@ jobs:
   release:
     needs: [gate, build]
     runs-on: ubuntu-latest
-    # Holds the signing secrets; protection rules on this environment guard them.
+    # Holds the signing secrets; only main and v* tags may use this environment. No reviewer: see `approve`.
     environment: release
     permissions:
       contents: write
