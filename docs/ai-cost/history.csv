@@ -56,3 +56,4 @@ timestamp_utc,total_usd,requests,sessions,by_model_usd
 2026-11-12T19:57:32Z,569.94,11580,1,claude-haiku-5-5=0.03;claude-opus-5-5=315.39;claude-sonnet-5-5=254.52
 2026-11-12T20:58:30Z,570.92,11602,1,claude-haiku-5-5=0.03;claude-opus-5-5=315.39;claude-sonnet-5-5=255.50
 2026-11-12T21:59:24Z,578.78,11802,1,claude-haiku-5-5=0.03;claude-opus-5-5=315.39;claude-sonnet-5-5=263.36
+2026-11-12T23:00:00Z,589.83,12022,1,claude-haiku-5-5=0.03;claude-opus-5-5=315.39;claude-sonnet-5-5=274.41
