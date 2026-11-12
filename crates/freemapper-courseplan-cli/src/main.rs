@@ -10,6 +10,7 @@ mod mcp;
 mod query_cmd;
 mod score_cmd;
 mod sync_cmd;
+mod update;
 
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -177,11 +178,47 @@ enum Command {
     },
     /// Serve course setting to AI assistants over MCP on stdin and stdout
     Mcp,
+    /// Install a newer freemapper-courseplan from the GitHub releases, after asking
+    Update {
+        /// Only check: exit code 10 when a newer version exists
+        #[arg(long, conflicts_with_all = ["yes", "rollback"])]
+        check: bool,
+        /// Install without asking
+        #[arg(long)]
+        yes: bool,
+        /// Install this version instead of the newest one
+        #[arg(long, value_name = "X.Y.Z")]
+        version: Option<freemapper_update::Version>,
+        /// Go back to the version the last update replaced
+        #[arg(long, conflicts_with = "version")]
+        rollback: bool,
+        /// Store what the daily check does when it finds a newer version
+        #[arg(long, value_enum, conflicts_with_all = ["check", "yes", "version", "rollback"])]
+        mode: Option<UpdateMode>,
+    },
     /// Show the help of a command
     Help {
         /// The command, with its subcommands: `help control add`
         command: Vec<String>,
     },
+}
+
+/// What the daily check does when it finds a newer version (`update --mode`).
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum UpdateMode {
+    Notify,
+    Install,
+    Off,
+}
+
+impl From<UpdateMode> for freemapper_update::Mode {
+    fn from(mode: UpdateMode) -> Self {
+        match mode {
+            UpdateMode::Notify => Self::Notify,
+            UpdateMode::Install => Self::Install,
+            UpdateMode::Off => Self::Off,
+        }
+    }
 }
 
 /// The `--lang` value in the arguments: `--lang de` or `--lang=de`, the last one wins. The scan
@@ -314,6 +351,15 @@ fn localized_command(lang: &Lang) -> clap::Command {
                 .mut_arg("no_browser", |a| with_help(a, "cli-arg-edit-no-browser"))
         })
         .mut_subcommand("mcp", |s| s.about(t("cli-help-mcp")))
+        .mut_subcommand("update", |s| {
+            s.about(t("cli-help-update"))
+                .after_help(t("cli-help-update-exit-codes"))
+                .mut_arg("check", |a| with_help(a, "cli-arg-update-check"))
+                .mut_arg("yes", |a| with_help(a, "cli-arg-update-yes"))
+                .mut_arg("version", |a| with_help(a, "cli-arg-update-version"))
+                .mut_arg("rollback", |a| with_help(a, "cli-arg-update-rollback"))
+                .mut_arg("mode", |a| with_help(a, "cli-arg-update-mode"))
+        })
         .mut_subcommand("help", |s| {
             s.about(t("cli-help-help"))
                 .mut_arg("command", |a| with_help(a, "cli-arg-help-command"))
@@ -473,6 +519,50 @@ fn main() -> ExitCode {
         Ok(cli) => cli,
         Err(error) => return report_parse_error(&lang, &error),
     };
+    update::set_lang(&lang);
+    // The MCP server's stdout is the protocol, and a stale file may be an older server still running.
+    if !matches!(cli.command, Command::Mcp) {
+        update::background::remove_stale_files();
+    }
+    if let Command::Update {
+        check,
+        yes,
+        version,
+        rollback,
+        mode,
+    } = cli.command
+    {
+        return match update::command::run(update::command::Request {
+            check,
+            yes,
+            version,
+            rollback,
+            mode: mode.map(Into::into),
+        }) {
+            Ok(code) => code,
+            Err(message) => {
+                print_error(&lang, &message);
+                ExitCode::from(1)
+            }
+        };
+    }
+    // The daily check runs beside `info` and `edit` (ADR 0076). After `info` it tells on stderr; the
+    // editor stays open for hours, so there it only records, and the page shows the notice.
+    let check = matches!(cli.command, Command::Info { .. } | Command::Edit { .. })
+        .then(|| {
+            update::background::start_background_check(
+                &update::background::CheckContext::of_command(),
+            )
+        })
+        .flatten();
+    let check = if matches!(cli.command, Command::Edit { .. }) {
+        if let Some(check) = check {
+            check.record_in_background();
+        }
+        None
+    } else {
+        check
+    };
     let result = match cli.command {
         Command::Init {
             map,
@@ -524,6 +614,7 @@ fn main() -> ExitCode {
             no_browser,
         } => editor::run(lang.clone(), project, port, !no_browser).map_err(Failure::Error),
         Command::Mcp => mcp::run(lang.clone()).map_err(Failure::Error),
+        Command::Update { .. } => unreachable!("handled above"),
         Command::Help { command: path } => {
             command.build();
             let mut found: &clap::Command = &command;
@@ -551,7 +642,8 @@ fn main() -> ExitCode {
             }
         }
     };
-    match result {
+    let command_ok = result.is_ok();
+    let code = match result {
         Ok(()) => ExitCode::SUCCESS,
         Err(Failure::Error(message)) => {
             print_error(&lang, &message);
@@ -562,7 +654,12 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
         Err(Failure::Findings) => ExitCode::from(1),
+    };
+    // After the command's own output, its error included.
+    if let Some(report) = check.and_then(|check| check.finish(command_ok)) {
+        report.print();
     }
+    code
 }
 
 fn init(
@@ -777,6 +874,10 @@ mod tests {
         ("import_cmd.rs", include_str!("import_cmd.rs")),
         ("sync_cmd.rs", include_str!("sync_cmd.rs")),
         ("mcp.rs", include_str!("mcp.rs")),
+        ("update/mod.rs", include_str!("update/mod.rs")),
+        ("update/command.rs", include_str!("update/command.rs")),
+        ("update/background.rs", include_str!("update/background.rs")),
+        ("update/source.rs", include_str!("update/source.rs")),
         ("mcp/params.rs", include_str!("mcp/params.rs")),
         ("mcp/score.rs", include_str!("mcp/score.rs")),
     ];
@@ -818,9 +919,11 @@ mod tests {
             .filter_map(|(_, s)| s.split("#[cfg(test)]").next())
             .flat_map(|code| code.split('"').skip(1).step_by(2))
             .filter(|lit| {
-                ["error-", "cli-", "word-", "mcp-", "check-", "editor-"]
-                    .iter()
-                    .any(|p| lit.starts_with(p))
+                [
+                    "error-", "cli-", "word-", "mcp-", "check-", "editor-", "update-",
+                ]
+                .iter()
+                .any(|p| lit.starts_with(p))
                     && lit.chars().all(|c| c.is_ascii_lowercase() || c == '-')
                     && !lit.ends_with('-')
             })

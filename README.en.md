@@ -75,6 +75,15 @@ assistant that can run commands (Claude Code, Codex) can also do the download it
 "Read AGENTS.md from github.com/HenryJobst/freemapper-courseplan and set up freemapper-courseplan." The file
 [`AGENTS.md`](AGENTS.md) is in every archive.
 
+### Updates
+
+A release build tells you at most once a day, with one line, when a newer version exists (after `info` and in the editor).
+`freemapper-courseplan update` then replaces the program in place, after asking. Every release is signed, the program
+checks the signature before it installs anything, and `update --rollback` brings back the version before. The same path
+stays, so the registration with your assistant keeps working; restart the MCP server afterwards. The program asks only
+the GitHub release servers and sends nothing but a fixed User-Agent with its name, version and repository. A build from
+source never updates itself. Details: user manual, chapter 2.
+
 ## Status
 
 freemapper-courseplan is in early development. On a sprint or schoolyard map (`.omap`) you can already set whole

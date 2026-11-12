@@ -74,6 +74,16 @@ der Befehle ausführen kann (Claude Code, Codex), erledigt auch den Download sel
 von github.com/HenryJobst/freemapper-courseplan und richte freemapper-courseplan ein.“ Die Datei
 [`AGENTS.md`](AGENTS.md) liegt in jedem Archiv.
 
+### Aktualisieren
+
+Ein Release-Build sagt höchstens einmal am Tag mit einer Zeile Bescheid, wenn es eine neuere Version gibt (nach `info`
+und im Editor). `freemapper-courseplan update` ersetzt das Programm dann an Ort und Stelle, nach Rückfrage. Jede
+Version ist signiert, das Programm prüft die Signatur, bevor es etwas installiert, und `update --rollback` holt die
+Version davor zurück. Der Pfad bleibt gleich, die Eintragung beim Assistenten gilt also weiter; starte danach den
+MCP-Server neu. Das Programm fragt nur die GitHub-Server der Releases und schickt nichts außer einem festen
+User-Agent mit Namen, Version und Repository. Ein aus dem Quellcode gebautes Programm aktualisiert sich nie. Einzelheiten:
+Handbuch, Kapitel 2.
+
 ## Status
 
 freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schulhofkarte (`.omap`) legst du schon

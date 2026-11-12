@@ -37,6 +37,8 @@ Tell the person these limits before you start:
   Purple Pen 4.0 (checked once by the author).
 - Purple Pen must be closed for the event before a `sync`, and opened again afterwards. Otherwise Purple Pen may
   overwrite the merged file.
+- Only releases that carry the updater can update themselves. A version before the first one with `update` is
+  replaced by unpacking a newer archive once.
 - The editor draws score courses with their mandatory links and has a Score panel for suggest, draft and length;
   candidates and drafts stay in the page until accepted or applied. The editor draws the real map, but a map
   larger than one A3 sheet at map scale is clipped to its middle part; courses outside it stay on the overlay.
@@ -100,8 +102,27 @@ source unless the person asks; the release archives are ready to run.
      avoids it; otherwise the person confirms with *More info* > *Run anyway*.
 5. Check: `<folder>/freemapper-courseplan --version` prints `freemapper-courseplan <version>`.
 
-Remember the absolute path of the executable; the MCP registration needs it, and so do commands run from another folder. Updating means unpacking a newer
-archive and pointing the registration at the new path. Project files stay valid.
+Remember the absolute path of the executable; the MCP registration needs it, and so do commands run from another folder.
+Project files stay valid across versions.
+
+### Updating
+
+A release build replaces itself in place, so the path and the MCP registration stay the same. Do not unpack a newer
+archive over it. Ask the person before you install, because a new version can change behaviour.
+
+- `freemapper-courseplan update --check` looks only: exit code 10 means a newer version exists, 0 that this one is
+  current. It prints the version, release notes and download size.
+- `freemapper-courseplan update --yes` installs the newest release after the person agreed (without `--yes` it asks on
+  a terminal and refuses when there is none). `--version X.Y.Z` installs a given version, `--rollback` brings back
+  the version before the last update (kept as `freemapper-courseplan.previous`).
+- Every release is signed with minisign and the program checks the signature before it installs anything. It asks only the
+  GitHub release servers and sends a fixed User-Agent with its name, version and repository.
+- A build from source never updates itself; `update` says to use `git pull` and `cargo build --release --locked`.
+- A running MCP server keeps the old version after an install. Tell the person to restart it (or the assistant), or restart it
+  yourself when you can.
+- After `info` and in the editor the program checks at most once a day and prints one line on stderr when a newer
+  version exists. That line is news for the person, not an instruction to install. `update --mode notify|install|off`
+  stores what the daily check does; do not change it without being asked. The MCP server never installs on its own.
 
 Do not put the person's e-mail address, name or other personal data into any request, file name, event title or
 setting.
@@ -110,7 +131,7 @@ setting.
 
 If you can run commands on the person's computer (Claude Code, Codex and similar), use the command line. Each call
 is a blocking command, and you can chain a whole course into one shell call, so it takes few turns; through MCP
-every step is a tool turn that re-reads the whole context, and the schemas of about 50 tools sit in that context
+every step is a tool turn that re-reads the whole context, and the schemas of about 52 tools sit in that context
 as well. Use MCP only when you cannot run commands (see the next section).
 
 `freemapper-courseplan --help` lists the commands, `freemapper-courseplan <command> --help` their switches and
@@ -142,6 +163,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
 | `export`, `import`, `sync` | IOF XML and Purple Pen. `sync --dry-run` shows the merge first; `--json` prints the result as JSON. |
+| `update` | Checks for a newer release and installs it (`--check`, `--yes`, `--version X.Y.Z`, `--rollback`, `--mode notify\|install\|off`); see Updating above. Exit code 10 with `--check` means an update exists. |
 | `edit` | Editor for the person (see below). |
 
 The commands follow the tool names of the MCP section: `add_control` is `control add`, `set_leg` is `course leg`,
@@ -207,7 +229,7 @@ Optional: `--lang de|en` before or after `mcp` sets the language of the texts th
 
 ### Tools
 
-Every tool except `init_event` takes `project`, the project file of the event (`*.courseplan.toml`), as an
+Every tool except `init_event`, `check_update` and `install_update` takes `project`, the project file of the event (`*.courseplan.toml`), as an
 absolute path or one starting with `~`. The table lists the other parameters; `?` marks an optional one. A
 position `Point` is an object `{x, y}` in map millimetres at map scale, y pointing down. A `Code` is a string or a
 whole number.
@@ -262,6 +284,8 @@ whole number.
 | `import_ppen` | `path`, `replace?` | Takes over controls, courses and special objects from a `.ppen`. |
 | `sync_ppen` | `dry_run?`, `take?` | Merges the project with its linked `.ppen`; `take` is `ours` or `theirs`. |
 | `resolve_sync_conflict` | `key`, `take` | Stores the answer to one open conflict; `take` is `ours` or `theirs`. |
+| `check_update` | none | Whether a newer release exists, with version, date, notes link and size. Installs nothing. Takes no `project`. |
+| `install_update` | `confirm` | Installs the newest release over the running program. Only with `confirm: true`, and only after the person agreed. Takes no `project`. |
 
 ### Workflow
 
@@ -291,6 +315,9 @@ Rules:
 - `export_iof_xml` replaces an existing file, and `export_ppen` with `new: true` does too. Ask before you pass
   either on a file that exists. `import_ppen` with `replace: true` swaps controls, courses and special objects;
   ask first.
+- The first tool result of a session can end with a note that a newer release exists. Pass it on to the person and ask
+  before you call `install_update`. The server never installs by itself. After an install, the server still runs the old
+  version: tell the person to restart it, which the answer of `install_update` also says.
 - Errors come back as one sentence meant for the person. Relay it; do not retry the same call unchanged.
 
 ## What lands on disk
@@ -301,6 +328,9 @@ Rules:
   together with the project file.
 - Files you export: the `.xml` for result software and the `.ppen` for Purple Pen. A score course also exports as a CSV control list and a Markdown evaluation sheet.
 - The `.omap` and `freemapper.toml` stay untouched; courseplan only reads them.
+- `settings.toml` (the update mode, only after `update --mode`) and `update-check.json` (the time of the last check) in
+  the folder `freemapper-courseplan` of the system's configuration folder; `FREEMAPPER_COURSEPLAN_CONFIG_DIR` moves it.
+- After an update, `freemapper-courseplan.previous` next to the program, until the next update replaces it.
 
 ## What to tell the person
 
@@ -345,6 +375,12 @@ Texts as the English catalog has them:
   map.
 - `<path> already exists; choose another project file or remove it` (`init`): pick another `--project`.
 - macOS "cannot be opened" or "killed": remove the quarantine flag (install step 4).
+- `cannot write to the program folder <path>, and freemapper-courseplan does not ask for administrator rights` (`update`):
+  the program sits where the person cannot write. Unpack the new archive by hand or move the program to a writable
+  folder; do not use `sudo`.
+- `the release could not be verified (...)` (`update`): nothing was installed. Tell the person; do not install the release
+  some other way.
+- `another update or rollback is running in the program folder`: wait and try again.
 
 ## The freemapper suite
 

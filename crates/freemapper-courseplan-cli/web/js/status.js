@@ -22,6 +22,13 @@ export function setMap(path, scale, kind) {
   fields.kind.textContent = t(`editor-mapkind-${kind}`);
 }
 
+// The notice about a newer release; the server words it in the page's language (api/update).
+export function setUpdate(notice) {
+  const box = document.getElementById("status-update");
+  box.textContent = notice ?? "";
+  box.hidden = !notice;
+}
+
 export function setCursor(point) {
   fields.cursor.textContent = point ? `${point[0].toFixed(2)}; ${point[1].toFixed(2)}` : "";
 }

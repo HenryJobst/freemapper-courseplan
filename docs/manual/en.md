@@ -19,6 +19,74 @@ Planned chapters:
 10. Handing on: IOF XML for OE, printing with freemapper-print
 11. Messages and what to do
 
+## 2. Installation: keeping the program up to date
+
+Unpacking the archive and registering the program is described in the [README](../../README.en.md#installing). This
+chapter covers what comes after: how a new version reaches you.
+
+### The notice
+
+A release build looks for a newer version at most once a day. It does so after `info` and when you start the editor,
+waits at most three seconds and prints one line on stderr:
+
+```
+freemapper-courseplan 0.15.0 is available (you have 0.14.0). Update with: freemapper-courseplan update
+```
+
+The editor shows the same news in its status bar. The commands that work only on your files (`init`, `check`, `export`
+and the others) do not check, so a script never waits for the network. A slow or failed check stays silent and is tried
+again the next day. No check runs when the variable `CI` is set. A build you made yourself from source never checks and
+never updates itself; `update` then tells you to use `git pull` and `cargo build --release --locked`.
+
+### Updating
+
+```
+freemapper-courseplan update
+```
+
+shows the newest version with its release notes and download size and asks before it installs. `--yes` skips the
+question (needed when no terminal is attached), `--check` only looks and ends with exit code 10 when a newer version
+exists, and `--version 0.14.0` installs a given version, an older one too.
+
+The program checks the signature of the release against a key built into it, then the checksums of the download and
+of the unpacked file. It starts the new file with `--version` before it swaps anything in. Nothing is installed when
+one of these checks fails. The new version takes the place of the old one under the same path, so the registration with
+your AI assistant stays valid. A running MCP server keeps the old version until the assistant restarts it.
+
+The program folder must be writable for you. The program never asks for administrator rights. If it cannot write there,
+it says which folder and installs nothing; unpack the new archive by hand in that case.
+
+### Going back
+
+```
+freemapper-courseplan update --rollback
+```
+
+swaps the version before the last update back in. The old file stays next to the program as
+`freemapper-courseplan.previous` (on Windows `freemapper-courseplan.previous.exe`) until the next update replaces it.
+
+### What the daily check does
+
+`update --mode notify` (the default) only tells you. `--mode install` installs a newer version by itself after a
+command that worked, and tells you. `--mode off` stops the daily check. The setting is stored in
+`settings.toml` in the folder `freemapper-courseplan` of your system's configuration folder (on macOS
+`~/Library/Application Support/freemapper-courseplan`). The variable `FREEMAPPER_COURSEPLAN_UPDATE` overrides it for
+one run. The MCP server never installs on its own, whatever the mode: it tells the assistant, and the assistant asks
+you before it calls `install_update`.
+
+### What is sent
+
+The program asks `github.com` and `release-assets.githubusercontent.com` for one small file (the update manifest and its
+signature) and, when you install, for the program file. It sends a fixed User-Agent with the name, version and
+repository of the program, for example `freemapper-courseplan/0.15.0 (+https://github.com/HenryJobst/freemapper-courseplan)`.
+It sends no project data, no names and no identifier. Other hosts are refused, also when a server redirects there.
+
+### A release that cannot install itself
+
+A release can raise the oldest version that may install it. Then `update --check` still exits with 10 and names the
+release page; unpack that archive by hand once. The same holds for the first release with the updater: versions
+before it have no `update` command.
+
 ## 3. With an AI assistant
 
 The assistant sets the courses for you. For this, freemapper-courseplan is an "MCP server", a tool that AI

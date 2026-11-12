@@ -19,6 +19,78 @@ Geplante Kapitel:
 10. Weitergeben: IOF-XML für OE, Druck mit freemapper-print
 11. Meldungen und was zu tun ist
 
+## 2. Installation: das Programm aktuell halten
+
+Wie du das Archiv entpackst und das Programm einträgst, steht in der [README](../../README.md#installieren). Dieses
+Kapitel behandelt, was danach kommt: wie eine neue Version zu dir gelangt.
+
+### Der Hinweis
+
+Ein Release-Build sucht höchstens einmal am Tag nach einer neueren Version. Das geschieht nach `info` und beim Start
+des Editors, dauert höchstens drei Sekunden und gibt eine Zeile auf stderr aus:
+
+```
+freemapper-courseplan 0.15.0 ist verfügbar (du hast 0.14.0). Aktualisieren mit: freemapper-courseplan update
+```
+
+Der Editor zeigt dieselbe Nachricht in der Statusleiste. Die Befehle, die nur mit deinen Dateien arbeiten (`init`,
+`check`, `export` und die übrigen), prüfen nicht, ein Skript wartet also nie auf das Netz. Eine langsame oder
+gescheiterte Prüfung bleibt still und wird am nächsten Tag wiederholt. Ist die Variable `CI` gesetzt, läuft keine
+Prüfung. Ein selbst aus dem Quellcode gebautes Programm prüft nie und aktualisiert sich nie; `update` verweist dann auf
+`git pull` und `cargo build --release --locked`.
+
+### Aktualisieren
+
+```
+freemapper-courseplan update
+```
+
+zeigt die neueste Version mit Versionshinweisen und Downloadgröße und fragt, bevor es installiert. `--yes` überspringt
+die Frage (nötig, wenn kein Terminal angeschlossen ist), `--check` schaut nur nach und endet mit Exit-Code 10, wenn es
+eine neuere Version gibt, und `--version 0.14.0` installiert eine bestimmte Version, auch eine ältere.
+
+Das Programm prüft die Signatur der Version gegen einen eingebauten Schlüssel, dann die Prüfsummen des Downloads und
+der entpackten Datei. Die neue Datei startet es mit `--version`, bevor es etwas austauscht. Schlägt eine dieser
+Prüfungen fehl, wird nichts installiert. Die neue Version liegt danach unter demselben Pfad wie die alte, die
+Eintragung bei deinem KI-Assistenten bleibt also gültig. Ein laufender MCP-Server behält die alte Version, bis der
+Assistent ihn neu startet.
+
+Der Programmordner muss für dich beschreibbar sein. Das Programm fragt nie nach Administratorrechten. Kann es dort nicht
+schreiben, nennt es den Ordner und installiert nichts; entpacke das neue Archiv dann von Hand.
+
+### Zurückgehen
+
+```
+freemapper-courseplan update --rollback
+```
+
+holt die Version vor der letzten Aktualisierung zurück. Die alte Datei bleibt als `freemapper-courseplan.previous`
+neben dem Programm liegen (unter Windows `freemapper-courseplan.previous.exe`), bis die nächste Aktualisierung sie
+ersetzt.
+
+### Was die tägliche Prüfung tut
+
+`update --mode notify` (Standard) sagt dir nur Bescheid. `--mode install` installiert eine neuere Version nach einem
+Befehl, der geklappt hat, selbst und sagt es dir. `--mode off` schaltet die tägliche Prüfung ab. Die Einstellung steht
+in `settings.toml` im Ordner `freemapper-courseplan` des Einstellungsordners deines Systems (unter macOS
+`~/Library/Application Support/freemapper-courseplan`). Die Variable `FREEMAPPER_COURSEPLAN_UPDATE` überschreibt sie
+für einen Lauf. Der MCP-Server installiert nie von selbst, in keinem Modus: Er sagt dem Assistenten Bescheid, und der
+Assistent fragt dich, bevor er `install_update` aufruft.
+
+### Was gesendet wird
+
+Das Programm fragt `github.com` und `release-assets.githubusercontent.com` nach einer kleinen Datei (dem
+Aktualisierungsmanifest und seiner Signatur) und, wenn du installierst, nach der Programmdatei. Es sendet einen festen
+User-Agent mit Namen, Version und Repository des Programms, zum Beispiel
+`freemapper-courseplan/0.15.0 (+https://github.com/HenryJobst/freemapper-courseplan)`. Es sendet keine Projektdaten,
+keine Namen und keine Kennung. Andere Server lehnt es ab, auch wenn ein Server dorthin weiterleitet.
+
+### Eine Version, die sich nicht selbst installieren kann
+
+Eine Version kann die älteste Version anheben, die sie installieren darf. Dann endet `update --check` trotzdem mit 10
+und nennt die Release-Seite; entpacke dieses Archiv einmal von Hand. Dasselbe gilt für die erste Version mit der
+Aktualisierung: Versionen davor haben keinen Befehl `update`.
+
 ## 3. Mit einem KI-Assistenten
 
 Der Assistent legt die Bahnen für dich. Dafür ist freemapper-courseplan ein „MCP-Server“, ein Werkzeug, das

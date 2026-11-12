@@ -753,7 +753,9 @@ mcp-instructions =
     gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
     (set_start_window) oder Regelkategorie und erwartete Starterzahl einer Kategorie (set_class); fehlen sie, führt
     check die Prüfregel als übersprungen. Einen Befund, den der Bahnleger so haben will, bekommt accept_finding mit
-    Begründung; remove_accepted_finding nimmt das zurück.
+    Begründung; remove_accepted_finding nimmt das zurück. check_update sagt, ob es ein neueres freemapper-courseplan
+    gibt; install_update installiert es, nur mit confirm: true, nachdem die Person zugestimmt hat, und der Assistent
+    startet danach den freemapper-courseplan-Server neu.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
 error-import-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
@@ -1616,3 +1618,60 @@ score-sheet-controls-heading = Posten
 score-sheet-col-code = Code
 score-sheet-col-value = Wert
 export-course-unused = --course gilt nur mit --csv oder --sheet; für --iof-xml und --ppen gibt es keine Bahnauswahl
+
+## update (ADR 0076)
+
+cli-warning-line = Warnung: { $text }
+cli-help-update = Eine neuere freemapper-courseplan-Version aus den GitHub-Releases installieren, nach Rückfrage. Ein aus dem Quellcode gebautes Programm nennt stattdessen den Weg zum Aktualisieren
+cli-help-update-exit-codes =
+    Exit-Code 0: erledigt, oder diese Version ist aktuell.
+    Exit-Code 1: die Aktualisierung ist fehlgeschlagen.
+    Exit-Code 2: falscher Aufruf, zum Beispiel eine unbekannte Option.
+    Exit-Code 10: mit --check, es gibt eine neuere Version.
+cli-arg-update-check = Nur prüfen. Exit-Code 10, wenn es eine neuere Version gibt, 0, wenn diese aktuell ist
+cli-arg-update-yes = Ohne Rückfrage installieren. Nötig, wenn die Eingabe kein Terminal ist
+cli-arg-update-version = Diese Version (x.y.z) statt der neuesten installieren, auch eine ältere
+cli-arg-update-rollback = Zur Version zurückkehren, die die letzte Aktualisierung ersetzt hat
+cli-arg-update-mode = Festlegen, was die tägliche Prüfung tut, wenn sie eine neuere Version findet (Standard notify). Funktioniert in jedem Build, weil nur die Einstellung geschrieben wird
+update-source-build = Dieses freemapper-courseplan wurde aus dem Quellcode gebaut. Aktualisiere es mit git pull und cargo build --release --locked.
+update-current = freemapper-courseplan { $version } ist aktuell.
+update-available = freemapper-courseplan { $new } ist verfügbar (du hast { $old }), erschienen am { $released }.
+update-details =
+    Versionshinweise: { $notes }
+    Download: { $size } MB
+update-decimal-separator = ,
+update-ask = Jetzt installieren? [j/N]
+update-not-installed = Es wurde nichts installiert.
+update-needs-yes = Die Eingabe ist kein Terminal, deshalb kann freemapper-courseplan vor der Installation nicht fragen. Mit freemapper-courseplan update --yes wird ohne Rückfrage installiert
+update-installing = freemapper-courseplan { $version } wird geladen und geprüft
+update-done = freemapper-courseplan wurde von { $old } auf { $new } aktualisiert. Versionshinweise: { $notes }
+update-mcp-restart = Ein laufender MCP-Server behält die alte Version, bis der KI-Assistent ihn neu startet.
+update-rolled-back = Zurück zu freemapper-courseplan { $version }. Die verlassene Version liegt als { $path } bereit.
+update-not-writable = In den Programmordner { $path } kann nicht geschrieben werden, und freemapper-courseplan fragt nicht nach Administratorrechten. Entpacke die neue Version dort von Hand oder verschiebe freemapper-courseplan in einen Ordner, in den du schreiben darfst
+update-too-old = freemapper-courseplan { $new } lässt sich nicht durch die Selbstaktualisierung von { $old } installieren. Installiere { $needed } oder neuer von Hand, siehe { $notes }
+update-busy = Im Programmordner läuft schon eine Aktualisierung oder ein Zurücksetzen (Sperrdatei { $path }). Warte, bis der Vorgang beendet ist, und versuche es dann erneut
+update-bad-signature = Die neue Version ließ sich nicht verifizieren ({ $error }). Es wurde nichts installiert
+update-check-bad-signature = Die neueste freemapper-courseplan-Version ließ sich nicht verifizieren ({ $error }). Es wurde nichts installiert
+update-no-manifest = Die neueste Version kann sich nicht selbst installieren (ihr fehlt das Aktualisierungsmanifest). Lade sie von { $page } herunter
+update-no-manifest-version = Die Version { $version } gibt es nicht, oder sie kann sich nicht selbst installieren (ihr fehlt das Aktualisierungsmanifest); siehe { $page }
+update-no-asset = Die neue Version enthält kein Programm für dieses System ({ $platform }). Es wurde nichts installiert
+update-no-previous = Es gibt keine vorherige Version, zu der zurückgekehrt werden kann ({ $path } fehlt)
+update-failed = Die Aktualisierung ist fehlgeschlagen: { $error }
+update-mode-set = Aktualisierungsmodus { $mode } in { $path } gespeichert.
+update-mode-env = FREEMAPPER_COURSEPLAN_UPDATE={ $value } hat Vorrang vor dieser Einstellung, solange die Variable gesetzt ist.
+update-mode-failed = { $path } ließ sich nicht schreiben: { $error }
+update-notice = freemapper-courseplan { $new } ist verfügbar (du hast { $old }). Aktualisieren mit: freemapper-courseplan update
+update-applies-next-start = Die neue Version gilt ab dem nächsten Start von freemapper-courseplan.
+update-install-failed = freemapper-courseplan { $new } wurde nicht installiert: { $error }
+update-no-config-dir = Dieses System hat keinen Ordner für Einstellungen. Setze FREEMAPPER_COURSEPLAN_CONFIG_DIR
+update-mcp-note = Hinweis für die Person: freemapper-courseplan { $new } ist verfügbar (dies ist { $old }). Frag sie, bevor du install_update aufrufst.
+update-mcp-needs-confirm = Es wurde nichts installiert. Frag zuerst die Person und rufe install_update nach ihrer Zustimmung mit confirm: true auf
+update-mcp-note-manual = Hinweis für die Person: freemapper-courseplan { $new } ist verfügbar (dies ist { $old }), lässt sich aber nicht mit install_update installieren. { $needed } oder neuer muss von Hand installiert werden, siehe { $notes }
+update-mcp-note-bad-signature = Hinweis für die Person: Die neueste freemapper-courseplan-Version ließ sich nicht verifizieren ({ $error }); es wurde nichts installiert. Sag es ihr und installiere sie nicht auf anderem Weg.
+update-mcp-restart-now = Starte den freemapper-courseplan-MCP-Server jetzt neu, denn er läuft noch mit der alten Version.
+mcp-tool-check-update = Ob es eine neuere freemapper-courseplan-Version gibt, mit Versionsnummer, Erscheinungsdatum, Versionshinweisen und Downloadgröße, oder dass diese Version aktuell ist. Installiert nichts.
+mcp-tool-install-update = Installiert die neueste freemapper-courseplan-Version über dieses Programm. Ruf es erst auf, wenn die Person zugestimmt hat, und mit confirm true. Die neue Version gilt, sobald der Assistent den freemapper-courseplan-Server neu startet.
+mcp-param-install-update-confirm = true, sobald die Person der Installation der neueren Version zugestimmt hat; ohne das wird nichts installiert.
+update-editor-notice = freemapper-courseplan { $version } ist verfügbar (du hast { $current }).
+update-editor-howto = Aktualisieren mit: freemapper-courseplan update
+update-editor-notes = Versionshinweise

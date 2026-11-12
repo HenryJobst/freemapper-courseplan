@@ -5,7 +5,7 @@
 //! texts come from the catalog in the language chosen at start (ruling R1).
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use freemapper_courseplan::check::{
     ArgValue, Args, CheckReport, Finding, Location, check_event_as, source_text,
@@ -26,13 +26,23 @@ use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
     CourseKind, Event, LegRef, MapPoint, NumberPlacement, ProjectError, ProjectFile, SpecialObject,
 };
+use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::handler::server::{router::tool::ToolRouter, wrapper::Parameters};
-use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
-use rmcp::{ErrorData as McpError, ServerHandler, ServiceExt, tool, tool_handler, tool_router};
+use rmcp::model::{
+    CallToolRequestParams, CallToolResponse, CallToolResult, ContentBlock, Implementation,
+    ServerCapabilities, ServerConfig,
+};
+use rmcp::service::RequestContext;
+use rmcp::{
+    ErrorData as McpError, RoleServer, ServerHandler, ServiceExt, tool, tool_handler, tool_router,
+};
 use serde_json::{Map, Value, json};
 
 use crate::edit_cmd;
 use crate::sync_cmd::{SyncCmdError, store_decision, sync_file, sync_json};
+use crate::update::background::{CheckContext, check_for_server};
+use crate::update::command::{check_for_mcp, install_for_mcp};
+use crate::update::release_build;
 use freemapper_courseplan::sync::decide::Take;
 
 mod params;
@@ -71,6 +81,23 @@ async fn blocking(
     match tokio::task::spawn_blocking(work).await {
         Ok(answer) => reply(answer),
         Err(_) => failure(text(&lang, "mcp-error-interrupted", &[])),
+    }
+}
+
+/// A tool result with plain text, for the update tools.
+fn plain_text(message: String) -> Result<CallToolResult, McpError> {
+    Ok(CallToolResult::success(vec![ContentBlock::text(message)]))
+}
+
+/// Runs an update tool (network and files) off the server's thread and answers with its text.
+async fn update_result(
+    lang: &Lang,
+    work: impl FnOnce() -> Result<String, String> + Send + 'static,
+) -> Result<CallToolResult, McpError> {
+    match tokio::task::spawn_blocking(work).await {
+        Ok(Ok(message)) => plain_text(message),
+        Ok(Err(message)) => failure(message),
+        Err(_) => failure(text(lang, "mcp-error-interrupted", &[])),
     }
 }
 
@@ -605,10 +632,70 @@ fn flag(value: Option<bool>) -> bool {
 // ---------------------------------------------------------------------------------------------
 // The server
 
+/// The note about a newer version for the person (ADR 0076): the daily check sets it, and one tool
+/// result of the server process carries it.
+#[derive(Default)]
+enum UpdateNote {
+    /// The check has not found a newer version (yet).
+    #[default]
+    Unknown,
+    Known(String),
+    /// An update tool runs; no result carries the note meanwhile, also not during a long install.
+    /// What the check finds waits here.
+    Held(Option<String>),
+    /// A tool result carried it, or an update tool gave the news itself.
+    Given,
+}
+
+impl UpdateNote {
+    fn know(&mut self, note: String) {
+        match self {
+            UpdateNote::Unknown => *self = UpdateNote::Known(note),
+            UpdateNote::Held(held @ None) => *held = Some(note),
+            _ => {}
+        }
+    }
+
+    /// The note, the first time it is asked for after it became known.
+    fn take(&mut self) -> Option<String> {
+        if !matches!(self, UpdateNote::Known(_)) {
+            return None;
+        }
+        match std::mem::replace(self, UpdateNote::Given) {
+            UpdateNote::Known(note) => Some(note),
+            _ => None,
+        }
+    }
+
+    /// An update tool starts.
+    fn hold(&mut self) {
+        match self {
+            UpdateNote::Unknown => *self = UpdateNote::Held(None),
+            UpdateNote::Known(note) => {
+                let note = std::mem::take(note);
+                *self = UpdateNote::Held(Some(note));
+            }
+            UpdateNote::Held(_) | UpdateNote::Given => {}
+        }
+    }
+
+    /// An update tool ended. Its answer gave the news, unless it failed: then the state is the one
+    /// before the tool, plus what the check found meanwhile.
+    fn release(&mut self, failed: bool) {
+        if !failed {
+            *self = UpdateNote::Given;
+        } else if let UpdateNote::Held(held) = self {
+            let held = held.take();
+            *self = held.map_or(UpdateNote::Unknown, UpdateNote::Known);
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct CoursePlanServer {
     tool_router: ToolRouter<Self>,
     lang: Lang,
+    update_note: Arc<Mutex<UpdateNote>>,
 }
 
 #[tool_router]
@@ -626,7 +713,23 @@ impl CoursePlanServer {
                 route.attr.input_schema = Arc::new(map);
             }
         }
-        Self { tool_router, lang }
+        Self {
+            tool_router,
+            lang,
+            update_note: Arc::default(),
+        }
+    }
+
+    /// Starts the daily check of the server; what it finds waits for the next tool result.
+    fn start_update_check(&self) {
+        let note = Arc::clone(&self.update_note);
+        check_for_server(&CheckContext::of_command(), move |text| {
+            note.lock().unwrap_or_else(|e| e.into_inner()).know(text);
+        });
+    }
+
+    fn update_note(&self) -> std::sync::MutexGuard<'_, UpdateNote> {
+        self.update_note.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn load(&self, project: &str) -> Result<ProjectFile, String> {
@@ -1138,6 +1241,28 @@ impl CoursePlanServer {
         Parameters(req): Parameters<SetRuleProfile>,
     ) -> Result<CallToolResult, McpError> {
         reply(self.set_rule_profile_op(req))
+    }
+
+    #[tool(description = "Whether a newer release exists")]
+    async fn check_update(&self) -> Result<CallToolResult, McpError> {
+        if !release_build() {
+            return plain_text(text(&self.lang, "update-source-build", &[]));
+        }
+        update_result(&self.lang, check_for_mcp).await
+    }
+
+    #[tool(description = "Install the newest release")]
+    async fn install_update(
+        &self,
+        Parameters(req): Parameters<InstallUpdate>,
+    ) -> Result<CallToolResult, McpError> {
+        if !release_build() {
+            return plain_text(text(&self.lang, "update-source-build", &[]));
+        }
+        if !req.confirm {
+            return failure(text(&self.lang, "update-mcp-needs-confirm", &[]));
+        }
+        update_result(&self.lang, install_for_mcp).await
     }
 
     #[tool(description = "Set the start window")]
@@ -2123,6 +2248,8 @@ pub(crate) const EDITOR_ONLY: &[&str] = &["score_apply_draft"];
 /// by dedicated routes. A new MCP tool must join one of the two lists (a test enforces it).
 #[cfg(test)]
 pub(crate) const EDITOR_EXCLUDED: &[&str] = &[
+    "check_update",
+    "install_update",
     "init_event",
     "export_iof_xml",
     "export_score_csv",
@@ -2324,6 +2451,38 @@ fn localize_schema(schema: &mut Value, lang: &Lang, tool: &str) {
 
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for CoursePlanServer {
+    /// The router's call, plus the note about a newer version on the one result that carries it.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, McpError> {
+        let update_tool = matches!(request.name.as_ref(), "check_update" | "install_update");
+        if update_tool {
+            self.update_note().hold();
+        }
+        let response = self
+            .tool_router
+            .call(ToolCallContext::new(self, request, context))
+            .await;
+        if update_tool {
+            let failed = match &response {
+                Ok(CallToolResponse::Complete(result)) => result.is_error == Some(true),
+                Ok(_) => false,
+                Err(_) => true,
+            };
+            self.update_note().release(failed);
+        }
+        let mut response = response?;
+        if !update_tool
+            && let CallToolResponse::Complete(result) = &mut response
+            && let Some(note) = self.update_note().take()
+        {
+            result.content.push(ContentBlock::text(note));
+        }
+        Ok(response)
+    }
+
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new(
@@ -2342,7 +2501,9 @@ pub fn run(lang: Lang) -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
     runtime.block_on(async {
-        let service = CoursePlanServer::new(lang)
+        let server = CoursePlanServer::new(lang);
+        server.start_update_check();
+        let service = server
             .serve(rmcp::transport::stdio())
             .await
             .map_err(|e| e.to_string())?;
@@ -2664,6 +2825,47 @@ mod tests {
     }
 
     #[test]
+    fn the_update_note_is_given_once() {
+        let mut note = UpdateNote::default();
+        assert_eq!(note.take(), None);
+        note.know("newer".into());
+        assert_eq!(note.take(), Some("newer".into()));
+        assert_eq!(note.take(), None);
+        // Once given, a later check adds nothing.
+        note.know("again".into());
+        assert_eq!(note.take(), None);
+    }
+
+    #[test]
+    fn an_update_tool_holds_the_note_and_gives_it_back_when_it_fails() {
+        // Known before a failed update tool: known after it.
+        let mut note = UpdateNote::Known("newer".into());
+        note.hold();
+        assert_eq!(note.take(), None);
+        note.release(true);
+        assert_eq!(note.take(), Some("newer".into()));
+        // Unknown before, found while the tool ran, the tool failed: known now.
+        let mut note = UpdateNote::default();
+        note.hold();
+        note.know("found".into());
+        assert_eq!(note.take(), None);
+        note.release(true);
+        assert_eq!(note.take(), Some("found".into()));
+        // Unknown before and after a failed tool: still waiting for the check.
+        let mut note = UpdateNote::default();
+        note.hold();
+        note.release(true);
+        note.know("later".into());
+        assert_eq!(note.take(), Some("later".into()));
+        // An update tool that answered gave the news: no note follows.
+        let mut note = UpdateNote::Known("newer".into());
+        note.hold();
+        note.release(false);
+        note.know("again".into());
+        assert_eq!(note.take(), None);
+    }
+
+    #[test]
     fn paths_must_be_absolute_or_home() {
         let lang = Lang::english();
         let refused = resolve(&lang, "projects/x.toml").unwrap_err();
@@ -2705,7 +2907,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 50);
+            assert_eq!(tools.len(), 52);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

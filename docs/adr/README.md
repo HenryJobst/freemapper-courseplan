@@ -119,3 +119,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0073](0073-score-candidates-wider-pool.md) | Score candidates: a wider pool | Accepted | 2026-11-11 |
 | [0074](0074-score-draft-local-search.md) | Score draft: local search and faster legs | Accepted | 2026-11-12 |
 | [0075](0075-score-leg-times-canonical.md) | Score legs: one number per leg time | Accepted | 2026-11-12 |
+| [0076](0076-self-update-from-signed-releases.md) | Self-update from signed releases | Accepted | 2026-11-12 |

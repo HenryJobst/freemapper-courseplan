@@ -11,6 +11,12 @@ rust-version.workspace = true
 name = "freemapper-courseplan"
 path = "src/main.rs"
 
+[features]
+# Tests only: a debug build with this feature takes FREEMAPPER_COURSEPLAN_UPDATE_TEST_BASE, counts as a
+# release build and sends its update requests to that stub server (`cargo test -p
+# freemapper-courseplan-cli --features test-stub`). Release builds never have it.
+test-stub = []
+
 [dependencies]
 freemapper-courseplan.workspace = true
 clap.workspace = true
@@ -28,10 +34,13 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 toml.workspace = true
+freemapper-update.workspace = true
+ureq.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
 tower.workspace = true
+minisign-verify.workspace = true
 
 [lints]
 workspace = true
