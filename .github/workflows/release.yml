@@ -2,7 +2,8 @@ name: Release
 
 # A tag "v<version>" (matching the version in Cargo.toml) builds freemapper-courseplan for every platform and
 # publishes a GitHub release with the archives and their SHA-256 checksums, the bare executables as
-# .gz and the signed update manifest freemapper-courseplan-update.json (ADR 0076).
+# .gz and the signed update manifest freemapper-courseplan-update.json (ADR 0076). Without the signing secret
+# in the release environment a gate job makes the release ship without the updater.
 #
 # A dispatch with dry_run builds, packages and signs the same from the dispatching branch, named
 # v<version> after Cargo.toml, and keeps the result as a workflow artifact for 3 days. It publishes
@@ -29,7 +30,44 @@ env:
   REF: ${{ inputs.dry_run && github.sha || github.event.inputs.tag || github.ref_name }}
 
 jobs:
+  # Tells the build whether this release is signed, before anything is compiled: a program built with
+  # the updater whose release has no manifest would tell every user "no manifest". Same gate as
+  # freemapper-print (ADR 0060 there).
+  gate:
+    runs-on: ubuntu-latest
+    # The environment that holds the signing secrets; the approval happens here, before the builds.
+    environment: release
+    permissions:
+      contents: read
+    outputs:
+      updater: ${{ steps.gate.outputs.updater }}
+    steps:
+      - name: Is the signing key available
+        id: gate
+        # Only whether the secret is set is looked at; its value is never printed.
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          if [ -n "$MINISIGN_SECRET_KEY" ]; then
+            echo "updater=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Once a published release has a manifest, a release without one would break the
+          # latest-download link of `freemapper-courseplan update`. A dry run publishes nothing.
+          names=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | .assets[].name')
+          if grep -qxF freemapper-courseplan-update.json <<< "$names" && [ "$DRY_RUN" != true ]; then
+            echo "::error::The release environment has no MINISIGN_SECRET_KEY, but a published release has freemapper-courseplan-update.json. A release without a manifest would break the latest-download link."
+            exit 1
+          fi
+          echo "updater=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::The release environment has no MINISIGN_SECRET_KEY; this release ships without the updater."
+
   build:
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +116,7 @@ jobs:
         # A release build of this repository, which may update itself (ADR 0076). Only this step
         # sets it.
         env:
-          FREEMAPPER_COURSEPLAN_DIST: github-release
+          FREEMAPPER_COURSEPLAN_DIST: ${{ needs.gate.outputs.updater == 'true' && 'github-release' || '' }}
         run: cargo build --release --locked -p freemapper-courseplan-cli --target ${{ matrix.target }}
       - name: Smoke test
         if: ${{ !matrix.cross }}
@@ -107,8 +145,10 @@ jobs:
           fi
           sha256 "$archive" > "$archive.sha256"
           # The bare executable for `freemapper-courseplan update`, and its SHA-256 for the update manifest.
-          gzip -9 -n -c "$dir/freemapper-courseplan$exe" > "$dir.gz"
-          sha256 "$dir/freemapper-courseplan$exe" > "$dir.exe.sha256"
+          if [ "${{ needs.gate.outputs.updater }}" = true ]; then
+            gzip -9 -n -c "$dir/freemapper-courseplan$exe" > "$dir.gz"
+            sha256 "$dir/freemapper-courseplan$exe" > "$dir.exe.sha256"
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.name }}
@@ -120,7 +160,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: build
+    needs: [gate, build]
     runs-on: ubuntu-latest
     # Holds the signing secrets; protection rules on this environment guard them.
     environment: release
@@ -148,9 +188,11 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Install minisign
+        if: ${{ needs.gate.outputs.updater == 'true' }}
         run: sudo apt-get update && sudo apt-get install -y minisign
       # Its signed manifest gives min_self_update_from (see update-manifest.sh).
       - name: Find the previous release with an update manifest
+        if: ${{ needs.gate.outputs.updater == 'true' }}
         id: previous
         env:
           GH_TOKEN: ${{ github.token }}
@@ -197,6 +239,7 @@ jobs:
             echo "No previous release with an update manifest: this is the first release with the updater."
           fi
       - name: Write the update manifest
+        if: ${{ needs.gate.outputs.updater == 'true' }}
         run: |
           set -euo pipefail
           if [ -f previous/freemapper-courseplan-update.json ]; then
@@ -209,6 +252,7 @@ jobs:
           mkdir exe-sha256
           mv dist/*.exe.sha256 exe-sha256/
       - name: Sign the update manifest
+        if: ${{ needs.gate.outputs.updater == 'true' }}
         # The secrets reach the shell only as environment variables. The key file lives only in
         # this step and is removed when it ends, also when it fails.
         env:
@@ -226,6 +270,7 @@ jobs:
           printf '%s\n' "$MINISIGN_PASSWORD" \
             | minisign -S -s "$key" -m freemapper-courseplan-update.json -t "freemapper-courseplan-update.json $TAG"
       - name: Verify the signature with the public key in the program
+        if: ${{ needs.gate.outputs.updater == 'true' }}
         run: |
           set -euo pipefail
           # -p takes the first key of the file. With two keys (rotation) loop over the key lines
@@ -301,8 +346,8 @@ jobs:
   # run, for the first release with the updater (its predecessor has no manifest and no updater)
   # and when this release is not the latest, which `update` would not offer.
   update-smoke:
-    needs: release
-    if: ${{ !inputs.dry_run && needs.release.outputs.previous != '' && needs.release.outputs.latest == 'true' }}
+    needs: [gate, release]
+    if: ${{ !inputs.dry_run && needs.gate.outputs.updater == 'true' && needs.release.outputs.previous != '' && needs.release.outputs.latest == 'true' }}
     strategy:
       fail-fast: false
       matrix:
