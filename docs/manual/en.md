@@ -658,7 +658,7 @@ prefix `wkb2026.score.`:
 
 Several of these limits are proposals of freemapper-courseplan, not values from a source; the source in the line
 says which. A finding at a pair of controls is accepted with `--controls`, one about the whole course with
-`--course`, as in the example `examples/luebeck-sprint/score-check.en.txt`. Team and relay courses stay unchecked.
+`--course`, as in the examples `examples/luebeck-sprint/score-check.en.txt` and `examples/berlin-kreuzberg/check.en.txt`. Team and relay courses stay unchecked.
 
 ### Giving a reason for an exception
 

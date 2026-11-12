@@ -144,7 +144,7 @@ freemapper-courseplan export luebeck-score.courseplan.toml --sheet score-15.shee
 
 `score-transcript.en.txt` has every command with its output, `score draft` included.
 
-**The draft fails at 45 minutes, and the map is not the reason.** I tried 45 first, the usual limit. The good runner
+**This map is too small for a score course of 30 to 45 minutes.** The usual limit for adults is 45 minutes and 30 is the sensible minimum, so the 15-minute course here is a short one. The example for the usual size is [`examples/berlin-kreuzberg`](../berlin-kreuzberg/). I tried 45 here first. The good runner
 takes every control, 100 percent of the points against a band of 87 to 93, and the very good runner is back after
 55 percent of the limit instead of 95 to 100. The draft stops at 30 controls because the free codes run out. A
 two-digit code carries its value in the second digit, so a highest value of 5 leaves 35 codes, and the pairs that read

@@ -144,8 +144,7 @@ freemapper-courseplan export luebeck-score.courseplan.toml --sheet score-15.shee
 
 `score-transcript.de.txt` hat jeden Befehl mit seiner Ausgabe, auch `score draft`.
 
-**Der Entwurf scheitert bei 45 Minuten, und die Karte ist nicht der Grund.** Ich habe zuerst 45 versucht, das übliche
-Limit. Der gute Läufer holt alle Posten, also 100 Prozent der Punkte bei einem Band von 87 bis 93, und der sehr gute
+**Diese Karte ist für eine Score-Bahn von 30 bis 45 Minuten zu klein.** Für Erwachsene sind 45 Minuten üblich und 30 das sinnvolle Minimum; die 15 Minuten hier sind also eine kurze Bahn. Das Beispiel in üblicher Größe ist [`examples/berlin-kreuzberg`](../berlin-kreuzberg/). Ich habe hier zuerst 45 versucht. Der gute Läufer holt alle Posten, also 100 Prozent der Punkte bei einem Band von 87 bis 93, und der sehr gute
 Läufer ist nach 55 Prozent des Limits zurück statt nach 95 bis 100. Der Entwurf hört bei 30 Posten auf, weil die freien
 Codes ausgehen. Ein zweistelliger Code trägt seinen Wert in der zweiten Ziffer, ein höchster Wert von 5 lässt also 35
 Codes, und die Paare, die auf dem Kopf gleich aussehen (6 und 9), nehmen einen Teil davon weg. Die letzte Zeile der

@@ -25,7 +25,7 @@ Tell the person these limits before you start:
   score course is measured with `score length`. Team and relay courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
   `score draft` and `score length` read the map and search routes, so they take seconds: about 1 s on a small
-  sprint map, about 6 s for `score suggest` and 8 s for `score draft` on the Lübeck map (release build, an idle machine; a draft that misses the bands can take twice as long). A draft
+  sprint map, about 6 s for `score suggest` and 8 s for `score draft` on the Lübeck map, about 30 s for a 45-minute `score draft` on the 1.8 x 2.0 km Berlin map (release build, an idle machine; a draft that misses the bands can take twice as long). A 45-minute score course needs a map of that size; the Lübeck map is too small for more than about 15 minutes. `examples/berlin-kreuzberg` holds a finished one. A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
   A draft can miss the length bands, for example when the free codes run out before the bands are met (30
