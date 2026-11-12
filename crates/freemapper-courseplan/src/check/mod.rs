@@ -23,6 +23,8 @@ mod stops;
 mod tables;
 
 pub use context::{CheckContext, CourseContext, ScoreControlRef, ScoreCourseContext};
+pub(crate) use forbidden::SPRINT_AREA_SYMBOLS;
+pub(crate) use geometry::point_in_area;
 pub use geometry::{drawn_part, drawn_part_between};
 
 use freemapper_courseplan_model::{

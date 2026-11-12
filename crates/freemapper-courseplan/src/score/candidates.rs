@@ -4,8 +4,8 @@ use freemapper_courseplan_model::{MapPoint, SpecialObject};
 
 use std::collections::BTreeMap;
 
-use crate::check::symbol_matches;
-use crate::map::{FeatureGeometry, MapIndex, inside_area};
+use crate::check::{SPRINT_AREA_SYMBOLS, point_in_area, symbol_matches};
+use crate::map::{FeatureGeometry, MapIndex};
 use crate::score::ScoreError;
 use crate::score::travel::{LegRoutes, Route, RouteParams, TravelTime};
 
@@ -364,11 +364,30 @@ fn segment_distance(p: &MapPoint, a: &MapPoint, b: &MapPoint) -> f64 {
     )
 }
 
+/// The rings of the map areas with an out-of-bounds symbol. A site inside one, or on its edge, is left
+/// out, by the geometry of the check `control_in_forbidden`, so a draft never holds a control the check
+/// reports (ADR 0082).
+fn out_of_bounds_areas(index: &MapIndex) -> Vec<&Vec<Vec<MapPoint>>> {
+    index
+        .features()
+        .iter()
+        .filter(|f| {
+            f.symbol_code
+                .as_deref()
+                .is_some_and(|c| SPRINT_AREA_SYMBOLS.iter().any(|s| symbol_matches(c, s)))
+        })
+        .filter_map(|f| match &f.geometry {
+            FeatureGeometry::Area(rings) => Some(rings),
+            _ => None,
+        })
+        .collect()
+}
+
 fn forbidden(specials: &[SpecialObject], at: &MapPoint, line_margin_mm: f64) -> bool {
     specials.iter().any(|s| match s {
         SpecialObject::OutOfBoundsArea { polygon, .. }
         | SpecialObject::DangerousArea { polygon, .. } => {
-            inside_area(at, std::slice::from_ref(polygon))
+            point_in_area(at, std::slice::from_ref(polygon))
         }
         SpecialObject::ForbiddenRoute { points, .. } => points
             .windows(2)
@@ -535,10 +554,16 @@ pub fn suggest_with(
         Err(e) => return Err(e),
     };
     let raw = raw_sites(index);
+    let out_of_bounds = out_of_bounds_areas(index);
     // The pool: sites outside forbidden areas with standing room.
     let pool: Vec<(&Site, MapPoint)> = raw
         .iter()
         .filter(|s| !forbidden(ctx.specials, &s.at, ctx.line_margin_mm))
+        .filter(|s| {
+            !out_of_bounds
+                .iter()
+                .any(|rings| point_in_area(&s.at, rings))
+        })
         .filter(|s| {
             dist(&s.at, &ctx.start) >= ctx.min_end_distance_mm
                 && dist(&s.at, &ctx.finish) >= ctx.min_end_distance_mm

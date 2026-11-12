@@ -14,6 +14,11 @@ use super::stops::{StopKind, stops_of};
 use super::{ArgValue, Args, CheckContext, Finding, Location, RuleRun, Skipped, symbol_matches};
 use crate::map::FeatureGeometry;
 
+/// The map symbols of out-of-bounds areas on sprint and schoolyard maps: the `area_symbols` of the rule
+/// `wkb2026.control.in_forbidden_sprint`, which a test compares. The score draft keeps its sites out of
+/// these areas with the same list and the same geometry (ADR 0082).
+pub const SPRINT_AREA_SYMBOLS: &[&str] = &["520", "709", "714"];
+
 /// A control on at least one course, with the names of the courses.
 struct OnCourses {
     code: ControlCode,

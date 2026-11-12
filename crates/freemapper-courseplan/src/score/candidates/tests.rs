@@ -185,6 +185,89 @@ fn blocked_and_out_of_bounds_are_excluded() {
     assert_eq!(positions(&found), vec![(80.0, 20.0)]);
 }
 
+/// A square map area with the symbol from x 30 to 50 and y 10 to 30.
+fn square_area(code: &str) -> MapFeature {
+    feature(
+        code,
+        FeatureGeometry::Area(vec![vec![
+            p(30.0, 10.0),
+            p(50.0, 10.0),
+            p(50.0, 30.0),
+            p(30.0, 30.0),
+        ]]),
+    )
+}
+
+#[test]
+fn sites_in_or_on_a_map_area_with_an_out_of_bounds_symbol_are_excluded() {
+    for code in ["520", "709", "714"] {
+        let index = MapIndex::from_features(vec![
+            square_area(code),
+            boulder(40.0, 20.0), // inside
+            boulder(50.0, 20.0), // on the edge
+            boulder(30.0, 30.0), // on a corner
+            boulder(50.1, 20.0), // just outside
+            boulder(70.0, 20.0), // far outside
+        ]);
+        let found = suggest(&index, &Fake::plain(), &ctx(&[], &[])).unwrap();
+        assert_eq!(
+            sorted(positions(&found)),
+            vec![(50.1, 20.0), (70.0, 20.0)],
+            "{code}"
+        );
+    }
+}
+
+#[test]
+fn other_map_areas_and_the_hole_of_an_area_do_not_exclude_sites() {
+    let holed = feature(
+        "520",
+        FeatureGeometry::Area(vec![
+            vec![p(30.0, 10.0), p(70.0, 10.0), p(70.0, 50.0), p(30.0, 50.0)],
+            vec![p(45.0, 25.0), p(55.0, 25.0), p(55.0, 35.0), p(45.0, 35.0)],
+        ]),
+    );
+    let index = MapIndex::from_features(vec![
+        holed,
+        square_area("521.3"),
+        boulder(50.0, 30.0), // in the hole
+        boulder(40.0, 20.0), // in the ring
+    ]);
+    let found = suggest(&index, &Fake::plain(), &ctx(&[], &[])).unwrap();
+    assert!(positions(&found).contains(&(50.0, 30.0)), "{found:?}");
+    assert!(!positions(&found).contains(&(40.0, 20.0)), "{found:?}");
+}
+
+#[test]
+fn a_site_on_the_edge_of_an_out_of_bounds_special_is_excluded() {
+    let index = MapIndex::from_features(vec![boulder(45.0, 20.0), boulder(70.0, 20.0)]);
+    let specials = [SpecialObject::OutOfBoundsArea {
+        id: "O1".into(),
+        ppen_id: None,
+        polygon: vec![p(35.0, 15.0), p(45.0, 15.0), p(45.0, 25.0), p(35.0, 25.0)],
+        courses: vec![],
+    }];
+    let found = suggest(&index, &Fake::plain(), &ctx(&specials, &[])).unwrap();
+    assert_eq!(positions(&found), vec![(70.0, 20.0)]);
+}
+
+#[test]
+fn the_symbols_of_the_candidates_equal_the_values_of_the_sprint_check_rule() {
+    let rules = crate::rules::load_rule_set("wkb-2026", &[]).unwrap();
+    let rule = rules
+        .rules
+        .iter()
+        .find(|r| r.rule.id == "wkb2026.control.in_forbidden_sprint")
+        .unwrap();
+    let in_rule: Vec<&str> = rule.rule.values["area_symbols"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect();
+    assert_eq!(in_rule, crate::check::SPRINT_AREA_SYMBOLS);
+}
+
 #[test]
 fn sites_on_a_forbidden_route_line_are_excluded() {
     let index = MapIndex::from_features(vec![boulder(40.0, 20.0), boulder(60.0, 20.0)]);
