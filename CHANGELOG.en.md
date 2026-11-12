@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Screenshots in the user manual, chapter 4. Fourteen pictures per language show the editor on the example maps by Remo Madella (Rummelsburger Bucht for the sprint course, Gleisdreieck for the score course): the whole page, a control, a course with its categories, a bent and taped leg, control numbers, control descriptions, a special object, findings, the Event menu, the Purple Pen export dialog, and the Score panel with candidates, a draft and the applied course. The German manual shows the German interface and the English manual the English one. Each caption names the map and points to the `ATTRIBUTION.txt` of the example.
+
 ## [0.14.0] - 2026-11-12
 
 ### Added

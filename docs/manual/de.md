@@ -328,6 +328,10 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
 - Die Statusleiste unten nennt die Karte, den Maßstab, die Kartenart und die Mauszeigerposition in Kartenmillimetern.
   Meldungen erscheinen dort ebenfalls.
 
+![Der Editor mit Bahn A auf der Karte Rummelsburger Bucht: links der Baum der Veranstaltung, in der Mitte die Karte mit der Bahn, rechts die Eigenschaften der Bahn, unten die Statusleiste mit den Befundzahlen.](images/editor-overview-de.jpg)
+
+*Der Editor mit Bahn A (vier Posten, 1146 m) auf der Sprintkarte Rummelsburger Bucht. Deutsche Oberfläche. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 ### Die Karte
 
 Die Karte zeichnet derselbe Kartenzeichner, den auch freemapper-print benutzt (freemapper-render in
@@ -365,6 +369,10 @@ Die Werkzeugleiste hat die Werkzeuge „Auswählen“, „Posten setzen“, „Q
 gelten also dieselben Prüfungen. Lehnt das Programm eine Änderung ab, etwa eine Position außerhalb der Karte, bleibt
 die Datei, wie sie war, und eine Meldung nennt den Grund.
 
+![Im Editor gewählter Posten 33: rechts seine Eigenschaften, auf der Karte sein Kreis in Blau.](images/editor-control-de.jpg)
+
+*Posten 33 ist gewählt. Die Eigenschaften zeigen Kennzahl, Art, Lage und die Bahnen, die ihn verwenden, dann die Postenbeschreibung und die Kartenobjekte im Umkreis von 3 mm. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Auswählen.** Mit dem Werkzeug „Auswählen“ klickst du einen Posten in der Karte oder im Baum an. Ein Klick wählt
   den Posten, dessen Mittelpunkt dem Mauszeiger am nächsten liegt, solange der Zeiger höchstens den Kreisradius plus
   die Linienbreite entfernt ist. Rechts zeigen die Eigenschaften ihn an.
@@ -395,6 +403,10 @@ die Datei, wie sie war, und eine Meldung nennt den Grund.
 
 ### Bahnen und Kategorien
 
+![Der Baum der Veranstaltung und die Eigenschaften von Bahn A: Name, Länge, Start, Ziel, Kategorie, die Posten mit ihren Knöpfen und die Postennummern.](images/editor-course-de.jpg)
+
+*Bahn A ist gewählt. Links der Baum mit Bahnen, Kategorien, Posten und Sonderobjekten, rechts die Eigenschaften der Bahn mit den Posten der Bahn mit „Nach oben“, „Nach unten“ und „Entfernen“, das Kästchen der Kategorie und die Postennummern. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Neue Bahn.** Wähle unter „Bahnen“ im Baum „Neue Bahn...“ und tippe einen Namen. Die Bahn bekommt Start und Ziel der
   Veranstaltung. Hat die Veranstaltung nicht genau einen Start und ein Ziel, sagt der Editor das und legt nichts an.
   Einen Namen, den es schon gibt, der leer oder länger als 200 Zeichen ist, lehnt der Dialog ab.
@@ -423,6 +435,10 @@ die Datei, wie sie war, und eine Meldung nennt den Grund.
 
 Eine Strecke ist die Linie zwischen zwei Posten. Klicke sie mit dem Auswahlwerkzeug an, um sie zu wählen.
 
+![Eine gewählte Strecke mit drei Knicken, in Blau mit weißen Punkten gezeichnet, und die Eigenschaften der Strecke mit gesetztem Kästchen „Abgeflaggt“.](images/editor-legs-de.jpg)
+
+*Eine Strecke, mit dem Werkzeug „Auswählen“ gewählt. Die Strecke von Posten 34 zum Ziel hat drei Knicke (die weißen Punkte) und ist abgeflaggt (die gestrichelte Linie). Die Eigenschaften zeigen die Zahl der Knicke und das Kästchen „Abgeflaggt“. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Knick einfügen.** Ziehe an der Linie der gewählten Strecke. Dort, wo du loslässt, entsteht ein Knick.
 - **Knick verschieben oder löschen.** Ziehe einen Knick, um ihn zu verschieben. Ein Klick wählt ihn, Entf löscht ihn.
 - **Abgeflaggte Strecke.** Das Feld „Abgeflaggt“ in den Eigenschaften der Strecke markiert sie als abgeflaggte
@@ -435,6 +451,10 @@ nach einer Änderung der Posten zu einem anderen Posten, verliert sie ihre Knick
 
 Das Nummernfeld eines Postens steht neben seinem Kreis. Eine gestrichelte Linie heißt: Das Programm hat es
 automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
+
+![Bahnmodus mit Bahn A: die Postennummern neben ihren Kreisen, das Feld 2 mit gestricheltem Rand.](images/editor-numbers-de.jpg)
+
+*Bahnmodus. Die Nummern stehen neben ihren Kreisen. Das Feld 2 hat einen gestrichelten Rand, weil das Programm es gesetzt hat und das Projekt speichert keine Lage dafür. Die Felder 3 und 4 haben eine gesetzte Lage. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Ziehen.** Ziehe im Bahnmodus ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor den Ort in
   Richtung und Abstand vom Kreis um und speichert beides für diese Bahn.
@@ -453,6 +473,10 @@ Warnzeichen (siehe „Befunde“).
 Wähle einen Posten. Seine Eigenschaften führen die Spalten C bis H auf, jede zugeklappt und mit dem aktuellen Symbol.
 Klappe eine Spalte auf, dann siehst du ihre Symbole als Raster aus Zeichen, jedes mit Nummer und Text in der Sprache
 des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
+
+![Die Eigenschaften eines Postens mit aufgeklappter Spalte D als Raster aus Symbolen, gewählt ist 4.9 Einzelbaum.](images/editor-description-de.jpg)
+
+*Posten 33 mit offener Spalte D. Jedes Symbol zeigt Nummer und Namen; gewählt ist 4.9 Einzelbaum. Spalte C bleibt zugeklappt und zeigt ihren aktuellen Wert. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Wählen.** Klicke ein Symbol an oder gehe mit den Pfeiltasten hin (Pos1 und Ende springen zum ersten und letzten)
   und drücke Enter. Tippst du eine Nummer wie `1.3`, springt die Auswahl dorthin. Das Symbol in Gebrauch ist
@@ -476,6 +500,18 @@ Eine Score-Bahn hat keine Reihenfolge. Der Editor zeichnet deshalb ihre Posten, 
 Pflichtverbindung als gestrichelte Linie zwischen ihren beiden Posten. Wähle die Bahn im Baum, dann öffnet sich in den
 Eigenschaften das Score-Fenster.
 
+![Die Karte Gleisdreieck mit Kandidaten als gestrichelten blauen Kreisen mit ihren Werten und rechts das Score-Fenster.](images/editor-score-candidates-de.jpg)
+
+*Eine neue Score-Bahn „Score 33“ mit 33 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Rechts stehen die Knöpfe und die Einstellungen. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+
+![Ein Entwurf einer Score-Bahn auf der Karte Gleisdreieck mit den Entwurfsposten und rechts dem Längenbericht beider Läuferprofile.](images/editor-score-draft-de.jpg)
+
+*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht, und beide Läufer liegen in ihren Spannen. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+
+![Die fertige Score-Bahn auf der Karte Gleisdreieck mit ihren Posten als Kreisen, dem Längenbericht und einer Warnung rechts.](images/editor-score-applied-de.jpg)
+
+*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 27 Posten mit zusammen 83 Punkten. Der Befund unten ist eine Warnung, denn die Kennzahlen 65 und 95 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+
 - **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
   gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert und die vier Abstände (Wert 1 ab,
   Posten auseinander, Reichweite vom Start, hohe Werte auseinander). Die beiden
@@ -495,6 +531,10 @@ Eigenschaften das Score-Fenster.
 
 ### Sonderobjekte
 
+![Das Werkzeug Sonderobjekt mit der Art Sperrgebiet, ein gezeichnetes Gebiet auf der Karte und rechts seine Eigenschaften.](images/editor-special-object-de.jpg)
+
+*Das Werkzeug „Sonderobjekt“ mit der Art „Sperrgebiet“ und seiner Kennung in der Werkzeugleiste. Das fertige Gebiet (vier Punkte) ist gewählt. Die Eigenschaften zeigen Kennung, Art, Lage, Punkte und die Bahnen, zu denen es gehört. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Zeichnen.** Wähle „Sonderobjekt“, dann eine Art (Start, Ziel, Erste-Hilfe-Posten, Wasserstelle, markierte
   Strecke, verbotene Route, Sperrgebiet, Gefahrenfläche) und prüfe die Kennung in der Werkzeugleiste. Sie wird als
   `<Art>-<n>` vorgeschlagen und lässt sich ändern. Start, Ziel, Erste-Hilfe-Posten und Wasserstelle setzt ein Klick.
@@ -513,6 +553,14 @@ Eigenschaften das Score-Fenster.
 
 Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus wie `check` und zeigt das Ergebnis.
 
+![Die Befunde von Bahn A in den Eigenschaften: eine Warnung und drei Hinweise, jeweils mit dem Knopf Akzeptieren, und Markierungen an den Strecken der Karte.](images/editor-findings-course-de.jpg)
+
+*Die Befunde von Bahn A. Die Warnung sagt, dass eine gerade Strecke das Sperrgebiet vom vorigen Bild quert. Die drei Hinweise betreffen Winkel. Jeder Befund hat „Akzeptieren...“, und an jeder betroffenen Strecke sitzt eine Markierung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
+![Die Befundschublade über der rechten Seite des Editors mit den offenen Befunden und den Regeln, die nicht geprüft wurden.](images/editor-findings-de.jpg)
+
+*Die Befundschublade, geöffnet mit einem Klick auf die Zahlen in der Statusleiste. Sie listet die offenen Befunde der ganzen Veranstaltung und unter „Nicht geprüft“ die Regeln, die nicht liefen, jeweils mit dem Grund. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - Die Statusleiste zählt Fehler, Warnungen und Hinweise der ganzen Veranstaltung. Jede Zahl hat ein Zeichen (Kreuz,
   Dreieck, „i“) und eine Farbe. Ein Klick auf die Zahlen öffnet die Schublade: alle offenen Befunde, die akzeptierten
   mit ihren Begründungen und unter „Nicht geprüft“ die Regeln, die nicht liefen, mit dem Grund.
@@ -529,6 +577,14 @@ Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus 
 
 Das Menü „Veranstaltung“ hat vier Einträge. Der Browser nennt nie eine Datei; der Editor schreibt nur die
 verknüpfte Purple-Pen-Datei des Projekts.
+
+![Das geöffnete Menü Veranstaltung mit den Einträgen für IOF-XML, Purple Pen und Editor schließen.](images/editor-event-menu-de.jpg)
+
+*Das Menü „Veranstaltung“. Seine Einträge exportieren IOF-XML, exportieren nach Purple Pen, importieren eine Purple-Pen-Datei, gleichen mit Purple Pen ab und schließen den Editor.*
+
+![Der Dialog Nach Purple Pen exportieren mit der verknüpften Datei und den Knöpfen In die verknüpfte Datei schreiben, Neue Datei herunterladen und Abbrechen.](images/editor-export-dialog-de.jpg)
+
+*Der Dialog „Nach Purple Pen exportieren“. Er nennt die verknüpfte Datei `rummelsburg-sprint.ppen` und bietet „In die verknüpfte Datei schreiben“ oder „Neue Datei herunterladen“. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **IOF-XML exportieren (Download).** Der Browser speichert das IOF-XML der Einzel- und Score-Bahnen, benannt nach der
   Projektdatei. Ein Fenster nennt ausgelassene Bahnen (Team- und Staffelbahnen) und sagt es, wenn die Karte
