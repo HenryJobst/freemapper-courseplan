@@ -2,13 +2,15 @@
 
 [Deutsch](README.md) · [All examples](../README.en.md)
 
-A sprint course with five controls on the map "Rummelsburger Bucht" by Remo Madella (MOO Challenge Berlin 2025,
+<p align="center"><a href="../../docs/manual/images/editor-overview-en.jpg"><img src="../../docs/manual/images/editor-overview-en.jpg" alt="The editor with course A on the map Rummelsburger Bucht; start and finish stand in the park in the middle" width="760"></a><br><sub>The course in the editor, start and finish in the park. Map: Remo Madella, MOO Challenge Berlin 2025.</sub></p>
+
+A sprint course with four controls on the map "Rummelsburger Bucht" by Remo Madella (MOO Challenge Berlin 2025,
 1:4000, 308 by 257 map millimetres, about 1.2 by 1.0 km). It was set with the command line only. The map sits
 here as `rummelsburg.omap`. Remo Madella released it on 2026-11-12 for use within the freemapper suite; that is not
 an open licence. The details are in [`ATTRIBUTION.txt`](ATTRIBUTION.txt) and below.
 
-There is no preview image yet. freemapper-print will supply the course print once it can print courses from a
-`.ppen`; you can see the map itself in the editor (`freemapper-courseplan edit rummelsburg-sprint.courseplan.toml`).
+The picture is a capture of the editor; a printed PDF from freemapper-print will follow once it can print courses from
+a `.ppen`. You can see the map in the editor itself (`freemapper-courseplan edit rummelsburg-sprint.courseplan.toml`).
 
 ## Files
 
@@ -23,24 +25,32 @@ There is no preview image yet. freemapper-print will supply the course print onc
 
 ```text
 $ freemapper-courseplan init rummelsburg.omap --project rummelsburg-sprint.courseplan.toml --title "Sprint training Rummelsburger Bucht"
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at -85,-68
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 95,0
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -93,-70
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -70.05,-40.78
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -13.67,7.12
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at 3,0
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 10,5
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -4,-1
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 6.42,37.92
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 23.39,76.2
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 60.73,73.78
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 67.69,27.2
 $ freemapper-courseplan class add rummelsburg-sprint.courseplan.toml Open
-$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34,35 --classes Open
+$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34 --classes Open
 $ freemapper-courseplan course numbers rummelsburg-sprint.courseplan.toml A
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
-course A: 5 controls, 1.2 km, climb – m
+course A: 4 controls, 0.9 km, climb – m
 ```
 
 The coordinates are map millimetres, y pointing down. `map extent` gives the extent of the map, -154.9 to 153.0 mm
 in x and -126.6 to 130.2 mm in y. Every output is in [`transcript.en.txt`](transcript.en.txt). The project sets no
 climb because I measured none; `info` then shows a dash.
+
+## Start and finish
+
+Start `S1` and finish `F1` stand in the park in the middle of the map, 34 m apart: a start and finish area as you
+would set it up at a sprint, easy to reach and easy to find, with the big tree (symbol 417) next to it. Both lie on the
+mapped area, not inside a building and not inside an out-of-bounds area. That matters, because the map is a diagonal
+strip and the blank part of the sheet beside it still lies inside the rectangle around all map objects. An earlier
+version of this example had its finish there, in the blank part, and `map_edge` said nothing. `check` now tests start,
+finish and controls against the map objects themselves (rule `wkb2026.map.inside`, ADR 0084).
 
 ## Straight legs
 
@@ -54,16 +64,16 @@ runner goes around, and this choice between lanes and squares is the route choic
 nothing about it, because the line between two controls is not the running route (ADR 0080).
 
 The controls stand at prominent map objects outside closed areas, each at least 0.8 mm from buildings, water and
-closed areas: 31 and 32 at crosses (symbol 531), 33 and 35 at monuments (526), 34 at a ring (530). None of them has
-an identical object inside its circle. The legs are 124 m (start to 31), 296 m, 314 m, 150 m, 188 m and 154 m (35 to
-the finish) long, 1.2 km of straight line in all. I looked for the sites with a small script that works on the
-outlines of the map, and I did not look at each one on the map. Look at every control in the editor before you use
-the course.
+closed areas: 31 and 33 at rings (symbol 530), 32 and 34 at monuments (526). None of them has an identical object
+inside its circle. The legs are 152 m (start to 31), 167 m, 150 m, 188 m and 247 m (34 to the finish) long, 905 m of
+straight line in all. The course runs once around the park and ends where it began. I looked for the sites with a
+small script that works on the outlines of the map, and I did not look at each one on the map. Look at every control in
+the editor before you use the course.
 
 ## Checking
 
 `check` finds nothing on this course: `0 errors, 0 warnings, 0 hints; 0 accepted, 6 skipped`. All angles at the
-controls lie between 102° and 159°. Of the six skipped rules, four are the length and difficulty rules of a
+controls lie between 102° and 161°. Of the six skipped rules, four are the length and difficulty rules of a
 competition, which do not apply at a training. The fifth is the start capacity, because the event has no start
 window, and the sixth is the rule that the best running route must not lead through an out-of-bounds area: it needs
 a route analysis, which the program does not have yet. All commands and the output of `check --all` are in
@@ -71,7 +81,7 @@ a route analysis, which the program does not have yet. All commands and the outp
 
 ## Special objects
 
-Besides start and finish the project has a first aid post `H1` near the start. The course has no marked leg.
+Besides start and finish the project has a first aid post `H1` in the start and finish area. The course has no marked leg.
 
 ## Export to IOF XML
 
@@ -97,12 +107,15 @@ whether controls, course and numbers sit in the right place.
 
 ## A score course on this map
 
-The map is small for a score course. With start `S1` and finish `F1` a draft succeeds at 15 minutes (9 controls,
-27 points; the good runner takes 24 of them, 88.9 percent, the very good runner all of them and finishes after 99.7
-percent of the limit) and at 20 minutes (13 controls, 28 points, 92.9 and 95.1 percent). At 25, 30 and 45 minutes the
-sites run out: the very good runner is back after 80, 67 and 44.5 percent of the limit instead of 95 to 100. For
-longer courses use [`../gleisdreieck/`](../gleisdreieck/), the larger map. These were runs of `score draft` without
-`--apply`; the project here holds no score course.
+The map is small for a score course. With start `S1` and finish `F1` a draft succeeds at 15 minutes (12 controls,
+28 points; the good runner takes 26 of them, 92.9 percent, the very good runner all of them and finishes after 99.1
+percent of the limit) and at 16 minutes (14 controls, 40 points, 92.5 and 97.6 percent). At 17 minutes the good runner
+scores 93.8 percent, just above the band but within the tolerance (ADR 0083). From 18 minutes the sites run out: the
+very good runner is back after 90.4 percent of the limit instead of 95 to 100, at 20 minutes after 81.3, at 30 after
+54.2 and at 45 after 36.2 percent. The frame around the sheet gives no sites any more (ADR 0078, ADR 0084); an earlier
+version of these numbers had controls at the corners of the frame. For longer courses use
+[`../gleisdreieck/`](../gleisdreieck/), the larger map. These were runs of `score draft` without `--apply`; the
+project here holds no score course.
 
 ## Source and licence
 

@@ -270,8 +270,8 @@ fn drafts_on_the_example_maps_never_hold_a_control_in_an_out_of_bounds_area() {
         ),
         (
             "examples/rummelsburger-bucht/rummelsburg.omap",
-            "-85,-68",
-            "95,0",
+            "3,0",
+            "10,5",
             "15",
         ),
     ] {

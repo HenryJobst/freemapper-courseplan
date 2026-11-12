@@ -1,48 +1,45 @@
 $ freemapper-courseplan init rummelsburg.omap --project rummelsburg-sprint.courseplan.toml --title "Sprinttraining Rummelsburger Bucht"
 rummelsburg-sprint.courseplan.toml
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at -85,-68
-Start S1 bei -85,-68 angelegt
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at 3,0
+Start S1 bei 3,0 angelegt
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 95,0
-Ziel F1 bei 95,0 angelegt
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 10,5
+Ziel F1 bei 10,5 angelegt
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -93,-70
-Erste-Hilfe-Stelle H1 bei -93,-70 angelegt
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -4,-1
+Erste-Hilfe-Stelle H1 bei -4,-1 angelegt
 
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -70.05,-40.78
-Posten 31 bei -70.05,-40.78 angelegt
-
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -13.67,7.12
-Posten 32 bei -13.67,7.12 angelegt
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 6.42,37.92
+Posten 31 bei 6.42,37.92 angelegt
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 23.39,76.2
-Posten 33 bei 23.39,76.2 angelegt
+Posten 32 bei 23.39,76.2 angelegt
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 60.73,73.78
-Posten 34 bei 60.73,73.78 angelegt
+Posten 33 bei 60.73,73.78 angelegt
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 67.69,27.2
-Posten 35 bei 67.69,27.2 angelegt
+Posten 34 bei 67.69,27.2 angelegt
 
 $ freemapper-courseplan class add rummelsburg-sprint.courseplan.toml Offen
 Kategorie Offen angelegt
 
-$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34,35 --classes Offen
+$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34 --classes Offen
 Bahn A angelegt
 
 $ freemapper-courseplan course numbers rummelsburg-sprint.courseplan.toml A
-5 Postennummern auf Bahn A gesetzt
+4 Postennummern auf Bahn A gesetzt
 
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
 Titel: Sprinttraining Rummelsburger Bucht
 Karte: rummelsburg.omap
 Kartenart: Sprintkarte
 Regelprofil: wkb-2026
-Posten: 5, Querungsstellen: 0
+Posten: 4, Querungsstellen: 0
 Bahnen: 1 (einzeln 1, Mannschaft 0, Staffel 0, Score 0)
 Kategorien: 1
-Bahn A: 5 Posten, 1,2 km, Anstieg – m
+Bahn A: 4 Posten, 0,9 km, Anstieg – m
 
 $ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
 0 Fehler, 0 Warnungen, 0 Hinweise; 0 akzeptiert, 6 übersprungen
@@ -64,5 +61,18 @@ $ freemapper-courseplan export rummelsburg-sprint.courseplan.toml --iof-xml cour
 $ freemapper-courseplan export rummelsburg-sprint.courseplan.toml --ppen rummelsburg-sprint.ppen
 1 Bahn in das neue Purple-Pen-Event rummelsburg-sprint.ppen geschrieben
 sources.ppen nennt jetzt rummelsburg-sprint.ppen
-9 Objekte des Projekts, die keine hatten, haben eine Purple-Pen-Kennung bekommen
+8 Objekte des Projekts, die keine hatten, haben eine Purple-Pen-Kennung bekommen
 
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+0 Fehler, 0 Warnungen, 0 Hinweise; 0 akzeptiert, 6 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml --all
+übersprungen:
+  wkb2026.leg.through_forbidden_sprint, Veranstaltung: Die Regel betrifft die Laufroute, und die Routenanalyse fehlt; die gerade Linie zwischen Posten wird nicht geprüft
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 0 akzeptiert, 6 übersprungen

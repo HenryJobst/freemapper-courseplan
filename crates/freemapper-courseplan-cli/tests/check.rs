@@ -336,6 +336,54 @@ fn a_control_on_a_map_area_with_an_out_of_bounds_symbol_is_an_error() {
     );
 }
 
+/// The Rummelsburger Bucht example and the same project with the finish moved into the blank part of the
+/// sheet beside the diagonal strip of terrain (ADR 0084). `map_edge` does not see it, the box around the map
+/// objects reaches there.
+#[test]
+fn a_finish_in_the_blank_part_beside_the_map_is_an_error_and_the_example_is_clean() {
+    let example = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/rummelsburger-bucht");
+    let dir = tempfile::tempdir().unwrap();
+    for name in ["rummelsburg.omap", "rummelsburg-sprint.courseplan.toml"] {
+        std::fs::copy(example.join(name), dir.path().join(name)).unwrap();
+    }
+    let project = dir.path().join("rummelsburg-sprint.courseplan.toml");
+    let p = project.to_str().unwrap();
+    let out = run(dir.path(), &["check", p]);
+    assert_eq!(code(&out), Some(0), "{}", stdout(&out));
+    assert!(
+        stdout(&out).contains("0 errors, 0 warnings, 0 hints"),
+        "{}",
+        stdout(&out)
+    );
+    // Remove the finish and put it back at 95,0: on the sheet, inside the bounding box of the map
+    // objects, but far from the terrain.
+    let text = std::fs::read_to_string(&project).unwrap();
+    let moved = text.replace("map_mm = [10.0, 5.0]", "map_mm = [95.0, 0.0]");
+    assert_ne!(text, moved, "the example's finish is no longer at 10,5");
+    std::fs::write(&project, moved).unwrap();
+    let out = run(dir.path(), &["check", p]);
+    assert_eq!(code(&out), Some(1), "{}", stdout(&out));
+    assert!(
+        stdout(&out).contains(
+            "finish F1 at 95, 0 mm on the map is outside the mapped area: the nearest map object, symbol 501.11, is 60 m away, at most 40 m allowed"
+        ),
+        "{}",
+        stdout(&out)
+    );
+    assert!(
+        stdout(&out).contains("wkb2026.map.inside"),
+        "{}",
+        stdout(&out)
+    );
+    let de = run_lang(dir.path(), "de", &["check", p]);
+    assert!(
+        stdout(&de)
+            .contains("Ziel F1 liegt bei 95, 0 mm auf der Karte außerhalb der kartierten Fläche"),
+        "{}",
+        stdout(&de)
+    );
+}
+
 #[test]
 fn check_help_names_the_exit_codes() {
     let (dir, _) = project();

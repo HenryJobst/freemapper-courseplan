@@ -12,45 +12,40 @@ ppen = "rummelsburg-sprint.ppen"
 [[specials]]
 kind = "start"
 id = "S1"
-map_mm = [-85.0, -68.0]
+map_mm = [3.0, 0.0]
 ppen_id = 1
 
 [[specials]]
 kind = "finish"
 id = "F1"
-map_mm = [95.0, 0.0]
+map_mm = [10.0, 5.0]
 ppen_id = 2
 
 [[specials]]
 kind = "first_aid"
 id = "H1"
-map_mm = [-93.0, -70.0]
+map_mm = [-4.0, -1.0]
 ppen_id = 1
 
 [[controls]]
 code = 31
-map_mm = [-70.05, -40.78]
+map_mm = [6.42, 37.92]
 ppen_id = 3
 
 [[controls]]
 code = 32
-map_mm = [-13.67, 7.12]
+map_mm = [23.39, 76.2]
 ppen_id = 4
 
 [[controls]]
 code = 33
-map_mm = [23.39, 76.2]
+map_mm = [60.73, 73.78]
 ppen_id = 5
 
 [[controls]]
 code = 34
-map_mm = [60.73, 73.78]
-ppen_id = 6
-
-[[controls]]
-code = 35
 map_mm = [67.69, 27.2]
-ppen_id = 7
+ppen_id = 6
 
 [[classes]]
 name = "Offen"
@@ -67,33 +62,26 @@ ppen_id = 1
 code = 31
 
 [courses.controls.number]
-direction = 234.2
+direction = 149.5
 gap_mm = 0.5
 
 [[courses.controls]]
 code = 32
 
 [courses.controls.number]
-direction = 83.9
-gap_mm = 2.5
+direction = 293.9
+gap_mm = 3.0
 
 [[courses.controls]]
 code = 33
-
-[courses.controls.number]
-direction = 298.2
-gap_mm = 2.0
-
-[[courses.controls]]
-code = 34
 
 [courses.controls.number]
 direction = 3.7
 gap_mm = 0.5
 
 [[courses.controls]]
-code = 35
+code = 34
 
 [courses.controls.number]
-direction = 156.5
-gap_mm = 3.5
+direction = 111.5
+gap_mm = 4.0

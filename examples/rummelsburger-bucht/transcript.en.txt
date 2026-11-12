@@ -1,48 +1,45 @@
 $ freemapper-courseplan init rummelsburg.omap --project rummelsburg-sprint.courseplan.toml --title "Sprint training Rummelsburger Bucht"
 rummelsburg-sprint.courseplan.toml
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at -85,-68
-added start S1 at -85,-68
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at 3,0
+added start S1 at 3,0
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 95,0
-added finish F1 at 95,0
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 10,5
+added finish F1 at 10,5
 
-$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -93,-70
-added first aid post H1 at -93,-70
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -4,-1
+added first aid post H1 at -4,-1
 
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -70.05,-40.78
-added control 31 at -70.05,-40.78
-
-$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -13.67,7.12
-added control 32 at -13.67,7.12
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 6.42,37.92
+added control 31 at 6.42,37.92
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 23.39,76.2
-added control 33 at 23.39,76.2
+added control 32 at 23.39,76.2
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 60.73,73.78
-added control 34 at 60.73,73.78
+added control 33 at 60.73,73.78
 
 $ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 67.69,27.2
-added control 35 at 67.69,27.2
+added control 34 at 67.69,27.2
 
 $ freemapper-courseplan class add rummelsburg-sprint.courseplan.toml Open
 added class Open
 
-$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34,35 --classes Open
+$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34 --classes Open
 added course A
 
 $ freemapper-courseplan course numbers rummelsburg-sprint.courseplan.toml A
-placed 5 control numbers on course A
+placed 4 control numbers on course A
 
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
 title: Sprint training Rummelsburger Bucht
 map: rummelsburg.omap
 map kind: sprint
 rule profile: wkb-2026
-controls: 5, crossing points: 0
+controls: 4, crossing points: 0
 courses: 1 (individual 1, team 0, relay 0, score 0)
 classes: 1
-course A: 5 controls, 1.2 km, climb – m
+course A: 4 controls, 0.9 km, climb – m
 
 $ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
 0 errors, 0 warnings, 0 hints; 0 accepted, 6 skipped
@@ -64,5 +61,18 @@ wrote 1 course to course-data.xml
 $ freemapper-courseplan export rummelsburg-sprint.courseplan.toml --ppen rummelsburg-sprint.ppen
 wrote 1 course to the new Purple Pen event rummelsburg-sprint.ppen
 sources.ppen now names rummelsburg-sprint.ppen
-stored a Purple Pen id for 9 objects of the project that had none
+stored a Purple Pen id for 8 objects of the project that had none
 
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+0 errors, 0 warnings, 0 hints; 0 accepted, 6 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml --all
+skipped:
+  wkb2026.leg.through_forbidden_sprint, event: the rule is about the running route, and the route analysis is missing; a straight line between controls is not checked
+  wkb2026.start.capacity, event: the event has no start window; event start-window sets it
+  wkb2026.length.long, event: not checked at a training
+  wkb2026.length.middle, event: not checked at a training
+  wkb2026.length.ultralong, event: not checked at a training
+  wkb2026.difficulty.mix, event: not checked at a training
+0 errors, 0 warnings, 0 hints; 0 accepted, 6 skipped

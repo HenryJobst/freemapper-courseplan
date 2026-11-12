@@ -8,30 +8,26 @@
     <descriptions lang="de" />
   </event>
   <control id="1" kind="start">
-    <location x="-85" y="68" />
+    <location x="3" y="0" />
   </control>
   <control id="2" kind="finish">
-    <location x="95" y="0" />
+    <location x="10" y="-5" />
     <description box="all" iof-2004-ref="14.3" />
   </control>
   <control id="3" kind="normal">
     <code>31</code>
-    <location x="-70.05" y="40.78" />
+    <location x="6.42" y="-37.92" />
   </control>
   <control id="4" kind="normal">
     <code>32</code>
-    <location x="-13.67" y="-7.12" />
+    <location x="23.39" y="-76.2" />
   </control>
   <control id="5" kind="normal">
     <code>33</code>
-    <location x="23.39" y="-76.2" />
+    <location x="60.73" y="-73.78" />
   </control>
   <control id="6" kind="normal">
     <code>34</code>
-    <location x="60.73" y="-73.78" />
-  </control>
-  <control id="7" kind="normal">
-    <code>35</code>
     <location x="67.69" y="-27.2" />
   </control>
   <course id="1" kind="normal" order="1">
@@ -44,27 +40,23 @@
   </course-control>
   <course-control id="2" control="3">
     <next course-control="3" />
-    <number-location x="-3.6502163" y="-5.0611496" />
+    <number-location x="-5.1443787" y="3.0302706" />
   </course-control>
   <course-control id="3" control="4">
     <next course-control="4" />
-    <number-location x="0.8202209" y="7.675" />
+    <number-location x="3.4932525" y="-7.8829722" />
   </course-control>
   <course-control id="4" control="5">
     <next course-control="5" />
-    <number-location x="3.6288676" y="-6.7678094" />
+    <number-location x="5.2917495" y="0.3422021" />
   </course-control>
   <course-control id="5" control="6">
     <next course-control="6" />
-    <number-location x="5.2917495" y="0.3422021" />
+    <number-location x="-3.5135756" y="8.919731" />
   </course-control>
-  <course-control id="6" control="7">
-    <next course-control="7" />
-    <number-location x="-8.114445" y="3.528261" />
-  </course-control>
-  <course-control id="7" control="2" />
+  <course-control id="6" control="2" />
   <special-object id="1" kind="first-aid">
-    <location x="-93" y="70" />
+    <location x="-4" y="1" />
     <courses all="true" />
   </special-object>
 </course-scribe-event>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0" createTime="2026-11-12T17:54:25Z" creator="freemapper-courseplan">
+<CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0" createTime="2026-11-12T21:43:49Z" creator="freemapper-courseplan">
   <Event>
     <Name>Sprinttraining Rummelsburger Bucht</Name>
   </Event>
@@ -11,78 +11,67 @@
     </Map>
     <Control type="Start">
       <Id>S1</Id>
-      <Position lat="52.499256" lng="13.477949"/>
-      <MapPosition x="-85" y="-68" unit="mm"/>
+      <Position lat="52.496540" lng="13.482756"/>
+      <MapPosition x="3" y="0" unit="mm"/>
     </Control>
     <Control type="Finish">
       <Id>F1</Id>
-      <Position lat="52.496247" lng="13.488153"/>
-      <MapPosition x="95" y="0" unit="mm"/>
+      <Position lat="52.496339" lng="13.483140"/>
+      <MapPosition x="10" y="5" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>31</Id>
-      <Position lat="52.498234" lng="13.478684"/>
-      <MapPosition x="-70.05" y="-40.78" unit="mm"/>
+      <Position lat="52.495172" lng="13.482758"/>
+      <MapPosition x="6.42" y="37.92" unit="mm"/>
     </Control>
     <Control type="Control">
       <Id>32</Id>
-      <Position lat="52.496339" lng="13.481741"/>
-      <MapPosition x="-13.67" y="7.12" unit="mm"/>
-    </Control>
-    <Control type="Control">
-      <Id>33</Id>
       <Position lat="52.493747" lng="13.483553"/>
       <MapPosition x="23.39" y="76.2" unit="mm"/>
     </Control>
     <Control type="Control">
-      <Id>34</Id>
+      <Id>33</Id>
       <Position lat="52.493714" lng="13.485756"/>
       <MapPosition x="60.73" y="73.78" unit="mm"/>
     </Control>
     <Control type="Control">
-      <Id>35</Id>
+      <Id>34</Id>
       <Position lat="52.495360" lng="13.486409"/>
       <MapPosition x="67.69" y="27.2" unit="mm"/>
     </Control>
     <Course>
       <Name>A</Name>
-      <Length>1225.96</Length>
+      <Length>905.11</Length>
       <CourseControl type="Start">
         <Control>S1</Control>
       </CourseControl>
       <CourseControl type="Control">
         <Control>31</Control>
         <MapText>1</MapText>
-        <MapTextPosition x="-3.65" y="5.06" unit="mm"/>
-        <LegLength>124.22</LegLength>
+        <MapTextPosition x="-5.14" y="-3.03" unit="mm"/>
+        <LegLength>152.3</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>32</Control>
         <MapText>2</MapText>
-        <MapTextPosition x="0.82" y="-7.68" unit="mm"/>
-        <LegLength>295.92</LegLength>
+        <MapTextPosition x="3.49" y="7.88" unit="mm"/>
+        <LegLength>167.49</LegLength>
       </CourseControl>
       <CourseControl type="Control">
         <Control>33</Control>
         <MapText>3</MapText>
-        <MapTextPosition x="3.63" y="6.77" unit="mm"/>
-        <LegLength>313.57</LegLength>
-      </CourseControl>
-      <CourseControl type="Control">
-        <Control>34</Control>
-        <MapText>4</MapText>
         <MapTextPosition x="5.29" y="-0.34" unit="mm"/>
         <LegLength>149.67</LegLength>
       </CourseControl>
       <CourseControl type="Control">
-        <Control>35</Control>
-        <MapText>5</MapText>
-        <MapTextPosition x="-8.11" y="-3.53" unit="mm"/>
+        <Control>34</Control>
+        <MapText>4</MapText>
+        <MapTextPosition x="-3.51" y="-8.92" unit="mm"/>
         <LegLength>188.39</LegLength>
       </CourseControl>
       <CourseControl type="Finish">
         <Control>F1</Control>
-        <LegLength>154.18</LegLength>
+        <LegLength>247.26</LegLength>
       </CourseControl>
     </Course>
     <ClassCourseAssignment>
