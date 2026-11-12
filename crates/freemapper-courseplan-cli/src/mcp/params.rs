@@ -526,6 +526,11 @@ pub(super) struct SetScoreSettings {
     pub(super) value_max: Option<u8>,
     pub(super) good_pace_s_per_km: Option<u32>,
     pub(super) very_good_pace_s_per_km: Option<u32>,
+    /// Target band of the good runner, `[low, high]` percent of all points.
+    pub(super) good_band_percent: Option<[u8; 2]>,
+    /// Target band of the very good runner, `[low, high]` percent of the time limit.
+    pub(super) very_good_band_percent: Option<[u8; 2]>,
+    pub(super) band_tolerance_percent: Option<u8>,
     pub(super) mix_hard_percent: Option<u8>,
     pub(super) seed: Option<u32>,
     pub(super) value1_min_m: Option<u32>,

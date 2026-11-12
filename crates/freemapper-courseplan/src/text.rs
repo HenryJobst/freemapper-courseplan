@@ -1141,6 +1141,8 @@ mod tests {
             "default",
             "very_good",
             "mix_hard",
+            "good_band",
+            "very_good_band",
             "seed",
             "value_max",
             "cells",
@@ -1491,6 +1493,8 @@ mod tests {
             "low-is-above-high",
             "must-not-exceed-100",
             "must-be-below-the-good-pace",
+            "must-be-0-to-10",
+            "must-not-start-below-the-good-band",
         ] {
             ids.insert(format!("word-score-problem-{problem}"));
         }

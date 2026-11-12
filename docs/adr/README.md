@@ -125,3 +125,5 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0079](0079-editor-server-reads-every-request-body.md) | The editor server reads every request body | Accepted | 2026-11-12 |
 | [0080](0080-the-leg-line-is-not-checked-against-out-of-bounds-areas.md) | The leg line is not checked against out-of-bounds areas | Accepted | 2026-11-12 |
 | [0081](0081-a-control-must-not-stand-in-an-out-of-bounds-area.md) | A control must not stand in an out-of-bounds area | Accepted | 2026-11-12 |
+| [0082](0082-score-candidates-keep-out-of-out-of-bounds-map-areas.md) | Score candidates keep out of out-of-bounds map areas | Accepted | 2026-11-12 |
+| [0083](0083-length-bands-are-targets-with-a-tolerance.md) | Length bands are targets with a tolerance | Accepted | 2026-11-12 |

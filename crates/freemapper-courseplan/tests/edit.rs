@@ -1737,6 +1737,49 @@ fn a_recoded_score_control_takes_the_value_of_its_new_code() {
 }
 
 #[test]
+fn the_bands_and_their_tolerance_are_stored_and_checked() {
+    let mut e = score_event();
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            good_band_percent: Some((80, 95)),
+            very_good_band_percent: Some((90, 100)),
+            band_tolerance_percent: Some(5),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(stored.good_band_percent, (80, 95));
+    assert_eq!(stored.very_good_band_percent, (90, 100));
+    assert_eq!(stored.band_tolerance_percent, 5);
+    let before = e.clone();
+    for change in [
+        ScoreSettingsChange {
+            band_tolerance_percent: Some(11),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            good_band_percent: Some((95, 80)),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            good_band_percent: Some((0, 101)),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            very_good_band_percent: Some((79, 100)),
+            ..Default::default()
+        },
+    ] {
+        assert!(matches!(
+            set_score_settings(&mut e, &change),
+            Err(EditError::Invalid(_))
+        ));
+        assert_eq!(e, before);
+    }
+}
+
+#[test]
 fn score_settings_and_details_are_checked_and_stored() {
     let mut e = score_event();
     let stored = set_score_settings(

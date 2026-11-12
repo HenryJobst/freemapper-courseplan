@@ -564,6 +564,8 @@ pub struct ScoreSettings {
     pub good_band_percent: (u8, u8),
     /// Share of the time limit the very good runner finishes in, low and high, in percent.
     pub very_good_band_percent: (u8, u8),
+    /// How many percentage points outside a band still count as near the target (ADR 0083); 0 to 10.
+    pub band_tolerance_percent: u8,
     /// Share of hard controls in the mix, in percent.
     pub mix_hard_percent: u8,
     /// Seed of the draft search, so that every run gives the same answer.
@@ -580,6 +582,12 @@ pub struct ScoreSettings {
     /// Smallest distance in metres between two high-valued controls (ADR 0072).
     pub high_value_gap_m: u32,
 }
+
+/// The default of [`ScoreSettings::band_tolerance_percent`], in percentage points (ADR 0083).
+pub const DEFAULT_BAND_TOLERANCE_PERCENT: u8 = 3;
+
+/// Largest value of [`ScoreSettings::band_tolerance_percent`].
+pub const MAX_BAND_TOLERANCE_PERCENT: u8 = 10;
 
 /// Share of `value_max` from which a control counts as high-valued (ADR 0072).
 pub const HIGH_VALUE_SHARE: f64 = 0.6;
@@ -609,6 +617,7 @@ impl Default for ScoreSettings {
             very_good_pace_s_per_km: 225,
             good_band_percent: (87, 93),
             very_good_band_percent: (95, 100),
+            band_tolerance_percent: DEFAULT_BAND_TOLERANCE_PERCENT,
             mix_hard_percent: 40,
             seed: 1,
             value1_min_m: 150,

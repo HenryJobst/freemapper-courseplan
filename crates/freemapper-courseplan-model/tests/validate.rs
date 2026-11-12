@@ -1,7 +1,7 @@
 //! Consistency checks on names, ids and geometry (final review of M2a, items 2, 3 and 13).
 
 use freemapper_courseplan_model::{
-    ControlCode, Event, MAX_CODE_CHARS, MAX_NAME_CHARS, ModelError, validate,
+    ControlCode, Event, MAX_CODE_CHARS, MAX_NAME_CHARS, ModelError, ScoreSettings, validate,
 };
 
 /// A consistent event with start S1, finish F1, controls 31 and 32, course A and class H21, plus
@@ -403,6 +403,11 @@ fn settings_out_of_range_are_refused() {
             "very_good_band_percent = [95, 101]",
             "very_good_band_percent",
         ),
+        ("band_tolerance_percent = 11", "band_tolerance_percent"),
+        (
+            "good_band_percent = [87, 93]\nvery_good_band_percent = [86, 100]",
+            "very_good_band_percent",
+        ),
         ("good_pace_s_per_km = 0", "good_pace_s_per_km"),
         ("very_good_pace_s_per_km = 0", "very_good_pace_s_per_km"),
         ("mix_hard_percent = 101", "mix_hard_percent"),
@@ -419,6 +424,18 @@ fn settings_out_of_range_are_refused() {
             "{settings}: {errors:?}"
         );
     }
+}
+
+#[test]
+fn the_band_tolerance_runs_from_0_to_10_and_defaults_to_3() {
+    for ok in [0, 3, 10] {
+        let text = format!("\n[score]\nband_tolerance_percent = {ok}\n");
+        assert_eq!(validate(&event(&text)), vec![], "{ok}");
+    }
+    assert_eq!(ScoreSettings::default().band_tolerance_percent, 3);
+    // A file that gives no tolerance gets the default, also when other settings are there.
+    let e = event("\n[score]\nseed = 2\n");
+    assert_eq!(e.score_settings().band_tolerance_percent, 3);
 }
 
 #[test]

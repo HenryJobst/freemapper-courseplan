@@ -459,7 +459,8 @@ pub(super) fn length_bands(
                 ("high", ArgValue::Int(i64::from(b.1))),
             ]
         };
-        for issue in &report.issues {
+        // A deviation within the tolerance is no finding; the length report names it (ADR 0083).
+        for issue in report.misses() {
             let (id, mut args) = match issue {
                 LengthIssue::GoodBelow { percent, band: b } => {
                     let mut a = vec![("percent", ArgValue::Number(*percent))];

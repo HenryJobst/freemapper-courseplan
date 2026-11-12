@@ -373,6 +373,15 @@ fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
             bad(what, "must not exceed 100");
         }
     }
+    if s.very_good_band_percent.0 < s.good_band_percent.0 {
+        bad(
+            "very_good_band_percent",
+            "must not start below the good band",
+        );
+    }
+    if s.band_tolerance_percent > crate::MAX_BAND_TOLERANCE_PERCENT {
+        bad("band_tolerance_percent", "must be 0 to 10");
+    }
     if s.mix_hard_percent > 100 {
         bad("mix_hard_percent", "must not exceed 100");
     }

@@ -110,7 +110,13 @@ struct Trial {
 }
 
 impl Trial {
+    /// Within the tolerance of the bands, with codes: a draft the search may return.
     fn ok(&self) -> bool {
+        self.report.is_ok() && self.codes.is_ok()
+    }
+
+    /// Inside both bands, with codes: what the search aims at.
+    fn in_band(&self) -> bool {
         self.report.issues.is_empty() && self.codes.is_ok()
     }
 }
@@ -129,6 +135,9 @@ struct Search<'a> {
 
 struct Outcome {
     trial: Trial,
+    /// Inside both bands.
+    exact: bool,
+    /// Within the tolerance of both bands: the draft is a success.
     ok: bool,
     /// With every candidate in, the very good runner still finishes early or the good runner
     /// still scores too much: the limit is long for this pool.
@@ -242,7 +251,7 @@ impl Search<'_> {
                 e.insert(self.attempt(&order, k)?);
             }
             let t = &seen[&k];
-            Ok((completes(t), t.ok()))
+            Ok((completes(t), t.in_band()))
         };
         let kmax = if eval(self.max_k)?.0 {
             self.max_k
@@ -261,15 +270,36 @@ impl Search<'_> {
             lo
         };
         let from = kmax.saturating_sub(SCAN_BELOW).max(self.min_k);
+        // The search aims at the bands: the first count inside both wins. The tolerance only decides what
+        // may be returned when none is (ADR 0083): the count nearest to the bands that stays within it.
         for k in (from..=kmax).rev() {
             if eval(k)?.1 {
                 let trial = seen.remove(&k).expect("just evaluated");
                 return Ok(Outcome {
                     trial,
+                    exact: true,
                     ok: true,
                     pool_too_short: false,
                 });
             }
+        }
+        let accepted = seen
+            .values()
+            .filter(|t| t.ok())
+            .min_by(|a, b| {
+                miss(&a.report)
+                    .total_cmp(&miss(&b.report))
+                    .then(a.k.cmp(&b.k))
+            })
+            .map(|t| t.k);
+        if let Some(k) = accepted {
+            let trial = seen.remove(&k).expect("seen");
+            return Ok(Outcome {
+                trial,
+                exact: false,
+                ok: true,
+                pool_too_short: false,
+            });
         }
         let pool_too_short = seen.get(&self.max_k).is_some_and(|t| {
             completes(t)
@@ -294,6 +324,7 @@ impl Search<'_> {
             .ok_or_else(|| code_error.expect("a count without codes has an error"))?;
         Ok(Outcome {
             trial: best,
+            exact: false,
             ok: false,
             pool_too_short,
         })
@@ -329,6 +360,7 @@ fn empty_report() -> LengthReport {
         very_good_finish_percent: 0.0,
         all_points: 0,
         issues: Vec::new(),
+        tolerance_percent: 0,
     }
 }
 
@@ -397,7 +429,7 @@ fn slot(forced: &mut Vec<usize>, c: usize) -> usize {
 }
 
 fn hint_for(r: &LengthReport, pool_too_short: bool, code_bound: bool) -> Hint {
-    let has = |f: fn(&LengthIssue) -> bool| r.issues.iter().any(f);
+    let has = |f: fn(&LengthIssue) -> bool| r.misses().any(f);
     if has(|i| {
         matches!(
             i,
@@ -515,7 +547,7 @@ fn draft_with_budget(req: &DraftRequest<'_>, budget: usize) -> Result<Draft, Dra
         );
         match search.search(order) {
             Ok(o) => {
-                let done = o.ok;
+                let done = o.exact;
                 outcomes.push(o);
                 if done {
                     break;
@@ -536,20 +568,21 @@ fn draft_with_budget(req: &DraftRequest<'_>, budget: usize) -> Result<Draft, Dra
             }
         }
     }
-    let mut chosen = if let Some(i) = outcomes.iter().position(|o| o.ok) {
+    let mut chosen = if let Some(i) = outcomes.iter().position(|o| o.exact) {
         outcomes.swap_remove(i)
     } else if let Some(best) = outcomes.into_iter().min_by(|a, b| {
-        miss(&a.trial.report)
-            .total_cmp(&miss(&b.trial.report))
+        b.ok.cmp(&a.ok)
+            .then(miss(&a.trial.report).total_cmp(&miss(&b.trial.report)))
             .then(a.trial.k.cmp(&b.trial.k))
     }) {
         best
     } else {
         return Err(plain_failure(Hint::Impossible, code_error));
     };
-    if !chosen.ok
+    if !chosen.exact
         && let Ok(better) = search.refine(chosen.trial.clone(), budget)
     {
+        chosen.exact = better.in_band();
         chosen.ok = better.ok();
         chosen.trial = better;
     }
@@ -586,7 +619,7 @@ fn draft_with_budget(req: &DraftRequest<'_>, budget: usize) -> Result<Draft, Dra
     }
     let hint = hint_for(&draft.report, chosen.pool_too_short, code_bound);
     Err(DraftFailure {
-        issues: draft.report.issues.clone(),
+        issues: draft.report.misses().cloned().collect(),
         best: Box::new(draft),
         hint,
         error: None,

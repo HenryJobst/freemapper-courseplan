@@ -1221,6 +1221,7 @@ fn custom_score_settings_with_a_large_seed_round_trip() {
         very_good_pace_s_per_km: 230,
         good_band_percent: (80, 90),
         very_good_band_percent: (96, 99),
+        band_tolerance_percent: 5,
         mix_hard_percent: 25,
         seed: u32::MAX,
         value1_min_m: 120,

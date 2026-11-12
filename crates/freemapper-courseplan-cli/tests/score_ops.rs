@@ -615,3 +615,128 @@ fn apply_with_links_stores_them() {
         "{stored}"
     );
 }
+
+// --- Bands are targets with a tolerance (ADR 0083) -------------------------------------------------------------
+
+#[test]
+fn the_bands_and_the_tolerance_are_settings() {
+    let (_dir, project) = fixture();
+    let v = json_of(&run(&[
+        "score",
+        "settings",
+        p(&project),
+        "--good-band",
+        "80-95",
+        "--very-good-band",
+        "90-100",
+        "--band-tolerance",
+        "5",
+        "--json",
+    ]));
+    assert_eq!(v["good_band_percent"], json!([80, 95]), "{v}");
+    assert_eq!(v["very_good_band_percent"], json!([90, 100]));
+    assert_eq!(v["band_tolerance_percent"], 5);
+    // The text answer names them.
+    let o = ok(&["score", "settings", p(&project), "--band-tolerance", "4"]);
+    assert!(
+        out(&o).contains("tolerance 4 percentage points"),
+        "{}",
+        out(&o)
+    );
+    assert!(out(&o).contains("band 80-95 percent"), "{}", out(&o));
+    // Bad values are refused and leave the file alone.
+    let before = std::fs::read(&project).unwrap();
+    for (flag, value) in [
+        ("--band-tolerance", "11"),
+        ("--good-band", "95-80"),
+        ("--good-band", "87"),
+        ("--very-good-band", "70-100"),
+        ("--good-band", "87-101"),
+    ] {
+        let o = run(&["score", "settings", p(&project), flag, value]);
+        assert_ne!(o.status.code(), Some(0), "{flag} {value}");
+        assert_eq!(std::fs::read(&project).unwrap(), before, "{flag} {value}");
+    }
+    // German texts.
+    let o = Command::new(BIN)
+        .args([
+            "--lang",
+            "de",
+            "score",
+            "settings",
+            p(&project),
+            "--band-tolerance",
+            "3",
+        ])
+        .output()
+        .unwrap();
+    assert!(out(&o).contains("Toleranz 3 Prozentpunkte"), "{}", out(&o));
+}
+
+#[test]
+fn a_length_report_is_in_band_near_or_missed() {
+    let (_dir, project) = fixture();
+    json_of(&run(&[
+        "score",
+        "draft",
+        p(&project),
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--apply",
+        "--json",
+    ]));
+    let report = || json_of(&run(&["score", "length", p(&project), "Sc", "--json"]));
+    let v = report();
+    let percent = v["length"]["good"]["percent"].as_f64().unwrap();
+    assert!(
+        ["in_band", "near"].contains(&v["length"]["state"].as_str().unwrap()),
+        "{v}"
+    );
+    // Move the good band so that its top lies 4 to 5 points below the result: beyond a tolerance of 3, within 5.
+    let high = percent.floor() as i64 - 4;
+    assert!(high >= 10, "{percent}");
+    let band = format!("{}-{high}", high - 10);
+    for (tolerance, state) in [("3", "missed"), ("5", "near")] {
+        ok(&[
+            "score",
+            "settings",
+            p(&project),
+            "--good-band",
+            &band,
+            "--very-good-band",
+            "90-100",
+            "--band-tolerance",
+            tolerance,
+        ]);
+        let v = report();
+        assert_eq!(v["length"]["state"], state, "{tolerance}: {v}");
+        assert_eq!(v["length"]["good"]["state"], state);
+        assert_eq!(v["length"]["ok"], state == "near");
+        assert_eq!(
+            v["length"]["tolerance_percent"]
+                .as_u64()
+                .unwrap()
+                .to_string(),
+            tolerance
+        );
+    }
+    // The text names the deviation and the state.
+    let o = run(&["score", "length", p(&project), "Sc"]);
+    assert!(
+        out(&o).contains("within the tolerance of 5 percentage points"),
+        "{}",
+        out(&o)
+    );
+    assert!(out(&o).contains("near the target, no miss"), "{}", out(&o));
+    // The check reports a miss, not a near deviation.
+    let check = |tol: &str| {
+        ok(&["score", "settings", p(&project), "--band-tolerance", tol]);
+        out(&run(&["check", p(&project)]))
+    };
+    assert!(
+        !check("5").contains("score_length_bands") && !check("5").contains("length_bands"),
+        "near is no finding"
+    );
+    assert!(check("3").contains("length_bands"), "a miss is a finding");
+}
