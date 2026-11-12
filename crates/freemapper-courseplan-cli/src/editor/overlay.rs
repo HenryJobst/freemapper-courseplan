@@ -87,6 +87,8 @@ pub(crate) struct OverlayLeg {
     /// The leg's bends in running order, as `{x, y}` like the `bends` argument of `set_leg`.
     pub bends: Vec<OverlayBend>,
     pub taped: bool,
+    /// Length of this leg alone on the ground, in metres (the course length is the sum over its legs).
+    pub length_m: f64,
 }
 
 /// A mandatory link of a score course: the straight line between the two controls, as a marked leg is drawn
@@ -271,6 +273,7 @@ pub(crate) fn overlay(
                 })
                 .collect(),
             taped: leg.taped,
+            length_m: r3(leg.length_mm * f64::from(map_scale) / 1000.0),
         })
         .collect();
 

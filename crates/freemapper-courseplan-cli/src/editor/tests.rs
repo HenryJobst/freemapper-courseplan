@@ -691,6 +691,13 @@ mod overlay {
         assert_eq!(first.drawn, [p(4.041, 0.0), p(47.0, 0.0)]);
         assert_eq!(o.legs[1].after, 1);
         assert!(!first.taped);
+        // 50 mm on the map at 1:4000 are 200 m on the ground: the leg's own length, not the course's.
+        near(first.length_m, 200.0);
+        let course = e.courses.iter().find(|c| c.name == "A").unwrap();
+        let total = freemapper_courseplan::course::course_length_m(&e, course, 4000).unwrap();
+        // Each leg is rounded to the millimetre of the answer, so the sum differs from the total by a hair.
+        assert!((o.legs.iter().map(|l| l.length_m).sum::<f64>() - total).abs() < 0.01);
+        assert!(first.length_m < total);
     }
 
     #[test]
