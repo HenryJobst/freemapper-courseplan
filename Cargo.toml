@@ -46,6 +46,13 @@ ureq = "=3.4.2"
 # Tests only: the key parser of freemapper-update, to check the committed public keys; same pin as in
 # freemapper-core.
 minisign-verify = "=0.3.0"
+# The oldest version whose updater may install the next release (ADR 0076). Left unset, the first release
+# with the updater takes its own version and later ones carry the value over from the previous signed
+# manifest (.github/scripts/update-manifest.sh). Set it by hand only when a release changes the update path:
+#
+# [workspace.metadata.update]
+# min_self_update_from = "0.14.0"
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
