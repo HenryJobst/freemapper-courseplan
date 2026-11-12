@@ -970,7 +970,7 @@ fn accepting_needs_a_known_rule_and_a_place_that_exists() {
     );
     let at_controls = refused(
         &mut e,
-        acceptance("wkb2026.leg.through_forbidden_sprint", &["31", "32"], "n"),
+        acceptance("wkb2026.leg.through_control", &["31", "32"], "n"),
     );
     assert!(
         matches!(

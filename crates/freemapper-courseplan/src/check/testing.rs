@@ -32,15 +32,11 @@ pub(crate) const POINT_110: u32 = 6;
 pub(crate) const LINE_5051: u32 = 7;
 pub(crate) const LINE_518: u32 = 8;
 pub(crate) const AREA_709: u32 = 9;
-pub(crate) const LINE_708: u32 = 10;
 pub(crate) const LINE_101: u32 = 11;
 pub(crate) const LINE_601: u32 = 12;
 
 /// An ISOM symbol set: 711 line (id 0), 520 area (id 1).
 const FOREST_SYMBOLS: &str = r#"<map><georeferencing scale="10000"/><colors count="0"></colors><symbols count="2" id="ISOM 2017-2"><symbol type="2" id="0" code="711" name="route"><line_symbol/></symbol><symbol type="4" id="1" code="520" name="ar"><area_symbol/></symbol></symbols><view><grid/></view></map>"#;
-
-/// Symbol ids of [`forest_map`].
-pub(crate) const FOREST_LINE_711: u32 = 0;
 
 /// A map at `1:scale` with the given objects in one part. 1:4000 is a sprint map.
 pub(crate) fn map(scale: u32, objects: Vec<MapObject>) -> MapDocument {

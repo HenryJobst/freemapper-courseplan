@@ -465,6 +465,8 @@ pub const NOTE_NON_STANDARD_SCALE: &str = "check-note-non-standard-scale";
 pub const SKIP_CLASS_NOT_MAPPED: &str = "check-skip-class-not-mapped";
 /// Reason: the course has no climb.
 pub const SKIP_CLIMB_MISSING: &str = "check-skip-climb-missing";
+/// Reason: the rule is about the running route, which the program does not compute yet.
+pub const SKIP_NEEDS_ROUTE_ANALYSIS: &str = "check-skip-needs-route-analysis";
 /// Reason: the rule lacks a value its check needs; argument `name`.
 pub const SKIP_VALUE_MISSING: &str = "check-skip-value-missing";
 /// Reason: the event has no start window, so the starters per minute cannot be computed.

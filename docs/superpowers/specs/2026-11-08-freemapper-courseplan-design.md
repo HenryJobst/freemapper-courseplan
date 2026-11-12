@@ -401,7 +401,7 @@ routing *(Claude's call: selection)*.
 | Acute angle at a control (dog leg) and opposing traffic on overlapping legs | WKB26 B 7.2.6, BL12, SOA |
 | Almost straight angle at a control (above 170°, hint) *(user, 2026-11-09)* | user |
 | Number gap outside the range (0.5 to 5 mm, warning) *(user, 2026-11-09)* | user |
-| Straight leg line through a forbidden or impassable area without bends | WKB26 B 7.2.6, IOF-R 17.2 |
+| ~~Straight leg line through a forbidden or impassable area without bends~~ no longer checked *(user, 2026-11-12)*: the line between controls is not the running route; the rule stays in the profile for the route analysis and shows as not checked (ADR 0080) | WKB26 B 7.2.6, IOF-R 17.2 |
 | Leg line through start, finish or another control | BL02 |
 | Control too close to the map edge | BL02 |
 | Several courses share a first control: maximum starters per start minute against the planned start window *(user criterion)*, and the angle between first legs that share a direction | user, SOFT |

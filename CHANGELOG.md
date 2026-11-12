@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- `check` prüft die gerade Linie zwischen zwei Posten nicht mehr gegen Sperrgebiete. Die Warnung „Die gerade Strecke quert das Sperrgebiet …“ entfällt, denn WKB26 B 7.2.6 betrifft die Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Die Regeln `wkb2026.leg.through_forbidden` und `wkb2026.leg.through_forbidden_sprint` bleiben im Regelprofil und stehen jetzt in `check --all` unter den nicht geprüften Regeln, bis es die Routenanalyse gibt. Hast du einen Befund dieser Regeln akzeptiert, bleibt die Ausnahme gültig und erscheint höchstens unter den Ausnahmen ohne Befund. Siehe ADR 0080.
+
 ## [0.14.1] - 2026-11-12
 
 ### Hinzugefügt

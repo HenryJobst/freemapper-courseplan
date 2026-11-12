@@ -123,3 +123,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0077](0077-examples-on-the-maps-of-remo-madella.md) | Examples on the maps of Remo Madella | Accepted | 2026-11-12 |
 | [0078](0078-no-score-sites-on-the-map-frame.md) | No score sites on the map frame | Accepted | 2026-11-12 |
 | [0079](0079-editor-server-reads-every-request-body.md) | The editor server reads every request body | Accepted | 2026-11-12 |
+| [0080](0080-the-leg-line-is-not-checked-against-out-of-bounds-areas.md) | The leg line is not checked against out-of-bounds areas | Accepted | 2026-11-12 |

@@ -119,8 +119,9 @@ exceptions that match no finding any more and the skipped rules. `event start-wi
 window, rule categories and expected starters that some checks need. Chapter 8 of the
 [user manual](docs/manual/en.md#8-checking-reading-findings-giving-reasons-for-exceptions) explains it, and the AI
 assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
-`set_start_window` and `set_class` for it. The program does not check team or relay courses yet, and the
-route analysis is missing, so it reports a straight leg through an out-of-bounds area only as a warning.
+`set_start_window` and `set_class` for it. The program does not check team or relay courses yet. The route analysis is
+missing, so the rule that the best route must not lead through an out-of-bounds area stays unchecked; a straight leg
+across such an area gets no finding (ADR 0080).
 
 `freemapper-courseplan export <project> --iof-xml <file>` writes the individual and score courses as IOF XML 3.0 for result
 software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads

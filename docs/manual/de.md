@@ -751,7 +751,7 @@ Von links nach rechts steht da:
 Die Kennung brauchst du, um eine Ausnahme zu begründen. Die Quelle sagt dir, wo du die Regel selbst nachlesen
 kannst. Innerhalb einer Bahn stehen zuerst die Befunde der ganzen Bahn, dann die der Strecken in Laufrichtung. Am
 Ende der Ausgabe steht einmal eine Zusammenfassung, im Beispiel „0 Fehler, 0 Warnungen, 1 Hinweis; 0 akzeptiert,
-5 übersprungen“.
+6 übersprungen“.
 
 ### Schwere und Exit-Code
 
@@ -769,9 +769,10 @@ akzeptierte Befunde zählen nicht.
 
 Einige Grenzen stehen so nicht in den Regeln, das Programm schlägt sie vor, zum Beispiel dass die halbierten
 Postenabstände auch auf Schulhofkarten gelten. Als Quelle steht dann „Vorschlag von freemapper-courseplan“, und
-`check --all` zeigt unter dem Befund die Anmerkung der Prüfregel, die den Vorschlag begründet. Führt die gerade
-Strecke durch ein Sperrgebiet, meldet das Programm nur eine Warnung, denn die Optimalroute könnte hindurchführen.
-Ob sie es tut, kann erst die spätere Routenanalyse sagen.
+`check --all` zeigt unter dem Befund die Anmerkung der Prüfregel, die den Vorschlag begründet. Die Regel,
+dass die beste Laufroute nicht durch ein Sperrgebiet führen darf, prüft das Programm nicht: Sie braucht die
+Routenanalyse. Sie steht in `check --all` unter den nicht geprüften Regeln. Eine gerade Strecke über ein Sperrgebiet
+bekommt keinen Befund, denn die Strecke ist die Luftlinie und nicht die Laufroute.
 
 ### Übersprungene Prüfregeln
 
@@ -780,6 +781,8 @@ Häufige Gründe:
 
 - Beim Training wendet das Programm die Längen- und Schwierigkeitsregeln des Wettkampfs nicht an.
 - Die Prüfregel gilt nur für eine andere Disziplin, Kartenart oder einen anderen Druckmaßstab.
+- Die Regel braucht die Laufroute. `wkb2026.leg.through_forbidden` und `wkb2026.leg.through_forbidden_sprint` (die
+  beste Route darf nicht durch ein Sperrgebiet führen) warten auf die Routenanalyse und stehen deshalb immer hier.
 - Ein Aufsatz hat die Prüfregel abgeschaltet; der Grund nennt ihn, etwa „Das Regelprofil nor-bb-2021 schaltet die
   Prüfregel ab“.
 - Ein Wert fehlt. Das Startfenster setzt `event start-window halle.courseplan.toml 90` (`--none` statt der Minuten entfernt es), die erwartete Starterzahl

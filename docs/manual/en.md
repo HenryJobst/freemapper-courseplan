@@ -717,7 +717,7 @@ From left to right the line holds:
 
 You need the id to give a reason for an exception. The source tells you where to read the rule yourself. Within a
 course the findings about the whole course come first, then those of its legs in running order. The output ends
-with one summary, in the example "0 errors, 0 warnings, 1 hint; 0 accepted, 5 skipped".
+with one summary, in the example "0 errors, 0 warnings, 1 hint; 0 accepted, 6 skipped".
 
 ### Severity and exit code
 
@@ -734,9 +734,10 @@ Warnings and hints do not change the exit code, and accepted findings do not cou
 
 Some limits are not written in the rules like that; the program proposes them, for example that the halved control
 distances also apply to schoolyard maps. Their source then reads "proposal of freemapper-courseplan", and `check
---all` shows the rule's note below the finding, which explains the proposal. If a straight leg crosses an
-out-of-bounds area, the program only warns, because the best route might lead through it. Only the later route
-analysis can say whether it does.
+--all` shows the rule's note below the finding, which explains the proposal. The rule that the best running
+route must not lead through an out-of-bounds area needs the route analysis, which the program does not have yet. It
+shows in `check --all` among the rules that were not checked. A straight leg across an out-of-bounds area gets no
+finding, because the leg is the straight line and not the running route.
 
 ### Skipped rules
 
@@ -744,6 +745,8 @@ analysis can say whether it does.
 
 - At a training the program does not apply the length and difficulty rules of competitions.
 - The rule applies only to another discipline, map kind or print scale.
+- The rule needs the running route. `wkb2026.leg.through_forbidden` and `wkb2026.leg.through_forbidden_sprint`
+  (the best route must not lead through an out-of-bounds area) wait for the route analysis, so they always show here.
 - An overlay switched the rule off; the reason names it, such as "rule profile nor-bb-2021 switches the rule
   off".
 - A value is missing. `event start-window hall.courseplan.toml 90` sets the start window (`--none` instead of the minutes removes it), `class set

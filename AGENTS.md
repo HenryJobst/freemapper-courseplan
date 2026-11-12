@@ -43,7 +43,10 @@ Tell the person these limits before you start:
   larger than one A3 sheet at map scale is clipped to its middle part; courses outside it stay on the overlay.
 - The editor has a read-only print preview of a course, but the program does not print courses yet; printing waits
   for freemapper-print.
-- The route analysis is missing, so a straight leg through an out-of-bounds area is only a warning.
+- The route analysis is missing. The rule that the best route must not lead through an out-of-bounds area is not
+  checked and shows among the rules that were not checked. A straight leg across such an area gets no finding: the
+  line between controls is not the running route (ADR 0080). `check` does not test whether a control stands inside
+  an out-of-bounds area; look at it.
 - OCAD is not needed and not tested.
 - `check` tests distances, angles and codes, not whether a control stands at the right feature. The person looks
   at every position on the map.

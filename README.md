@@ -119,8 +119,9 @@ Ausnahmen, zu denen kein Befund mehr passt, und die übersprungenen Prüfregeln.
 tragen Startfenster, Regelkategorien und erwartete Starter nach, die manche Prüfungen brauchen. Das Handbuch erklärt
 es in [Kapitel 8](docs/manual/de.md#8-prüfen-hinweise-lesen-ausnahmen-begründen), und der KI-Assistent hat dafür die
 Werkzeuge `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`, `set_start_window` und
-`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht, und die Routenanalyse
-fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnung.
+`set_class`. Mannschafts- und Staffelbahnen prüft das Programm noch nicht. Die Routenanalyse
+fehlt, deshalb bleibt die Regel, dass die beste Route nicht durch ein Sperrgebiet führen darf, ungeprüft; eine
+gerade Strecke über ein Sperrgebiet bekommt keinen Befund (ADR 0080).
 
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzel- und Score-Bahnen als IOF-XML 3.0 für die
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
