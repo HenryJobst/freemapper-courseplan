@@ -56,11 +56,7 @@ is inside the usual 30 to 90 minutes, so the limit warning of the Lübeck exampl
 
 ## Other starts and limits
 
-Three starts were tried at 45 minutes: `0,0`, `-30,10` and `40,-40`. The first two give 27 and 30 controls inside both
-bands, and a rerun with `score length` agrees. At `40,-40` (finish `60,-40`) the draft reports 33 controls, 97 points
-and 99.8 percent for the very good runner. After `--apply`, `score length` and `check` find 96 points reachable and
-100.7 percent of the limit for all of them, just outside the band. The two evaluations disagree there, so the example
-does not use that start.
+Three starts were tried at 45 minutes: `0,0`, `-30,10` and `40,-40` (finish `60,-40`). The first two give 27 and 30 controls and the third 32, all inside both bands, and after `--apply` a rerun with `score length` and `check` names the same numbers as the draft. Until ADR 0075 that was not so at the third start: the draft reported 97 points and the applied course reached 96. The example stays with the first start.
 
 ## Limits of this example
 

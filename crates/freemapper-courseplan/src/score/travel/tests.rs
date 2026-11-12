@@ -526,3 +526,33 @@ fn shared_profiles_read_prefetched_times_in_both_directions() {
     let cached = other.profile(1.0).fastest_time(p(20.0, 180.0), c).unwrap();
     assert!((direct - cached).abs() < 1e-6);
 }
+
+/// Times must not depend on the way they were found: the tour heuristic turns a difference in the last
+/// digit into another tour, so the draft and a later `score length` would disagree (ADR 0075).
+#[test]
+fn a_leg_time_is_the_same_number_by_every_route_to_it() {
+    let s = obstacle_surface();
+    let mut points = Vec::new();
+    for i in 0..7 {
+        for j in 0..7 {
+            points.push(p(7.0 + 29.3 * f64::from(i), 11.0 + 27.1 * f64::from(j)));
+        }
+    }
+    let mut differing = 0;
+    for (i, from) in points.iter().enumerate() {
+        let many = s.times_from(from, &points[i + 1..]);
+        for (to, got) in points[i + 1..].iter().zip(many) {
+            let (Ok(forth), Ok(back), Ok(many)) = (
+                s.fastest(from.clone(), to.clone()),
+                s.fastest(to.clone(), from.clone()),
+                got,
+            ) else {
+                continue;
+            };
+            if forth.time_s != back.time_s || forth.time_s != many {
+                differing += 1;
+            }
+        }
+    }
+    assert_eq!(differing, 0, "pairs whose time depends on the search");
+}

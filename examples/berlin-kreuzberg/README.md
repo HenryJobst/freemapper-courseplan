@@ -58,11 +58,7 @@ Beispiels entfällt also.
 
 ## Andere Starts und Limits
 
-Bei 45 Minuten habe ich drei Starts versucht: `0,0`, `-30,10` und `40,-40`. Die ersten beiden ergeben 27 und 30 Posten
-in beiden Bändern, und ein neuer Lauf mit `score length` stimmt zu. Bei `40,-40` (Ziel `60,-40`) meldet der Entwurf 33
-Posten, 97 Punkte und 99,8 Prozent für den sehr guten Läufer. Nach `--apply` finden `score length` und `check` nur 96
-Punkte erreichbar und 100,7 Prozent des Limits für alle, knapp außerhalb des Bands. Die beiden Bewertungen weichen dort
-voneinander ab, deshalb nimmt das Beispiel diesen Start nicht.
+Bei 45 Minuten habe ich drei Starts versucht: `0,0`, `-30,10` und `40,-40` (Ziel `60,-40`). Der erste und der zweite ergeben 27 und 30 Posten, der dritte 32 Posten, alle in beiden Bändern, und ein neuer Lauf mit `score length` und `check` nennt nach `--apply` dieselben Zahlen wie der Entwurf. Beim dritten Start war das bis ADR 0075 nicht so: der Entwurf meldete 97 Punkte, die übernommene Bahn kam auf 96. Das Beispiel bleibt beim ersten Start.
 
 ## Grenzen dieses Beispiels
 

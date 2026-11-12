@@ -207,7 +207,9 @@ impl CostSurface {
                     .iter()
                     .map(|(p, c)| hop(p, &self.grid.centre(*c)) * f64::from(self.grid.factor[*c]))
                     .sum();
-                Ok((cost + end_cost) * f64::from(self.pace.0) / 1000.0)
+                Ok(canonical_time(
+                    (cost + end_cost) * f64::from(self.pace.0) / 1000.0,
+                ))
             })
             .collect()
     }
@@ -242,7 +244,8 @@ impl CostSurface {
             .iter()
             .map(|(p, cell)| hop(p, &self.grid.centre(*cell)) * f64::from(self.grid.factor[*cell]))
             .sum();
-        let time_s = (search.cost(path) + end_cost) * f64::from(self.pace.0) / 1000.0;
+        let time_s =
+            canonical_time((search.cost(path) + end_cost) * f64::from(self.pace.0) / 1000.0);
         Route {
             points,
             length_m,
@@ -326,6 +329,13 @@ impl SharedRoutes {
             factor,
         }
     }
+}
+
+/// A leg time rounded to a millisecond. The same cost summed along a path found from the other end, or by
+/// another search, differs in the last digits; the tour heuristic turns that into another tour, so the
+/// draft and a later length analysis would disagree (ADR 0075).
+fn canonical_time(t: f64) -> f64 {
+    (t * 1000.0).round() / 1000.0
 }
 
 fn pair_key(from: &MapPoint, to: &MapPoint) -> [u64; 4] {
