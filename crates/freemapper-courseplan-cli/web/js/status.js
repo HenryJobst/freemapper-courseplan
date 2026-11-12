@@ -12,7 +12,10 @@ const fields = {
 
 // Shows a message by its text id; with raw = true the text is shown as it is (server answers already localized).
 export function say(idOrText, raw = false) {
-  message.textContent = raw ? idOrText : t(idOrText);
+  const text = raw ? idOrText : t(idOrText);
+  message.textContent = text;
+  // The bar stays one line (CSS ellipsis); the whole text is in the tooltip.
+  message.title = text;
 }
 
 export function setMap(path, scale, kind) {

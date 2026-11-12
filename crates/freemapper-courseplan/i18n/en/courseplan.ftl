@@ -1078,6 +1078,7 @@ editor-tree-event-settings = Event settings
 editor-tree-new-course = New course...
 editor-tree-new-class = New category...
 editor-new-course-title = New course
+editor-new-score-course-title = New score course
 editor-new-course-label = Course name
 editor-new-class-title = New category
 editor-new-class-label = Category name

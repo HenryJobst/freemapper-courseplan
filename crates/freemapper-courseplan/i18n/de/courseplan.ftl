@@ -1073,6 +1073,7 @@ editor-tree-event-settings = Einstellungen
 editor-tree-new-course = Neue Bahn...
 editor-tree-new-class = Neue Kategorie...
 editor-new-course-title = Neue Bahn
+editor-new-score-course-title = Neue Score-Bahn
 editor-new-course-label = Name der Bahn
 editor-new-class-title = Neue Kategorie
 editor-new-class-label = Name der Kategorie

@@ -237,18 +237,17 @@ export function showNear(host, answer) {
   }
 }
 
-// A selected leg or bend: the course and the leg, the number of bends and the taped box. The course length is
-// shown here too, because every bend changes it.
+// A selected leg or bend: the course and the leg, the number of bends and the taped box. The length is the
+// leg's own (the overlay carries it), not the course's.
 function legRows(host, list, state, selection, overlay, actions) {
   const leg = overlay?.legs.find((l) => l.after === selection.after);
   if (!leg) return;
-  const info = state.courses.find((c) => c.name === selection.course);
   row(list, "editor-prop-kind", t("editor-leg-word"));
   row(list, "editor-prop-name", selection.course);
   row(list, "editor-leg-word", legLabel(leg.after));
   row(list, "editor-prop-bends", leg.bends.length);
   if (selection.kind === "bend") row(list, "editor-prop-bend", `${selection.index + 1} / ${leg.bends.length}`);
-  row(list, "editor-prop-length", info?.length_m == null ? null : `${Math.round(info.length_m)} m`);
+  row(list, "editor-prop-length", leg.length_m == null ? null : `${Math.round(leg.length_m)} m`);
   const term = document.createElement("dt");
   const label = document.createElement("label");
   label.htmlFor = "prop-taped";

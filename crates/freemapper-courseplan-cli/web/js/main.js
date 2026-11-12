@@ -532,7 +532,7 @@ async function newScoreCourse() {
     return;
   }
   const name = await course.askName({
-    titleId: "editor-new-course-title",
+    titleId: "editor-new-score-course-title",
     labelId: "editor-new-course-label",
     errorId: "editor-error-course-name",
     others: state.data.event.courses.map((c) => c.name),
