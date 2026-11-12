@@ -58,7 +58,7 @@ Beispiels entfällt also.
 
 ## Andere Starts und Limits
 
-Bei 45 Minuten habe ich drei Starts versucht: `0,0`, `-30,10` und `40,-40` (Ziel `60,-40`). Der erste und der zweite ergeben 27 und 30 Posten, der dritte 32 Posten, alle in beiden Bändern, und ein neuer Lauf mit `score length` und `check` nennt nach `--apply` dieselben Zahlen wie der Entwurf. Beim dritten Start war das bis ADR 0075 nicht so: der Entwurf meldete 97 Punkte, die übernommene Bahn kam auf 96. Das Beispiel bleibt beim ersten Start.
+Bei 45 Minuten habe ich drei Starts versucht: `0,0`, `-30,10` und `40,-40` (Ziel `60,-40`). Der erste und der zweite ergeben 27 und etwa 30 Posten, der dritte 32 Posten, alle in beiden Bändern, und ein neuer Lauf mit `score length` und `check` nennt nach `--apply` dieselben Zahlen wie der Entwurf. Beim dritten Start war das bis ADR 0075 nicht so: der Entwurf meldete 97 Punkte, die übernommene Bahn kam auf 96. Das Beispiel bleibt beim ersten Start.
 
 ## Grenzen dieses Beispiels
 
