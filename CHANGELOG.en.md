@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `check` reports a control that stands in an out-of-bounds area as an error. The new rules `wkb2026.control.in_forbidden` (forest maps) and `wkb2026.control.in_forbidden_sprint` (sprint and schoolyard maps) cite WKB26 A 2.2. An area is a special object of the kind out-of-bounds area that belongs to the course of the control or names no course, and any map area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control on the edge stands in the area. The rule does not test start, finish, crossing points or controls that are on no course. See ADR 0081.
+
 ### Changed
 
 - `check` no longer tests the straight line between two controls against out-of-bounds areas. The warning "the straight leg crosses ..." is gone: WKB26 B 7.2.6 is about the running route, and a straight line over an out-of-bounds area is normal. The rules `wkb2026.leg.through_forbidden` and `wkb2026.leg.through_forbidden_sprint` stay in the rule profile and now appear in `check --all` among the rules that were not checked, until the route analysis exists. If you accepted a finding of these rules, the exception stays valid and shows at most among the acceptances that match no finding. See ADR 0080.

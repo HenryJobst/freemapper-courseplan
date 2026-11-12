@@ -250,7 +250,7 @@ Betrifft vor allem freemapper-print. Die Bahnlegung braucht die Werte für Vorsc
 | Nummer | 4,0 mm Arial, nach Norden, verdeckt nichts Wichtiges; Vorsicht bei 6/9 | 704; BOF B3.1.11 | A |
 | Lesbarkeit: Nummer und Code eindeutig zugeordnet, Kreismitte erkennbar | – | WKB26 B 7.2.6 | A (Kollisionen) |
 | Kartenausschnitt enthält alle sinnvollen Routen | – | IOF-R 15.6 | A (Routing) |
-| Sperrgebiete und unpassierbare Signaturen sind verboten (Liste der ISOM/ISSprOM-Nummern) | – | WKB26 A 2.2; IOF-R 17.2 | A |
+| Sperrgebiete und unpassierbare Signaturen sind verboten (Liste der ISOM/ISSprOM-Nummern) | – | WKB26 A 2.2; IOF-R 17.2 | A; für Posten seit 12.11.2026 geprüft (`control_in_forbidden`, ADR 0081): Sonderobjekt Sperrgebiet und Kartenflächen 520, 709, 714; Start, Ziel, Querungsstellen und die Strecke nicht |
 | Postenbeschreibung nach IOF; Text zusätzlich für Kinderbahnen | – | WKB26 B 7.2.8; IOF-CD | A |
 
 ### 3.10 Sicherheit

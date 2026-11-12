@@ -774,6 +774,13 @@ dass die beste Laufroute nicht durch ein Sperrgebiet führen darf, prüft das Pr
 Routenanalyse. Sie steht in `check --all` unter den nicht geprüften Regeln. Eine gerade Strecke über ein Sperrgebiet
 bekommt keinen Befund, denn die Strecke ist die Luftlinie und nicht die Laufroute.
 
+Die Lage der Posten prüft `check` dagegen. Ein Posten in einem Sperrgebiet ist ein Fehler. Die Regel heißt
+`wkb2026.control.in_forbidden`, auf Sprint- und Schulhofkarten `wkb2026.control.in_forbidden_sprint`. Als Sperrgebiet
+gilt ein Sonderobjekt der Art Sperrgebiet, das zur Bahn des Postens gehört oder keine Bahn nennt, und auf der Karte
+jede Fläche mit dem Symbol 520 oder 709, auf Sprint- und Schulhofkarten auch 714. Ein Posten genau auf dem Rand steht
+im Gebiet. Start, Ziel, Querungsstellen und Posten, die auf keiner Bahn liegen, prüft die Regel nicht. Willst du die
+Lage trotzdem, akzeptierst du den Befund mit einer Begründung.
+
 ### Übersprungene Prüfregeln
 
 `check` zählt die übersprungenen Prüfregeln in der Zusammenfassung, `check --all` nennt jede mit dem Grund.

@@ -45,11 +45,13 @@ Tell the person these limits before you start:
   for freemapper-print.
 - The route analysis is missing. The rule that the best route must not lead through an out-of-bounds area is not
   checked and shows among the rules that were not checked. A straight leg across such an area gets no finding: the
-  line between controls is not the running route (ADR 0080). `check` does not test whether a control stands inside
-  an out-of-bounds area; look at it.
+  line between controls is not the running route (ADR 0080). `check` does report a control that stands inside an
+  out-of-bounds area, either a special object of its course or a map area with the symbol 520, 709 or 714 (709 and
+  520 on forest maps), as an error (ADR 0081). It does not test start, finish, crossing points or controls that are on
+  no course; look at those yourself.
 - OCAD is not needed and not tested.
-- `check` tests distances, angles and codes, not whether a control stands at the right feature. The person looks
-  at every position on the map.
+- `check` tests distances, angles, codes and out-of-bounds areas, not whether a control stands at the right feature.
+  The person looks at every position on the map.
 
 ## Install
 

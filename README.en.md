@@ -121,7 +121,7 @@ window, rule categories and expected starters that some checks need. Chapter 8 o
 assistant has the tools `check`, `accept_finding`, `remove_accepted_finding`, `set_rule_profile`,
 `set_start_window` and `set_class` for it. The program does not check team or relay courses yet. The route analysis is
 missing, so the rule that the best route must not lead through an out-of-bounds area stays unchecked; a straight leg
-across such an area gets no finding (ADR 0080).
+across such an area gets no finding (ADR 0080). A control inside an out-of-bounds area is an error (ADR 0081).
 
 `freemapper-courseplan export <project> --iof-xml <file>` writes the individual and score courses as IOF XML 3.0 for result
 software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads

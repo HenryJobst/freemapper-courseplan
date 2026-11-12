@@ -739,6 +739,13 @@ route must not lead through an out-of-bounds area needs the route analysis, whic
 shows in `check --all` among the rules that were not checked. A straight leg across an out-of-bounds area gets no
 finding, because the leg is the straight line and not the running route.
 
+`check` does test where the controls stand. A control inside an out-of-bounds area is an error. The rule is
+`wkb2026.control.in_forbidden`, and on sprint and schoolyard maps `wkb2026.control.in_forbidden_sprint`. An area is a
+special object of the kind out-of-bounds area that belongs to the course of the control or names no course, and on the
+map any area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control exactly on the edge stands in
+the area. The rule does not test the start, the finish, crossing points or controls that are on no course. If you
+want the position anyway, accept the finding with a reason.
+
 ### Skipped rules
 
 `check` counts the skipped rules in its summary, and `check --all` names each with its reason. Common reasons:

@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `check` meldet einen Posten, der in einem Sperrgebiet steht, als Fehler. Die neuen Regeln `wkb2026.control.in_forbidden` (Waldkarten) und `wkb2026.control.in_forbidden_sprint` (Sprint- und Schulhofkarten) nennen als Quelle WKB26 A 2.2. Als Sperrgebiet gilt ein Sonderobjekt der Art Sperrgebiet, das zur Bahn des Postens gehört oder keine Bahn nennt, und jede Kartenfläche mit dem Symbol 520 oder 709, auf Sprint- und Schulhofkarten auch 714. Ein Posten auf dem Rand steht im Gebiet. Start, Ziel, Querungsstellen und Posten ohne Bahn prüft die Regel nicht. Siehe ADR 0081.
+
 ### Geändert
 
 - `check` prüft die gerade Linie zwischen zwei Posten nicht mehr gegen Sperrgebiete. Die Warnung „Die gerade Strecke quert das Sperrgebiet …“ entfällt, denn WKB26 B 7.2.6 betrifft die Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Die Regeln `wkb2026.leg.through_forbidden` und `wkb2026.leg.through_forbidden_sprint` bleiben im Regelprofil und stehen jetzt in `check --all` unter den nicht geprüften Regeln, bis es die Routenanalyse gibt. Hast du einen Befund dieser Regeln akzeptiert, bleibt die Ausnahme gültig und erscheint höchstens unter den Ausnahmen ohne Befund. Siehe ADR 0080.
