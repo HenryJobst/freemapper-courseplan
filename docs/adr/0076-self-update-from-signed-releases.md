@@ -1,0 +1,62 @@
+# 0076: Self-update from signed releases
+
+Status: Accepted, 2026-11-12. Takes over freemapper's [ADR 0094](https://github.com/HenryJobst/freemapper/blob/main/docs/adr/0094-self-update-from-signed-releases.md).
+
+## Context
+
+People unpack freemapper-courseplan once and register it with an AI assistant by its absolute path. Releases come every
+few days and nothing tells them. Updating means a new download, unpacking and a new registration. The checksums next to
+the archives prove integrity, not origin. On 2026-11-12 the user asked for the same auto-update concept that freemapper
+already has *(user)*. The design is [`2026-11-12-self-update-design.md`](../superpowers/specs/2026-11-12-self-update-design.md),
+which lists only the differences from freemapper's design.
+
+## Decision
+
+- `freemapper-courseplan update` replaces the running executable in place with the newest release, after asking:
+  download, SHA-256 of the `.gz` and of the executable, `--version` of the new file, two renames. The old file stays as
+  `freemapper-courseplan.previous` for `update --rollback`. The path stays, so the MCP registration keeps working
+  *(user)*. Flags: `--check` (exit 10 when a newer version exists), `--yes`, `--version X.Y.Z`, `--rollback`,
+  `--mode notify|install|off`.
+- Every release publishes the bare executables as `.gz` and one manifest `freemapper-courseplan-update.json` with a
+  minisign signature. The manifest names its app, so a signed manifest of freemapper is refused here. Nothing unsigned is
+  installed *(user)*.
+- **Signing key** *(Claude's call)*: the public key of freemapper (`assets/update/minisign.pub`, key id
+  9353842ABFFAC9FB) is reused. The user then copies two repository secrets (`MINISIGN_SECRET_KEY`,
+  `MINISIGN_PASSWORD`) and makes no second key. Cost if wrong: a leak in one repository exposes the key of both;
+  the compiled-in list of keys lets a release rotate it.
+- **When the program checks** *(Claude's call)*: courseplan has no command that uses the network. The daily check
+  (at most once a day, 3 s budget, one line on stderr) therefore runs after `info` and `edit`, not after the offline
+  batch commands. The editor page shows a one-line notice from the cached check and has no install button. Cost if
+  wrong: someone who only runs `check` in scripts never sees a notice. `update --check` stays available.
+- **MCP**: tools `check_update` and `install_update` (`confirm: true` required), a note in the first tool result, and
+  no install by the server on its own, whatever the mode *(user)*. The tool count goes from 50 to 52.
+- **Where things live** *(Claude's call)*: settings and the check record sit in `<config dir>/freemapper-courseplan/`
+  (`settings.toml`, `update-check.json`); courseplan has no cache folder. `FREEMAPPER_COURSEPLAN_UPDATE` overrides the
+  mode for one process, `FREEMAPPER_COURSEPLAN_CONFIG_DIR` moves the folder (the tests use it).
+- Builds from source never update themselves. `release.yml` sets `FREEMAPPER_COURSEPLAN_DIST=github-release` for the
+  build step only; the compile fails if a release build carries the test key.
+- **HTTP client** *(Claude's call)*: `ureq` 3.4.2 (the version freemapper uses, older than two weeks, ADR 0006) with
+  redirects off in the agent. The app follows at most three, each target through the host rule of `freemapper-update`.
+  Only the three GitHub hosts are allowed. `minisign-verify` 0.3.0 is a dev-dependency that checks the committed key.
+  The pure parts come from `freemapper-update` of freemapper-core (pin v0.19.0, unchanged); the network stays here
+  (core ADR 0007).
+- **Release workflow** *(Claude's call)*: a port of freemapper's. It builds with the dist variable, adds the `.gz`
+  assets, writes and signs the manifest, verifies the signature with the key in the program and refuses to publish
+  without one. `min_self_update_from` carries over from the previous release's signed manifest and is raised by hand
+  through `[workspace.metadata.update]` in `Cargo.toml`; the first release with the updater takes its own version.
+  A job after publishing lets the previous release update itself and roll back.
+
+## Consequences
+
+- Until the user has added the two secrets to the GitHub repository, a release fails at the signing step. No release is
+  made before that.
+- The first release with the updater cannot be reached by `update` from older versions, which have no updater. People
+  install it by hand once.
+- The program sends one kind of request, to the GitHub release hosts, with a fixed User-Agent that names the program,
+  its version and the repository. No project data, no user name, no identifier.
+- Cost if wrong: an update that breaks reaches everyone in mode `install` at once (rollback and the post-release job
+  limit it); a lost signing key forces one manual update; a change of GitHub's redirects breaks the check until the
+  program is adapted.
+
+Source: user request of 2026-11-12; freemapper ADR 0094 and its design of 2026-11-11; freemapper-core ADRs 0005 to 0007
+and 0009; ADR 0006 (dependency age).
