@@ -538,6 +538,9 @@ pub(super) struct SetScoreSettings {
     pub(super) max_reach_m: Option<u32>,
     pub(super) auto_reach: Option<bool>,
     pub(super) high_value_gap_m: Option<u32>,
+    pub(super) dead_end_max_m: Option<u32>,
+    pub(super) start_finish_max_m: Option<u32>,
+    pub(super) map_margin_m: Option<u32>,
 }
 
 #[derive(Deserialize, JsonSchema)]

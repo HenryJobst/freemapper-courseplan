@@ -5,9 +5,11 @@
 
 use freemapper_courseplan::edit;
 use freemapper_courseplan::map::{MapIndex, MapKind, map_kind_for_file};
+use freemapper_courseplan::mapped::MappedArea;
 use freemapper_courseplan::score::candidates::{
     Candidate, FORBIDDEN_LINE_MARGIN_M, SuggestContext, suggest_with,
 };
+use freemapper_courseplan::score::dead_end::{DeadEnds, check_ends};
 use freemapper_courseplan::score::points::{CodeRules, assign_codes, assign_values};
 use freemapper_courseplan::score::travel::{
     CostSurface, Pace, RouteParams, SharedRoutes, TravelTime,
@@ -206,6 +208,13 @@ impl CoursePlanServer {
         })
     }
 
+    /// The dead-end analysis and the mapped area of the map, which the generation filters its sites by
+    /// (ADR 0085, ADR 0087). The mapped area is none for a map without terrain objects.
+    fn site_filters(&self, world: &World) -> Result<(DeadEnds, Option<MappedArea>), String> {
+        let dead_ends = DeadEnds::build(&world.index, world.scale).map_err(|e| self.locs(&e))?;
+        Ok((dead_ends, MappedArea::build(&world.index, world.scale)))
+    }
+
     fn surfaces(
         &self,
         world: &World,
@@ -318,6 +327,12 @@ impl CoursePlanServer {
         let (_, start) = self.end_point(event, start_id.as_deref(), false)?;
         let (_, finish) = self.end_point(event, finish_id.as_deref(), true)?;
         let specials = area_specials(event, req.course.as_ref().map(|n| n.0.as_str()));
+        let (dead_ends, mapped) = self.site_filters(&world)?;
+        // A course gives start and finish as inputs; they have to suit the settings (ADR 0086, ADR 0087).
+        if req.course.is_some() {
+            check_ends(&start, &finish, world.scale, &settings, mapped.as_ref())
+                .map_err(|e| self.locs(&e))?;
+        }
         let surfaces = self.surfaces(&world, &settings, &polygons(&specials))?;
         let existing: Vec<MapPoint> = event.controls.iter().map(|c| c.map_mm.clone()).collect();
         let min_distance_mm = self.min_distance_mm(req.min_distance_mm, world.scale, &settings)?;
@@ -341,6 +356,8 @@ impl CoursePlanServer {
                 existing: &existing,
                 limit,
                 line_margin_mm: line_margin_mm(world.scale),
+                dead_end: Some((&dead_ends, settings.dead_end_max_m)),
+                margin: mapped.as_ref().map(|m| (m, settings.map_margin_m)),
             },
         )
         .map_err(|e| self.locs(&e))?;
@@ -688,6 +705,9 @@ impl CoursePlanServer {
         let world = self.score_world(file)?;
         let settings = event.score_settings();
         let specials = area_specials(event, Some(name));
+        let (dead_ends, mapped) = self.site_filters(&world)?;
+        check_ends(&start, &finish, world.scale, &settings, mapped.as_ref())
+            .map_err(|e| self.locs(&e))?;
         let surfaces = self.surfaces(&world, &settings, &polygons(&specials))?;
         let min_distance_mm = self.min_distance_mm(None, world.scale, &settings)?;
         let candidates = suggest_with(
@@ -706,6 +726,8 @@ impl CoursePlanServer {
                 existing: &existing,
                 limit: DEFAULT_LIMIT,
                 line_margin_mm: line_margin_mm(world.scale),
+                dead_end: Some((&dead_ends, settings.dead_end_max_m)),
+                margin: mapped.as_ref().map(|m| (m, settings.map_margin_m)),
             },
         )
         .map_err(|e| self.locs(&e))?;

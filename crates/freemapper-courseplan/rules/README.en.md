@@ -71,6 +71,9 @@ the findings that were accepted for it are reported again.
 | `similar_features` | Two controls on similar features closer than `metres` |
 | `map_edge` | A control, start or finish closer than `metres` to the map edge |
 | `inside_map` | A start, finish, control or crossing point with no map object within `metres`, so in the blank part beside the terrain; objects of the symbols in `ignore_symbols` and an axis-aligned rectangle line that spans `frame_percent` percent of the terrain extent do not count as objects |
+| `map_margin` | A start, finish, control or crossing point closer than `map_margin_m` (event setting, default 50 m) to the edge of the mapped area; a position outside it is reported by `inside_map` |
+| `control_dead_end` | A control lies deeper than `dead_end_max_m` (event setting, default 60 m) in a dead end; sprint and schoolyard maps only |
+| `start_finish_distance` | Start and finish of a course further apart than `start_finish_max_m` (event setting, default 400 m) in a straight line; a hint, sprint and schoolyard maps only |
 | `leg_through_control` | A leg passing through another control of the same course |
 | `leg_through_forbidden` | The best running route leads through an out-of-bounds area; not checked until the route analysis exists, so the rule shows among the rules that were not checked |
 | `control_in_forbidden` | A control of a course stands inside an out-of-bounds special object of that course, or inside a map area with a symbol from `area_symbols`; on the edge counts as inside |

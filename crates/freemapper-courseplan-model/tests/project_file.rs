@@ -1228,6 +1228,9 @@ fn custom_score_settings_with_a_large_seed_round_trip() {
         min_gap_m: 110,
         max_reach_m: Some(800),
         high_value_gap_m: 200,
+        dead_end_max_m: 90,
+        start_finish_max_m: 300,
+        map_margin_m: 70,
     };
     project.event.score = Some(custom.clone());
     project.save().unwrap();

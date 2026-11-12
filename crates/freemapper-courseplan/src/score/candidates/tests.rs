@@ -106,6 +106,8 @@ fn ctx<'a>(specials: &'a [SpecialObject], existing: &'a [MapPoint]) -> SuggestCo
         existing,
         limit: 50,
         line_margin_mm: 1.0,
+        dead_end: None,
+        margin: None,
     }
 }
 
@@ -737,6 +739,8 @@ fn luebeck_timing_for_limit_60() {
         line_margin_mm: 1.0,
         existing: &[],
         limit: 60,
+        dead_end: None,
+        margin: None,
     };
     // The example's start flag lies inside a building (ADR 0062).
     let flagged = SuggestContext {
@@ -986,4 +990,86 @@ fn the_frame_some_maps_draw_around_their_content_gives_no_sites() {
     ];
     assert!(!is_map_frame(&big, &extent));
     assert!(!is_map_frame(&frame, &None));
+}
+
+/// A lane of 12 m width that leaves a field and is closed at its tip, framed by buildings, at 1:1000.
+fn lane_map(points: &[(f64, f64)]) -> MapIndex {
+    let building = |x0: f64, y0: f64, x1: f64, y1: f64| {
+        feature(
+            "521",
+            FeatureGeometry::Area(vec![vec![p(x0, y0), p(x1, y0), p(x1, y1), p(x0, y1)]]),
+        )
+    };
+    let mut all = vec![
+        building(-250.0, 600.0, 750.0, 700.0),
+        building(-300.0, -300.0, -250.0, 700.0),
+        building(750.0, -300.0, 800.0, 700.0),
+        building(-250.0, -300.0, 244.0, 100.0),
+        building(256.0, -300.0, 750.0, 100.0),
+        building(244.0, -300.0, 256.0, -50.0),
+    ];
+    all.extend(points.iter().map(|&(x, y)| boulder(x, y)));
+    MapIndex::from_features(all)
+}
+
+#[test]
+fn sites_deep_in_a_dead_end_are_left_out_and_the_setting_decides() {
+    use crate::score::dead_end::DeadEnds;
+    let index = lane_map(&[(250.0, -30.0), (250.0, 60.0), (250.0, 400.0)]);
+    let analysis = DeadEnds::build(&index, 1000).unwrap();
+    let travel = Fake::plain();
+    let at = |found: &[Candidate], x: f64, y: f64| found.iter().any(|c| c.at == p(x, y));
+    let mut c = ctx(&[], &[]);
+    c.min_distance_mm = 5.0;
+    c.start = p(100.0, 400.0);
+    c.finish = p(120.0, 400.0);
+    // Without the filter every boulder is a site.
+    let all = suggest(&index, &travel, &c).unwrap();
+    assert!(at(&all, 250.0, -30.0) && at(&all, 250.0, 60.0) && at(&all, 250.0, 400.0));
+    // At 60 m the tip of the lane is out; the boulder 40 m from the mouth and the one in the field stay.
+    c.dead_end = Some((&analysis, 60));
+    let kept = suggest(&index, &travel, &c).unwrap();
+    assert!(!at(&kept, 250.0, -30.0), "the deep site is left out");
+    assert!(at(&kept, 250.0, 400.0), "the site in the field stays");
+    // At 20 m the boulder 40 m from the mouth goes too.
+    c.dead_end = Some((&analysis, 20));
+    let strict = suggest(&index, &travel, &c).unwrap();
+    assert!(!at(&strict, 250.0, 60.0) && !at(&strict, 250.0, -30.0));
+    assert!(at(&strict, 250.0, 400.0));
+}
+
+#[test]
+fn sites_too_close_to_the_edge_of_the_mapped_area_are_left_out() {
+    use crate::mapped::MappedArea;
+    let building = feature(
+        "521",
+        FeatureGeometry::Area(vec![vec![
+            p(0.0, 0.0),
+            p(300.0, 0.0),
+            p(300.0, 300.0),
+            p(0.0, 300.0),
+        ]]),
+    );
+    // The edge of the mapped area lies 40 m beyond the wall: x = 20 has a margin of 60 m, x = 5 one of 45 m.
+    let index = MapIndex::from_features(vec![
+        building,
+        boulder(20.0, 150.0),
+        boulder(5.0, 150.0),
+        boulder(150.0, 150.0),
+    ]);
+    let area = MappedArea::build(&index, 1000).unwrap();
+    let travel = Fake::plain();
+    let mut c = ctx(&[], &[]);
+    c.min_distance_mm = 5.0;
+    c.start = p(100.0, 100.0);
+    c.finish = p(120.0, 100.0);
+    c.margin = Some((&area, 50));
+    let found = suggest(&index, &travel, &c).unwrap();
+    let at = |x: f64, y: f64| found.iter().any(|c| c.at == p(x, y));
+    assert!(at(20.0, 150.0) && at(150.0, 150.0));
+    assert!(!at(5.0, 150.0), "45 m from the edge is too close");
+    // At 40 m the one at 45 m stays.
+    c.margin = Some((&area, 40));
+    let looser = suggest(&index, &travel, &c).unwrap();
+    assert!(looser.iter().any(|c| c.at == p(5.0, 150.0)));
 }

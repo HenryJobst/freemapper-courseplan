@@ -581,7 +581,29 @@ pub struct ScoreSettings {
     pub max_reach_m: Option<u32>,
     /// Smallest distance in metres between two high-valued controls (ADR 0072).
     pub high_value_gap_m: u32,
+    /// Farthest walk in metres into a dead end that a generated control may need; `check` warns above it
+    /// (ADR 0085). 20 to 300.
+    pub dead_end_max_m: u32,
+    /// Farthest straight-line distance in metres between start and finish that a generated course accepts;
+    /// `check` hints above it (ADR 0086). 50 to 2000.
+    pub start_finish_max_m: u32,
+    /// Least distance in metres from start, finish and controls to the edge of the mapped area (ADR 0087).
+    /// 0 to 200.
+    pub map_margin_m: u32,
 }
+
+/// The default of [`ScoreSettings::dead_end_max_m`] in metres (ADR 0085).
+pub const DEFAULT_DEAD_END_MAX_M: u32 = 60;
+/// Range of [`ScoreSettings::dead_end_max_m`].
+pub const DEAD_END_MAX_RANGE_M: (u32, u32) = (20, 300);
+/// The default of [`ScoreSettings::start_finish_max_m`] in metres (ADR 0086).
+pub const DEFAULT_START_FINISH_MAX_M: u32 = 400;
+/// Range of [`ScoreSettings::start_finish_max_m`].
+pub const START_FINISH_MAX_RANGE_M: (u32, u32) = (50, 2000);
+/// The default of [`ScoreSettings::map_margin_m`] in metres (ADR 0087).
+pub const DEFAULT_MAP_MARGIN_M: u32 = 50;
+/// Range of [`ScoreSettings::map_margin_m`].
+pub const MAP_MARGIN_RANGE_M: (u32, u32) = (0, 200);
 
 /// The default of [`ScoreSettings::band_tolerance_percent`], in percentage points (ADR 0083).
 pub const DEFAULT_BAND_TOLERANCE_PERCENT: u8 = 3;
@@ -624,6 +646,9 @@ impl Default for ScoreSettings {
             min_gap_m: 100,
             max_reach_m: None,
             high_value_gap_m: 200,
+            dead_end_max_m: DEFAULT_DEAD_END_MAX_M,
+            start_finish_max_m: DEFAULT_START_FINISH_MAX_M,
+            map_margin_m: DEFAULT_MAP_MARGIN_M,
         }
     }
 }

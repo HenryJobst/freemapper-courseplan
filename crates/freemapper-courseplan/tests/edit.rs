@@ -1934,6 +1934,50 @@ fn value_max_below_a_control_value_is_refused() {
 }
 
 #[test]
+fn the_practical_sprint_settings_are_stored_and_checked() {
+    let mut e = score_event();
+    let stored = set_score_settings(
+        &mut e,
+        &ScoreSettingsChange {
+            dead_end_max_m: Some(90),
+            start_finish_max_m: Some(600),
+            map_margin_m: Some(0),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        (
+            stored.dead_end_max_m,
+            stored.start_finish_max_m,
+            stored.map_margin_m
+        ),
+        (90, 600, 0)
+    );
+    let before = e.clone();
+    for bad in [
+        ScoreSettingsChange {
+            dead_end_max_m: Some(19),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            start_finish_max_m: Some(2001),
+            ..Default::default()
+        },
+        ScoreSettingsChange {
+            map_margin_m: Some(201),
+            ..Default::default()
+        },
+    ] {
+        assert!(matches!(
+            set_score_settings(&mut e, &bad),
+            Err(EditError::Invalid(_))
+        ));
+        assert_eq!(e, before);
+    }
+}
+
+#[test]
 fn score_distance_settings_are_stored_and_checked() {
     let mut e = score_event();
     let stored = set_score_settings(

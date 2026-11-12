@@ -66,6 +66,21 @@ pub static SCHEMA: Schema = Schema {
             without_filters: &[],
         },
         KeySchema {
+            key: "map_margin",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "control_dead_end",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
+            key: "start_finish_distance",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
             key: "leg_through_control",
             values: None,
             without_filters: &[],

@@ -76,6 +76,9 @@ Schlüssel:
 | `similar_features` | Zwei Posten auf ähnlichen Objekten näher als `metres` |
 | `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
 | `inside_map` | Start, Ziel, Posten oder Querungsstelle ohne Kartenobjekt im Abstand `metres`, also im weißen Teil neben dem Gelände; Objekte mit einem Symbol aus `ignore_symbols` und ein achsenparalleles Rechteck als Linie, das `frame_percent` Prozent der Geländeausdehnung überspannt, zählen nicht als Objekte |
+| `map_margin` | Start, Ziel, Posten oder Querungsstelle näher als `map_margin_m` (Ereignis-Einstellung, Standard 50 m) am Rand der kartierten Fläche; eine Stelle außerhalb meldet `inside_map` |
+| `control_dead_end` | Ein Posten liegt tiefer als `dead_end_max_m` (Ereignis-Einstellung, Standard 60 m) in einer Sackgasse; nur Sprint- und Schulhofkarten |
+| `start_finish_distance` | Start und Ziel einer Bahn weiter als `start_finish_max_m` (Ereignis-Einstellung, Standard 400 m) in der Luftlinie auseinander; Hinweis, nur Sprint- und Schulhofkarten |
 | `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
 | `leg_through_forbidden` | Die optimale Laufroute führt durch ein Sperrgebiet; ungeprüft, bis es die Routenanalyse gibt, die Regel steht deshalb unter den nicht geprüften Regeln |
 | `control_in_forbidden` | Ein Posten einer Bahn steht in einem Sperrgebiet-Sonderobjekt dieser Bahn oder in einer Kartenfläche mit einem Symbol aus `area_symbols`; auf dem Rand gilt als drin |

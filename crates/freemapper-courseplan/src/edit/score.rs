@@ -33,6 +33,9 @@ pub struct ScoreSettingsChange {
     /// `Some(None)` returns the reach to automatic.
     pub max_reach_m: Option<Option<u32>>,
     pub high_value_gap_m: Option<u32>,
+    pub dead_end_max_m: Option<u32>,
+    pub start_finish_max_m: Option<u32>,
+    pub map_margin_m: Option<u32>,
 }
 
 impl ScoreSettingsChange {
@@ -326,6 +329,15 @@ pub fn set_score_settings(
         }
         if let Some(v) = change.high_value_gap_m {
             s.high_value_gap_m = v;
+        }
+        if let Some(v) = change.dead_end_max_m {
+            s.dead_end_max_m = v;
+        }
+        if let Some(v) = change.start_finish_max_m {
+            s.start_finish_max_m = v;
+        }
+        if let Some(v) = change.map_margin_m {
+            s.map_margin_m = v;
         }
         e.score = Some(s.clone());
         Ok(s)
