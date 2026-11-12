@@ -476,7 +476,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan"
-version = "0.14.1"
+version = "0.15.0"
 dependencies = [
  "freemapper-contract",
  "freemapper-course",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-cli"
-version = "0.14.1"
+version = "0.15.0"
 dependencies = [
  "axum",
  "clap",
@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "freemapper-courseplan-model"
-version = "0.14.1"
+version = "0.15.0"
 dependencies = [
  "serde",
  "tempfile",

@@ -65,7 +65,7 @@ freemapper-courseplan is one executable without an installer and without depende
 source unless the person asks; the release archives are ready to run.
 
 1. Find the newest version: `https://api.github.com/repos/HenryJobst/freemapper-courseplan/releases/latest`
-   returns JSON with `tag_name`, for example `v0.14.1`. The release page is
+   returns JSON with `tag_name`, for example `v0.15.0`. The release page is
    <https://github.com/HenryJobst/freemapper-courseplan/releases/latest>.
 2. Pick the archive for the system. The name is `freemapper-courseplan-<tag>-<platform>` plus the extension:
 
@@ -81,7 +81,7 @@ source unless the person asks; the release archives are ready to run.
 3. Download, check and unpack. macOS and Linux, for example in `~/Applications` or `~/opt`:
 
    ```sh
-   tag=v0.14.1; platform=macos-arm64
+   tag=v0.15.0; platform=macos-arm64
    base="https://github.com/HenryJobst/freemapper-courseplan/releases/download/$tag"
    curl -fLO "$base/freemapper-courseplan-$tag-$platform.tar.gz"
    curl -fLO "$base/freemapper-courseplan-$tag-$platform.tar.gz.sha256"
@@ -92,7 +92,7 @@ source unless the person asks; the release archives are ready to run.
    Windows (PowerShell):
 
    ```powershell
-   $tag = "v0.14.1"; $name = "freemapper-courseplan-$tag-windows-x86_64.zip"
+   $tag = "v0.15.0"; $name = "freemapper-courseplan-$tag-windows-x86_64.zip"
    $base = "https://github.com/HenryJobst/freemapper-courseplan/releases/download/$tag"
    Invoke-WebRequest "$base/$name" -OutFile $name
    Invoke-WebRequest "$base/$name.sha256" -OutFile "$name.sha256"

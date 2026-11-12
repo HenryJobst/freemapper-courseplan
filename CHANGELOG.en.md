@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-12
+
 ### Added
 
 - `check` reports a control that stands in an out-of-bounds area as an error. The new rules `wkb2026.control.in_forbidden` (forest maps) and `wkb2026.control.in_forbidden_sprint` (sprint and schoolyard maps) cite WKB26 A 2.2. An area is a special object of the kind out-of-bounds area that belongs to the course of the control or names no course, and any map area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control on the edge stands in the area. The rule does not test start, finish, crossing points or controls that are on no course. See ADR 0081.
