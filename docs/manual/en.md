@@ -322,7 +322,7 @@ One editor belongs to one project. To open a second project, start a second edit
 
 ![The editor with course A on the map Rummelsburger Bucht: the event tree on the left, the map with the course in the middle, the properties of the course on the right, the status bar with the finding counts below.](images/editor-overview-en.jpg)
 
-*The editor with course A (five controls, 1226 m) on the sprint map Rummelsburger Bucht. English interface. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*The editor with course A (four controls, 905 m) on the sprint map Rummelsburger Bucht; start and finish stand in the park in the middle. English interface. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ### The map
 
@@ -426,7 +426,7 @@ A leg is the straight line from control to control until you bend it. Click it w
 
 ![A selected leg with three bends, drawn in blue with white dots, next to a dashed taped leg, and the properties of the selected leg.](images/editor-legs-en.jpg)
 
-*A leg chosen with the "Select" tool. The leg from control 32 to control 33 has three bends (the white dots); the properties show their number and the box "Taped". The dashed leg from control 35 to the finish is taped and has one bend. I set these bends only for the picture: legs are straight by default, and the course of the example has no bend. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*A leg chosen with the "Select" tool. The leg from control 32 to control 33 has three bends (the white dots); the properties show their number and the box "Taped". The dashed leg from control 34 to the finish is taped and has one bend. I set these bends only for the picture: legs are straight by default, and the course of the example has no bend. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Add a bend.** Drag the line of the chosen leg. A bend appears where you let go.
 - **Move or delete a bend.** Drag a bend to move it. A click on a bend chooses it, and Delete removes it.
@@ -474,7 +474,7 @@ the project stores no position for it yet.
 
 ![Course mode with course A: the control numbers beside their circles, the box 2 with a dashed outline.](images/editor-numbers-en.jpg)
 
-*Course mode. The numbers sit beside their circles. The box 2 has a dashed outline, so the program placed it and the project stores no position for it. The boxes 1, 3, 4 and 5 have a placed position. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Course mode. The numbers sit beside their circles. The box 2 has a dashed outline, so the program placed it and the project stores no position for it. The boxes 1, 3 and 4 have a placed position. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Drag.** In course mode, drag a number box to another place. On release the editor turns the place into a
   direction and a gap from the circle and stores both for this course.
@@ -495,7 +495,7 @@ within 3 mm of the control are listed below column D.
 
 ![The properties of a control with column D opened as a grid of symbols and 5.20 statue picked.](images/editor-description-en.jpg)
 
-*Control 33 with column D open. Each symbol shows its number and name; 5.20 statue is picked. Column C stays folded and shows its current value. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Control 32 with column D open. Each symbol shows its number and name; 5.20 statue is picked. Column C stays folded and shows its current value. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Pick.** Click a symbol, or move with the arrow keys (Home and End jump to the first and last) and press Enter.
   Typing a number such as `1.3` jumps to it. The symbol in use is marked, and the focus stays on the pick.
@@ -535,9 +535,9 @@ The list comes from freemapper-core, so every symbol you can pick can also be wr
 
 Half a second after each change the editor runs the same check as `check` and shows the result.
 
-![The findings of course A in the properties: three hints, each with the button Accept, and markers on the map legs.](images/editor-findings-course-en.jpg)
+![The findings of course A in the properties: one warning and two hints, each with the button Accept, and markers on the map legs.](images/editor-findings-course-en.jpg)
 
-*The findings of course A. The three hints are about angles: two controls where the course runs almost straight on and one acute angle. I moved two controls of the example course for this picture; the example course itself has no finding. Each finding has "Accept...", and a marker sits on each leg it concerns. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*The findings of course A: one warning and two hints, all about angles. The course turns too sharply at control 34 (43 degrees, a warning) and at control 32 (49 degrees), and it runs almost straight on at control 31 (172 degrees). I moved controls 32 and 33 of the example course for this picture; the example course itself has no finding. Each finding has "Accept...", and a marker sits on each leg it concerns. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ![The findings drawer over the right side of the editor with the open findings and the rules that were not checked.](images/editor-findings-en.jpg)
 
@@ -750,6 +750,15 @@ special object of the kind out-of-bounds area that belongs to the course of the 
 map any area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control exactly on the edge stands in
 the area. The rule does not test the start, the finish, crossing points or controls that are on no course. If you
 want the position anyway, accept the finding with a reason.
+
+A start, finish, control or crossing point must also lie on the mapped area. Many maps are not rectangles: the
+Rummelsburger Bucht is a diagonal strip, and the rest of the sheet is blank, although it lies inside the rectangle
+around all map objects (which is what the warning `wkb2026.map.edge` measures against). A position in the blank part
+is an error, rule `wkb2026.map.inside`. A position counts as mapped when a map object lies within 40 m of it. The sheet
+frame and layout symbols such as the north lines pattern (601) do not count as objects. The message names the
+position in map millimetres and the nearest object. A square between buildings with no object in it stays inside as
+long as it is not much wider than 80 m; on a map with large empty areas, accept the finding with a reason or ask for a
+larger value in the rule (ADR 0084).
 
 ### Skipped rules
 

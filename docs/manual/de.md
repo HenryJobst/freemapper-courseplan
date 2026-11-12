@@ -335,7 +335,7 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
 
 ![Der Editor mit Bahn A auf der Karte Rummelsburger Bucht: links der Baum der Veranstaltung, in der Mitte die Karte mit der Bahn, rechts die Eigenschaften der Bahn, unten die Statusleiste mit den Befundzahlen.](images/editor-overview-de.jpg)
 
-*Der Editor mit Bahn A (fünf Posten, 1226 m) auf der Sprintkarte Rummelsburger Bucht. Deutsche Oberfläche. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Der Editor mit Bahn A (vier Posten, 905 m) auf der Sprintkarte Rummelsburger Bucht; Start und Ziel stehen im Park in der Mitte. Deutsche Oberfläche. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ### Die Karte
 
@@ -442,7 +442,7 @@ Eine Strecke ist die gerade Linie von Posten zu Posten, bis du sie knickst. Klic
 
 ![Eine gewählte Strecke mit drei Knicken, in Blau mit weißen Punkten gezeichnet, daneben eine gestrichelte abgeflaggte Strecke, und die Eigenschaften der gewählten Strecke.](images/editor-legs-de.jpg)
 
-*Eine Strecke, mit dem Werkzeug „Auswählen“ gewählt. Die Strecke von Posten 32 zu Posten 33 hat drei Knicke (die weißen Punkte); die Eigenschaften zeigen ihre Zahl und das Kästchen „Abgeflaggt“. Die gestrichelte Strecke von Posten 35 ins Ziel ist abgeflaggt und hat einen Knick. Diese Knicke habe ich nur für das Bild gesetzt: Strecken sind standardmäßig gerade, und die Bahn des Beispiels hat keinen Knick. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Eine Strecke, mit dem Werkzeug „Auswählen“ gewählt. Die Strecke von Posten 32 zu Posten 33 hat drei Knicke (die weißen Punkte); die Eigenschaften zeigen ihre Zahl und das Kästchen „Abgeflaggt“. Die gestrichelte Strecke von Posten 34 ins Ziel ist abgeflaggt und hat einen Knick. Diese Knicke habe ich nur für das Bild gesetzt: Strecken sind standardmäßig gerade, und die Bahn des Beispiels hat keinen Knick. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Knick einfügen.** Ziehe an der Linie der gewählten Strecke. Dort, wo du loslässt, entsteht ein Knick.
 - **Knick verschieben oder löschen.** Ziehe einen Knick, um ihn zu verschieben. Ein Klick wählt ihn, Entf löscht ihn.
@@ -459,7 +459,7 @@ automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
 
 ![Bahnmodus mit Bahn A: die Postennummern neben ihren Kreisen, das Feld 2 mit gestricheltem Rand.](images/editor-numbers-de.jpg)
 
-*Bahnmodus. Die Nummern stehen neben ihren Kreisen. Das Feld 2 hat einen gestrichelten Rand, weil das Programm es gesetzt hat und das Projekt speichert keine Lage dafür. Die Felder 1, 3, 4 und 5 haben eine gesetzte Lage. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Bahnmodus. Die Nummern stehen neben ihren Kreisen. Das Feld 2 hat einen gestrichelten Rand, weil das Programm es gesetzt hat und das Projekt speichert keine Lage dafür. Die Felder 1, 3 und 4 haben eine gesetzte Lage. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Ziehen.** Ziehe im Bahnmodus ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor den Ort in
   Richtung und Abstand vom Kreis um und speichert beides für diese Bahn.
@@ -481,7 +481,7 @@ des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
 
 ![Die Eigenschaften eines Postens mit aufgeklappter Spalte D als Raster aus Symbolen, gewählt ist 5.20 Denkmal.](images/editor-description-de.jpg)
 
-*Posten 33 mit offener Spalte D. Jedes Symbol zeigt Nummer und Namen; gewählt ist 5.20 Denkmal. Spalte C bleibt zugeklappt und zeigt ihren aktuellen Wert. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Posten 32 mit offener Spalte D. Jedes Symbol zeigt Nummer und Namen; gewählt ist 5.20 Denkmal. Spalte C bleibt zugeklappt und zeigt ihren aktuellen Wert. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Wählen.** Klicke ein Symbol an oder gehe mit den Pfeiltasten hin (Pos1 und Ende springen zum ersten und letzten)
   und drücke Enter. Tippst du eine Nummer wie `1.3`, springt die Auswahl dorthin. Das Symbol in Gebrauch ist
@@ -558,9 +558,9 @@ Eigenschaften das Score-Fenster.
 
 Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus wie `check` und zeigt das Ergebnis.
 
-![Die Befunde von Bahn A in den Eigenschaften: drei Hinweise, jeweils mit dem Knopf Akzeptieren, und Markierungen an den Strecken der Karte.](images/editor-findings-course-de.jpg)
+![Die Befunde von Bahn A in den Eigenschaften: eine Warnung und zwei Hinweise, jeweils mit dem Knopf Akzeptieren, und Markierungen an den Strecken der Karte.](images/editor-findings-course-de.jpg)
 
-*Die Befunde von Bahn A. Die drei Hinweise betreffen Winkel: zwei fast geradeaus laufende Posten und ein spitzer Winkel. Für dieses Bild habe ich zwei Posten der Beispielbahn verschoben, die Beispielbahn selbst hat keinen Befund. Jeder Befund hat „Akzeptieren...“, und an jeder betroffenen Strecke sitzt eine Markierung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Die Befunde von Bahn A: eine Warnung und zwei Hinweise, alle zu Winkeln. Die Bahn knickt am Posten 34 (43 Grad, eine Warnung) und am Posten 32 (49 Grad) zu scharf ab und läuft am Posten 31 (172 Grad) fast geradeaus weiter. Für dieses Bild habe ich die Posten 32 und 33 der Beispielbahn verschoben, die Beispielbahn selbst hat keinen Befund. Jeder Befund hat „Akzeptieren...“, und an jeder betroffenen Strecke sitzt eine Markierung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ![Die Befundschublade über der rechten Seite des Editors mit den offenen Befunden und den Regeln, die nicht geprüft wurden.](images/editor-findings-de.jpg)
 
@@ -785,6 +785,15 @@ gilt ein Sonderobjekt der Art Sperrgebiet, das zur Bahn des Postens gehört oder
 jede Fläche mit dem Symbol 520 oder 709, auf Sprint- und Schulhofkarten auch 714. Ein Posten genau auf dem Rand steht
 im Gebiet. Start, Ziel, Querungsstellen und Posten, die auf keiner Bahn liegen, prüft die Regel nicht. Willst du die
 Lage trotzdem, akzeptierst du den Befund mit einer Begründung.
+
+Start, Ziel, Posten und Querungsstellen müssen außerdem auf der kartierten Fläche liegen. Viele Karten sind keine
+Rechtecke: Die Rummelsburger Bucht ist ein schräger Streifen, und der Rest des Blatts ist weiß, obwohl er im Rechteck
+um alle Kartenobjekte liegt (woran die Warnung `wkb2026.map.edge` misst). Eine Stelle im weißen Teil ist ein Fehler,
+Regel `wkb2026.map.inside`. Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 40 m entfernt liegt. Der
+Blattrahmen und Layoutsymbole wie das Nordlinienmuster (601) zählen nicht als Objekte. Die Meldung nennt die Stelle in
+Kartenmillimetern und das nächste Objekt. Ein Platz zwischen Gebäuden ohne Objekt darin bleibt innen, solange er nicht
+viel breiter als 80 m ist; bei einer Karte mit großen leeren Flächen akzeptierst du den Befund mit einer Begründung oder
+bittest um einen größeren Wert in der Regel (ADR 0084).
 
 ### Übersprungene Prüfregeln
 
