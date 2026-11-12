@@ -20,9 +20,9 @@ which lists only the differences from freemapper's design.
 - Every release publishes the bare executables as `.gz` and one manifest `freemapper-courseplan-update.json` with a
   minisign signature. The manifest names its app, so a signed manifest of freemapper is refused here. Nothing unsigned is
   installed *(user)*.
-- **Signing key** *(Claude's call)*: the public key of freemapper (`assets/update/minisign.pub`, key id
-  9353842ABFFAC9FB) is reused. The user then copies two repository secrets (`MINISIGN_SECRET_KEY`,
-  `MINISIGN_PASSWORD`) and makes no second key. Cost if wrong: a leak in one repository exposes the key of both;
+- **Signing key** *(user)*: the public key of freemapper (`assets/update/minisign.pub`, key id
+  9353842ABFFAC9FB) is reused, and the two secrets `MINISIGN_SECRET_KEY` and `MINISIGN_PASSWORD` go into the
+  GitHub environment `release` of this repository. The user makes no second key. Cost if wrong: a leak in one repository exposes the key of both;
   the compiled-in list of keys lets a release rotate it.
 - **When the program checks** *(Claude's call)*: courseplan has no command that uses the network. The daily check
   (at most once a day, 3 s budget, one line on stderr) therefore runs after `info` and `edit`, not after the offline
@@ -45,6 +45,14 @@ which lists only the differences from freemapper's design.
   without one. `min_self_update_from` carries over from the previous release's signed manifest and is raised by hand
   through `[workspace.metadata.update]` in `Cargo.toml`; the first release with the updater takes its own version.
   A job after publishing lets the previous release update itself and roll back.
+
+## Exception to ADR 0006
+
+`flate2` 1.1.11 (published 2026-11-06) is in `Cargo.lock` and is younger than two weeks. `freemapper-update` of
+freemapper-core v0.19.0, the pin we already use, requires `flate2 = "=1.1.11"`, and freemapper has the same entry. Going
+older would need a different core pin, which this change does not touch. The version is two weeks old on 2026-11-20. No
+release is needed before that date, so no release ships it younger than the rule allows. All other new entries are older
+than two weeks; `rustls-pki-types` and `webpki-roots` were set back to 1.15.1 and 1.0.11 for that reason.
 
 ## Consequences
 

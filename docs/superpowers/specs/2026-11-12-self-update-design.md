@@ -38,9 +38,9 @@ All of freemapper's design sections 1, 3.1 to 3.5, 3.9 and 3.10 apply with the n
   --check` stays.
 - **Editor** *(Claude's call, D2)*: a one-line notice from the cached check, like freemapper's page; no install
   button. Texts in both languages through Fluent.
-- **Signing key** *(Claude's call, D3)*: the public key of freemapper (`assets/update/minisign.pub`, key id
-  9353842ABFFAC9FB) is reused, so the user only copies two repository secrets (`MINISIGN_SECRET_KEY`,
-  `MINISIGN_PASSWORD`) to the courseplan repository. The manifest's `app` field keeps a signed freemapper
+- **Signing key** *(user, D3)*: the public key of freemapper (`assets/update/minisign.pub`, key id
+  9353842ABFFAC9FB) is reused, so the user only copies two secrets (`MINISIGN_SECRET_KEY`,
+  `MINISIGN_PASSWORD`) into the environment `release` of the courseplan repository. The manifest's `app` field keeps a signed freemapper
   manifest from being accepted here. Cost if wrong: one key signs two repositories; a leak in one repository
   affects both; rotation through the key list covers it.
 - **HTTP client** *(Claude's call, D4)*: `ureq` 3.4.2, the version freemapper uses, as the only new third-party
@@ -57,5 +57,5 @@ All of freemapper's design sections 1, 3.1 to 3.5, 3.9 and 3.10 apply with the n
 
 ## 4. Human step
 
-The user adds `MINISIGN_SECRET_KEY` and `MINISIGN_PASSWORD` to the GitHub repository settings of
+*(user)* The user adds `MINISIGN_SECRET_KEY` and `MINISIGN_PASSWORD` to the GitHub environment `release` of
 freemapper-courseplan (the same values as in freemapper). An agent does not handle the secret key.
