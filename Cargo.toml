@@ -17,6 +17,8 @@ freemapper-rules = { git = "https://github.com/HenryJobst/freemapper-core", tag 
 freemapper-omap = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.19.0" }
 freemapper-course = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.19.0" }
 freemapper-render = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.19.0" }
+# The self-update: manifest, signature check, version order and the swap; no network (ADR 0076).
+freemapper-update = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.19.0" }
 freemapper-printrules = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.19.0" }
 # The suite contract: the shared types (map kind, sidecar reader, object class) without the checker; the
 # tests add its fixtures (ADR 0041, core ADR 0027).
@@ -39,6 +41,11 @@ axum = { version = "0.8.9", default-features = false, features = ["http1", "toki
 rust-embed = { version = "8.13.0", features = ["debug-embed", "mime-guess"] }
 tower = { version = "0.5.3", default-features = false, features = ["util"] }
 
+# The HTTP client of the self-update. Pinned: newer releases are younger than two weeks (ADR 0006).
+ureq = "=3.4.2"
+# Tests only: the key parser of freemapper-update, to check the committed public keys; same pin as in
+# freemapper-core.
+minisign-verify = "=0.3.0"
 [workspace.lints.rust]
 unsafe_code = "forbid"
 
