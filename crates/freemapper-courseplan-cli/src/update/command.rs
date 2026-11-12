@@ -129,7 +129,6 @@ fn installed_text(app: &App, installed: Version, notes: &str) -> String {
 /// The MCP tool `check_update` (spec 3.7) in a release build: what `update --check` prints, or
 /// the error for the person. A release that needs a manual install is a result, as for
 /// `--check`.
-#[allow(dead_code)] // STEP3: used by the MCP server and the editor
 pub fn check_for_mcp() -> Result<String, String> {
     let app = courseplan_app();
     let source = update_source();
@@ -143,7 +142,6 @@ pub fn check_for_mcp() -> Result<String, String> {
 /// The MCP tool `install_update` (spec 3.7) in a release build, once the person agreed: installs
 /// the newest release over the running program, printing nothing. The text for the person, or
 /// the error.
-#[allow(dead_code)] // STEP3: used by the MCP server and the editor
 pub fn install_for_mcp() -> Result<String, String> {
     let app = courseplan_app();
     let source = update_source();

@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 50] = [
+const TOOLS: [&str; 52] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -57,6 +57,8 @@ const TOOLS: [&str; 50] = [
     "remove_accepted_finding",
     "set_rule_profile",
     "set_start_window",
+    "check_update",
+    "install_update",
 ];
 
 struct Session {
@@ -193,6 +195,12 @@ fn lists_the_tools() {
     assert_eq!(session.info["serverInfo"]["name"], "freemapper-courseplan");
     let instructions = session.info["instructions"].as_str().unwrap();
     assert!(
+        instructions.contains(
+            "install_update installs it, only with confirm: true after the person agreed"
+        ),
+        "{instructions}"
+    );
+    assert!(
         instructions.contains("event_info") && instructions.contains("place_numbers"),
         "{instructions}"
     );
@@ -208,7 +216,8 @@ fn lists_the_tools() {
             "{name}: {tool}"
         );
         assert!(
-            tool["inputSchema"]["properties"]["project"].is_object() || name == "init_event",
+            tool["inputSchema"]["properties"]["project"].is_object()
+                || ["init_event", "check_update", "install_update"].contains(&name),
             "{name}: {tool}"
         );
     }

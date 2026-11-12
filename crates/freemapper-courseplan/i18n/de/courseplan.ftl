@@ -753,7 +753,9 @@ mcp-instructions =
     gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
     (set_start_window) oder Regelkategorie und erwartete Starterzahl einer Kategorie (set_class); fehlen sie, führt
     check die Prüfregel als übersprungen. Einen Befund, den der Bahnleger so haben will, bekommt accept_finding mit
-    Begründung; remove_accepted_finding nimmt das zurück.
+    Begründung; remove_accepted_finding nimmt das zurück. check_update sagt, ob es ein neueres freemapper-courseplan
+    gibt; install_update installiert es, nur mit confirm: true, nachdem die Person zugestimmt hat, und der Assistent
+    startet danach den freemapper-courseplan-Server neu.
 mcp-error-relative-path = { $path } ist ein relativer Pfad. Gib einen absoluten Pfad an oder einen mit ~ am Anfang
 mcp-error-not-toml = { $path } ist keine Projektdatei. Projektdateien enden auf .toml
 error-import-not-map = { $path } ist keine OOM-Karte. Karten enden auf .omap oder .xmap
@@ -1667,3 +1669,9 @@ update-mcp-needs-confirm = Es wurde nichts installiert. Frag zuerst die Person u
 update-mcp-note-manual = Hinweis für die Person: freemapper-courseplan { $new } ist verfügbar (dies ist { $old }), lässt sich aber nicht mit install_update installieren. { $needed } oder neuer muss von Hand installiert werden, siehe { $notes }
 update-mcp-note-bad-signature = Hinweis für die Person: Die neueste freemapper-courseplan-Version ließ sich nicht verifizieren ({ $error }); es wurde nichts installiert. Sag es ihr und installiere sie nicht auf anderem Weg.
 update-mcp-restart-now = Starte den freemapper-courseplan-MCP-Server jetzt neu, denn er läuft noch mit der alten Version.
+mcp-tool-check-update = Ob es eine neuere freemapper-courseplan-Version gibt, mit Versionsnummer, Erscheinungsdatum, Versionshinweisen und Downloadgröße, oder dass diese Version aktuell ist. Installiert nichts.
+mcp-tool-install-update = Installiert die neueste freemapper-courseplan-Version über dieses Programm. Ruf es erst auf, wenn die Person zugestimmt hat, und mit confirm true. Die neue Version gilt, sobald der Assistent den freemapper-courseplan-Server neu startet.
+mcp-param-install-update-confirm = true, sobald die Person der Installation der neueren Version zugestimmt hat; ohne das wird nichts installiert.
+update-editor-notice = freemapper-courseplan { $version } ist verfügbar (du hast { $current }).
+update-editor-howto = Aktualisieren mit: freemapper-courseplan update
+update-editor-notes = Versionshinweise

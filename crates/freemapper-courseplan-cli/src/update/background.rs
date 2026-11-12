@@ -257,7 +257,6 @@ impl BackgroundCheck {
 /// person once the check finds a newer version, or at once when the record of an earlier check
 /// knows one. A release that needs a manual install gets a note that says so, with its link, and
 /// one that does not verify a note that nothing was installed (spec 3.2).
-#[allow(dead_code)] // STEP3: used by the MCP server and the editor
 pub fn check_for_server(ctx: &CheckContext, tell: impl FnOnce(String) + Send + 'static) {
     if let Some(check) = start_background_check(ctx) {
         let _ = std::thread::Builder::new()
@@ -298,7 +297,6 @@ pub fn check_for_server(ctx: &CheckContext, tell: impl FnOnce(String) + Send + '
 /// A newer version than this one, with its release notes link, that the record of an earlier
 /// check holds, under the same conditions as the check itself (apart from the 24 hours). Reads
 /// the record only; the editor page uses it too.
-#[allow(dead_code)] // STEP3: used by the MCP server and the editor
 pub fn recorded_update(ctx: &CheckContext) -> Option<(Version, String)> {
     if !ctx.release || ctx.ci || ctx.mode == Mode::Off {
         return None;
@@ -312,7 +310,24 @@ pub fn recorded_update(ctx: &CheckContext) -> Option<(Version, String)> {
     }
 }
 
-#[allow(dead_code)] // STEP3: used by the MCP server and the editor
+/// The one line the editor page shows when the record of an earlier check knows a newer version:
+/// the news, how to update, and the release notes link. `None` when there is nothing to tell.
+pub fn editor_notice() -> Option<String> {
+    let (version, notes) = recorded_update(&CheckContext::of_command())?;
+    Some(format!(
+        "{} {} {}: {notes}",
+        text(
+            "update-editor-notice",
+            &[
+                ("version", v(version)),
+                ("current", v(courseplan_app().current))
+            ],
+        ),
+        text("update-editor-howto", &[]),
+        text("update-editor-notes", &[]),
+    ))
+}
+
 fn server_note(version: Version) -> String {
     text(
         "update-mcp-note",

@@ -63,6 +63,7 @@ body {
   min-height: 1.9rem;
 }
 #status-message { flex: 1 1 18rem; }
+#status-update { font-weight: 600; }
 .status .name { opacity: 0.75; }
 .status .cursor { display: inline-block; min-width: 9ch; font-variant-numeric: tabular-nums; }
 
@@ -279,3 +280,4 @@ dialog button { font: inherit; }
 #score-progress:empty { display: none; }
 #pane-props[aria-busy="true"] { cursor: progress; }
 .banner-box span { white-space: pre-line; }
+#status-update[hidden] { display: none; }

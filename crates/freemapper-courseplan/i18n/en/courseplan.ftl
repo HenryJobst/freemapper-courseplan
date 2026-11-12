@@ -758,7 +758,9 @@ mcp-instructions =
     check tests the courses against the rule profile of the event, which set_rule_profile changes. Some checks
     need the start window (set_start_window) or the rule category and expected starters of a class (set_class);
     without them check lists the rule as skipped. A finding the course setter wants as it is gets accept_finding
-    with a note; remove_accepted_finding takes that back.
+    with a note; remove_accepted_finding takes that back. check_update tells whether a newer freemapper-courseplan
+    exists; install_update installs it, only with confirm: true after the person agreed, and the assistant then
+    restarts the freemapper-courseplan server.
 mcp-error-relative-path = { $path } is a relative path; use an absolute path or one starting with ~
 mcp-error-not-toml = { $path } is not a project file; project files end in .toml
 error-import-not-map = { $path } is not an OOM map; maps end in .omap or .xmap
@@ -1672,3 +1674,9 @@ update-mcp-needs-confirm = nothing was installed; ask the person first and call 
 update-mcp-note-manual = Note for the person: freemapper-courseplan { $new } is available (this is { $old }), but install_update cannot install it. Install { $needed } or newer by hand, see { $notes }
 update-mcp-note-bad-signature = Note for the person: the newest freemapper-courseplan release could not be verified ({ $error }); nothing was installed. Tell them, and do not install it some other way.
 update-mcp-restart-now = Restart the freemapper-courseplan MCP server now; it still runs the old version.
+mcp-tool-check-update = Whether a newer freemapper-courseplan release exists, with its version, release date, release notes and download size, or that this one is up to date. Installs nothing.
+mcp-tool-install-update = Install the newest freemapper-courseplan release over this program. Call it only after the person agreed, with confirm true. The new version applies once the assistant restarts the freemapper-courseplan server.
+mcp-param-install-update-confirm = true once the person agreed to install the newer version; without it nothing is installed.
+update-editor-notice = freemapper-courseplan { $version } is available (you have { $current }).
+update-editor-howto = Update with: freemapper-courseplan update
+update-editor-notes = Release notes

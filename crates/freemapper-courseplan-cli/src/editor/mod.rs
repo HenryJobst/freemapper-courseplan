@@ -99,6 +99,7 @@ pub(crate) fn router(prefix: &str, state: Shared, stop: Arc<Notify>) -> Router {
         .route(&format!("{prefix}/assets/{{*path}}"), get(asset))
         .route(&format!("{prefix}/api/texts"), get(texts))
         .route(&format!("{prefix}/api/rules"), get(api_rules))
+        .route(&format!("{prefix}/api/update"), get(api_update))
         .route(&format!("{prefix}/api/state"), get(api_state))
         .route(&format!("{prefix}/api/revision"), get(api_revision))
         .route(&format!("{prefix}/api/overlay"), get(api_overlay))
@@ -145,6 +146,16 @@ async fn texts(State(state): State<Shared>) -> Response {
         })
         .collect();
     axum::Json(serde_json::json!({ "lang": lang.code(), "texts": texts })).into_response()
+}
+
+/// The notice about a newer release from the cached daily check, or `null` (ADR 0076). It reads the
+/// record only; the page asks again a few seconds after the start, when the check has written it.
+async fn api_update() -> Response {
+    blocking_response(|| {
+        axum::Json(serde_json::json!({ "notice": crate::update::background::editor_notice() }))
+            .into_response()
+    })
+    .await
 }
 
 /// The rule profiles, overlays and rule categories the program knows, for the page's pickers. Read-only; it

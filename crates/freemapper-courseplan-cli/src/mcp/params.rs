@@ -604,3 +604,11 @@ pub(super) struct ScoreApplyDraft {
     pub(super) controls: Vec<DraftControl>,
     pub(super) links: Vec<DraftLink>,
 }
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct InstallUpdate {
+    /// Only `true` installs; the person has to agree first.
+    #[serde(default)]
+    pub(super) confirm: bool,
+}

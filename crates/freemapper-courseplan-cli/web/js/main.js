@@ -1480,6 +1480,15 @@ try {
   // Without texts the page stays as it is; the server console says why.
 }
 
+// The daily update check writes its record within three seconds of the start, so the notice is asked for
+// twice: at once, for a record from an earlier day, and again once the new check is done.
+async function showUpdateNotice() {
+  const answer = await get("api/update");
+  if (answer.ok && answer.data?.notice) status.setUpdate(answer.data.notice);
+}
+showUpdateNotice();
+setTimeout(showUpdateNotice, 5000);
+
 pollTimer = setInterval(poll, POLL_MS);
 window.addEventListener("focus", poll);
 document.addEventListener("visibilitychange", poll);
