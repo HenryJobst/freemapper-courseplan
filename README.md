@@ -21,7 +21,7 @@ Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Biblioth
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
 `freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte, `freemapper-course` für das
 Lesen von Purple-Pen-Dateien und `freemapper-web` für den lokalen Server des Editors. Die Programme binden sie in
-einer festen Version ein (courseplan: 0.14.1), statt den Code zu kopieren. Die Lage der Postennummern und die
+einer festen Version ein (courseplan: 0.19.0), statt den Code zu kopieren. Die Lage der Postennummern und die
 Tabellen der Beschreibungssymbole kommen von dort, daher platzieren courseplan und freemapper-print die Nummern
 gleich.
 
@@ -86,6 +86,9 @@ User-Agent mit Namen, Version und Repository. Ein aus dem Quellcode gebautes Pro
 Handbuch, Kapitel 2.
 
 ## Status
+
+Die aktuelle Version ist [v0.15.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.15.0) vom
+12. November 2026 (was neu ist, steht in den [Änderungen](CHANGELOG.md)).
 
 freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schulhofkarte (`.omap`) legst du schon
 ganze Einzelbahnen an. `freemapper-courseplan init <Karte>` erzeugt die Projektdatei. Mit `control`, `special`,

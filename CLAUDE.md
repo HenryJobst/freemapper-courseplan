@@ -54,7 +54,7 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   milestone with new user-visible functionality is merged and CI on `main` is green, or after an important
   fix. Version 0.x: minor step per milestone, patch step for fixes. Steps: set `[workspace.package] version`,
   `cargo update -w`, turn "Unveröffentlicht"/"Unreleased" into `## [x.y.z] - YYYY-MM-DD` in both changelogs,
-  commit, annotated tag `vX.Y.Z`, push `main` and the tag to both remotes, watch the release workflow, and
+  set the version and date in the first lines of the "Status" section of both READMEs, commit, annotated tag `vX.Y.Z`, push `main` and the tag to both remotes, watch the release workflow, and
   report the release URL.
 - Test fixtures carry source, date and licence in `tests/fixtures/README.md`.
 - Coordination with the sibling sessions goes through SendMessage. Agreements with them are recorded in the

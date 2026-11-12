@@ -21,7 +21,7 @@ Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
 `freemapper-text` for the program texts, `freemapper-omap` for reading the map, `freemapper-course` for reading
 Purple Pen files and `freemapper-web` for the editor's local server. The programs use them in a fixed version
-(courseplan: 0.14.1) instead of copying the code. The number placement and the description symbol tables come from
+(courseplan: 0.19.0) instead of copying the code. The number placement and the description symbol tables come from
 there, so courseplan and freemapper-print place numbers the same way.
 
 Planned for the first version:
@@ -86,6 +86,9 @@ the GitHub release servers and sends nothing but a fixed User-Agent with its nam
 source never updates itself. Details: user manual, chapter 2.
 
 ## Status
+
+The current version is [v0.15.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.15.0) of
+12 November 2026 (see the [changes](CHANGELOG.en.md) for what is new).
 
 freemapper-courseplan is in early development. On a sprint or schoolyard map (`.omap`) you can already set whole
 individual courses. `freemapper-courseplan init <map>` creates the project file. With `control`, `special`,
