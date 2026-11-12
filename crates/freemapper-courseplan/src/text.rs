@@ -1380,11 +1380,12 @@ mod tests {
 
     /// Every non-test source file directly under `src/check/`; the guard test below fails when a
     /// new module is missing here, so its message ids are scanned.
-    const CHECK_SOURCES: [(&str, &str); 13] = [
+    const CHECK_SOURCES: [(&str, &str); 14] = [
         ("mod.rs", include_str!("check/mod.rs")),
         ("codes.rs", include_str!("check/codes.rs")),
         ("context.rs", include_str!("check/context.rs")),
         ("distance.rs", include_str!("check/distance.rs")),
+        ("forbidden.rs", include_str!("check/forbidden.rs")),
         ("geometry.rs", include_str!("check/geometry.rs")),
         ("legs.rs", include_str!("check/legs.rs")),
         ("numbers.rs", include_str!("check/numbers.rs")),

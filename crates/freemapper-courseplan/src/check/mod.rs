@@ -13,6 +13,7 @@
 pub(crate) mod codes;
 mod context;
 mod distance;
+mod forbidden;
 mod geometry;
 mod legs;
 mod numbers;
@@ -700,6 +701,11 @@ pub const CHECKS: &[Check] = &[
         "leg_through_forbidden",
         distance::leg_through_forbidden,
         &[Place::Leg],
+    ),
+    Check::at(
+        "control_in_forbidden",
+        forbidden::control_in_forbidden,
+        &[Place::Control],
     ),
     Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
     Check::at("straight_angle", legs::straight_angle, &[Place::Leg]),

@@ -231,6 +231,31 @@ note = { de = "Geprüft wird die Laufroute, nicht die Luftlinie zwischen zwei Po
 # boundary, 709 out-of-bounds area, 714 temporary construction or closed area.
 impassable = ["520", "708", "709", "714"]
 
+[[rules]]
+id = "wkb2026.control.in_forbidden"
+key = "control_in_forbidden"
+severity = "error"
+map_kinds = ["forest"]
+source = { doc = "WKB26", section = "A 2.2" }
+note = { de = "Ein Posten darf nicht in einem Sperrgebiet stehen. Als Sperrgebiet gilt ein Sperrgebiet-Sonderobjekt der Bahn und jede Kartenfläche mit einem Sperrgebiet-Symbol. Die Forschungsdatei nennt WKB26 A 2.2 und IOF-R 17.2: Sperrgebiete und unpassierbare Signaturen sind verboten, nach einer Liste von ISOM- und ISSprOM-Nummern. Den Wortlaut kennen wir nicht. Geprüft wird der Posten, nicht die Strecke (ADR 0081). Die Grenzlinie 708 ist eine Linie und wird nicht geprüft. Ein Posten genau auf dem Rand einer Fläche steht darin.", en = "A control must not stand in an out-of-bounds area. That means an out-of-bounds special object of the course and any map area with an out-of-bounds symbol. The research file gives WKB26 A 2.2 and IOF-R 17.2: out-of-bounds areas and impassable symbols are forbidden, per a list of ISOM and ISSprOM numbers. We do not know the original wording. The control is tested, not the leg (ADR 0081). The boundary line 708 is a line and is not tested. A control exactly on the edge of an area stands in it." }
+
+[rules.values]
+# Area symbols of ISOM 2017-2: 520 area that shall not be entered, 709 out-of-bounds area.
+area_symbols = ["520", "709"]
+
+[[rules]]
+id = "wkb2026.control.in_forbidden_sprint"
+key = "control_in_forbidden"
+severity = "error"
+map_kinds = ["sprint", "schoolyard"]
+source = { doc = "WKB26", section = "A 2.2" }
+note = { de = "Ein Posten darf nicht in einem Sperrgebiet stehen. Als Sperrgebiet gilt ein Sperrgebiet-Sonderobjekt der Bahn und jede Kartenfläche mit einem Sperrgebiet-Symbol. Die Forschungsdatei nennt WKB26 A 2.2 und IOF-R 17.2: Sperrgebiete und unpassierbare Signaturen sind verboten, nach einer Liste von ISOM- und ISSprOM-Nummern. Den Wortlaut kennen wir nicht. Geprüft wird der Posten, nicht die Strecke (ADR 0081). Die Grenzlinie 708 ist eine Linie und wird nicht geprüft. Ein Posten genau auf dem Rand einer Fläche steht darin.", en = "A control must not stand in an out-of-bounds area. That means an out-of-bounds special object of the course and any map area with an out-of-bounds symbol. The research file gives WKB26 A 2.2 and IOF-R 17.2: out-of-bounds areas and impassable symbols are forbidden, per a list of ISOM and ISSprOM numbers. We do not know the original wording. The control is tested, not the leg (ADR 0081). The boundary line 708 is a line and is not tested. A control exactly on the edge of an area stands in it." }
+
+[rules.values]
+# Area symbols of ISSprOM 2019-2: 520 area that shall not be entered, 709 out-of-bounds area,
+# 714 temporary construction or closed area.
+area_symbols = ["520", "709", "714"]
+
 # ---------------------------------------------------------------------------------------------
 # Leg shapes (plan M2b, Task 5)
 

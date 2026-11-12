@@ -204,6 +204,8 @@ check-leg-through-control = { $metres ->
            *[control] control
         } { $stop }, inside its circle radius of { $limit } m
     }
+check-control-in-forbidden-special = control { $code } stands inside the out-of-bounds area { $id }, at { $x }, { $y } mm on the map
+check-control-in-forbidden-map = control { $code } stands inside a map area with the out-of-bounds symbol { $symbol }, at { $x }, { $y } mm on the map
 check-acute-angle = the legs at { $stop_kind ->
         [crossing] crossing point
        *[control] control

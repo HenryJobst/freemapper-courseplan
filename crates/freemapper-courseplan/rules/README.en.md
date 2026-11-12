@@ -72,6 +72,7 @@ the findings that were accepted for it are reported again.
 | `map_edge` | A control, start or finish closer than `metres` to the map edge |
 | `leg_through_control` | A leg passing through another control of the same course |
 | `leg_through_forbidden` | The best running route leads through an out-of-bounds area; not checked until the route analysis exists, so the rule shows among the rules that were not checked |
+| `control_in_forbidden` | A control of a course stands inside an out-of-bounds special object of that course, or inside a map area with a symbol from `area_symbols`; on the edge counts as inside |
 | `acute_angle` | The angle between the legs at a control below `degrees` |
 | `straight_angle` | Angle between the legs at a control above `degrees`, almost straight on |
 | `number_gap` | Distance of the number from the circle below `min_gap_mm` or above `max_gap_mm`; either value may be missing |
@@ -216,3 +217,6 @@ program no longer tests the straight line between two controls against them (ADR
 running route, and a straight line over an out-of-bounds area is normal. Until the route analysis exists,
 `check --all` lists the rule among the rules that were not checked. Uncrossable lines and objects (cliffs, water,
 walls, fences, buildings, bridges) and forbidden routes wait for the route analysis as well.
+
+`control_in_forbidden` reads its map symbols from `area_symbols`: 520 and 709 on forest maps, 520, 709 and 714 on
+sprint and schoolyard maps. The boundary line 708 is a line and is not in the list (ADR 0081).

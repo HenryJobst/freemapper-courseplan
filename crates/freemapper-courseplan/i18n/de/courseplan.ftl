@@ -204,6 +204,8 @@ check-leg-through-control = { $metres ->
            *[control] am Posten
         } { $stop } vorbei, innerhalb des Kreisradius von { $limit } m
     }
+check-control-in-forbidden-special = Posten { $code } steht im Sperrgebiet { $id }, bei { $x }, { $y } mm auf der Karte
+check-control-in-forbidden-map = Posten { $code } steht in einer Kartenfläche mit dem Sperrgebiet-Symbol { $symbol }, bei { $x }, { $y } mm auf der Karte
 check-acute-angle = Die Strecken { $stop_kind ->
         [crossing] an der Querungsstelle
        *[control] am Posten

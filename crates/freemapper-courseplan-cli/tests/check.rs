@@ -201,6 +201,142 @@ fn an_error_finding_exits_1_until_it_is_accepted() {
 }
 
 #[test]
+fn a_control_in_an_out_of_bounds_special_is_an_error_until_it_is_accepted() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    for args in [
+        vec![
+            "special",
+            "add",
+            p,
+            "--kind",
+            "out-of-bounds",
+            "--id",
+            "OB1",
+            "--point",
+            "98,84",
+            "--point",
+            "108,84",
+            "--point",
+            "108,94",
+            "--point",
+            "98,94",
+        ],
+        vec!["control", "add", p, "--at", "103,89"],
+        vec![
+            "course",
+            "add",
+            p,
+            "B",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "33",
+        ],
+    ] {
+        let out = run(d, &args);
+        assert!(out.status.success(), "{args:?}: {}", stderr(&out));
+    }
+    let out = run(d, &["check", p]);
+    assert_eq!(code(&out), Some(1), "{}", stdout(&out));
+    assert!(
+        stdout(&out).contains(
+            "error control 33: control 33 stands inside the out-of-bounds area OB1, at 103, 89 mm on the map \
+             (wkb2026.control.in_forbidden_sprint, WKB26 A 2.2)"
+        ),
+        "{}",
+        stdout(&out)
+    );
+    let de = run_lang(d, "de", &["check", p]);
+    assert!(
+        stdout(&de).contains("Posten 33 steht im Sperrgebiet OB1, bei 103, 89 mm auf der Karte"),
+        "{}",
+        stdout(&de)
+    );
+
+    let accept = [
+        "finding",
+        "accept",
+        p,
+        "wkb2026.control.in_forbidden_sprint",
+        "--controls",
+        "33",
+        "--note",
+        "the area is lifted for this event",
+    ];
+    assert_eq!(code(&run(d, &accept)), Some(0));
+    let out = run(d, &["check", p]);
+    assert_eq!(code(&out), Some(0), "{}", stdout(&out));
+    assert!(stdout(&out).contains("1 accepted"), "{}", stdout(&out));
+}
+
+#[test]
+fn a_control_on_a_map_area_with_an_out_of_bounds_symbol_is_an_error() {
+    // Gleisdreieck has a 714 area (closed area) around (88.2, -82.8) map mm.
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("gleisdreieck.omap");
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples/gleisdreieck/gleisdreieck.omap"),
+        &map,
+    )
+    .unwrap();
+    let out = run(dir.path(), &["init", map.to_str().unwrap()]);
+    assert!(out.status.success(), "{}", stderr(&out));
+    let project = dir.path().join("gleisdreieck.courseplan.toml");
+    let p = project.to_str().unwrap();
+    for args in [
+        vec![
+            "special",
+            "add",
+            p,
+            "--kind",
+            "start",
+            "--id",
+            "S1",
+            "--at=100,-290",
+        ],
+        vec![
+            "special",
+            "add",
+            p,
+            "--kind",
+            "finish",
+            "--id",
+            "F1",
+            "--at=100,-275",
+        ],
+        vec!["control", "add", p, "--at=88.2,-82.8"],
+        vec![
+            "course",
+            "add",
+            p,
+            "A",
+            "--start",
+            "S1",
+            "--finish",
+            "F1",
+            "--controls",
+            "31",
+        ],
+    ] {
+        let out = run(dir.path(), &args);
+        assert!(out.status.success(), "{args:?}: {}", stderr(&out));
+    }
+    let out = run(dir.path(), &["check", p]);
+    assert_eq!(code(&out), Some(1), "{}", stdout(&out));
+    assert!(
+        stdout(&out).contains(
+            "control 31 stands inside a map area with the out-of-bounds symbol 714, at 88.2, -82.8 mm on the map"
+        ),
+        "{}",
+        stdout(&out)
+    );
+}
+
+#[test]
 fn check_help_names_the_exit_codes() {
     let (dir, _) = project();
     let en = stdout(&run(dir.path(), &["help", "check"]));

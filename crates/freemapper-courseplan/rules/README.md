@@ -77,6 +77,7 @@ Schlüssel:
 | `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
 | `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
 | `leg_through_forbidden` | Die optimale Laufroute führt durch ein Sperrgebiet; ungeprüft, bis es die Routenanalyse gibt, die Regel steht deshalb unter den nicht geprüften Regeln |
+| `control_in_forbidden` | Ein Posten einer Bahn steht in einem Sperrgebiet-Sonderobjekt dieser Bahn oder in einer Kartenfläche mit einem Symbol aus `area_symbols`; auf dem Rand gilt als drin |
 | `acute_angle` | Winkel zwischen den Strecken an einem Posten unter `degrees` |
 | `straight_angle` | Winkel zwischen den Strecken an einem Posten über `degrees`, fast geradeaus |
 | `number_gap` | Abstand der Nummer zum Kreis unter `min_gap_mm` oder über `max_gap_mm`; jeder Wert darf fehlen |
@@ -226,3 +227,6 @@ prüft das Programm die gerade Linie zwischen zwei Posten nicht mehr dagegen (AD
 Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Bis es die Routenanalyse gibt, führt `check --all`
 die Regel unter den nicht geprüften Regeln auf. Unpassierbare Linien und Objekte (Felsen, Wasser, Mauern, Zäune,
 Gebäude, Brücken) und verbotene Routen warten ebenfalls auf die Routenanalyse.
+
+`control_in_forbidden` liest seine Kartensymbole aus `area_symbols`: 520 und 709 auf Waldkarten, 520, 709 und 714 auf
+Sprint- und Schulhofkarten. Die Grenzlinie 708 ist eine Linie und steht nicht in der Liste (ADR 0081).
