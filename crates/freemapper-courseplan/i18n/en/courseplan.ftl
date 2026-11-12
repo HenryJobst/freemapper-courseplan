@@ -1621,3 +1621,54 @@ score-sheet-controls-heading = Controls
 score-sheet-col-code = Code
 score-sheet-col-value = Value
 export-course-unused = --course applies only with --csv or --sheet; --iof-xml and --ppen take no course
+
+## update (ADR 0076)
+
+cli-warning-line = warning: { $text }
+cli-help-update = Install a newer freemapper-courseplan from the GitHub releases, after asking. A build from source says how to update it instead
+cli-help-update-exit-codes =
+    Exit code 0: done, or this version is current.
+    Exit code 1: the update failed.
+    Exit code 2: wrong call, for example an unknown option.
+    Exit code 10: with --check, a newer version exists.
+cli-arg-update-check = Only check. Exit code 10 when a newer version exists, 0 when this one is current
+cli-arg-update-yes = Install without asking. Needed when the input is not a terminal
+cli-arg-update-version = Install this version (x.y.z) instead of the newest one, also an older one
+cli-arg-update-rollback = Go back to the version the last update replaced
+cli-arg-update-mode = Store what the daily check does when it finds a newer version (default notify). Works in every build, because it only writes the setting
+update-source-build = This freemapper-courseplan was built from source. Update it with git pull and cargo build --release --locked.
+update-current = freemapper-courseplan { $version } is up to date.
+update-available = freemapper-courseplan { $new } is available (you have { $old }), released { $released }.
+update-details =
+    Release notes: { $notes }
+    Download: { $size } MB
+update-decimal-separator = .
+update-ask = Install it now? [y/N]
+update-not-installed = Nothing was installed.
+update-needs-yes = the input is not a terminal, so freemapper-courseplan cannot ask before installing; run freemapper-courseplan update --yes to install without asking
+update-installing = downloading and checking freemapper-courseplan { $version }
+update-done = freemapper-courseplan updated from { $old } to { $new }. Release notes: { $notes }
+update-mcp-restart = A running MCP server keeps the old version until the AI assistant restarts it.
+update-rolled-back = Went back to freemapper-courseplan { $version }. The version you left is kept as { $path }.
+update-not-writable = cannot write to the program folder { $path }, and freemapper-courseplan does not ask for administrator rights. Unpack the new release there by hand, or move freemapper-courseplan to a folder you can write to.
+update-too-old = freemapper-courseplan { $new } cannot be installed by the self-update of { $old }; install { $needed } or newer by hand, see { $notes }
+update-busy = another update or rollback is running in the program folder (lock file { $path }); wait for it to finish and try again
+update-bad-signature = the release could not be verified ({ $error }); nothing was installed
+update-check-bad-signature = the newest freemapper-courseplan release could not be verified ({ $error }); nothing was installed
+update-no-manifest = the newest release cannot install itself (it has no update manifest); download it from { $page }
+update-no-manifest-version = release { $version } does not exist or cannot install itself (it has no update manifest); see { $page }
+update-no-asset = the release has no program for this system ({ $platform }); nothing was installed
+update-no-previous = there is no previous version to go back to ({ $path } is missing)
+update-failed = the update failed: { $error }
+update-mode-set = Update mode set to { $mode } in { $path }.
+update-mode-env = FREEMAPPER_COURSEPLAN_UPDATE={ $value } overrides this setting while it is set.
+update-mode-failed = could not write { $path }: { $error }
+update-notice = freemapper-courseplan { $new } is available (you have { $old }). Update with: freemapper-courseplan update
+update-applies-next-start = The new version applies from the next start of freemapper-courseplan.
+update-install-failed = freemapper-courseplan { $new } was not installed: { $error }
+update-no-config-dir = no configuration folder on this system; set FREEMAPPER_COURSEPLAN_CONFIG_DIR
+update-mcp-note = Note for the person: freemapper-courseplan { $new } is available (this is { $old }). Ask them before calling install_update.
+update-mcp-needs-confirm = nothing was installed; ask the person first and call install_update with confirm: true once they agree
+update-mcp-note-manual = Note for the person: freemapper-courseplan { $new } is available (this is { $old }), but install_update cannot install it. Install { $needed } or newer by hand, see { $notes }
+update-mcp-note-bad-signature = Note for the person: the newest freemapper-courseplan release could not be verified ({ $error }); nothing was installed. Tell them, and do not install it some other way.
+update-mcp-restart-now = Restart the freemapper-courseplan MCP server now; it still runs the old version.
