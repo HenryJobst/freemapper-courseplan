@@ -330,7 +330,7 @@ Ein Editor gehört zu einem Projekt. Willst du ein zweites öffnen, startest du 
 
 ![Der Editor mit Bahn A auf der Karte Rummelsburger Bucht: links der Baum der Veranstaltung, in der Mitte die Karte mit der Bahn, rechts die Eigenschaften der Bahn, unten die Statusleiste mit den Befundzahlen.](images/editor-overview-de.jpg)
 
-*Der Editor mit Bahn A (vier Posten, 1146 m) auf der Sprintkarte Rummelsburger Bucht. Deutsche Oberfläche. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Der Editor mit Bahn A (fünf Posten, 1226 m) auf der Sprintkarte Rummelsburger Bucht. Deutsche Oberfläche. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ### Die Karte
 
@@ -433,11 +433,11 @@ die Datei, wie sie war, und eine Meldung nennt den Grund.
 
 ### Strecken und Knicke
 
-Eine Strecke ist die Linie zwischen zwei Posten. Klicke sie mit dem Auswahlwerkzeug an, um sie zu wählen.
+Eine Strecke ist die gerade Linie von Posten zu Posten, bis du sie knickst. Klicke sie mit dem Auswahlwerkzeug an, um sie zu wählen.
 
-![Eine gewählte Strecke mit drei Knicken, in Blau mit weißen Punkten gezeichnet, und die Eigenschaften der Strecke mit gesetztem Kästchen „Abgeflaggt“.](images/editor-legs-de.jpg)
+![Eine gewählte Strecke mit drei Knicken, in Blau mit weißen Punkten gezeichnet, daneben eine gestrichelte abgeflaggte Strecke, und die Eigenschaften der gewählten Strecke.](images/editor-legs-de.jpg)
 
-*Eine Strecke, mit dem Werkzeug „Auswählen“ gewählt. Die Strecke von Posten 34 zum Ziel hat drei Knicke (die weißen Punkte) und ist abgeflaggt (die gestrichelte Linie). Die Eigenschaften zeigen die Zahl der Knicke und das Kästchen „Abgeflaggt“. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Eine Strecke, mit dem Werkzeug „Auswählen“ gewählt. Die Strecke von Posten 32 zu Posten 33 hat drei Knicke (die weißen Punkte); die Eigenschaften zeigen ihre Zahl und das Kästchen „Abgeflaggt“. Die gestrichelte Strecke von Posten 35 ins Ziel ist abgeflaggt und hat einen Knick. Diese Knicke habe ich nur für das Bild gesetzt: Strecken sind standardmäßig gerade, und die Bahn des Beispiels hat keinen Knick. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Knick einfügen.** Ziehe an der Linie der gewählten Strecke. Dort, wo du loslässt, entsteht ein Knick.
 - **Knick verschieben oder löschen.** Ziehe einen Knick, um ihn zu verschieben. Ein Klick wählt ihn, Entf löscht ihn.
@@ -454,7 +454,7 @@ automatisch gesetzt, und das Projekt speichert noch keine Lage dafür.
 
 ![Bahnmodus mit Bahn A: die Postennummern neben ihren Kreisen, das Feld 2 mit gestricheltem Rand.](images/editor-numbers-de.jpg)
 
-*Bahnmodus. Die Nummern stehen neben ihren Kreisen. Das Feld 2 hat einen gestrichelten Rand, weil das Programm es gesetzt hat und das Projekt speichert keine Lage dafür. Die Felder 3 und 4 haben eine gesetzte Lage. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Bahnmodus. Die Nummern stehen neben ihren Kreisen. Das Feld 2 hat einen gestrichelten Rand, weil das Programm es gesetzt hat und das Projekt speichert keine Lage dafür. Die Felder 1, 3, 4 und 5 haben eine gesetzte Lage. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Ziehen.** Ziehe im Bahnmodus ein Nummernfeld an eine andere Stelle. Beim Loslassen rechnet der Editor den Ort in
   Richtung und Abstand vom Kreis um und speichert beides für diese Bahn.
@@ -474,9 +474,9 @@ Wähle einen Posten. Seine Eigenschaften führen die Spalten C bis H auf, jede z
 Klappe eine Spalte auf, dann siehst du ihre Symbole als Raster aus Zeichen, jedes mit Nummer und Text in der Sprache
 des Programms. Die Kartenobjekte im Umkreis von 3 mm stehen unter Spalte D.
 
-![Die Eigenschaften eines Postens mit aufgeklappter Spalte D als Raster aus Symbolen, gewählt ist 4.9 Einzelbaum.](images/editor-description-de.jpg)
+![Die Eigenschaften eines Postens mit aufgeklappter Spalte D als Raster aus Symbolen, gewählt ist 5.20 Denkmal.](images/editor-description-de.jpg)
 
-*Posten 33 mit offener Spalte D. Jedes Symbol zeigt Nummer und Namen; gewählt ist 4.9 Einzelbaum. Spalte C bleibt zugeklappt und zeigt ihren aktuellen Wert. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Posten 33 mit offener Spalte D. Jedes Symbol zeigt Nummer und Namen; gewählt ist 5.20 Denkmal. Spalte C bleibt zugeklappt und zeigt ihren aktuellen Wert. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Wählen.** Klicke ein Symbol an oder gehe mit den Pfeiltasten hin (Pos1 und Ende springen zum ersten und letzten)
   und drücke Enter. Tippst du eine Nummer wie `1.3`, springt die Auswahl dorthin. Das Symbol in Gebrauch ist
@@ -553,9 +553,9 @@ Eigenschaften das Score-Fenster.
 
 Eine halbe Sekunde nach jeder Änderung führt der Editor dieselbe Prüfung aus wie `check` und zeigt das Ergebnis.
 
-![Die Befunde von Bahn A in den Eigenschaften: eine Warnung und drei Hinweise, jeweils mit dem Knopf Akzeptieren, und Markierungen an den Strecken der Karte.](images/editor-findings-course-de.jpg)
+![Die Befunde von Bahn A in den Eigenschaften: drei Hinweise, jeweils mit dem Knopf Akzeptieren, und Markierungen an den Strecken der Karte.](images/editor-findings-course-de.jpg)
 
-*Die Befunde von Bahn A. Die Warnung sagt, dass eine gerade Strecke das Sperrgebiet vom vorigen Bild quert. Die drei Hinweise betreffen Winkel. Jeder Befund hat „Akzeptieren...“, und an jeder betroffenen Strecke sitzt eine Markierung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+*Die Befunde von Bahn A. Die drei Hinweise betreffen Winkel: zwei fast geradeaus laufende Posten und ein spitzer Winkel. Für dieses Bild habe ich zwei Posten der Beispielbahn verschoben, die Beispielbahn selbst hat keinen Befund. Jeder Befund hat „Akzeptieren...“, und an jeder betroffenen Strecke sitzt eine Markierung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 ![Die Befundschublade über der rechten Seite des Editors mit den offenen Befunden und den Regeln, die nicht geprüft wurden.](images/editor-findings-de.jpg)
 
