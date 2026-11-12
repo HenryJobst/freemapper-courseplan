@@ -1,0 +1,75 @@
+$ freemapper-courseplan special add kreuzberg.courseplan.toml --kind start --id S-score --at 0,0
+added start S-score at 0,0
+
+$ freemapper-courseplan special add kreuzberg.courseplan.toml --kind finish --id F-score --at 30,0
+added finish F-score at 30,0
+
+$ freemapper-courseplan score suggest kreuzberg.courseplan.toml --start S-score --finish F-score --limit 8
+8 candidates, best route choice first
+-149.141,166.365  521  value 4, route choice 0.91, difficulty 0.28, 221.3 s from the start
+-150.395,12.563  521  value 2, route choice 0.88, difficulty 0.29, 142.2 s from the start
+31.457,123.595  521  value 1, route choice 0.86, difficulty 0.13, 127.8 s from the start
+-53.565,171.04  521  value 3, route choice 0.85, difficulty 0.3, 172.8 s from the start
+-151.17,-165.317  521  value 4, route choice 0.82, difficulty 0.32, 225.0 s from the start
+-72.597,78.734  522  value 1, route choice 0.8, difficulty 0.16, 110.2 s from the start
+-85.399,-75.506  521  value 2, route choice 0.78, difficulty 0.34, 117.5 s from the start
+148.441,167.949  521  value 5, route choice 0.7, difficulty 0.38, 228.2 s from the start
+
+$ freemapper-courseplan score draft kreuzberg.courseplan.toml 'Score 45' --time-limit 45 --start S-score --finish F-score --apply
+wrote score course Score 45: 27 controls, 80 points
+34  value 4  at -179.73,-211.651
+65  value 5  at 189.069,-146.188
+64  value 4  at -187.116,199.996
+83  value 3  at 193.276,128.888
+41  value 1  at 122.673,15.482
+62  value 2  at 10.904,180.639
+63  value 3  at -193.101,30.606
+75  value 5  at 57.265,-110.061
+43  value 3  at -132.125,-111.678
+61  value 1  at 122.977,50.587
+81  value 1  at -94.686,173.135
+52  value 2  at 109.141,99.697
+42  value 2  at -110.075,43.958
+93  value 3  at 103.382,185.967
+35  value 5  at 186.148,-226.729
+44  value 4  at 131.073,-84.205
+71  value 1  at 40.859,94.329
+53  value 3  at -202.835,-42.694
+33  value 3  at -106.711,-190.764
+31  value 1  at -54.786,-48.923
+74  value 4  at 186.227,200.957
+45  value 5  at 85.284,-204.879
+73  value 3  at 184.535,52.581
+54  value 4  at -139.312,127.192
+51  value 1  at -28.257,48.219
+55  value 5  at 31.326,-157.333
+32  value 2  at 124.062,-22.703
+good runner: 74 of 80 points, 92.5 percent (band 87 to 93 percent)
+very good runner: 80 points, finishes after 99.2 percent of the limit (band 95 to 100 percent)
+both runners are inside the bands
+
+$ freemapper-courseplan score length kreuzberg.courseplan.toml 'Score 45'
+Score 45: 27 controls, time limit 45 minutes
+good runner: 74 of 80 points, 92.5 percent (band 87 to 93 percent)
+very good runner: 80 points, finishes after 99.2 percent of the limit (band 95 to 100 percent)
+both runners are inside the bands
+
+$ freemapper-courseplan info kreuzberg.courseplan.toml
+title: Berlin Kreuzberg Schöneberg
+map: kreuzberg.omap
+map kind: sprint
+rule profile: wkb-2026
+controls: 27, crossing points: 0
+courses: 1 (individual 0, team 0, relay 0, score 1)
+classes: 0
+score course Score 45: 27 controls, 80 points, time limit 45 minutes
+
+$ freemapper-courseplan export kreuzberg.courseplan.toml --iof-xml course-data.xml
+wrote 1 course to course-data.xml
+
+$ freemapper-courseplan export kreuzberg.courseplan.toml --csv score-45.csv --course 'Score 45'
+wrote the control list of Score 45 to score-45.csv
+
+$ freemapper-courseplan export kreuzberg.courseplan.toml --sheet score-45.sheet.md --course 'Score 45'
+wrote the evaluation sheet of Score 45 to score-45.sheet.md
+

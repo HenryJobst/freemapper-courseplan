@@ -15,6 +15,13 @@ Every fixture file is listed here with its source, date and licence. Files made 
 | `crates/freemapper-courseplan/tests/fixtures/placement/cases.toml` | freemapper-core tag `v0.6.0` (commit `6d0e152`), `crates/freemapper-course/tests/fixtures/placement/cases.toml`; copied byte for byte. Shared number placement cases (format in its header). | 2026-11-10 | GPL-3.0-or-later (freemapper-core) |
 | `crates/freemapper-courseplan/tests/fixtures/placement/luebeck-sprint-auto.toml` | Made here: `auto_place(keep_existing = false)` of every course of `examples/luebeck-sprint`, written by `PLACEMENT_CASES_DUMP=1 cargo test -p freemapper-courseplan --test placement_cases`. | 2026-11-10 | GPL-3.0-or-later |
 
+The Berlin example is not a fixture, but its map is a third-party data product, so its provenance sits here too (the example README has the details):
+
+| File | Source | Date | Licence |
+|---|---|---|---|
+| `examples/berlin-kreuzberg/kreuzberg.omap` | Made with freemapper 0.12.0 from the polygon lon 13.3640 to 13.3860, lat 52.4890 to 52.5040 (kind sprint, 1:4000, title "Berlin Kreuzberg Schöneberg"). Data: OpenStreetMap extract of 2026-11-06; Geoportal Berlin ALKIS, K5, Baumbestand, Straßenbefahrung 2014, Öffentliche Beleuchtung, Zierbrunnen, Trinkwasserbrunnen, Gebäudehöhen; orthophoto, DTM and image DSM tiles of GeoBasis-DE/LGB (see `freemapper.toml` there for tiles and currency). Credits in `ATTRIBUTION.txt` next to it. | 2026-11-11 | OpenStreetMap contributors, ODbL; GeoBasis-DE/LGB 2026, dl-de/by-2-0; Geoportal Berlin, dl-de/zero-2-0 (data changed) |
+| `examples/berlin-kreuzberg/ATTRIBUTION.txt`, `freemapper.toml` | Written by freemapper with the map. Copied unchanged; the `templates/` and `data/` folders of the freemapper project are not part of this repository. | 2026-11-11 | As the map |
+
 The `.ppen` files keep their CRLF line ends and byte order mark (`.gitattributes`: `*.ppen -text`), so their
 hashes stay those of the originals. Their maps are not in this repository: Lincoln Park is a 1:5000 bitmap,
 Overlapper and sampleevent8 have no map. The import test (`crates/freemapper-courseplan/tests/ppen_import.rs`)

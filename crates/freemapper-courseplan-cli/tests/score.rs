@@ -198,6 +198,29 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     );
 }
 
+/// The Berlin score example (examples/berlin-kreuzberg/README.en.md): 45 minutes, both bands met on a fresh
+/// evaluation, and `check` quiet apart from the accepted code pair.
+#[test]
+fn berlin_score_example_meets_its_bands_and_check_is_quiet() {
+    let project = repo_root().join("examples/berlin-kreuzberg/kreuzberg.courseplan.toml");
+    let p = project.to_str().unwrap();
+    let o = run("en", &["score", "length", p, "Score 45"]);
+    assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
+    let text = out(&o);
+    assert!(
+        text.contains("27 controls, time limit 45 minutes"),
+        "{text}"
+    );
+    assert!(text.contains("both runners are inside the bands"), "{text}");
+    let o = run("en", &["check", p]);
+    assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
+    assert!(
+        out(&o).contains("0 errors, 0 warnings, 0 hints; 1 accepted"),
+        "{}",
+        out(&o)
+    );
+}
+
 #[test]
 fn score_course_round_trips_through_cli() {
     let (_dir, project) = luebeck();

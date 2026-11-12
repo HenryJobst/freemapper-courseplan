@@ -1,0 +1,13 @@
+$ freemapper-courseplan check kreuzberg.courseplan.toml
+event:
+  warning controls 63, 93: codes 63 and 93 in score course Score 45 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+0 errors, 1 warning, 0 hints; 0 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan finding accept kreuzberg.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note 'The draft takes both codes from the default range. The two controls stand about 1.3 km apart.'
+accepted finding wkb2026.score.code_ambiguity at controls 63, 93
+
+$ freemapper-courseplan check kreuzberg.courseplan.toml
+0 errors, 0 warnings, 0 hints; 1 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+

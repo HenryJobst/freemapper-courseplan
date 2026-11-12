@@ -51,10 +51,10 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Sketch of a sprint course in Lübeck's old town"></a>
 
-A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a score course with 9 controls and a 15-minute limit. The image is a sketch:
+A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a short score course (9 controls, 15 minutes); the map is too small for more. The image is a sketch:
 the map comes from freemapper-print, the course is drawn on top. Commands, project file and output are in
 [`examples/luebeck-sprint`](examples/luebeck-sprint/); [`examples/README.en.md`](examples/README.en.md) lists all
-examples.
+examples. For a score course of the usual size, 45 minutes, see [`examples/berlin-kreuzberg`](examples/berlin-kreuzberg/): a map of Berlin-Kreuzberg made with freemapper from open data.
 
 ```text
 $ freemapper-courseplan info luebeck-sprint.courseplan.toml
@@ -99,7 +99,7 @@ has a Score panel, and `export --csv` and `export --sheet` write the control lis
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
 length bands as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
-[user manual](docs/manual/en.md#score-courses) explains it, the Lübeck example holds a finished course, and the
+[user manual](docs/manual/en.md#score-courses) explains it, the [Berlin example](examples/berlin-kreuzberg/) holds a finished 45-minute course, and the
 decisions are in ADR 0060 to 0070.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with

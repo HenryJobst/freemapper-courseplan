@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0" createTime="2026-11-12T00:28:58Z" creator="freemapper-courseplan">
+  <Event>
+    <Name>Berlin Kreuzberg Schöneberg</Name>
+  </Event>
+  <RaceCourseData>
+    <Map>
+      <Scale>4000</Scale>
+      <MapPositionTopLeft x="0" y="0" unit="mm"/>
+      <MapPositionBottomRight x="0" y="0" unit="mm"/>
+    </Map>
+    <Control type="Start">
+      <Id>S-score</Id>
+      <Position lat="52.496500" lng="13.375000"/>
+      <MapPosition x="0" y="0" unit="mm"/>
+    </Control>
+    <Control type="Finish">
+      <Id>F-score</Id>
+      <Position lat="52.496403" lng="13.376760"/>
+      <MapPosition x="30" y="0" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>34</Id>
+      <Position lat="52.504660" lng="13.365582"/>
+      <MapPosition x="-179.73" y="-211.65" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>65</Id>
+      <Position lat="52.501119" lng="13.386869"/>
+      <MapPosition x="189.07" y="-146.19" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>64</Id>
+      <Position lat="52.489947" lng="13.362963"/>
+      <MapPosition x="-187.12" y="200" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>83</Id>
+      <Position lat="52.491258" lng="13.385650"/>
+      <MapPosition x="193.28" y="128.89" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>41</Id>
+      <Position lat="52.495547" lng="13.382113"/>
+      <MapPosition x="122.67" y="15.48" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>62</Id>
+      <Position lat="52.489998" lng="13.374679"/>
+      <MapPosition x="10.9" y="180.64" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>63</Id>
+      <Position lat="52.496031" lng="13.363511"/>
+      <MapPosition x="-193.1" y="30.61" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>75</Id>
+      <Position lat="52.500254" lng="13.378945"/>
+      <MapPosition x="57.27" y="-110.06" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>43</Id>
+      <Position lat="52.500927" lng="13.367843"/>
+      <MapPosition x="-132.13" y="-111.68" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>61</Id>
+      <Position lat="52.494290" lng="13.381944"/>
+      <MapPosition x="122.98" y="50.59" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>81</Id>
+      <Position lat="52.490609" lng="13.368526"/>
+      <MapPosition x="-94.69" y="173.14" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>52</Id>
+      <Position lat="52.492576" lng="13.380871"/>
+      <MapPosition x="109.14" y="99.7" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>42</Id>
+      <Position lat="52.495283" lng="13.368310"/>
+      <MapPosition x="-110.08" y="43.96" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>93</Id>
+      <Position lat="52.489507" lng="13.380074"/>
+      <MapPosition x="103.38" y="185.97" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>35</Id>
+      <Position lat="52.504012" lng="13.387127"/>
+      <MapPosition x="186.15" y="-226.73" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>44</Id>
+      <Position lat="52.499089" lng="13.383137"/>
+      <MapPosition x="131.07" y="-84.21" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>71</Id>
+      <Position lat="52.492990" lng="13.376895"/>
+      <MapPosition x="40.86" y="94.33" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>53</Id>
+      <Position lat="52.498686" lng="13.363329"/>
+      <MapPosition x="-202.84" y="-42.69" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>33</Id>
+      <Position lat="52.503676" lng="13.369754"/>
+      <MapPosition x="-106.71" y="-190.76" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>31</Id>
+      <Position lat="52.498429" lng="13.372047"/>
+      <MapPosition x="-54.79" y="-48.92" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>74</Id>
+      <Position lat="52.488701" lng="13.384853"/>
+      <MapPosition x="186.23" y="200.96" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>45</Id>
+      <Position lat="52.503558" lng="13.381093"/>
+      <MapPosition x="85.28" y="-204.88" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>73</Id>
+      <Position lat="52.494018" lng="13.385544"/>
+      <MapPosition x="184.54" y="52.58" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>54</Id>
+      <Position lat="52.492398" lng="13.366153"/>
+      <MapPosition x="-139.31" y="127.19" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>51</Id>
+      <Position lat="52.494865" lng="13.373086"/>
+      <MapPosition x="-28.26" y="48.22" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>55</Id>
+      <Position lat="52.502031" lng="13.377675"/>
+      <MapPosition x="31.33" y="-157.33" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>32</Id>
+      <Position lat="52.496910" lng="13.382398"/>
+      <MapPosition x="124.06" y="-22.7" unit="mm"/>
+    </Control>
+    <Course>
+      <Name>Score 45</Name>
+      <CourseControl type="Start">
+        <Control>S-score</Control>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>34</Control>
+        <Score>4</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>65</Control>
+        <Score>5</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>64</Control>
+        <Score>4</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>83</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>41</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>62</Control>
+        <Score>2</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>63</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>75</Control>
+        <Score>5</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>43</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>61</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>81</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>52</Control>
+        <Score>2</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>42</Control>
+        <Score>2</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>93</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>35</Control>
+        <Score>5</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>44</Control>
+        <Score>4</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>71</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>53</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>33</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>31</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>74</Control>
+        <Score>4</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>45</Control>
+        <Score>5</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>73</Control>
+        <Score>3</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>54</Control>
+        <Score>4</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>51</Control>
+        <Score>1</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>55</Control>
+        <Score>5</Score>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>32</Control>
+        <Score>2</Score>
+      </CourseControl>
+      <CourseControl type="Finish">
+        <Control>F-score</Control>
+      </CourseControl>
+      <Extensions>
+        <fcp:ScoreCourse xmlns:fcp="https://github.com/HenryJobst/freemapper-courseplan/ns/score/1" timeLimitMin="45" penaltyPerMin="5">
+        </fcp:ScoreCourse>
+      </Extensions>
+    </Course>
+  </RaceCourseData>
+</CourseData>

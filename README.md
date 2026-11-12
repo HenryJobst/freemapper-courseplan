@@ -50,10 +50,10 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 <a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Skizze einer Sprintbahn in der Lübecker Altstadt"></a>
 
-Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine Score-Bahn mit 9 Posten und 15 Minuten Limit. Das Bild ist eine
+Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine kurze Score-Bahn (9 Posten, 15 Minuten); die Karte ist für mehr zu klein. Das Bild ist eine
 Skizze: Die Karte stammt aus freemapper-print, die Bahn ist darübergezeichnet. Befehle, Projektdatei und Ausgaben
 stehen unter [`examples/luebeck-sprint`](examples/luebeck-sprint/); alle Beispiele zeigt
-[`examples/README.md`](examples/README.md).
+[`examples/README.md`](examples/README.md). Eine Score-Bahn in üblicher Größe, 45 Minuten, zeigt [`examples/berlin-kreuzberg`](examples/berlin-kreuzberg/): eine mit freemapper aus offenen Daten gemachte Karte von Berlin-Kreuzberg.
 
 ```text
 $ freemapper-courseplan info luebeck-sprint.courseplan.toml
@@ -98,8 +98,8 @@ Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben 
 Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferprofile sind eine
 erste Fassung; nimm die Längenbänder als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
 KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
-[Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das Lübecker Beispiel enthält eine fertige
-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
+[Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Berliner Beispiel](examples/berlin-kreuzberg/) enthält eine fertige
+45-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz

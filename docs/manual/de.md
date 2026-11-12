@@ -692,7 +692,7 @@ sie nicht; acht eigene Regeln lesen die Postenmenge, das Limit und die Verbindun
 
 Mehrere dieser Grenzen sind Vorschläge von freemapper-courseplan, keine Werte aus einer Quelle; die Quelle in der
 Zeile sagt, welche. Einen Befund an einem Postenpaar akzeptierst du mit `--controls`, einen an der ganzen Bahn mit
-`--course`, wie im Beispiel `examples/luebeck-sprint/score-check.de.txt`. Mannschafts- und Staffelbahnen bleiben
+`--course`, wie in den Beispielen `examples/luebeck-sprint/score-check.de.txt` und `examples/berlin-kreuzberg/check.de.txt`. Mannschafts- und Staffelbahnen bleiben
 ungeprüft.
 
 ### Eine Ausnahme begründen
