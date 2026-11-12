@@ -1123,6 +1123,17 @@ mod tests {
     /// Sample values for every variable the catalogs use.
     fn sample_args() -> Vec<(&'static str, FluentValue<'static>)> {
         [
+            "new",
+            "old",
+            "released",
+            "notes",
+            "size",
+            "mode",
+            "page",
+            "platform",
+            "needed",
+            "current",
+            "text",
             "code",
             "name",
             "id",
