@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.14.1] - 2026-11-12
+
 ### Hinzugefügt
 
 - Bildschirmfotos im Handbuch, Kapitel 4. Je Sprache vierzehn Bilder zeigen den Editor auf den Beispielkarten von Remo Madella (Rummelsburger Bucht für die Sprintbahn, Gleisdreieck für die Score-Bahn): die ganze Seite, einen Posten, eine Bahn mit ihren Kategorien, eine abgeflaggte Strecke mit Knicken, Postennummern, Postenbeschreibungen, ein Sonderobjekt, Befunde, das Menü „Veranstaltung“, den Dialog zum Export nach Purple Pen und das Score-Fenster mit Kandidaten, einem Entwurf und der übernommenen Bahn. Das deutsche Handbuch zeigt die deutsche Oberfläche, das englische die englische. Jede Bildunterschrift nennt die Karte und verweist auf die `ATTRIBUTION.txt` des Beispiels.
