@@ -1,10 +1,10 @@
-# Auswertungsbogen für Score 33
+# Auswertungsbogen für Score 34
 
 - Veranstaltung: Score-Bahn Gleisdreieck
-- Zeitlimit: 33 Minuten
+- Zeitlimit: 34 Minuten
 - Abzug: 5 Punkte für jede angefangene Minute über dem Limit. Die Bahn legt keinen Abzug fest, das ist der Standard.
 - Bei gleicher Punktzahl gewinnt, wer schneller ist.
-- Punkte insgesamt: 83 auf 27 Posten
+- Punkte insgesamt: 95 auf 33 Posten
 
 ## Pflichtverbindungen
 
@@ -35,9 +35,15 @@ Diese Bahn hat keine Pflichtverbindungen.
 | 64 | 4 |
 | 65 | 5 |
 | 71 | 1 |
+| 72 | 2 |
 | 73 | 3 |
+| 74 | 4 |
 | 75 | 5 |
 | 81 | 1 |
+| 82 | 2 |
 | 83 | 3 |
-| 85 | 5 |
-| 95 | 5 |
+| 84 | 4 |
+| 91 | 1 |
+| 92 | 2 |
+| 93 | 3 |
+| 94 | 4 |

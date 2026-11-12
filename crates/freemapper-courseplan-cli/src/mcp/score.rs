@@ -13,8 +13,8 @@ use freemapper_courseplan::score::travel::{
     CostSurface, Pace, RouteParams, SharedRoutes, TravelTime,
 };
 use freemapper_courseplan::score::{
-    Draft, DraftFailure, DraftRequest, Hint, LengthIssue, LengthReport, ScoreError, ScoredControl,
-    Tour, analyse_length, draft,
+    BandState, Draft, DraftFailure, DraftRequest, Hint, LengthIssue, LengthReport, ScoreError,
+    ScoredControl, Tour, analyse_length, draft,
 };
 use freemapper_courseplan::text::{FluentValue, Localize, text};
 use freemapper_courseplan_model::{
@@ -101,6 +101,15 @@ fn metres_to_mm(metres: f64, scale: u32) -> f64 {
 /// The forbidden-route margin of the candidates in map millimetres.
 fn line_margin_mm(scale: u32) -> f64 {
     FORBIDDEN_LINE_MARGIN_M * 1000.0 / f64::from(scale.max(1))
+}
+
+/// The name of a band state in the answers (ADR 0083).
+fn state_name(state: BandState) -> &'static str {
+    match state {
+        BandState::InBand => "in_band",
+        BandState::Near => "near",
+        BandState::Missed => "missed",
+    }
 }
 
 fn round1(x: f64) -> f64 {
@@ -481,7 +490,7 @@ impl CoursePlanServer {
         };
         let length = match report {
             Some(report) => self.length_json(&report, &codes, &settings),
-            None => json!({ "all_points": 0, "ok": true, "issues": [] }),
+            None => json!({ "all_points": 0, "ok": true, "state": "in_band", "issues": [] }),
         };
         Ok(json!({
             "name": name,
@@ -492,7 +501,7 @@ impl CoursePlanServer {
     }
 
     /// The words of one miss and its size: percentage points, or points for a missed control.
-    fn issue_json(&self, issue: &LengthIssue, all_points: u32) -> Value {
+    fn issue_json(&self, issue: &LengthIssue, all_points: u32, tolerance: u8) -> Value {
         let t = |id: &str, args: &[(&str, FluentValue<'static>)]| text(&self.lang, id, args);
         let band = |b: &(u8, u8)| [("low", v(b.0)), ("high", v(b.1))];
         let (kind, miss, words) = match issue {
@@ -541,14 +550,38 @@ impl CoursePlanServer {
                 )
             }
         };
-        json!({ "kind": kind, "miss": miss, "text": words })
+        // A deviation within the tolerance is a success that the report names (ADR 0083).
+        let near = issue.is_near(tolerance);
+        let words = if near {
+            format!(
+                "{words} {}",
+                t("score-near-suffix", &[("tolerance", v(tolerance))])
+            )
+        } else {
+            words
+        };
+        json!({
+            "kind": kind,
+            "miss": miss,
+            "state": if near { "near" } else { "missed" },
+            "text": words,
+        })
     }
 
     fn length_json(&self, r: &LengthReport, codes: &[String], s: &ScoreSettings) -> Value {
         json!({
             "all_points": r.all_points,
-            "ok": r.issues.is_empty(),
+            "ok": r.is_ok(),
+            "state": state_name(if r.issues.is_empty() {
+                BandState::InBand
+            } else if r.is_ok() {
+                BandState::Near
+            } else {
+                BandState::Missed
+            }),
+            "tolerance_percent": r.tolerance_percent,
             "good": {
+                "state": state_name(r.state(true)),
                 "points": r.good.points,
                 "percent": round1(r.good_percent),
                 "time_s": round1(r.good.time_s),
@@ -556,13 +589,14 @@ impl CoursePlanServer {
                 "band_percent": [s.good_band_percent.0, s.good_band_percent.1],
             },
             "very_good": {
+                "state": state_name(r.state(false)),
                 "points": r.very_good.points,
                 "finish_percent": round1(r.very_good_finish_percent),
                 "time_s": round1(r.very_good.time_s),
                 "order": tour_json(&r.very_good, codes)["order"],
                 "band_percent": [s.very_good_band_percent.0, s.very_good_band_percent.1],
             },
-            "issues": r.issues.iter().map(|i| self.issue_json(i, r.all_points)).collect::<Vec<_>>(),
+            "issues": r.issues.iter().map(|i| self.issue_json(i, r.all_points, r.tolerance_percent)).collect::<Vec<_>>(),
         })
     }
 
@@ -575,7 +609,7 @@ impl CoursePlanServer {
             .issues
             .iter()
             .map(|i| {
-                self.issue_json(i, all)["text"]
+                self.issue_json(i, all, f.best.report.tolerance_percent)["text"]
                     .as_str()
                     .unwrap_or_default()
                     .to_owned()

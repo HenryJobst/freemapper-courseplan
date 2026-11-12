@@ -13,6 +13,7 @@
 pub(crate) mod codes;
 mod context;
 mod distance;
+mod forbidden;
 mod geometry;
 mod legs;
 mod numbers;
@@ -22,6 +23,8 @@ mod stops;
 mod tables;
 
 pub use context::{CheckContext, CourseContext, ScoreControlRef, ScoreCourseContext};
+pub(crate) use forbidden::SPRINT_AREA_SYMBOLS;
+pub(crate) use geometry::point_in_area;
 pub use geometry::{drawn_part, drawn_part_between};
 
 use freemapper_courseplan_model::{
@@ -700,6 +703,11 @@ pub const CHECKS: &[Check] = &[
         "leg_through_forbidden",
         distance::leg_through_forbidden,
         &[Place::Leg],
+    ),
+    Check::at(
+        "control_in_forbidden",
+        forbidden::control_in_forbidden,
+        &[Place::Control],
     ),
     Check::at("acute_angle", legs::acute_angle, &[Place::Leg]),
     Check::at("straight_angle", legs::straight_angle, &[Place::Leg]),

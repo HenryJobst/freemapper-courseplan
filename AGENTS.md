@@ -24,13 +24,19 @@ Tell the person these limits before you start:
 - Individual and score courses can be edited and checked. `info` gives a length for individual courses only; a
   score course is measured with `score length`. Team and relay courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
-  `score draft` and `score length` read the map and search routes, so they take seconds: about 2 to 4 s for a draft on the 1.2 x 1.0 km Rummelsburger Bucht map (`score suggest` 2.3 s, a 15-minute draft 2.4 s, a 20-minute draft 3.6 s), and about 4.5 s for `score suggest`, 23 s for a 33-minute `score draft` and 2.7 s for `score length` on the 1.2 x 1.8 km Gleisdreieck map (release build, an idle machine, measured 2026-11-12; a draft that misses the bands can take as long or longer). Neither map reaches the usual 45 minutes. The largest limit reached on Gleisdreieck is 33 minutes, on the Rummelsburger Bucht about 20; a 45-minute score course needs a larger map than either. `examples/gleisdreieck` holds the 33-minute course. A draft
+  `score draft` and `score length` read the map and search routes, so they take seconds: about 2 to 4 s for a draft on the 1.2 x 1.0 km Rummelsburger Bucht map (`score suggest` 2.3 s, a 15-minute draft 2.4 s, a 20-minute draft 3.6 s), and about 2 s for `score suggest`, 15 s for a 34-minute `score draft` and 2 s for `score length` on the 1.2 x 1.8 km Gleisdreieck map (release build, measured 2026-11-12 on a busy shared machine, so an idle one may be faster; a draft that misses the targets can take as long or longer). Neither map reaches the usual 45 minutes. The largest limit reached on Gleisdreieck is 34 minutes with the good runner 1.7 points above its band, so near the target; the largest with both runners inside their bands is 31. The Rummelsburger Bucht reaches about 20; a 45-minute score course needs a larger map than either. `examples/gleisdreieck` holds the 34-minute course. A draft
   has to start and finish outside buildings and blocked areas, or the program says the start cannot be reached.
   The routes come from a raster of the map symbols, without elevation.
-  A draft can miss the length bands, for example when the free codes run out before the bands are met (30
-  controls at the highest value 5, 54 at 9) or when the map has too few usable sites. The command then exits with 1,
-  names each missed band and ends with a hint. Try another limit or a higher `score settings --value-max`, and tell
-  the person what happened.
+  The length bands are targets with a tolerance (ADR 0083): the good runner scores 87 to 93 percent of all points, the
+  very good runner finishes after 95 to 100 percent of the limit, and 3 percentage points beyond either band still
+  count as near the target. A draft or `score length` is then a success with exit 0 and names the deviation; the JSON
+  answers say `in_band`, `near` or `missed` in `length.state`. The bands and the tolerance are settings (`score
+  settings --good-band MIN-MAX --very-good-band MIN-MAX --band-tolerance N`, tool `set_score_settings`, the Score panel
+  of the editor); change them only when the person asks. A draft can miss the targets beyond the tolerance, for
+  example when the free codes run out before they are met (30 controls at the highest value 5, 54 at 9) or when the
+  map has too few usable sites. The command then exits with 1, names each missed band and ends with a hint. Try
+  another limit or a higher `score settings --value-max`, and tell the person what happened. Sites inside or on the
+  edge of an out-of-bounds map area (symbols 520, 709, 714) are never suggested or drafted (ADR 0082).
 - The score extension in the IOF XML (time limit, penalty, links, in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1`) is not tried in OE or any other reader; a strict reader may ignore it. The `Score` values are standard.
 - The IOF XML export has not been tried in OE, because nobody on the project has OE. The Purple Pen export opens in
   Purple Pen 4.0 (checked once by the author).
@@ -45,11 +51,13 @@ Tell the person these limits before you start:
   for freemapper-print.
 - The route analysis is missing. The rule that the best route must not lead through an out-of-bounds area is not
   checked and shows among the rules that were not checked. A straight leg across such an area gets no finding: the
-  line between controls is not the running route (ADR 0080). `check` does not test whether a control stands inside
-  an out-of-bounds area; look at it.
+  line between controls is not the running route (ADR 0080). `check` does report a control that stands inside an
+  out-of-bounds area, either a special object of its course or a map area with the symbol 520, 709 or 714 (709 and
+  520 on forest maps), as an error (ADR 0081). It does not test start, finish, crossing points or controls that are on
+  no course; look at those yourself.
 - OCAD is not needed and not tested.
-- `check` tests distances, angles and codes, not whether a control stands at the right feature. The person looks
-  at every position on the map.
+- `check` tests distances, angles, codes and out-of-bounds areas, not whether a control stands at the right feature.
+  The person looks at every position on the map.
 
 ## Install
 
@@ -158,8 +166,8 @@ freemapper-courseplan check hall.courseplan.toml
 | `list controls\|courses\|specials\|classes` | The details as a table; `--json` gives the MCP answer. |
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
-| `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
-| `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--course NAME` for the start and finish of a score course, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles meet the length bands; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band exits with 1 and names each miss and what would help. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
+| `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--good-band`, `--very-good-band`, `--band-tolerance`, `--mix-hard`, `--seed`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
+| `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--course NAME` for the start and finish of a score course, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles reach the target length bands, within a tolerance; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band beyond the tolerance exits with 1 and names each miss and what would help; one near the target exits with 0 and names the deviation. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
 | `export --csv FILE --course NAME`, `export --sheet FILE --course NAME` | Control list (`code,value,x_mm,y_mm`, map millimetres) and Markdown evaluation sheet of a score course; other courses are refused. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
@@ -268,11 +276,11 @@ whole number.
 | `set_score_controls` | `name`, `controls` | Replaces the controls: a list of `{code, value?}`. Without `value` the code gives it (second digit of a two-digit code, last digit of a longer one); a different value is refused. |
 | `set_control_value` | `name`, `code`, `value` | Accepts only the value the code carries (repairs a drifted file); to change a value, change the code. |
 | `add_score_link`, `remove_score_link` | `name`, `a`, `b` | Mandatory link between two controls of a score course, either direction. A runner who skips it is disqualified. At most two links per control, no ring. |
-| `set_score_settings` | `value_max?`, `good_pace_s_per_km?`, `very_good_pace_s_per_km?`, `mix_hard_percent?`, `seed?` | Event-wide score settings (no `name`, takes `project` only). |
+| `set_score_settings` | `value_max?`, `good_pace_s_per_km?`, `very_good_pace_s_per_km?`, `good_band_percent?`, `very_good_band_percent?`, `band_tolerance_percent?`, `mix_hard_percent?`, `seed?`, … | Event-wide score settings (no `name`, takes `project` only). The bands are `[low, high]` percent (the good runner scores that share of all points, the very good runner finishes after that share of the limit), the tolerance is 0 to 10 percentage points beyond a band that still count as near the target (default 3). |
 | `set_score_course_details` | `name`, `time_limit_min?`, `penalty_per_min?`, `no_penalty?` | Time limit and penalty of a score course; `no_penalty` goes back to the default penalty. |
 | `score_suggest` | `limit?`, `min_distance_mm?`, `start?`, `finish?` | Control site candidates, best route choice first: position, `symbol_code`, `route_choice`, `difficulty`, `effort_s`, suggested `value`, and a free `code` that carries that value (`null` when no free code is left; only the best-ranked candidates get one, so the code space is not overrun). Writes nothing. Takes seconds. |
-| `score_draft` | `name`, `time_limit_min`, `start?`, `finish?`, `links?`, `apply?` | Draft of a score course: controls with code, value and position, and the length report. `links` is a list of `{a: {x, y}, b: {x, y}}`, each end a position from `score_suggest`. Writes only with `apply: true`. A draft that misses a band is an error result with one sentence per miss and the hint. |
-| `score_length` | `name` | Round trips of both runner profiles on an existing score course, with the bands and each miss. Reports only. |
+| `score_draft` | `name`, `time_limit_min`, `start?`, `finish?`, `links?`, `apply?` | Draft of a score course: controls with code, value and position, and the length report. `links` is a list of `{a: {x, y}, b: {x, y}}`, each end a position from `score_suggest`. Writes only with `apply: true`. `length.state` is `in_band`, `near` (within the tolerance, a success) or `missed`. A draft that misses a band beyond the tolerance is an error result with one sentence per miss and the hint. |
+| `score_length` | `name` | Round trips of both runner profiles on an existing score course, with the bands, `length.state` and each deviation. Reports only. |
 | `place_numbers` | `name`, `overwrite?` | Places the control numbers automatically; call again after changing legs. |
 | `set_course_number` | `name`, `after`, `direction?`, `gap_mm?`, `clear?` | Number placement of one control in one course. |
 | `check` | none | Tests the individual and score courses against the rule profile. |
@@ -364,9 +372,9 @@ Texts as the English catalog has them:
   `score draft` and `score length` need a start and finish outside buildings and blocked areas. Add a new start or
   finish with `special add` at a free position (`map near` shows what lies there); do not move the person's own.
 - `The good runner scores 100 percent of all points ...` or `The very good runner ...` (`score draft`, exit 1): the
-  draft misses a length band and names the miss. The last line gives a hint, such as a shorter limit, too few
+  draft misses a length band beyond the tolerance and names the miss. The last line gives a hint, such as a shorter limit, too few
   suitable sites on the map, or free codes that run out (raise the highest value or free codes). Try another limit and tell the person which band was missed; never present such a draft as a
-  success.
+  success. A draft near the target is a success; say that it is near and by how much.
 - `<path> has no link to a Purple Pen file. Link it first with export --ppen FILE or import --ppen FILE`: link
   the project before `sync`.
 - `<path> changed while the sync ran, probably because Purple Pen saved it. Nothing was written. Run sync again`:

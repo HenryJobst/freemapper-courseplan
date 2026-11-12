@@ -693,3 +693,45 @@ fn the_local_search_keeps_links_and_the_high_value_gap() {
     let gap = f64::from(w.settings.high_value_gap_m) * 1000.0 / f64::from(w.scale);
     assert_eq!(close_high_pairs(&d, w.settings.high_from(), gap), 0);
 }
+
+// --- The bands are targets; the tolerance only decides what may be returned (ADR 0083) --------------------------
+
+#[test]
+fn a_draft_near_the_target_succeeds_and_names_the_deviation() {
+    // A band no count of this fixture hits: the good runner lands 1 to 5 points beside it.
+    let mut w = World::new(grid(4), ok_limit(&grid(4)));
+    w.settings.good_band_percent = (95, 95);
+    w.settings.band_tolerance_percent = 0;
+    let strict = w.run();
+    w.settings.band_tolerance_percent = 6;
+    let d = w.run().expect("within the tolerance");
+    assert!(d.report.is_ok());
+    if strict.is_err() {
+        assert!(!d.report.issues.is_empty(), "the deviation is named: {d:?}");
+        assert!(d.report.near().count() > 0);
+        assert_eq!(d.report.misses().count(), 0);
+    }
+}
+
+#[test]
+fn an_exact_draft_stays_exact_with_a_tolerance() {
+    let mut w = World::new(grid(4), ok_limit(&grid(4)));
+    let exact = w.run().expect("a draft");
+    assert!(exact.report.issues.is_empty());
+    w.settings.band_tolerance_percent = 10;
+    // The search aims at the band, not at the edge of the tolerance.
+    let wide = w.run().expect("a draft");
+    assert!(wide.report.issues.is_empty(), "{wide:?}");
+    assert_eq!(wide.controls.len(), exact.controls.len());
+}
+
+#[test]
+fn beyond_the_tolerance_a_draft_fails_with_the_misses_only() {
+    let mut w = World::new(grid(4), too_long(&grid(4)));
+    w.settings.band_tolerance_percent = 3;
+    let f = w
+        .run()
+        .expect_err("every candidate is in and the set is too short");
+    assert!(!f.issues.is_empty());
+    assert!(f.issues.iter().all(|i| !i.is_near(3)), "{:?}", f.issues);
+}

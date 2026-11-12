@@ -45,8 +45,9 @@ pub enum ScoreCmd {
             .required(true)
             .multiple(true)
             .args([
-                "value_max", "good_pace", "very_good_pace", "mix_hard", "seed", "value1_min",
-                "min_gap", "max_reach", "auto_reach", "high_value_gap",
+                "value_max", "good_pace", "very_good_pace", "good_band", "very_good_band",
+                "band_tolerance", "mix_hard", "seed", "value1_min", "min_gap", "max_reach",
+                "auto_reach", "high_value_gap",
             ])
     ))]
     Settings {
@@ -57,6 +58,12 @@ pub enum ScoreCmd {
         good_pace: Option<String>,
         #[arg(long, value_name = "S")]
         very_good_pace: Option<String>,
+        #[arg(long, value_name = "MIN-MAX")]
+        good_band: Option<String>,
+        #[arg(long, value_name = "MIN-MAX")]
+        very_good_band: Option<String>,
+        #[arg(long, value_name = "N")]
+        band_tolerance: Option<String>,
         #[arg(long, value_name = "PERCENT")]
         mix_hard: Option<String>,
         #[arg(long, value_name = "N")]
@@ -373,6 +380,9 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             value_max,
             good_pace,
             very_good_pace,
+            good_band,
+            very_good_band,
+            band_tolerance,
             mix_hard,
             seed,
             value1_min,
@@ -407,6 +417,15 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             if let Some(v) = very_good_pace {
                 args["very_good_pace_s_per_km"] = json!(parse_pace(lang, &v)?);
             }
+            if let Some(v) = good_band {
+                args["good_band_percent"] = json!(parse_band(lang, &v)?);
+            }
+            if let Some(v) = very_good_band {
+                args["very_good_band_percent"] = json!(parse_band(lang, &v)?);
+            }
+            if let Some(v) = band_tolerance {
+                args["band_tolerance_percent"] = json!(clamp_u8(parse_count(lang, &v)?));
+            }
             if let Some(v) = mix_hard {
                 args["mix_hard_percent"] = json!(clamp_u8(parse_count(lang, &v)?));
             }
@@ -424,6 +443,12 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
                     ("value_max", s(&value["value_max"])),
                     ("good", s(&value["good_pace_s_per_km"])),
                     ("very_good", s(&value["very_good_pace_s_per_km"])),
+                    ("good_band", band_text(&value["good_band_percent"])),
+                    (
+                        "very_good_band",
+                        band_text(&value["very_good_band_percent"]),
+                    ),
+                    ("tolerance", s(&value["band_tolerance_percent"])),
                     ("mix_hard", s(&value["mix_hard_percent"])),
                     ("seed", s(&value["seed"])),
                     ("value1_min", s(&value["value1_min_m"])),
@@ -530,8 +555,15 @@ fn print_length(lang: &Lang, length: &Value) {
     for issue in items(length, "issues") {
         println!("{}", s(&issue["text"]));
     }
-    if length["ok"] == true {
-        say(lang, "cli-score-length-ok", &[]);
+    // The state of the whole set, one of three (ADR 0083).
+    match length["state"].as_str() {
+        Some("in_band") => say(lang, "cli-score-length-ok", &[]),
+        Some("near") => say(
+            lang,
+            "cli-score-length-near",
+            &[("tolerance", s(&length["tolerance_percent"]))],
+        ),
+        _ => {}
     }
 }
 
@@ -689,6 +721,27 @@ fn parse_pace(lang: &Lang, value: &str) -> Result<u32, Failure> {
             &[("value", FluentValue::from(value.to_owned()))],
         ))
     })
+}
+
+/// A band as `87-93`: two whole percentages, the low one first.
+fn parse_band(lang: &Lang, value: &str) -> Result<[u8; 2], Failure> {
+    let parsed = value.split_once('-').and_then(|(low, high)| {
+        let low = low.trim().parse::<u8>().ok()?;
+        let high = high.trim().parse::<u8>().ok()?;
+        Some([low, high])
+    });
+    parsed.ok_or_else(|| {
+        Failure::Usage(text(
+            lang,
+            "cli-score-bad-band",
+            &[("value", FluentValue::from(value.to_owned()))],
+        ))
+    })
+}
+
+/// A stored band as `87-93`.
+fn band_text(band: &Value) -> String {
+    format!("{}-{}", s(&band[0]), s(&band[1]))
 }
 
 fn clamp_u8(n: u32) -> u8 {

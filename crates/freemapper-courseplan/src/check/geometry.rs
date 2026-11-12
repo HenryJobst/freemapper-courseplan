@@ -4,7 +4,7 @@
 
 use freemapper_courseplan_model::MapPoint;
 
-use crate::map::inside_area;
+use crate::map::{distance_to_polyline, inside_area};
 
 pub(crate) fn distance(a: &MapPoint, b: &MapPoint) -> f64 {
     (a.x - b.x).hypot(a.y - b.y)
@@ -87,6 +87,19 @@ pub(crate) fn polylines_meet(leg: &[MapPoint], line: &[MapPoint], closed: bool) 
 pub(crate) fn polyline_meets_area(leg: &[MapPoint], rings: &[Vec<MapPoint>]) -> bool {
     leg.iter().any(|p| inside_area(p, rings))
         || rings.iter().any(|ring| polylines_meet(leg, ring, true))
+}
+
+/// Slack for a point that lies on an edge, in map mm: far below what a map or a click can place.
+const ON_EDGE_MM: f64 = 1e-9;
+
+/// Whether `p` lies inside an area or on the edge of one of its rings. The rings follow the even-odd
+/// rule of the map (`FeatureGeometry::Area`): the first is the outer ring, the others are holes, and a
+/// point in a hole is outside. The edge of a hole is part of the area, so it counts as inside.
+pub(crate) fn point_in_area(p: &MapPoint, rings: &[Vec<MapPoint>]) -> bool {
+    inside_area(p, rings)
+        || rings
+            .iter()
+            .any(|ring| distance_to_polyline(p, ring, true) <= ON_EDGE_MM)
 }
 
 /// The angle in degrees between two directions, 0 to 180; `None` when one has no length.
@@ -363,6 +376,52 @@ mod tests {
         ));
         let dot = [p(3.0, 0.0), p(3.0, 0.0)];
         assert_eq!(opposing_length(&dot, &bent, 2.5, 135.0, &[]), 0.0);
+    }
+
+    #[test]
+    fn a_point_in_an_area_is_inside_and_one_on_its_edge_too() {
+        let square = vec![p(0.0, 0.0), p(10.0, 0.0), p(10.0, 10.0), p(0.0, 10.0)];
+        let rings = [square];
+        assert!(point_in_area(&p(5.0, 5.0), &rings));
+        // Edges, corners and the closing edge from the last point to the first.
+        assert!(point_in_area(&p(10.0, 5.0), &rings));
+        assert!(point_in_area(&p(0.0, 5.0), &rings));
+        assert!(point_in_area(&p(5.0, 0.0), &rings));
+        assert!(point_in_area(&p(5.0, 10.0), &rings));
+        assert!(point_in_area(&p(0.0, 0.0), &rings));
+        assert!(point_in_area(&p(10.0, 10.0), &rings));
+        assert!(!point_in_area(&p(10.001, 5.0), &rings));
+        assert!(!point_in_area(&p(-1.0, -1.0), &rings));
+        assert!(!point_in_area(&p(5.0, 10.5), &rings));
+    }
+
+    #[test]
+    fn a_point_in_a_hole_is_outside_and_one_on_the_hole_edge_is_inside() {
+        let outer = vec![p(0.0, 0.0), p(10.0, 0.0), p(10.0, 10.0), p(0.0, 10.0)];
+        let hole = vec![p(4.0, 4.0), p(6.0, 4.0), p(6.0, 6.0), p(4.0, 6.0)];
+        let rings = [outer, hole];
+        assert!(!point_in_area(&p(5.0, 5.0), &rings));
+        assert!(point_in_area(&p(4.0, 5.0), &rings));
+        assert!(point_in_area(&p(5.0, 6.0), &rings));
+        assert!(point_in_area(&p(2.0, 5.0), &rings));
+    }
+
+    #[test]
+    fn a_point_in_a_concave_area_is_inside_only_in_the_arms() {
+        // An L shape.
+        let l = vec![
+            p(0.0, 0.0),
+            p(10.0, 0.0),
+            p(10.0, 4.0),
+            p(4.0, 4.0),
+            p(4.0, 10.0),
+            p(0.0, 10.0),
+        ];
+        let rings = [l];
+        assert!(point_in_area(&p(2.0, 8.0), &rings));
+        assert!(point_in_area(&p(8.0, 2.0), &rings));
+        assert!(!point_in_area(&p(8.0, 8.0), &rings));
+        assert!(point_in_area(&p(4.0, 8.0), &rings));
     }
 
     #[test]

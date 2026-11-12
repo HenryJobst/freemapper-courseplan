@@ -23,6 +23,9 @@ pub struct ScoreSettingsChange {
     pub value_max: Option<u8>,
     pub good_pace_s_per_km: Option<u32>,
     pub very_good_pace_s_per_km: Option<u32>,
+    pub good_band_percent: Option<(u8, u8)>,
+    pub very_good_band_percent: Option<(u8, u8)>,
+    pub band_tolerance_percent: Option<u8>,
     pub mix_hard_percent: Option<u8>,
     pub seed: Option<u32>,
     pub value1_min_m: Option<u32>,
@@ -296,6 +299,15 @@ pub fn set_score_settings(
         }
         if let Some(v) = change.very_good_pace_s_per_km {
             s.very_good_pace_s_per_km = v;
+        }
+        if let Some(v) = change.good_band_percent {
+            s.good_band_percent = v;
+        }
+        if let Some(v) = change.very_good_band_percent {
+            s.very_good_band_percent = v;
+        }
+        if let Some(v) = change.band_tolerance_percent {
+            s.band_tolerance_percent = v;
         }
         if let Some(v) = change.mix_hard_percent {
             s.mix_hard_percent = v;

@@ -127,7 +127,7 @@ impl Search<'_> {
         };
         let mut cur_trial = from;
         let mut cur_score = self.score(&cur_trial);
-        if cur_trial.ok() {
+        if cur_trial.in_band() {
             return Ok(cur_trial);
         }
         let mut evals = 0;
@@ -147,7 +147,7 @@ impl Search<'_> {
                 cur = next;
                 cur_score = s;
                 cur_trial = trial;
-                if cur_trial.ok() {
+                if cur_trial.in_band() {
                     break;
                 }
             }

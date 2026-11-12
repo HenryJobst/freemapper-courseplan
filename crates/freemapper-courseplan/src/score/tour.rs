@@ -13,7 +13,7 @@ mod length;
 #[cfg(test)]
 mod tests;
 
-pub use length::{LengthIssue, LengthReport, analyse_length};
+pub use length::{BandState, LengthIssue, LengthReport, analyse_length};
 
 /// Up to this many controls the solver is exact, above it a seeded heuristic.
 pub const EXACT_MAX: usize = 12;

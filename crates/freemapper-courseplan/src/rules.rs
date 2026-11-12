@@ -71,6 +71,11 @@ pub static SCHEMA: Schema = Schema {
             without_filters: &[],
         },
         KeySchema {
+            key: "control_in_forbidden",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
             key: "acute_angle",
             values: None,
             without_filters: &[],

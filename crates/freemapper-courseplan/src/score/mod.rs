@@ -12,7 +12,8 @@ pub mod travel;
 pub use draft::{Draft, DraftControl, DraftFailure, DraftRequest, Hint, draft};
 pub use sheet::{evaluation_sheet, score_csv};
 pub use tour::{
-    LengthIssue, LengthReport, ScoredControl, Tour, analyse_length, best_tour, best_tour_seeded,
+    BandState, LengthIssue, LengthReport, ScoredControl, Tour, analyse_length, best_tour,
+    best_tour_seeded,
 };
 
 /// Why the score code could not do what was asked. Matchable; a text per variant joins the Fluent

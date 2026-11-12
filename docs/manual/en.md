@@ -213,7 +213,7 @@ freemapper-courseplan score course set hall.courseplan.toml Score45 --penalty 6
 - A link names two controls that the runner has to visit directly one after the other, in either direction. A runner
   who does not is disqualified. A control takes at most two links, and links may not close a ring. A control with a
   link stays in the course until you remove the link (`score link remove`).
-- `score settings` writes the `[score]` table of the event: value range, the paces of a good and a very good runner
+- `score settings` writes the `[score]` table of the event: value range, the target bands (`--good-band 87-93`, `--very-good-band 95-100`, in percent), their tolerance (`--band-tolerance 3`, 0 to 10 percentage points), the paces of a good and a very good runner
   (seconds per kilometre, or `4:10`), the share of hard controls and the seed. Four distances in metres on the ground
   decide where controls stand (ADR 0072): `--value1-min` (150 m) is the least distance of a control from start and
   finish, where value 1 begins; `--min-gap` (100 m, not lower) the least distance between two controls;
@@ -258,20 +258,25 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   `score draft` also keeps the gap between high-valued controls; `check` warns when a course falls below it or below
   the minimum gap. `--course NAME` takes the start and
   finish of that score course (`--start` and `--finish` still win); without it the first start and finish of the event count.
-  Sites in out-of-bounds and dangerous areas, and within 4 m of a forbidden route, are excluded. With `--json`
+  Sites in out-of-bounds and dangerous areas, on or inside map areas with the symbol 520, 709 or 714, and within 4 m of a forbidden route, are excluded. With `--json`
   and over MCP each candidate also has a free `code` that carries its value. It is `null` when no free code is left:
   only the best-ranked candidates get one.
 - `score draft` picks controls from these sites and gives them values and codes, so that the good runner scores
   87 to 93 percent of all points by default within the limit and the very good runner takes every control and
-  finishes after 95 to 100 percent of it by default. Both bands are settings of the event. Without `--apply` it only prints the draft. With
+  finishes after 95 to 100 percent of it by default. Both bands are targets, and so is their tolerance: a result up
+  to 3 percentage points outside a band, by default, counts as near the target. The bands and the tolerance are
+  settings of the event. Without `--apply` it only prints the draft. With
   `--apply` it adds the controls and creates the score course, or replaces the controls of an existing score course
   and removes the controls that only it used. A course of another kind is refused. The editor can undo the change.
 - `--link "X,Y;X,Y"` makes two positions a mandatory link; each must be the position of a candidate from `score
   suggest`, run with a `--limit` of at least 60, the pool the draft uses. Repeat the option for more links.
-- When no draft meets both bands, the command exits with 1. It names each missed band with the size of the miss, and
+- Each runner ends up *in the band*, *near the target* or *missed*. In the band and near the target are successes:
+  the command exits with 0, and for a draft near the target it names the deviation, for example "1.7 percentage points
+  above the band ... within the tolerance of 3 percentage points". A draft that misses a band beyond the tolerance
+  exits with 1. It names each missed band with the size of the miss, and
   one hint: a longer or shorter limit, more suitable sites, free codes (the control count is capped by the code space: raise the highest value with `score settings --value-max`, 9 at most, or free codes on the map), a faster good runner, or that these inputs cannot work.
 - `score length` analyses a course that exists, for example after you moved a control, and reports the same bands and
-  misses. It never changes the course.
+  deviations and says in which of the three states the course is. It never changes the course.
 - The same answers come from the tools `score_suggest`, `score_draft` and `score_length`; `--json` prints them.
   The draft is the same on every run for the same project.
 
@@ -437,19 +442,19 @@ dashed line between its two controls. Select the course in the tree to open the 
 
 ![The Gleisdreieck map with candidate controls as dashed blue circles with their values, and the Score panel on the right.](images/editor-score-candidates-en.jpg)
 
-*A new score course "Score 33" with a limit of 33 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. The panel on the right holds the buttons and the settings. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*A new score course "Score 34" with a limit of 34 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. The panel on the right holds the buttons and the settings, scrolled to the target bands and their tolerance. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![A draft score course on the Gleisdreieck map with the draft controls and the length report of both runner profiles in the panel.](images/editor-score-draft-en.jpg)
 
-*The result of "Draft course". The draft controls show their codes. The panel lists the length report, and both runners are inside their bands. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*The result of "Draft course". The draft controls show their codes. The panel lists the length report: the very good runner is inside the band, and the good runner is 1.7 percentage points above it, within the tolerance of 3, so the report says that every runner is in the band or near the target. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![The finished score course on the Gleisdreieck map with its controls as circles, the length report and a warning in the panel.](images/editor-score-applied-en.jpg)
 
-*After "Apply draft" and "Check length". The course has 27 controls worth 83 points. The finding at the bottom is a warning that codes 65 and 95 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*After "Apply draft" and "Check length". The course has 33 controls worth 95 points. The four findings at the bottom are warnings that pairs of codes such as 63 and 93 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
   settings: highest value, the paces, the share of hard controls, the seed and the four distances (value 1 from, controls apart, reach from the start,
-  high values apart). The two bands are shown, not edited.
+  high values apart). The two bands (both ends of each) and the tolerance are fields too; the defaults show as placeholders, and the length report says "in the band", "near the target" or "missed".
   "New score course..." in the tree makes a course with a 45 minute limit; the event needs one start and one finish.
 - **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
   one to the course, as two steps for undo. A candidate without a free code cannot be accepted.
@@ -739,6 +744,13 @@ route must not lead through an out-of-bounds area needs the route analysis, whic
 shows in `check --all` among the rules that were not checked. A straight leg across an out-of-bounds area gets no
 finding, because the leg is the straight line and not the running route.
 
+`check` does test where the controls stand. A control inside an out-of-bounds area is an error. The rule is
+`wkb2026.control.in_forbidden`, and on sprint and schoolyard maps `wkb2026.control.in_forbidden_sprint`. An area is a
+special object of the kind out-of-bounds area that belongs to the course of the control or names no course, and on the
+map any area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control exactly on the edge stands in
+the area. The rule does not test the start, the finish, crossing points or controls that are on no course. If you
+want the position anyway, accept the finding with a reason.
+
 ### Skipped rules
 
 `check` counts the skipped rules in its summary, and `check --all` names each with its reason. Common reasons:
@@ -773,7 +785,8 @@ prefix `wkb2026.score.`:
   Both look at courses from six controls on.
 - `length_bands` (warning): on the cost surface of the map the good runner scores 87 to 93 percent of all points
   by default, and the very good runner takes every control and finishes after 95 to 100 percent of the limit. The
-  bands are settings of the event. The rule searches routes and takes a few seconds on a large map. Without map
+  bands are targets with a tolerance of 3 percentage points by default; only a miss beyond it is a finding, and a
+  deviation within it only shows in the length report. Bands and tolerance are settings of the event. The rule searches routes and takes a few seconds on a large map. Without map
   objects, or if the search fails, it is skipped with the reason.
 - `limit_penalty` (warning): the limit lies between 30 and 90 minutes, and a minute over costs at least as many
   points as the highest control value.

@@ -9,6 +9,8 @@ wkb2026.map.edge | map_edge | warning | enabled=true |  | { metres = 10.0 } | cl
 wkb2026.leg.through_control | leg_through_control | warning | enabled=true |  | {} | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
 wkb2026.leg.through_forbidden | leg_through_forbidden | warning | enabled=true | map_kinds=[forest] | { impassable = ["520", "708", "709"] } | WKB26:B 7.2.6 | from wkb-2026
 wkb2026.leg.through_forbidden_sprint | leg_through_forbidden | warning | enabled=true | map_kinds=[schoolyard,sprint] | { impassable = ["520", "708", "709", "714"] } | WKB26:B 7.2.6 | from wkb-2026
+wkb2026.control.in_forbidden | control_in_forbidden | error | enabled=true | map_kinds=[forest] | { area_symbols = ["520", "709"] } | WKB26:A 2.2 | from wkb-2026
+wkb2026.control.in_forbidden_sprint | control_in_forbidden | error | enabled=true | map_kinds=[schoolyard,sprint] | { area_symbols = ["520", "709", "714"] } | WKB26:A 2.2 | from wkb-2026
 wkb2026.leg.acute_angle | acute_angle | warning | enabled=true |  | { degrees = 45.0 } | claude:M2b plan, Task 5 | from wkb-2026
 wkb2026.leg.acute_angle_hint | acute_angle | hint | enabled=true |  | { degrees = 90.0 } | BL12:5. Bahnkonzeption | from wkb-2026
 wkb2026.leg.straight_angle_hint | straight_angle | hint | enabled=true |  | { degrees = 170.0 } | claude:number placement plan, Task 3 | from wkb-2026
@@ -45,6 +47,8 @@ wkb2026.map.edge | map_edge | warning | enabled=true |  | { metres = 10.0 } | cl
 wkb2026.leg.through_control | leg_through_control | warning | enabled=true |  | {} | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
 wkb2026.leg.through_forbidden | leg_through_forbidden | warning | enabled=true | map_kinds=[forest] | { impassable = ["520", "708", "709"] } | WKB26:B 7.2.6 | from wkb-2026
 wkb2026.leg.through_forbidden_sprint | leg_through_forbidden | warning | enabled=true | map_kinds=[schoolyard,sprint] | { impassable = ["520", "708", "709", "714"] } | WKB26:B 7.2.6 | from wkb-2026
+wkb2026.control.in_forbidden | control_in_forbidden | error | enabled=true | map_kinds=[forest] | { area_symbols = ["520", "709"] } | WKB26:A 2.2 | from wkb-2026
+wkb2026.control.in_forbidden_sprint | control_in_forbidden | error | enabled=true | map_kinds=[schoolyard,sprint] | { area_symbols = ["520", "709", "714"] } | WKB26:A 2.2 | from wkb-2026
 wkb2026.leg.acute_angle | acute_angle | warning | enabled=true |  | { degrees = 45.0 } | claude:M2b plan, Task 5 | from wkb-2026
 wkb2026.leg.acute_angle_hint | acute_angle | hint | enabled=true |  | { degrees = 90.0 } | BL12:5. Bahnkonzeption | from wkb-2026
 wkb2026.leg.straight_angle_hint | straight_angle | hint | enabled=true |  | { degrees = 170.0 } | claude:number placement plan, Task 3 | from wkb-2026

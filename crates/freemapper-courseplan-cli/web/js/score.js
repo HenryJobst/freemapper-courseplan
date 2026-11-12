@@ -73,13 +73,14 @@ function row(list, labelId, value) {
 }
 
 // A whole-number field: a good value is passed to commit(n), anything else is marked invalid.
-function numberRow(list, id, labelId, value, commit) {
+function numberRow(list, id, labelId, value, commit, placeholder) {
   const term = node("dt");
   const label = node("label", { for: id }, t(labelId));
   term.append(label);
   const detail = node("dd");
   const input = node("input", { id, type: "text", inputmode: "numeric", autocomplete: "off" });
   input.value = value === null || value === undefined ? "" : String(value);
+  if (placeholder !== undefined) input.setAttribute("placeholder", String(placeholder));
   input.disabled = working;
   input.addEventListener("input", () => {
     input.dataset.dirty = "1";
@@ -230,6 +231,11 @@ async function accept(candidate) {
 
 // --- Panel -----------------------------------------------------------------------------------------------------------
 
+// The defaults of the score settings, shown as placeholders (ADR 0083).
+const DEFAULT_GOOD_BAND = [87, 93];
+const DEFAULT_VERY_GOOD_BAND = [95, 100];
+const DEFAULT_TOLERANCE = 3;
+
 function reportRows(list, length) {
   const band = (b) => `${b[0]}${DASH}${b[1]} %`;
   if (length.good) {
@@ -246,7 +252,8 @@ function reportBlock(length) {
   const list = node("dl", { class: "props" });
   reportRows(list, length);
   block.append(list);
-  block.append(node("p", {}, t(length.ok ? "editor-score-bands-ok" : "editor-score-bands-missed")));
+  const stateText = { in_band: "editor-score-bands-ok", near: "editor-score-bands-near", missed: "editor-score-bands-missed" };
+  block.append(node("p", {}, t(stateText[length.state] ?? "editor-score-bands-missed")));
   if (length.issues.length > 0) {
     const issues = node("ul");
     // The sentences come formatted from the server.
@@ -370,8 +377,25 @@ export function panel(host, state, course) {
         });
       }
     }
-    row(settings, "editor-score-good-band", `${s.good_band_percent[0]}${DASH}${s.good_band_percent[1]} %`);
-    row(settings, "editor-score-very-good-band", `${s.very_good_band_percent[0]}${DASH}${s.very_good_band_percent[1]} %`);
+    // The target bands and their tolerance (ADR 0083). A band is stored as a pair, so a change of one end sends
+    // both. The placeholders show the defaults.
+    for (const [key, defaults, ids] of [
+      ["good_band_percent", DEFAULT_GOOD_BAND, ["score-good-band-low", "score-good-band-high"]],
+      ["very_good_band_percent", DEFAULT_VERY_GOOD_BAND, ["score-very-good-band-low", "score-very-good-band-high"]],
+    ]) {
+      const labels = key === "good_band_percent"
+        ? ["editor-score-good-band-low", "editor-score-good-band-high"]
+        : ["editor-score-very-good-band-low", "editor-score-very-good-band-high"];
+      for (const end of [0, 1]) {
+        numberRow(settings, ids[end], labels[end], s[key][end], (n) => {
+          const pair = [...s[key]];
+          pair[end] = n;
+          change("set_score_settings", { [key]: pair }, ids[end]);
+        }, defaults[end]);
+      }
+    }
+    numberRow(settings, "score-band-tolerance", "editor-score-band-tolerance", s.band_tolerance_percent,
+      (n) => change("set_score_settings", { band_tolerance_percent: n }, "score-band-tolerance"), DEFAULT_TOLERANCE);
     section.append(settings);
   }
 
