@@ -117,7 +117,10 @@ function table(columns, rows) {
     body.append(tr);
   }
   tbl.append(body);
-  return tbl;
+  // The panel is 20 rem wide; a table that is wider scrolls inside this box instead of being cut off.
+  const wrap = node("div", { class: "score-table-wrap" });
+  wrap.append(tbl);
+  return wrap;
 }
 
 // --- Flows -----------------------------------------------------------------------------------------------------------
@@ -378,7 +381,9 @@ export function panel(host, state, course) {
     }
     if (results.candidates.length > 0) {
       section.append(node("h4", {}, t("editor-score-candidates")));
-      if (results.candidates.some((c) => !c.code)) {
+      // Candidates after the code space ran out show "No free code" on their own button; the hint is for the case
+      // where not even the best-ranked one got a code.
+      if (results.candidates.every((c) => !c.code)) {
         section.append(node("p", { class: "hint" }, t("editor-score-no-code-hint")));
       }
       section.append(candidateTable(results.candidates));
