@@ -56,8 +56,11 @@ than two weeks; `rustls-pki-types` and `webpki-roots` were set back to 1.15.1 an
 
 ## Consequences
 
-- Until the user has added the two secrets to the GitHub repository, a release fails at the signing step. No release is
-  made before that.
+- A `gate` job at the start of the release workflow (as in freemapper-print, ADR 0060 there) checks whether the
+  environment `release` holds `MINISIGN_SECRET_KEY`, before anything is compiled *(user, 2026-11-12)*. The person
+  approves the release there. With the secret the build carries the updater and the release is signed. Without it
+  the release ships without the updater, unless a published release already has a manifest: then the gate fails,
+  because the latest-download link would break.
 - The first release with the updater cannot be reached by `update` from older versions, which have no updater. People
   install it by hand once.
 - The program sends one kind of request, to the GitHub release hosts, with a fixed User-Agent that names the program,
