@@ -58,7 +58,7 @@ than two weeks; `rustls-pki-types` and `webpki-roots` were set back to 1.15.1 an
 
 - A `gate` job at the start of the release workflow (as in freemapper-print, ADR 0060 there) checks whether the
   environment `release` holds `MINISIGN_SECRET_KEY`, before anything is compiled *(user, 2026-11-12)*. The person
-  approves the release there. With the secret the build carries the updater and the release is signed. Without it
+  approves the release in a job `approve` before it (environment `release-approval`, a reviewer and no secrets); the environment `release` holds the secrets, is limited to `main` and `v*` and has no reviewer, so a release asks once *(user, 2026-11-12)*. With the secret the build carries the updater and the release is signed. Without it
   the release ships without the updater, unless a published release already has a manifest: then the gate fails,
   because the latest-download link would break.
 - The first release with the updater cannot be reached by `update` from older versions, which have no updater. People
