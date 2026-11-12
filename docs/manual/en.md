@@ -315,6 +315,10 @@ One editor belongs to one project. To open a second project, start a second edit
 - The status bar at the bottom names the map, the scale, the map kind and the cursor position in map millimetres.
   Messages appear there too.
 
+![The editor with course A on the map Rummelsburger Bucht: the event tree on the left, the map with the course in the middle, the properties of the course on the right, the status bar with the finding counts below.](images/editor-overview-en.jpg)
+
+*The editor with course A (four controls, 1146 m) on the sprint map Rummelsburger Bucht. English interface. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 ### The map
 
 The map is drawn by the renderer that freemapper-print uses too (freemapper-render in freemapper-core v0.14.1). The
@@ -352,6 +356,10 @@ saved at once, through the same operations as the command line and the AI assist
 the program refuses a change, for example a position outside the map, the file stays as it was and a message says
 why.
 
+![Control 33 selected in the editor: its properties on the right, its circle in blue on the map.](images/editor-control-en.jpg)
+
+*Control 33 selected. The properties show code, kind, position and the courses that use it, then the control description and the map objects within 3 mm. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Select.** With the "Select" tool, click a control in the map or in the tree. A click selects the control whose
   centre is nearest to the pointer, as long as the pointer is within the circle's radius plus the line width. The
   properties on the right show it.
@@ -380,6 +388,10 @@ why.
 
 ### Courses and categories
 
+![The event tree and the properties of course A: name, length, start, finish, category, the stops with their buttons, and the control numbers.](images/editor-course-en.jpg)
+
+*Course A selected. Left the tree with courses, categories, controls and special objects, right the properties of the course with the stops with "Move up", "Move down" and "Remove", the category box and the control numbers. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **New course.** Choose "New course..." under "Courses" in the tree and type a name. The course gets the start and
   the finish of the event. If the event has not exactly one start and one finish, the editor says so and adds
   nothing. A name that is taken, empty or longer than 200 characters is refused in the dialog.
@@ -407,6 +419,10 @@ why.
 
 A leg is the line between two stops. Click it with the "Select" tool to choose it.
 
+![A selected leg with three bends, drawn in blue with white dots, and the properties of the leg with the box Taped ticked.](images/editor-legs-en.jpg)
+
+*A leg chosen with the "Select" tool. The leg from control 34 to the finish has three bends (the white dots) and is taped (the dashed line). The properties show the number of bends and the box "Taped". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Add a bend.** Drag the line of the chosen leg. A bend appears where you let go.
 - **Move or delete a bend.** Drag a bend to move it. A click on a bend chooses it, and Delete removes it.
 - **Tape a leg.** The "Taped" check box in the properties of the leg marks it as a taped leg.
@@ -418,6 +434,18 @@ the stops sends to another stop loses its bends and tape.
 
 A score course has no running order, so the editor draws its controls, start and finish, and each mandatory link as a
 dashed line between its two controls. Select the course in the tree to open the Score panel in the properties.
+
+![The Gleisdreieck map with candidate controls as dashed blue circles with their values, and the Score panel on the right.](images/editor-score-candidates-en.jpg)
+
+*A new score course "Score 33" with a limit of 33 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. The panel on the right holds the buttons and the settings. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+
+![A draft score course on the Gleisdreieck map with the draft controls and the length report of both runner profiles in the panel.](images/editor-score-draft-en.jpg)
+
+*The result of "Draft course". The draft controls show their codes. The panel lists the length report, and both runners are inside their bands. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+
+![The finished score course on the Gleisdreieck map with its controls as circles, the length report and a warning in the panel.](images/editor-score-applied-en.jpg)
+
+*After "Apply draft" and "Check length". The course has 27 controls worth 83 points. The finding at the bottom is a warning that codes 65 and 95 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
   settings: highest value, the paces, the share of hard controls, the seed and the four distances (value 1 from, controls apart, reach from the start,
@@ -439,6 +467,10 @@ dashed line between its two controls. Select the course in the tree to open the 
 The number box of a control sits beside its circle. A dashed outline means the program placed it automatically and
 the project stores no position for it yet.
 
+![Course mode with course A: the control numbers beside their circles, the box 2 with a dashed outline.](images/editor-numbers-en.jpg)
+
+*Course mode. The numbers sit beside their circles. The box 2 has a dashed outline, so the program placed it and the project stores no position for it. The boxes 3 and 4 have a placed position. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Drag.** In course mode, drag a number box to another place. On release the editor turns the place into a
   direction and a gap from the circle and stores both for this course.
 - **For all courses.** With "for all courses" ticked, the placement is stored on the control and applies to every
@@ -455,6 +487,10 @@ One drag is one step for undo. A gap outside the rule range gets a warning sign 
 Select a control. Its properties list the columns C to H, each folded and showing the current symbol. Open a column
 to see its symbols as a grid of icons, each with its number and text in the language of the program. The map objects
 within 3 mm of the control are listed below column D.
+
+![The properties of a control with column D opened as a grid of symbols and 4.9 lone tree picked.](images/editor-description-en.jpg)
+
+*Control 33 with column D open. Each symbol shows its number and name; 4.9 lone tree is picked. Column C stays folded and shows its current value. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Pick.** Click a symbol, or move with the arrow keys (Home and End jump to the first and last) and press Enter.
   Typing a number such as `1.3` jumps to it. The symbol in use is marked, and the focus stays on the pick.
@@ -473,6 +509,10 @@ The list comes from freemapper-core, so every symbol you can pick can also be wr
 
 ### Special objects
 
+![The Special object tool with the kind Out-of-bounds area, a drawn area on the map and its properties on the right.](images/editor-special-object-en.jpg)
+
+*The "Special object" tool with the kind "Out-of-bounds area" and its id in the toolbar. The finished area (four points) is selected. The properties show id, kind, position, points and the courses it belongs to. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - **Draw.** Choose "Special object", pick a kind (start, finish, first aid post, water point, marked route,
   forbidden route, out-of-bounds area, dangerous area) and check the id in the toolbar. It is proposed as
   `<kind>-<n>` and you may change it. A start, finish, first aid post or water point is placed by one click. A line
@@ -490,6 +530,14 @@ The list comes from freemapper-core, so every symbol you can pick can also be wr
 
 Half a second after each change the editor runs the same check as `check` and shows the result.
 
+![The findings of course A in the properties: a warning and three hints, each with the button Accept, and markers on the map legs.](images/editor-findings-course-en.jpg)
+
+*The findings of course A. The warning says that a straight leg crosses the out-of-bounds area from the previous picture. The three hints are about angles. Each finding has "Accept...", and a marker sits on each leg it concerns. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
+![The findings drawer over the right side of the editor with the open findings and the rules that were not checked.](images/editor-findings-en.jpg)
+
+*The findings drawer, opened by a click on the counts in the status bar. It lists the open findings of the whole event and, under "Not checked", the rules that did not run, each with its reason. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
+
 - The status bar counts errors, warnings and hints of the whole event. Each count has a sign (cross, triangle, "i") as
   well as a colour. A click on the counts opens the drawer: all open findings, the accepted ones with their notes, and
   under "Not checked" the rules that did not run, with the reason.
@@ -504,6 +552,14 @@ Half a second after each change the editor runs the same check as `check` and sh
 
 The Event menu has four entries. The browser never names a file; the editor writes only the project's own linked
 Purple Pen file.
+
+![The open Event menu with the entries for IOF XML, Purple Pen and Close editor.](images/editor-event-menu-en.jpg)
+
+*The "Event" menu. Its entries export IOF XML, export to Purple Pen, import a Purple Pen file, sync with Purple Pen and close the editor.*
+
+![The dialog Export to Purple Pen with the linked file and the buttons Write to the linked file, Download a new file and Cancel.](images/editor-export-dialog-en.jpg)
+
+*The dialog "Export to Purple Pen". It names the linked file `rummelsburg-sprint.ppen` and offers "Write to the linked file" or "Download a new file". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/rummelsburger-bucht/ATTRIBUTION.txt.*
 
 - **Export IOF XML (download).** The browser saves the IOF XML of the individual and score courses, named after the project
   file. A dialog lists courses that were left out (team and relay courses) and says so when the map has no
