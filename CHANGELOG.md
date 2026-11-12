@@ -10,6 +10,15 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 - Bildschirmfotos im Handbuch, Kapitel 4. Je Sprache vierzehn Bilder zeigen den Editor auf den Beispielkarten von Remo Madella (Rummelsburger Bucht für die Sprintbahn, Gleisdreieck für die Score-Bahn): die ganze Seite, einen Posten, eine Bahn mit ihren Kategorien, eine abgeflaggte Strecke mit Knicken, Postennummern, Postenbeschreibungen, ein Sonderobjekt, Befunde, das Menü „Veranstaltung“, den Dialog zum Export nach Purple Pen und das Score-Fenster mit Kandidaten, einem Entwurf und der übernommenen Bahn. Das deutsche Handbuch zeigt die deutsche Oberfläche, das englische die englische. Jede Bildunterschrift nennt die Karte und verweist auf die `ATTRIBUTION.txt` des Beispiels.
 
+### Behoben
+
+- Editor: Wählst du eine Strecke, zeigt „Länge“ jetzt die Länge dieser Strecke. Bisher stand dort die Länge der ganzen Bahn.
+- Editor, Score-Fenster: Die Kandidatentabelle passt in das Fenster, die Spalte „Übernehmen“ ist nicht mehr abgeschnitten. Der Hinweis „Kein freier Code“ erscheint nur noch, wenn gar kein Kandidat einen Code hat. Hat nur der Rest der Liste keinen, steht das an den Zeilen selbst.
+- Editor: Der Dialog für eine neue Score-Bahn heißt „Neue Score-Bahn“, nicht mehr „Neue Bahn“.
+- Editor: Die Statusleiste bleibt einzeilig. Lange Meldungen enden mit „…“ und stehen ganz im Tooltip, die Fläche darüber springt nicht mehr.
+- Editor: Die Befundeliste deckt die Fläche von Eigenschaften und Karte ganz ab. Oben blieb ein Streifen des Eigenschaftenfensters sichtbar.
+- `edit`: Der Server liest bei Rückgängig, Wiederholen und Beenden auch den Anfrage-Rumpf, bevor er antwortet. Sonst konnte der Client unter macOS ab und zu „Connection reset by peer“ statt der Antwort sehen (ADR 0079).
+
 ## [0.14.0] - 2026-11-12
 
 ### Hinzugefügt

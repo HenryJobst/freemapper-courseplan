@@ -10,6 +10,15 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 - Screenshots in the user manual, chapter 4. Fourteen pictures per language show the editor on the example maps by Remo Madella (Rummelsburger Bucht for the sprint course, Gleisdreieck for the score course): the whole page, a control, a course with its categories, a bent and taped leg, control numbers, control descriptions, a special object, findings, the Event menu, the Purple Pen export dialog, and the Score panel with candidates, a draft and the applied course. The German manual shows the German interface and the English manual the English one. Each caption names the map and points to the `ATTRIBUTION.txt` of the example.
 
+### Fixed
+
+- Editor: when you select a leg, "Length" now shows the length of that leg. It used to show the length of the whole course.
+- Editor, Score panel: the candidate table fits the panel, and the Accept column is no longer cut off. The note "No free code" appears only when no candidate has a code. If only the rest of the list has none, the rows say so themselves.
+- Editor: the dialog for a new score course is titled "New score course", not "New course".
+- Editor: the status bar stays on one line. A long message ends in an ellipsis and shows in full as a tooltip, and the area above no longer jumps.
+- Editor: the findings drawer covers the properties and map area completely. A strip of the properties pane used to show above it.
+- `edit`: for undo, redo and quit the server now reads the request body before it answers. Otherwise a client on macOS could now and then see "Connection reset by peer" instead of the answer (ADR 0079).
+
 ## [0.14.0] - 2026-11-12
 
 ### Added
