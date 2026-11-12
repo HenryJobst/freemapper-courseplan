@@ -1,0 +1,331 @@
+map_kind = "sprint"
+scale_denominator = 4000
+declination_date = "2026-11-11"
+buffer_m = 50.0
+crs = 25833
+provider = "lgb"
+title = "Berlin Kreuzberg Schöneberg"
+
+[map_area]
+coordinates = [[[13.364, 52.489], [13.386, 52.489], [13.386, 52.504], [13.364, 52.504], [13.364, 52.489]]]
+type = "Polygon"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33388-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33388-5816.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33388-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33388-5817.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33388-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33388-5818.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33389-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33389-5816.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33389-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33389-5817.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33389-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33389-5818.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33390-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33390-5816.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33390-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33390-5817.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "orthophoto"
+tile = "33390-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dop/rgb_jpg/dop_33390-5818.zip"
+currency = "2026-03-05"
+published = "2026-07-29"
+
+[[tiles]]
+product = "dtm"
+tile = "33388-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33388-5816.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33388-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33388-5817.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33388-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33388-5818.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33389-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33389-5816.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33389-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33389-5817.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33389-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33389-5818.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33390-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33390-5816.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33390-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33390-5817.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "dtm"
+tile = "33390-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/dgm/tif/dgm_33390-5818.zip"
+currency = "2025-12-01"
+published = "2026-01-26"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33388-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33388-5816.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33388-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33388-5817.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33388-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33388-5818.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33389-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33389-5816.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33389-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33389-5817.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33389-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33389-5818.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33390-5816"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33390-5816.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33390-5817"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33390-5817.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[[tiles]]
+product = "imagedsm"
+tile = "33390-5818"
+url = "https://data.geobasis-bb.de/geobasis/daten/bdom/tif/bdom_33390-5818.zip"
+currency = "2026-03-05"
+published = "2026-09-10"
+
+[buildings]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4268
+regions = ["berlin"]
+
+[land_use]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 586
+regions = ["berlin"]
+
+[berlin_layers.anlagenbaeume]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 3020
+regions = ["berlin"]
+
+[berlin_layers.bauwerke-flaechen]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 653
+regions = ["berlin"]
+
+[berlin_layers.bauwerke-linien]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4893
+regions = ["berlin"]
+
+[berlin_layers.beleuchtung]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 1200
+regions = ["berlin"]
+
+[berlin_layers.gebaeudehoehen]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4993
+regions = ["berlin"]
+
+[berlin_layers.relief]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 196
+regions = ["berlin"]
+
+[berlin_layers.sb-bordstein]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 2252
+regions = ["berlin"]
+
+[berlin_layers.sb-flaechen]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 5012
+regions = ["berlin"]
+
+[berlin_layers.sb-gelaender]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 155
+regions = ["berlin"]
+
+[berlin_layers.sb-gruenflaeche]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 104
+regions = ["berlin"]
+
+[berlin_layers.sb-mauer]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 46
+regions = ["berlin"]
+
+[berlin_layers.sb-moebel]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4532
+regions = ["berlin"]
+
+[berlin_layers.sb-objekte]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 100
+regions = ["berlin"]
+
+[berlin_layers.sb-treppe]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 6
+regions = ["berlin"]
+
+[berlin_layers.strassenbaeume]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 2486
+regions = ["berlin"]
+
+[berlin_layers.trinkwasserbrunnen]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4
+regions = ["berlin"]
+
+[berlin_layers.vegetation-linien]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 2
+regions = ["berlin"]
+
+[berlin_layers.zierbrunnen]
+bbox = [388869.0, 5816602.0, 390501.0, 5818405.0]
+fetched = "2026-11-11"
+count = 4
+regions = ["berlin"]
+
+[osm]
+extract = "2026-11-06"
+area = [52.48855084, 13.36326224, 52.50444916, 13.38673776]
+count = 6756
+
+[k5]
+flight = "2026-01-02"
+flight_label = "K5 dataset"
+fetched = "2026-11-11"
+bbox = [388869.472, 5816602.962, 390500.41, 5818404.883]
