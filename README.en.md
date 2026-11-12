@@ -6,6 +6,8 @@
 [![AI effort (Claude API): $570](https://img.shields.io/badge/AI%20effort%20%28Claude%20API%29-%24570-8A2BE2)](docs/ai-cost/history.csv)
 <!-- claude-cost:end -->
 
+<p align="center"><a href="examples/README.en.md"><img src="docs/manual/images/editor-overview-en.jpg" alt="The freemapper-courseplan editor with a course on the map Rummelsburger Bucht" width="760"></a><br><sub>The editor with a sprint course on the map "Rummelsburger Bucht" by Remo Madella (MOO Challenge Berlin 2025). Click to open the <a href="examples/README.en.md">examples</a>.</sub></p>
+
 freemapper-courseplan is the course-setting program of the freemapper suite. You set courses by hand in an
 editor in the browser, on the finished map from OpenOrienteering Mapper (OOM). The program checks them against
 the competition rules and hands them on to result software and to printing:

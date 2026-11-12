@@ -6,6 +6,8 @@
 [![KI-Aufwand (Claude API): 570 $](https://img.shields.io/badge/KI--Aufwand%20%28Claude%20API%29-570%20%24-8A2BE2)](docs/ai-cost/history.csv)
 <!-- claude-cost:end -->
 
+<p align="center"><a href="examples/README.md"><img src="docs/manual/images/editor-overview-de.jpg" alt="Der Editor von freemapper-courseplan mit einer Bahn auf der Karte Rummelsburger Bucht" width="760"></a><br><sub>Der Editor mit einer Sprintbahn auf der Karte „Rummelsburger Bucht“ von Remo Madella (MOO Challenge Berlin 2025). Ein Klick öffnet die <a href="examples/README.md">Beispiele</a>.</sub></p>
+
 freemapper-courseplan ist das Bahnlegungsprogramm der freemapper-Suite. Man legt die Bahnen von Hand in einem
 Editor im Browser, auf der fertigen Karte aus OpenOrienteering Mapper (OOM). Das Programm prüft sie gegen die
 Wettkampfbestimmungen und gibt sie an die Auswertung und an den Druck weiter:
