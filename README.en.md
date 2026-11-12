@@ -49,22 +49,21 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 
 ## Example
 
-<a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Sketch of a sprint course in Lübeck's old town"></a>
-
-A sprint course with seven controls in Lübeck's old town, set with the command line only. A second project file there adds a short score course (9 controls, 15 minutes); the map is too small for more. The image is a sketch:
-the map comes from freemapper-print, the course is drawn on top. Commands, project file and output are in
-[`examples/luebeck-sprint`](examples/luebeck-sprint/); [`examples/README.en.md`](examples/README.en.md) lists all
-examples. For a score course of the usual size, 45 minutes, see [`examples/berlin-kreuzberg`](examples/berlin-kreuzberg/): a map of Berlin-Kreuzberg made with freemapper from open data.
+A sprint course with four controls on the map "Rummelsburger Bucht", set with the command line only, with bends,
+a marked leg and a first aid post. Also a 33-minute score course (27 controls, 83 points) on the map "Gleisdreieck".
+Both maps are by Remo Madella (MOO Challenge Berlin 2025); he released them on 2026-11-12 for use within the
+freemapper suite, not under an open licence. Commands, project files and output are in
+[`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) and [`examples/gleisdreieck`](examples/gleisdreieck/);
+[`examples/README.en.md`](examples/README.en.md) lists all examples. The program does not reach 45 minutes, the usual
+size for adults, on either map; on Gleisdreieck it reaches 33.
 
 ```text
-$ freemapper-courseplan info luebeck-sprint.courseplan.toml
-title: Sprint training Lübeck old town
+$ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
+title: Sprint training Rummelsburger Bucht
 map kind: sprint
-controls: 7, crossing points: 0
-course A: 7 controls, 1.3 km, climb 5 m
+controls: 4, crossing points: 0
+course A: 4 controls, 1.1 km, climb – m
 ```
-
-<br clear="right">
 
 ## Installing
 
@@ -108,7 +107,7 @@ has a Score panel, and `export --csv` and `export --sheet` write the control lis
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
 length bands as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
-[user manual](docs/manual/en.md#score-courses) explains it, the [Berlin example](examples/berlin-kreuzberg/) holds a finished 45-minute course, and the
+[user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 33-minute course, and the
 decisions are in ADR 0060 to 0070.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with
@@ -126,7 +125,7 @@ route analysis is missing, so it reports a straight leg through an out-of-bounds
 `freemapper-courseplan export <project> --iof-xml <file>` writes the individual and score courses as IOF XML 3.0 for result
 software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads
 back through the IOF reader of freemapper-course (freemapper-print's); a finished example is
-[`course-data.xml`](examples/luebeck-sprint/course-data.xml). An import into OE, Purple Pen or Condes has not been
+[`course-data.xml`](examples/rummelsburger-bucht/course-data.xml). An import into OE, Purple Pen or Condes has not been
 tested, because nobody on the project has OE. Reports from people with OE are welcome. If the map is georeferenced, the start, controls and finish also carry
 latitude and longitude (ADR 0039). Taped legs are not written yet, and team and relay courses are skipped. A score course carries its time limit, penalty and links in an extension element of its own. Chapter 10 of the
 [user manual](docs/manual/en.md#10-handing-on-iof-xml-for-oe) has the details.
@@ -142,8 +141,9 @@ score courses or gaps, the program names in a note. `import` replaces a project 
 assistant has the tool `export_ppen`. It changes an existing file in place and leaves alone what the project does not
 know, such as circle gaps or map exchange; with `--new` it writes the file from scratch. It never deletes anything and
 reports what is in the file but not in the project. The writer is `freemapper-course` in freemapper-core. The example
-[`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) is such an export. **Purple Pen 4.0 opens
-the file without an error, and its content looks right** (checked by the author, 2026-11-10).
+[`rummelsburg-sprint.ppen`](examples/rummelsburger-bucht/rummelsburg-sprint.ppen) is such an export. **This file has
+not been opened in Purple Pen yet.** An export of an earlier example (Lübeck old town) opened in Purple Pen 4.0 without
+an error, and its content looked right (checked by the author, 2026-11-10); the writer is the same.
 
 `freemapper-courseplan sync <project>` merges the project with its linked `.ppen` in both directions. It compares the
 file as the last sync left it (the base copy `X.courseplan.ppen-base`, to be committed to git), the file now and the

@@ -285,7 +285,7 @@ import and sync with Purple Pen are in the Event menu.
 ### Starting it
 
 ```sh
-freemapper-courseplan edit luebeck-sprint.courseplan.toml
+freemapper-courseplan edit rummelsburg-sprint.courseplan.toml
 ```
 
 The command loads the project, opens the browser and prints the address on a single line, such as
@@ -601,7 +601,7 @@ it saves, whether the file is still the one it read. If it is not, for example b
 while the command ran, the command writes nothing, prints
 
 ```
-luebeck-sprint.courseplan.toml changed since it was read; nothing was written
+rummelsburg-sprint.courseplan.toml changed since it was read; nothing was written
 ```
 
 and exits with code 1. Run the command again; it then reads the new state. The check counts any change in the file,
@@ -726,7 +726,7 @@ prefix `wkb2026.score.`:
 
 Several of these limits are proposals of freemapper-courseplan, not values from a source; the source in the line
 says which. A finding at a pair of controls is accepted with `--controls`, one about the whole course with
-`--course`, as in the examples `examples/luebeck-sprint/score-check.en.txt` and `examples/berlin-kreuzberg/check.en.txt`. Team and relay courses stay unchecked.
+`--course`, as in the examples `examples/gleisdreieck/check.en.txt` and `examples/rummelsburger-bucht/check.en.txt`. Team and relay courses stay unchecked.
 
 ### Giving a reason for an exception
 
@@ -858,9 +858,10 @@ The project file, the map and the `--iof-xml` target of the same call are not al
 base file only up to a fixed size limit; a broken or foreign file gives an error message. If the file does not fit the
 map, the export writes nothing.
 
-**Opened in Purple Pen 4.0.** The example [`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen)
-opens there without an error, and its content looks right (checked by the author, 2026-11-10). The file also reads
-back through the reader of freemapper-course, and exporting a file that was read gives the same bytes.
+**Opened in Purple Pen 4.0.** An export of an earlier example (Lübeck old town) opened there without an error, and its
+content looked right (checked by the author, 2026-11-10); the writer is the same. The current example,
+[`rummelsburg-sprint.ppen`](../../examples/rummelsburger-bucht/rummelsburg-sprint.ppen), has not been opened in Purple
+Pen yet. The file also reads back through the reader of freemapper-course, and exporting a file that was read gives the same bytes.
 
 The AI assistant has the tool `export_ppen` for this, with `project`, `path` and `new`; the path must end in `.ppen`.
 The writer lives in `freemapper-course` (freemapper-core); the decisions are in ADR 0035.
@@ -962,7 +963,7 @@ call) and returns `written`, `conflicts`, `changes` and `notes`. `resolve_sync_c
 `export` passes the courses to scoring software that reads IOF XML 3.0:
 
 ```sh
-freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+freemapper-courseplan export rummelsburg-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
 The program writes all individual and score courses of the event to the file: controls with map position, the control
@@ -980,7 +981,7 @@ Things to know:
   `export` says so. OE, OCAD and Condes have not been tested with these positions.
 - Taped legs are missing for now. The map extent is written as 0/0 mm.
 - The time `createTime` is UTC and carries the marker `Z`. It does not affect the courses.
-- The example [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) validates against the IOF schema,
+- The example [`course-data.xml`](../../examples/rummelsburger-bucht/course-data.xml) validates against the IOF schema,
   and a test reads the export back through the IOF reader of freemapper-course (freemapper-print's). An import into
   OE, Purple Pen or Condes has not been tested, because nobody on the project has OE. If you import the file there,
   please report what arrives.
