@@ -454,7 +454,9 @@ fn page_revision(headers: &HeaderMap) -> Option<String> {
         .map(str::to_owned)
 }
 
-async fn api_undo(State(state): State<Shared>, headers: HeaderMap) -> Response {
+// `api/undo`, `api/redo` and `api/quit` need no body, but the page sends one (`{}`). Taking it as `Bytes` makes
+// the server read it before it answers: a connection closed with unread request bytes ends in a reset (ADR 0079).
+async fn api_undo(State(state): State<Shared>, headers: HeaderMap, _body: Bytes) -> Response {
     let revision = page_revision(&headers);
     serialized(state, move |st| {
         api::run_history(st, false, revision.as_deref())
@@ -462,7 +464,7 @@ async fn api_undo(State(state): State<Shared>, headers: HeaderMap) -> Response {
     .await
 }
 
-async fn api_redo(State(state): State<Shared>, headers: HeaderMap) -> Response {
+async fn api_redo(State(state): State<Shared>, headers: HeaderMap, _body: Bytes) -> Response {
     let revision = page_revision(&headers);
     serialized(state, move |st| {
         api::run_history(st, true, revision.as_deref())
@@ -854,7 +856,7 @@ async fn api_symbols(State(state): State<Shared>, RawQuery(query): RawQuery) -> 
     }
 }
 
-async fn quit(State(stop): State<Arc<Notify>>) -> Response {
+async fn quit(State(stop): State<Arc<Notify>>, _body: Bytes) -> Response {
     stop.notify_one();
     axum::Json(serde_json::json!({ "ok": true })).into_response()
 }

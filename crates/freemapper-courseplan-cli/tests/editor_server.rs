@@ -110,8 +110,7 @@ impl Editor {
             head.push_str("{}");
         }
         stream.write_all(head.as_bytes()).unwrap();
-        let mut answer = String::new();
-        stream.read_to_string(&mut answer).unwrap();
+        let answer = read_answer(&mut stream);
         let (head, body) = answer.split_once("\r\n\r\n").unwrap();
         let status = head.split(' ').nth(1).unwrap().parse().unwrap();
         (status, head.to_owned(), body.to_owned())
@@ -136,8 +135,7 @@ impl Editor {
             port = self.port
         )
         .unwrap();
-        let mut answer = String::new();
-        stream.read_to_string(&mut answer).unwrap();
+        let answer = read_answer(&mut stream);
         let (head, body) = answer.split_once("\r\n\r\n").unwrap();
         let status = head.split(' ').nth(1).unwrap().parse().unwrap();
         (status, serde_json::from_str(body).unwrap_or_default())
@@ -167,6 +165,50 @@ impl Drop for Editor {
         let _ = self.child.kill();
         let _ = self.child.wait();
     }
+}
+
+/// Reads the answer to a request sent with `Connection: close` up to the end of the stream.
+///
+/// The server may close with request bytes it never read (the handlers of `api/undo`, `api/redo` and
+/// `api/quit` ignore the body they get). The kernel then answers those bytes with a reset, and the next read
+/// fails with "Connection reset by peer" where it would have returned the end of the stream, on macOS now and
+/// then. A reset that arrives after the complete response (the head and as many body bytes as `Content-Length`
+/// says, or the final chunk) loses nothing, so it counts as the end. A reset before that is a real failure.
+fn read_answer(stream: &mut TcpStream) -> String {
+    let mut bytes = Vec::new();
+    let mut chunk = [0u8; 8192];
+    loop {
+        match stream.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => bytes.extend_from_slice(&chunk[..n]),
+            Err(e)
+                if e.kind() == std::io::ErrorKind::ConnectionReset && response_complete(&bytes) =>
+            {
+                break;
+            }
+            Err(e) => panic!(
+                "reading the answer failed: {e} (after {} bytes)",
+                bytes.len()
+            ),
+        }
+    }
+    String::from_utf8(bytes).unwrap()
+}
+
+fn response_complete(bytes: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(bytes);
+    let Some((head, body)) = text.split_once("\r\n\r\n") else {
+        return false;
+    };
+    let head = head.to_ascii_lowercase();
+    if let Some(length) = head
+        .lines()
+        .find_map(|l| l.strip_prefix("content-length:"))
+        .and_then(|v| v.trim().parse::<usize>().ok())
+    {
+        return body.len() >= length;
+    }
+    head.contains("transfer-encoding: chunked") && body.ends_with("0\r\n\r\n")
 }
 
 fn stderr(o: &Output) -> String {
