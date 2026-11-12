@@ -190,6 +190,12 @@ check-map-edge = { $kind ->
         [crossing] crossing point
        *[control] control
     } { $id } is { $metres } m from the map edge, at least { $limit } m required
+check-inside-map = { $kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $id } at { $x }, { $y } mm on the map is outside the mapped area: the nearest map object, symbol { $symbol }, is { $metres } m away, at most { $limit } m allowed
 check-leg-through-control = { $metres ->
         [0] the leg runs over { $stop_kind ->
             [start] start

@@ -61,6 +61,11 @@ pub static SCHEMA: Schema = Schema {
             without_filters: &[],
         },
         KeySchema {
+            key: "inside_map",
+            values: None,
+            without_filters: &[],
+        },
+        KeySchema {
             key: "leg_through_control",
             values: None,
             without_filters: &[],

@@ -190,6 +190,12 @@ check-map-edge = { $kind ->
         [crossing] Querungsstelle
        *[control] Posten
     } { $id } liegt { $metres } m vom Kartenrand entfernt, gefordert sind mindestens { $limit } m
+check-inside-map = { $kind ->
+        [start] Start
+        [finish] Ziel
+        [crossing] Querungsstelle
+       *[control] Posten
+    } { $id } liegt bei { $x }, { $y } mm auf der Karte außerhalb der kartierten Fläche: das nächste Kartenobjekt, Symbol { $symbol }, ist { $metres } m entfernt, erlaubt sind höchstens { $limit } m
 check-leg-through-control = { $metres ->
         [0] Die Strecke führt über { $stop_kind ->
             [start] den Start

@@ -199,6 +199,24 @@ source = { doc = "claude", section = "M2b plan, Task 4" }
 note = { de = "BL02 (S. 10) nennt Posten zu nah am Kartenrand als Fehler, aber ohne Zahl; die 10 m sind ein Vorschlag.", en = "BL02 (p. 10) lists controls too close to the map edge as a mistake but gives no number; the 10 m are a proposal." }
 
 [[rules]]
+id = "wkb2026.map.inside"
+key = "inside_map"
+severity = "error"
+source = { doc = "BL02", section = "Mögliche Fehler bei der Bahnlegung (p. 10)" }
+note = { de = "Start, Ziel, Posten und Querungsstellen müssen auf der kartierten Fläche liegen, nicht im weißen Teil neben dem Gelände (Nutzer, 2026-11-12). Die Forschungsdatei führt unter BL02 den Posten zu nah am Kartenrand und die Route außerhalb der Karte; ein Wortlaut zu Start und Ziel liegt uns nicht vor. Gemessen wird gegen die Kartenobjekte selbst, nicht gegen das Rechteck um sie (ADR 0084).", en = "Start, finish, controls and crossing points must lie on the mapped area, not in the blank part beside the terrain (user, 2026-11-12). The research file lists, under BL02, a control too close to the map edge and a route outside the map; we do not have wording on start and finish. The test is against the map objects themselves, not against the box around them (ADR 0084)." }
+
+[rules.values]
+# A position is inside when a map object lies within this distance (ground metres); open squares
+# between buildings stay inside, the blank part beside a strip of terrain does not.
+metres = 40.0
+# An axis-aligned rectangle line that spans this percentage of the terrain extent in both directions is the
+# sheet frame, not terrain.
+frame_percent = 80.0
+# Layout symbols that mappers lay over the whole print area: 601 north lines pattern, 602 registration
+# mark. They are no terrain.
+ignore_symbols = ["601", "602"]
+
+[[rules]]
 id = "wkb2026.leg.through_control"
 key = "leg_through_control"
 severity = "warning"

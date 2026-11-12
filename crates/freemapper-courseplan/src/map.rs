@@ -179,6 +179,11 @@ impl MapIndex {
         near
     }
 
+    /// Distance in mm from `p` to one feature (0 inside an area).
+    pub fn distance_to(feature: &MapFeature, p: &MapPoint) -> f64 {
+        feature_distance(&feature.geometry, p)
+    }
+
     /// Smallest and largest corner over all feature points.
     pub fn extent(&self) -> Option<(MapPoint, MapPoint)> {
         let mut points = self.features.iter().flat_map(|f| match &f.geometry {

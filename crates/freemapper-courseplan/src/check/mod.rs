@@ -15,6 +15,7 @@ mod context;
 mod distance;
 mod forbidden;
 mod geometry;
+mod inside;
 mod legs;
 mod numbers;
 mod score;
@@ -26,6 +27,7 @@ pub use context::{CheckContext, CourseContext, ScoreControlRef, ScoreCourseConte
 pub(crate) use forbidden::SPRINT_AREA_SYMBOLS;
 pub(crate) use geometry::point_in_area;
 pub use geometry::{drawn_part, drawn_part_between};
+pub(crate) use inside::{FRAME_PERCENT, IGNORED_SYMBOLS, is_frame_outline, terrain_extent};
 
 use freemapper_courseplan_model::{
     AcceptedFinding, ControlCode, CourseKind, Discipline, Event, FindingKey, LegRef, SpecialObject,
@@ -694,6 +696,7 @@ pub const CHECKS: &[Check] = &[
         &[Place::Controls],
     ),
     Check::at("map_edge", distance::map_edge, &[Place::Control]),
+    Check::at("inside_map", inside::inside_map, &[Place::Control]),
     Check::at(
         "leg_through_control",
         distance::leg_through_control,

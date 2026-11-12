@@ -75,6 +75,7 @@ Schlüssel:
 | `min_distance` | Zwei Posten der Veranstaltung näher als `metres` |
 | `similar_features` | Zwei Posten auf ähnlichen Objekten näher als `metres` |
 | `map_edge` | Posten, Start oder Ziel näher als `metres` am Kartenrand |
+| `inside_map` | Start, Ziel, Posten oder Querungsstelle ohne Kartenobjekt im Abstand `metres`, also im weißen Teil neben dem Gelände; Objekte mit einem Symbol aus `ignore_symbols` und ein achsenparalleles Rechteck als Linie, das `frame_percent` Prozent der Geländeausdehnung überspannt, zählen nicht als Objekte |
 | `leg_through_control` | Eine Strecke führt durch einen anderen Posten derselben Bahn |
 | `leg_through_forbidden` | Die optimale Laufroute führt durch ein Sperrgebiet; ungeprüft, bis es die Routenanalyse gibt, die Regel steht deshalb unter den nicht geprüften Regeln |
 | `control_in_forbidden` | Ein Posten einer Bahn steht in einem Sperrgebiet-Sonderobjekt dieser Bahn oder in einer Kartenfläche mit einem Symbol aus `area_symbols`; auf dem Rand gilt als drin |
