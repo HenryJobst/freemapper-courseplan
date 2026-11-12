@@ -225,7 +225,7 @@ freemapper-courseplan score course set halle.courseplan.toml Score45 --penalty 6
   Ring schließen. Ein Posten mit Verbindung bleibt in der Bahn, bis du die Verbindung entfernst
   (`score link remove`).
 - `score settings` schreibt den Abschnitt `[score]` der Veranstaltung: Wertebereich, die Pace eines guten und eines
-  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), den Anteil schwerer Posten und den Startwert. Vier Abstände
+  sehr guten Läufers (Sekunden je Kilometer oder `4:10`), die Zielbänder (`--good-band 87-93`, `--very-good-band 95-100`, in Prozent), ihre Toleranz (`--band-tolerance 3`, 0 bis 10 Prozentpunkte), den Anteil schwerer Posten und den Startwert. Vier Abstände
   in Metern im Gelände regeln, wo Posten stehen (ADR 0072): `--value1-min` (150 m) ist der kleinste Abstand eines
   Postens von Start und Ziel, ab dort beginnt Wert 1; `--min-gap` (100 m, nicht kleiner) der kleinste Abstand zweier
   Posten; `--high-value-gap` (200 m, mindestens `--min-gap`) der kleinste Abstand zweier hochwertiger Posten, also
@@ -270,21 +270,26 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   Gelände). Plätze näher als `value1_min_m` an Start oder Ziel und, mit `--course`, weiter als die Reichweite vom Start
   entfernt fallen weg. `score draft` hält zusätzlich den Abstand hochwertiger Posten ein; `check` warnt, wenn eine
   Bahn ihn oder den Mindestabstand unterschreitet. `--course NAME` nimmt Start und Ziel dieser Score-Bahn (`--start` und `--finish` haben weiter
-  Vorrang); ohne die Option gelten der erste Start und das erste Ziel des Events. Plätze in Sperr- und Gefahrengebieten und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
+  Vorrang); ohne die Option gelten der erste Start und das erste Ziel des Events. Plätze in Sperr- und Gefahrengebieten, auf oder in Kartenflächen mit dem Symbol 520, 709 oder 714 und näher als 4 m an einem gesperrten Weg sind ausgeschlossen. Mit `--json` und über MCP hat jeder Kandidat außerdem einen freien `code`, der seinen Wert trägt. Er ist `null`, wenn kein freier Code mehr da ist: Nur die bestplatzierten Kandidaten bekommen einen.
 - `score draft` wählt aus diesen Plätzen Posten und gibt ihnen Werte und Codes. Der gute Läufer holt dann im Limit
   standardmäßig 87 bis 93 Prozent aller Punkte, der sehr gute Läufer schafft alle Posten und ist standardmäßig nach
-  95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Einstellungen des Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
+  95 bis 100 Prozent des Limits im Ziel. Beide Bänder sind Zielwerte, und ihre Toleranz auch: Ein Ergebnis bis zu
+  3 Prozentpunkte außerhalb eines Bandes gilt standardmäßig als nahe am Ziel. Bänder und Toleranz sind Einstellungen des
+  Events. Ohne `--apply` gibt der Befehl den Entwurf nur aus. Mit
   `--apply` legt er die Posten an und erstellt die Score-Bahn, oder er ersetzt die Posten einer vorhandenen
   Score-Bahn und entfernt die Posten, die nur sie nutzte. Eine Bahn anderer Art wird abgelehnt. Im Editor lässt sich
   die Änderung rückgängig machen.
 - `--link "X,Y;X,Y"` macht zwei Positionen zu einer Pflichtverbindung; jede muss die Position eines Kandidaten aus
   `score suggest` sein, mit einem `--limit` von mindestens 60 aufgerufen, dem Pool des Entwurfs. Die Option lässt sich für weitere Verbindungen wiederholen.
-- Trifft kein Entwurf beide Bänder, endet der Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
+- Jeder Läufer landet *im Band*, *nahe am Ziel* oder *verfehlt*. Im Band und nahe am Ziel sind Erfolge: Der Befehl
+  endet mit 0, und bei einem Entwurf nahe am Ziel nennt er die Abweichung, etwa „1,7 Prozentpunkte über dem Band
+  ... innerhalb der Toleranz von 3 Prozentpunkten“. Verfehlt ein Entwurf ein Band über die Toleranz hinaus, endet der
+  Befehl mit 1. Er nennt jedes verfehlte Band mit der Größe der
   Abweichung und einen Hinweis: ein längeres oder kürzeres Limit, mehr geeignete Plätze, freie Codes (die Postenzahl ist
   durch den Coderaum begrenzt: erhöhe den höchsten Wert mit `score settings --value-max`, höchstens 9, oder gib Codes
   auf der Karte frei), ein schnellerer guter Läufer oder dass diese Eingaben nicht gehen.
 - `score length` analysiert eine vorhandene Bahn, zum Beispiel nachdem du einen Posten verschoben hast, und meldet
-  dieselben Bänder und Abweichungen. Es ändert die Bahn nie.
+  dieselben Bänder und Abweichungen und sagt, in welchem der drei Zustände die Bahn liegt. Es ändert die Bahn nie.
 - Dieselben Antworten liefern die Werkzeuge `score_suggest`, `score_draft` und `score_length`; `--json` gibt sie aus.
   Der Entwurf ist bei gleichem Projekt bei jedem Lauf derselbe.
 
@@ -502,20 +507,20 @@ Eigenschaften das Score-Fenster.
 
 ![Die Karte Gleisdreieck mit Kandidaten als gestrichelten blauen Kreisen mit ihren Werten und rechts das Score-Fenster.](images/editor-score-candidates-de.jpg)
 
-*Eine neue Score-Bahn „Score 33“ mit 33 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Rechts stehen die Knöpfe und die Einstellungen. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Eine neue Score-Bahn „Score 34“ mit 34 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Rechts stehen die Knöpfe und die Einstellungen, bis zu den Zielspannen und ihrer Toleranz gescrollt. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Ein Entwurf einer Score-Bahn auf der Karte Gleisdreieck mit den Entwurfsposten und rechts dem Längenbericht beider Läuferprofile.](images/editor-score-draft-de.jpg)
 
-*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht, und beide Läufer liegen in ihren Spannen. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht: Der sehr gute Läufer liegt in seiner Spanne, der gute 1,7 Prozentpunkte darüber, innerhalb der Toleranz von 3. Der Bericht sagt deshalb, dass jeder Läufer in seiner Spanne oder nahe am Ziel liegt. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Die fertige Score-Bahn auf der Karte Gleisdreieck mit ihren Posten als Kreisen, dem Längenbericht und einer Warnung rechts.](images/editor-score-applied-de.jpg)
 
-*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 27 Posten mit zusammen 83 Punkten. Der Befund unten ist eine Warnung, denn die Kennzahlen 65 und 95 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 33 Posten mit zusammen 95 Punkten. Die vier Befunde unten sind Warnungen, denn Paare von Kennzahlen wie 63 und 93 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
   gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert und die vier Abstände (Wert 1 ab,
   Posten auseinander, Reichweite vom Start, hohe Werte auseinander). Die beiden
-  Spannen werden angezeigt, nicht bearbeitet. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
+  Spannen und die Toleranz sind Felder (beide Enden jeder Spanne); die Standardwerte stehen als Platzhalter darin, und der Längenbericht sagt „im Band“, „nahe am Ziel“ oder „verfehlt“. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
   Veranstaltung braucht dafür einen Start und ein Ziel.
 - **Posten vorschlagen.** Zeigt geordnete Kandidaten als gestrichelte Kreise mit ihrem Wert und als Tabelle.
   „Übernehmen“ fügt einen der Bahn hinzu, als zwei Schritte für Rückgängig. Ein Kandidat ohne freien Code lässt sich
@@ -817,7 +822,9 @@ sie nicht; acht eigene Regeln lesen die Postenmenge, das Limit und die Verbindun
   kürzeste ist. Beide Regeln gelten erst ab sechs Posten.
 - `length_bands` (Warnung): Auf der Kostenfläche der Karte holt der gute Läufer standardmäßig 87 bis 93 Prozent aller
   Punkte, und der sehr gute Läufer läuft alle Posten an und ist nach 95 bis 100 Prozent des Limits im Ziel. Die
-  Bänder sind Einstellungen der Veranstaltung. Die Regel sucht Routen und braucht auf einer großen Karte einige
+  Bänder sind Zielwerte mit einer Toleranz von standardmäßig 3 Prozentpunkten; nur eine Abweichung darüber hinaus
+  ist ein Befund, eine innerhalb der Toleranz steht nur im Längenbericht. Bänder und Toleranz sind Einstellungen der
+  Veranstaltung. Die Regel sucht Routen und braucht auf einer großen Karte einige
   Sekunden. Ohne Kartenobjekte oder bei einer gescheiterten Suche wird sie mit Grund übersprungen.
 - `limit_penalty` (Warnung): Das Limit liegt zwischen 30 und 90 Minuten, und eine Minute darüber kostet mindestens
   so viele Punkte wie der höchste Postenwert.

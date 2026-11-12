@@ -9,12 +9,19 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 ### Hinzugefügt
 
 - `check` meldet einen Posten, der in einem Sperrgebiet steht, als Fehler. Die neuen Regeln `wkb2026.control.in_forbidden` (Waldkarten) und `wkb2026.control.in_forbidden_sprint` (Sprint- und Schulhofkarten) nennen als Quelle WKB26 A 2.2. Als Sperrgebiet gilt ein Sonderobjekt der Art Sperrgebiet, das zur Bahn des Postens gehört oder keine Bahn nennt, und jede Kartenfläche mit dem Symbol 520 oder 709, auf Sprint- und Schulhofkarten auch 714. Ein Posten auf dem Rand steht im Gebiet. Start, Ziel, Querungsstellen und Posten ohne Bahn prüft die Regel nicht. Siehe ADR 0081.
+- Die Längenbänder des Score-Entwurfs sind Zielwerte mit Toleranz. Ein Läufer liegt im Band, nahe am Ziel (bis zu 3 Prozentpunkte außerhalb, genau 3 zählt noch) oder verfehlt das Band. Nahe am Ziel ist ein Erfolg: `score draft` und `score length` enden mit 0 und nennen die Abweichung, die JSON-Antworten und die MCP-Werkzeuge haben `length.state`. Nur ein Fehlschlag über die Toleranz hinaus endet mit 1 und ist ein Befund von `check`. Der Entwurf zielt weiter auf das Band; die Toleranz bestimmt nur, was er zurückgeben darf. Siehe ADR 0083.
+- Bänder und Toleranz sind einstellbar: neue Einstellung `band_tolerance_percent` (0 bis 10, Standard 3), `score settings --good-band MIN-MAX --very-good-band MIN-MAX --band-tolerance N`, die Parameter `good_band_percent`, `very_good_band_percent` und `band_tolerance_percent` von `set_score_settings` und Eingabefelder im Score-Fenster des Editors, dessen Längenbericht „im Band“, „nahe am Ziel“ oder „verfehlt“ sagt. Das Band „sehr gut“ darf nicht unter dem Band „gut“ beginnen.
 
 ### Geändert
 
 - `check` prüft die gerade Linie zwischen zwei Posten nicht mehr gegen Sperrgebiete. Die Warnung „Die gerade Strecke quert das Sperrgebiet …“ entfällt, denn WKB26 B 7.2.6 betrifft die Laufroute, und eine Luftlinie über ein Sperrgebiet ist normal. Die Regeln `wkb2026.leg.through_forbidden` und `wkb2026.leg.through_forbidden_sprint` bleiben im Regelprofil und stehen jetzt in `check --all` unter den nicht geprüften Regeln, bis es die Routenanalyse gibt. Hast du einen Befund dieser Regeln akzeptiert, bleibt die Ausnahme gültig und erscheint höchstens unter den Ausnahmen ohne Befund. Siehe ADR 0080.
+- Das Beispiel „Gleisdreieck“ ist neu entworfen: 34 Minuten, 33 Posten, 95 Punkte (vorher 33 Minuten, 27 Posten, 83 Punkte). Sechs Posten der alten Fassung standen in Kartenflächen mit dem Symbol 520 (ADR 0082). Der gute Läufer liegt bei 94,7 Prozent, nahe am Ziel (ADR 0083); `check` zeigt vier akzeptierte Warnungen zu ähnlichen Codes. Dateien, Ausgaben, Bilder und Zahlen in den READMEs und im Handbuch folgen.
 - Das Beispiel „Rummelsburger Bucht“ hat jetzt fünf Posten und nur gerade Strecken, ohne Knickpunkte und ohne markierte Strecke. Eine Strecke ist die Luftlinie von Posten zu Posten, Knickpunkte sind die Ausnahme. IOF-XML, Purple-Pen-Datei, Ausgaben und beide READMEs folgen der neuen Bahn.
 - Die Bildschirmfotos im Handbuch zeigen die neue Bahn. Das Bild zu den Knicken hat Knicke nur zur Anschauung, die Bildunterschrift sagt das. Die Befundbilder zeigen drei Winkelhinweise, die durch verschobene Posten in einer Arbeitskopie entstanden. Der Abschnitt „Strecken und Knicke“ sagt jetzt, dass eine Strecke gerade ist, bis du sie knickst.
+
+### Behoben
+
+- `score suggest` und `score draft` schlagen keine Postenstellen mehr vor, die in oder auf dem Rand einer Kartenfläche mit dem Symbol 520, 709 oder 714 liegen, und auch keine auf dem Rand eines Sperrgebiet-Sonderobjekts. Vorher stand ein Entwurf auf dem Gleisdreieck mit sechs Posten in Flächen „nicht betreten“, die `check` seit ADR 0081 als Fehler meldet. Entwurf und Prüfung benutzen dieselbe Geometrie und dieselbe Symbolliste (ADR 0082).
 
 ## [0.14.1] - 2026-11-12
 

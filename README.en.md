@@ -35,7 +35,7 @@ Planned for the first version:
   export and sync are usable now: `import`, `export --ppen` and `sync`; Purple Pen 4.0 opens the export);
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - score courses with point values carried by the control code, a time limit, a penalty and mandatory links, with
-  suggested control sites, a draft that meets the length bands, checks and export (`score`, usable now);
+  suggested control sites, a draft that reaches the length bands within a tolerance, checks and export (`score`, usable now);
 - sprint and schoolyard maps; forest maps come later;
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
   special objects and control descriptions, findings of the check, export, import and sync with Purple Pen, with undo and
@@ -50,12 +50,12 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 ## Example
 
 A sprint course with five controls on the map "Rummelsburger Bucht", set with the command line only, with straight
-legs and a first aid post. Also a 33-minute score course (27 controls, 83 points) on the map "Gleisdreieck".
+legs and a first aid post. Also a 34-minute score course (33 controls, 95 points) on the map "Gleisdreieck".
 Both maps are by Remo Madella (MOO Challenge Berlin 2025); he released them on 2026-11-12 for use within the
 freemapper suite, not under an open licence. Commands, project files and output are in
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) and [`examples/gleisdreieck`](examples/gleisdreieck/);
 [`examples/README.en.md`](examples/README.en.md) lists all examples. The program does not reach 45 minutes, the usual
-size for adults, on either map; on Gleisdreieck it reaches 33.
+size for adults, on either map; on Gleisdreieck it reaches 34, with the good runner near the target.
 
 ```text
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
@@ -105,10 +105,10 @@ changed it. The draft writes nothing until you add `--apply`. Ten rules of `chec
 code, alike codes, ring and obvious order, length bands, limit and penalty, links, mix of hard controls, gaps between controls), the editor
 has a Score panel, and `export --csv` and `export --sheet` write the control list and the evaluation sheet. Routes
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
-length bands as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
+length bands (targets with a tolerance, both settable) as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
-[user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 33-minute course, and the
-decisions are in ADR 0060 to 0070.
+[user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 34-minute course, and the
+decisions are in ADR 0060 to 0070, 0082 and 0083.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with
 severity, place, rule and source. The built-in profile is `wkb-2026` (competition rules 2026) and the overlay

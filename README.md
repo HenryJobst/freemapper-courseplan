@@ -35,7 +35,7 @@ Geplant ist für die erste Version:
   Export und Abgleich sind schon nutzbar: `import`, `export --ppen` und `sync`; Purple Pen 4.0 öffnet den Export);
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Score-Bahnen mit Punktwerten, die der Postencode trägt, mit Zeitlimit, Abzug und Pflichtverbindungen, mit
-  vorgeschlagenen Postenstellen, einem Entwurf, der die Längenbänder trifft, Prüfungen und Export (`score`, schon nutzbar);
+  vorgeschlagenen Postenstellen, einem Entwurf, der die Längenbänder mit einer Toleranz erreicht, Prüfungen und Export (`score`, schon nutzbar);
 - Sprint- und Schulhofkarten; Waldkarten kommen später;
 - Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
   Sonderobjekte und Postenbeschreibungen, Befunde der Prüfung, Export, Import und Abgleich mit Purple Pen, mit
@@ -49,12 +49,12 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 ## Beispiel
 
 Eine Sprintbahn mit fünf Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
-geraden Strecken und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 33 Minuten
-(27 Posten, 83 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
+geraden Strecken und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 34 Minuten
+(33 Posten, 95 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
 hat sie am 12.11.2026 für die freemapper-Suite freigegeben, nicht unter einer offenen Lizenz. Befehle, Projektdateien und Ausgaben stehen unter
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) und [`examples/gleisdreieck`](examples/gleisdreieck/);
 alle Beispiele zeigt [`examples/README.md`](examples/README.md). 45 Minuten, die übliche Größe für Erwachsene,
-schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 33.
+schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 34, mit dem guten Läufer nahe am Ziel.
 
 ```text
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
@@ -105,10 +105,10 @@ Entwurf schreibt erst mit `--apply`. Zehn Regeln von `check` lesen Score-Bahnen 
 Ring und offensichtliche Reihenfolge, Längenbänder, Limit und Abzug, Verbindungen, Anteil schwerer Posten, Abstände der Posten), der
 Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben die Postenliste und den
 Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferprofile sind eine
-erste Fassung; nimm die Längenbänder als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
+erste Fassung; nimm die Längenbänder (Zielwerte mit Toleranz, einstellbar) als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
 KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
 [Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Gleisdreieck-Beispiel](examples/gleisdreieck/) enthält eine fertige
-33-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
+34-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070, 0082 und 0083.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz

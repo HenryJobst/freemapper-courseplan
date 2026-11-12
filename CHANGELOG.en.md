@@ -9,12 +9,19 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 ### Added
 
 - `check` reports a control that stands in an out-of-bounds area as an error. The new rules `wkb2026.control.in_forbidden` (forest maps) and `wkb2026.control.in_forbidden_sprint` (sprint and schoolyard maps) cite WKB26 A 2.2. An area is a special object of the kind out-of-bounds area that belongs to the course of the control or names no course, and any map area with the symbol 520 or 709, on sprint and schoolyard maps also 714. A control on the edge stands in the area. The rule does not test start, finish, crossing points or controls that are on no course. See ADR 0081.
+- The length bands of the score draft are targets with a tolerance. A runner is in the band, near the target (up to 3 percentage points outside, exactly 3 still counts) or misses the band. Near the target is a success: `score draft` and `score length` exit with 0 and name the deviation, and the JSON answers and the MCP tools carry `length.state`. Only a miss beyond the tolerance exits with 1 and is a finding of `check`. The draft still aims at the band; the tolerance only decides what it may return. See ADR 0083.
+- The bands and the tolerance are settable: a new setting `band_tolerance_percent` (0 to 10, default 3), `score settings --good-band MIN-MAX --very-good-band MIN-MAX --band-tolerance N`, the parameters `good_band_percent`, `very_good_band_percent` and `band_tolerance_percent` of `set_score_settings`, and input fields in the Score panel of the editor, whose length report says "in the band", "near the target" or "missed". The very good band must not start below the good band.
 
 ### Changed
 
 - `check` no longer tests the straight line between two controls against out-of-bounds areas. The warning "the straight leg crosses ..." is gone: WKB26 B 7.2.6 is about the running route, and a straight line over an out-of-bounds area is normal. The rules `wkb2026.leg.through_forbidden` and `wkb2026.leg.through_forbidden_sprint` stay in the rule profile and now appear in `check --all` among the rules that were not checked, until the route analysis exists. If you accepted a finding of these rules, the exception stays valid and shows at most among the acceptances that match no finding. See ADR 0080.
+- The example "Gleisdreieck" is redrafted: 34 minutes, 33 controls, 95 points (before: 33 minutes, 27 controls, 83 points). Six controls of the old version stood in map areas with the symbol 520 (ADR 0082). The good runner is at 94.7 percent, near the target (ADR 0083); `check` shows four accepted warnings about alike codes. Files, outputs, pictures and the numbers in the READMEs and the manual follow.
 - The example "Rummelsburger Bucht" now has five controls and only straight legs, with no bends and no marked leg. A leg is the straight line from control to control, and bends are the exception. IOF XML, the Purple Pen file, the outputs and both READMEs follow the new course.
 - The screenshots in the manual show the new course. The picture for bends has bends for illustration only, and its caption says so. The findings pictures show three angle hints that came from moved controls in a working copy. The section "Legs and bends" now says that a leg is straight until you bend it.
+
+### Fixed
+
+- `score suggest` and `score draft` no longer propose control sites that lie inside or on the edge of a map area with the symbol 520, 709 or 714, nor on the edge of an out-of-bounds special object. Before, a draft on Gleisdreieck had six controls in "do not enter" areas, which `check` has reported as an error since ADR 0081. Draft and check use the same geometry and the same symbol list (ADR 0082).
 
 ## [0.14.1] - 2026-11-12
 

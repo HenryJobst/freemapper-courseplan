@@ -199,29 +199,29 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     );
 }
 
-/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 33 minutes, both bands met on a fresh
-/// evaluation, and `check` quiet apart from the accepted code pair, whose note is true: the two controls stand
-/// about 260 m apart.
+/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 34 minutes, both runners in their band or near
+/// the target (ADR 0083) on a fresh evaluation, exit 0, and `check` quiet apart from four accepted code pairs whose
+/// notes are true: each note names the distance of the two controls.
 #[test]
-fn gleisdreieck_score_example_meets_its_bands_and_check_is_quiet() {
+fn gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet() {
     let project = repo_root().join("examples/gleisdreieck/gleisdreieck-score.courseplan.toml");
     let p = project.to_str().unwrap();
-    let o = run("en", &["score", "length", p, "Score 33"]);
+    let o = run("en", &["score", "length", p, "Score 34", "--json"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
-    let text = out(&o);
-    assert!(
-        text.contains("27 controls, time limit 33 minutes"),
-        "{text}"
-    );
-    assert!(text.contains("both runners are inside the bands"), "{text}");
+    let v: serde_json::Value = serde_json::from_str(&out(&o)).unwrap();
+    assert_eq!(v["controls"], 33, "{v}");
+    assert_eq!(v["time_limit_min"], 34);
+    assert_eq!(v["length"]["ok"], true, "{v}");
+    let state = v["length"]["state"].as_str().unwrap();
+    assert!(["in_band", "near"].contains(&state), "{v}");
     let o = run("en", &["check", p]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     assert!(
-        out(&o).contains("0 errors, 0 warnings, 0 hints; 1 accepted"),
+        out(&o).contains("0 errors, 0 warnings, 0 hints; 4 accepted"),
         "{}",
         out(&o)
     );
-    // The accepted note says the controls 65 and 95 stand about 260 m apart; the project says where.
+    // Each accepted note says how far the two controls stand apart; the project says where they are.
     let text = std::fs::read_to_string(&project).unwrap();
     let doc: toml::Value = toml::from_str(&text).unwrap();
     let at = |code: i64| {
@@ -234,9 +234,96 @@ fn gleisdreieck_score_example_meets_its_bands_and_check_is_quiet() {
         let m = c["map_mm"].as_array().unwrap();
         (m[0].as_float().unwrap(), m[1].as_float().unwrap())
     };
-    let (a, b) = (at(65), at(95));
-    let metres = ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2)).sqrt() * 4.0;
-    assert!((250.0..270.0).contains(&metres), "{metres} m");
+    let accepted = doc["accepted_findings"].as_array().unwrap();
+    assert_eq!(accepted.len(), 4);
+    for finding in accepted {
+        let codes: Vec<i64> = finding["controls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|c| c.as_integer().unwrap())
+            .collect();
+        let (a, b) = (at(codes[0]), at(codes[1]));
+        let metres = ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2)).sqrt() * 4.0;
+        let note = finding["note"].as_str().unwrap();
+        let stated: f64 = note
+            .split("rund ")
+            .nth(1)
+            .and_then(|rest| rest.split(' ').next())
+            .and_then(|n| n.parse().ok())
+            .unwrap_or_else(|| panic!("a distance in the note: {note}"));
+        assert!((metres - stated).abs() <= 10.0, "{note}: {metres} m");
+    }
+}
+
+/// A draft never holds a control that `check` reports as standing in an out-of-bounds area (ADR 0082), on both
+/// example maps and with several seeds. A draft that misses its targets writes nothing and proves nothing, so only
+/// written drafts are checked; at least one per map must be written.
+#[test]
+fn drafts_on_the_example_maps_never_hold_a_control_in_an_out_of_bounds_area() {
+    for (map, start, finish, limit) in [
+        (
+            "examples/gleisdreieck/gleisdreieck.omap",
+            "100,-290",
+            "100,-275",
+            "20",
+        ),
+        (
+            "examples/rummelsburger-bucht/rummelsburg.omap",
+            "-85,-68",
+            "95,0",
+            "15",
+        ),
+    ] {
+        let mut written = 0;
+        for seed in ["1", "2", "3"] {
+            let dir = tempfile::tempdir().unwrap();
+            let target = dir.path().join("m.omap");
+            std::fs::copy(repo_root().join(map), &target).unwrap();
+            let project = dir.path().join("m.courseplan.toml");
+            let p = project.to_str().unwrap();
+            for args in [
+                vec!["init", target.to_str().unwrap()],
+                vec![
+                    "special", "add", p, "--kind", "start", "--id", "S", "--at", start,
+                ],
+                vec![
+                    "special", "add", p, "--kind", "finish", "--id", "F", "--at", finish,
+                ],
+                vec!["score", "settings", p, "--seed", seed],
+            ] {
+                let o = run("en", &args);
+                assert_eq!(o.status.code(), Some(0), "{map} {args:?}: {}", err(&o));
+            }
+            let o = run(
+                "en",
+                &[
+                    "score",
+                    "draft",
+                    p,
+                    "T",
+                    "--time-limit",
+                    limit,
+                    "--start",
+                    "S",
+                    "--finish",
+                    "F",
+                    "--apply",
+                ],
+            );
+            if o.status.code() != Some(0) {
+                continue;
+            }
+            written += 1;
+            let checked = run("en", &["check", p]);
+            assert!(
+                !out(&checked).contains("in_forbidden"),
+                "{map}, seed {seed}: {}",
+                out(&checked)
+            );
+        }
+        assert!(written > 0, "{map}: no draft was written");
+    }
 }
 
 #[test]

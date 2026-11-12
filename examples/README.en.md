@@ -12,4 +12,4 @@ not been opened in Purple Pen yet. There is no preview image yet; the print PDF 
 | Example | Map |
 |---|---|
 | [Sprint training, Rummelsburger Bucht](rummelsburger-bucht/) | Rummelsburger Bucht, 1:4000, 1.2 by 1.0 km; sprint course with five controls, straight legs and a first aid post |
-| [Score course 33 minutes, Gleisdreieck](gleisdreieck/) | Gleisdreieck, 1:4000, 1.2 by 1.8 km; 27 controls worth 83 points |
+| [Score course 34 minutes, Gleisdreieck](gleisdreieck/) | Gleisdreieck, 1:4000, 1.2 by 1.8 km; 33 controls worth 95 points |
