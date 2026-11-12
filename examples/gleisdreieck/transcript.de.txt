@@ -1,0 +1,104 @@
+$ freemapper-courseplan init gleisdreieck.omap --project gleisdreieck-score.courseplan.toml --title "Score-Bahn Gleisdreieck"
+gleisdreieck-score.courseplan.toml
+
+$ freemapper-courseplan special add gleisdreieck-score.courseplan.toml --kind start --id S-score --at 100,-290
+Start S-score bei 100,-290 angelegt
+
+$ freemapper-courseplan special add gleisdreieck-score.courseplan.toml --kind finish --id F-score --at 100,-275
+Ziel F-score bei 100,-275 angelegt
+
+$ freemapper-courseplan score suggest gleisdreieck-score.courseplan.toml --start S-score --finish F-score --limit 8
+8 Kandidaten, beste Routenwahl zuerst
+60.574,6.852  521  Wert 4, Routenwahl 0.86, Schwierigkeit 0.27, 259.8 s vom Start
+-13.19,-27.763  531  Wert 5, Routenwahl 0.83, Schwierigkeit 0.31, 256.2 s vom Start
+-38.659,-246.276  521  Wert 2, Routenwahl 0.62, Schwierigkeit 0.42, 147.6 s vom Start
+67.069,-75.399  522  Wert 4, Routenwahl 0.57, Schwierigkeit 0.44, 191.9 s vom Start
+-43.325,-192.607  531  Wert 3, Routenwahl 0.54, Schwierigkeit 0.39, 165.8 s vom Start
+12.371,-266.586  521  Wert 1, Routenwahl 0.43, Schwierigkeit 0.52, 97.3 s vom Start
+63.029,-166.707  521  Wert 2, Routenwahl 0.39, Schwierigkeit 0.54, 130.1 s vom Start
+11.504,-206.362  521  Wert 1, Routenwahl 0.22, Schwierigkeit 0.55, 101.6 s vom Start
+
+$ freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 33" --time-limit 33 --start S-score --finish F-score --apply
+Score-Bahn Score 33 geschrieben: 27 Posten, 83 Punkte
+75  Wert 5  bei -80.196,35.737
+54  Wert 4  bei 90.872,-65.709
+53  Wert 3  bei -68.471,-146.576
+95  Wert 5  bei 43.442,56.251
+35  Wert 5  bei -19.829,-71.773
+45  Wert 5  bei -112.249,-34.932
+32  Wert 2  bei -17.5263515625,-266.449912109375
+64  Wert 4  bei 32.81,-38.386
+52  Wert 2  bei 63.029,-166.707
+55  Wert 5  bei -37.602,-15.71
+85  Wert 5  bei -15.216,54.202
+65  Wert 5  bei 92.462,12.209
+34  Wert 4  bei -50.518,-220.82
+42  Wert 2  bei 11.504,-206.362
+62  Wert 2  bei 53.751,-96.565
+51  Wert 1  bei 136.823,-266.047
+71  Wert 1  bei 119.61,-220.507
+41  Wert 1  bei 54.339,-279.116
+31  Wert 1  bei 25.209,-303.796
+73  Wert 3  bei 87.615,-93.584
+43  Wert 3  bei 98.136,-159.519
+61  Wert 1  bei 60.712,-237.037
+83  Wert 3  bei 67.069,-75.399
+44  Wert 4  bei -96.142,-85.771
+63  Wert 3  bei -15.375,-146.273
+33  Wert 3  bei 19.372,-164.394
+81  Wert 1  bei 40.393,-217.406
+guter Läufer: 77 von 83 Punkten, 92.8 Prozent (Band 87 bis 93 Prozent)
+sehr guter Läufer: 83 Punkte, im Ziel nach 96.1 Prozent des Limits (Band 95 bis 100 Prozent)
+beide Läufer liegen in den Bändern
+
+$ freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 33"
+Score 33: 27 Posten, Zeitlimit 33 Minuten
+guter Läufer: 77 von 83 Punkten, 92.8 Prozent (Band 87 bis 93 Prozent)
+sehr guter Läufer: 83 Punkte, im Ziel nach 96.1 Prozent des Limits (Band 95 bis 100 Prozent)
+beide Läufer liegen in den Bändern
+
+$ freemapper-courseplan info gleisdreieck-score.courseplan.toml
+Titel: Score-Bahn Gleisdreieck
+Karte: gleisdreieck.omap
+Kartenart: Sprintkarte
+Regelprofil: wkb-2026
+Posten: 27, Querungsstellen: 0
+Bahnen: 1 (einzeln 0, Mannschaft 0, Staffel 0, Score 1)
+Kategorien: 0
+Score-Bahn Score 33: 27 Posten, 83 Punkte, Zeitlimit 33 Minuten
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+Veranstaltung:
+  Warnung Posten 65, 95: Die Codes 65 und 95 der Score-Bahn Score 33 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+0 Fehler, 1 Warnung, 0 Hinweise; 0 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 65,95 --note "Training: Die Posten 65 und 95 stehen rund 260 m auseinander, eine Verwechslung ist kaum möglich."
+Befund wkb2026.score.code_ambiguity bei Posten 65, 95 akzeptiert
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
+akzeptiert:
+  Warnung Posten 65, 95: Die Codes 65 und 95 der Score-Bahn Score 33 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 65 und 95 stehen rund 260 m auseinander, eine Verwechslung ist kaum möglich.
+    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+übersprungen:
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
+
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --iof-xml course-data.xml
+1 Bahn nach course-data.xml geschrieben
+
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-33.csv --course "Score 33"
+Postenliste der Bahn Score 33 nach score-33.csv geschrieben
+
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-33.sheet.de.md --course "Score 33"
+Auswertungsbogen der Bahn Score 33 nach score-33.sheet.de.md geschrieben
+

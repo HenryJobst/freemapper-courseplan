@@ -429,7 +429,7 @@ fn crossing_points_have_no_placement_and_the_rest_do() {
 
 fn example_text() -> String {
     let project = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+        .join("../../tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml");
     let file = ProjectFile::load(&project).expect("example loads");
     let doc = read_map_file(&file.map_path()).expect("example map reads");
     let index = MapIndex::from_document(&doc);
@@ -439,7 +439,7 @@ fn example_text() -> String {
     )
     .expect("rule set");
     let mut text = String::from(
-        "# auto_place(keep_existing = false) of every course of examples/luebeck-sprint, today's code.\nformat = 1\n",
+        "# auto_place(keep_existing = false) of every course of tests/fixtures/luebeck-sprint, today's code.\nformat = 1\n",
     );
     for course in &file.event.courses {
         let gaps = freemapper_courseplan::numbers::gap_range(

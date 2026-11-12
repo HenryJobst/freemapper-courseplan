@@ -214,7 +214,7 @@ mod tests {
         let map_path = root().join("tests/fixtures/maps/luebeck.omap");
         let map = read_map_file(&map_path).unwrap();
         let kind = map_kind_for_file(&map, &map_path);
-        let dir = root().join("examples/luebeck-sprint");
+        let dir = root().join("tests/fixtures/luebeck-sprint");
         let project = ProjectFile::load(&dir.join("luebeck-sprint.courseplan.toml")).unwrap();
         let ppen = std::fs::read(dir.join("luebeck-sprint.ppen")).unwrap();
         let v = views(&project.event, Some(&ppen), &ppen, &map, kind).unwrap();

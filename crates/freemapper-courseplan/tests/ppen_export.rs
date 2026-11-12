@@ -399,7 +399,7 @@ fn repo_root() -> PathBuf {
 /// The Lübeck example with what the example lacks: bends, a taped leg, a planned print scale on the
 /// second course, a course-control placement next to central ones, and special objects.
 fn luebeck() -> (Event, MapDocument) {
-    let path = repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+    let path = repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml");
     let mut event = ProjectFile::load(&path).unwrap().event;
     let map = read_map_file(&path.parent().unwrap().join(&event.sources.map)).unwrap();
     let a = &mut event.courses[0];
@@ -691,7 +691,7 @@ fn exporting_onto_its_own_export_changes_nothing() {
 #[test]
 fn a_comment_with_a_multibyte_character_does_not_upset_the_patch() {
     // The example has no descriptions, so the patch takes the standard from the base file's element.
-    let path = repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+    let path = repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml");
     let event = ProjectFile::load(&path).unwrap().event;
     let map = read_map_file(&path.parent().unwrap().join(&event.sources.map)).unwrap();
     let first = export_ppen(&event, &map, target(None, true)).unwrap();
@@ -843,24 +843,24 @@ fn unlinked_starts_finishes_and_crossing_points_pair_by_their_order() {
 
 // ---- the committed example and the round trip through our own reader ----
 
-const EXAMPLE_PPEN: &str = "examples/luebeck-sprint/luebeck-sprint.ppen";
+const EXAMPLE_PPEN: &str = "tests/fixtures/luebeck-sprint/luebeck-sprint.ppen";
 
 /// The Lübeck example project as it is committed, with the map it names.
 fn luebeck_example() -> (Event, MapDocument) {
-    let path = repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml");
+    let path = repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml");
     let event = ProjectFile::load(&path).unwrap().event;
     let map = read_map_file(&path.parent().unwrap().join(&event.sources.map)).unwrap();
     (event, map)
 }
 
-/// The export `export --ppen examples/luebeck-sprint/luebeck-sprint.ppen` makes for a new file: no base,
+/// The export `export --ppen tests/fixtures/luebeck-sprint/luebeck-sprint.ppen` makes for a new file: no base,
 /// the map named relative to the `.ppen`, English texts.
 fn example_export() -> PpenExport {
     let (event, map) = luebeck_example();
     let target = Target {
         base: None,
         linked: true,
-        map_path: "../../tests/fixtures/maps/luebeck.omap".to_owned(),
+        map_path: "../maps/luebeck.omap".to_owned(),
         lang: "en",
         delete: Deletions::default(),
     };

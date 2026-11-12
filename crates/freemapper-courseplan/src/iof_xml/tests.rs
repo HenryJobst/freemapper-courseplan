@@ -410,7 +410,7 @@ fn luebeck_xml() -> String {
 fn luebeck() -> Event {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../examples/luebeck-sprint/luebeck-sprint.courseplan.toml"
+        "/../../tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"
     );
     ProjectFile::load(std::path::Path::new(path)).unwrap().event
 }
@@ -432,7 +432,7 @@ fn output_is_deterministic_and_matches_snapshot() {
     );
     let example = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../examples/luebeck-sprint/course-data.xml"
+        "/../../tests/fixtures/luebeck-sprint/course-data.xml"
     );
     if std::env::var_os("UPDATE_SNAPSHOT").is_some() {
         std::fs::write(path, &xml).unwrap();
@@ -446,7 +446,7 @@ fn output_is_deterministic_and_matches_snapshot() {
     let committed = std::fs::read_to_string(example).unwrap();
     assert!(
         xml == committed,
-        "examples/luebeck-sprint/course-data.xml is stale; rerun with UPDATE_SNAPSHOT=1"
+        "tests/fixtures/luebeck-sprint/course-data.xml is stale; rerun with UPDATE_SNAPSHOT=1"
     );
 }
 

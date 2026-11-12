@@ -1,0 +1,247 @@
+format = 1
+
+[event]
+title = "Score-Bahn Gleisdreieck"
+discipline = "training"
+rule_profile = "wkb-2026"
+
+[sources]
+map = "gleisdreieck.omap"
+
+[[specials]]
+kind = "start"
+id = "S-score"
+map_mm = [100.0, -290.0]
+
+[[specials]]
+kind = "finish"
+id = "F-score"
+map_mm = [100.0, -275.0]
+
+[[controls]]
+code = 75
+map_mm = [-80.196, 35.737]
+
+[[controls]]
+code = 54
+map_mm = [90.872, -65.709]
+
+[[controls]]
+code = 53
+map_mm = [-68.471, -146.576]
+
+[[controls]]
+code = 95
+map_mm = [43.442, 56.251]
+
+[[controls]]
+code = 35
+map_mm = [-19.829, -71.773]
+
+[[controls]]
+code = 45
+map_mm = [-112.249, -34.932]
+
+[[controls]]
+code = 32
+map_mm = [-17.5263515625, -266.449912109375]
+
+[[controls]]
+code = 64
+map_mm = [32.81, -38.386]
+
+[[controls]]
+code = 52
+map_mm = [63.029, -166.707]
+
+[[controls]]
+code = 55
+map_mm = [-37.602, -15.71]
+
+[[controls]]
+code = 85
+map_mm = [-15.216, 54.202]
+
+[[controls]]
+code = 65
+map_mm = [92.462, 12.209]
+
+[[controls]]
+code = 34
+map_mm = [-50.518, -220.82]
+
+[[controls]]
+code = 42
+map_mm = [11.504, -206.362]
+
+[[controls]]
+code = 62
+map_mm = [53.751, -96.565]
+
+[[controls]]
+code = 51
+map_mm = [136.823, -266.047]
+
+[[controls]]
+code = 71
+map_mm = [119.61, -220.507]
+
+[[controls]]
+code = 41
+map_mm = [54.339, -279.116]
+
+[[controls]]
+code = 31
+map_mm = [25.209, -303.796]
+
+[[controls]]
+code = 73
+map_mm = [87.615, -93.584]
+
+[[controls]]
+code = 43
+map_mm = [98.136, -159.519]
+
+[[controls]]
+code = 61
+map_mm = [60.712, -237.037]
+
+[[controls]]
+code = 83
+map_mm = [67.069, -75.399]
+
+[[controls]]
+code = 44
+map_mm = [-96.142, -85.771]
+
+[[controls]]
+code = 63
+map_mm = [-15.375, -146.273]
+
+[[controls]]
+code = 33
+map_mm = [19.372, -164.394]
+
+[[controls]]
+code = 81
+map_mm = [40.393, -217.406]
+
+[[courses]]
+name = "Score 33"
+start = "S-score"
+finish = "F-score"
+kind = "score"
+time_limit_min = 33
+
+[[courses.controls]]
+code = 75
+value = 5
+
+[[courses.controls]]
+code = 54
+value = 4
+
+[[courses.controls]]
+code = 53
+value = 3
+
+[[courses.controls]]
+code = 95
+value = 5
+
+[[courses.controls]]
+code = 35
+value = 5
+
+[[courses.controls]]
+code = 45
+value = 5
+
+[[courses.controls]]
+code = 32
+value = 2
+
+[[courses.controls]]
+code = 64
+value = 4
+
+[[courses.controls]]
+code = 52
+value = 2
+
+[[courses.controls]]
+code = 55
+value = 5
+
+[[courses.controls]]
+code = 85
+value = 5
+
+[[courses.controls]]
+code = 65
+value = 5
+
+[[courses.controls]]
+code = 34
+value = 4
+
+[[courses.controls]]
+code = 42
+value = 2
+
+[[courses.controls]]
+code = 62
+value = 2
+
+[[courses.controls]]
+code = 51
+value = 1
+
+[[courses.controls]]
+code = 71
+value = 1
+
+[[courses.controls]]
+code = 41
+value = 1
+
+[[courses.controls]]
+code = 31
+value = 1
+
+[[courses.controls]]
+code = 73
+value = 3
+
+[[courses.controls]]
+code = 43
+value = 3
+
+[[courses.controls]]
+code = 61
+value = 1
+
+[[courses.controls]]
+code = 83
+value = 3
+
+[[courses.controls]]
+code = 44
+value = 4
+
+[[courses.controls]]
+code = 63
+value = 3
+
+[[courses.controls]]
+code = 33
+value = 3
+
+[[courses.controls]]
+code = 81
+value = 1
+
+[[accepted_findings]]
+rule = "wkb2026.score.code_ambiguity"
+controls = [65, 95]
+note = "Training: Die Posten 65 und 95 stehen rund 260 m auseinander, eine Verwechslung ist kaum möglich."

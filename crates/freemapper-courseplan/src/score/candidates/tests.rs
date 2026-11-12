@@ -608,7 +608,7 @@ fn luebeck_timing_for_limit_60() {
     use crate::score::travel::{CostSurface, Pace, RouteParams};
     let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
     let project = freemapper_courseplan_model::ProjectFile::load(std::path::Path::new(&format!(
-        "{root}/examples/luebeck-sprint/luebeck-sprint.courseplan.toml"
+        "{root}/tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"
     )))
     .unwrap();
     let doc = crate::omap::read::read_map_file(std::path::Path::new(&format!(
@@ -877,4 +877,30 @@ fn a_lost_site_pushes_only_its_close_neighbours_away() {
     c.min_distance_mm = 20.0;
     let found = suggest(&index, &travel, &c).unwrap();
     assert_eq!(positions(&found), vec![(60.0, 50.0)]);
+}
+
+#[test]
+fn the_frame_some_maps_draw_around_their_content_gives_no_sites() {
+    let extent = Some((p(-100.0, -200.0), p(100.0, 200.0)));
+    let frame = vec![
+        p(-100.0, -190.0),
+        p(100.0, -190.0),
+        p(100.0, 190.0),
+        p(-100.0, 190.0),
+        p(-100.0, -190.0),
+    ];
+    assert!(is_map_frame(&frame, &extent));
+    // A building is a rectangle too, but small.
+    let building = vec![p(0.0, 0.0), p(10.0, 0.0), p(10.0, 8.0), p(0.0, 8.0)];
+    assert!(!is_map_frame(&building, &extent));
+    // A large outline with more than four corners is no frame.
+    let big = vec![
+        p(-100.0, -190.0),
+        p(100.0, -190.0),
+        p(100.0, 190.0),
+        p(0.0, 150.0),
+        p(-100.0, 190.0),
+    ];
+    assert!(!is_map_frame(&big, &extent));
+    assert!(!is_map_frame(&frame, &None));
 }

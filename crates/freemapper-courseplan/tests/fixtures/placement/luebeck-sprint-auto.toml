@@ -1,4 +1,4 @@
-# auto_place(keep_existing = false) of every course of examples/luebeck-sprint, today's code.
+# auto_place(keep_existing = false) of every course of tests/fixtures/luebeck-sprint, today's code.
 format = 1
 
 [[course]]

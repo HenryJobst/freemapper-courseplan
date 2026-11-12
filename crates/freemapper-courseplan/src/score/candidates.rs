@@ -227,8 +227,40 @@ impl LineFamily<'_> {
     }
 }
 
+/// A map needs at least this many objects before a rectangle spanning it counts as a frame.
+const FRAME_MIN_FEATURES: usize = 50;
+
+/// An outline that is a plain axis-aligned rectangle spanning at least 90 percent of the extent of the
+/// mapped objects in both directions: the frame some maps draw around their content. Its corners lie on
+/// the edge of the map, not at a feature a runner could find, so they are no sites (ADR 0077).
+fn is_map_frame(points: &[MapPoint], extent: &Option<(MapPoint, MapPoint)>) -> bool {
+    const SPAN: f64 = 0.9;
+    const FLAT_MM: f64 = 0.01;
+    let Some((lo, hi)) = extent else {
+        return false;
+    };
+    let mut pts = points.to_vec();
+    if pts.len() > 1 && pts.first() == pts.last() {
+        pts.pop();
+    }
+    if pts.len() != 4 {
+        return false;
+    }
+    let axis_aligned = (0..4).all(|i| {
+        let (a, b) = (&pts[i], &pts[(i + 1) % 4]);
+        (a.x - b.x).abs() <= FLAT_MM || (a.y - b.y).abs() <= FLAT_MM
+    });
+    let (x0, x1, y0, y1) = pts.iter().fold(
+        (f64::MAX, f64::MIN, f64::MAX, f64::MIN),
+        |(a, b, c, d), p| (a.min(p.x), b.max(p.x), c.min(p.y), d.max(p.y)),
+    );
+    axis_aligned && (x1 - x0) >= SPAN * (hi.x - lo.x) && (y1 - y0) >= SPAN * (hi.y - lo.y)
+}
+
 /// Every site the map offers, with duplicate positions (0.01 mm) reduced to the clearest.
 fn raw_sites(index: &MapIndex) -> Vec<Site> {
+    // A rectangle is only a frame around something: a map with a handful of objects has none.
+    let extent = index.extent().filter(|_| index.len() >= FRAME_MIN_FEATURES);
     let classes = Classes::embedded();
     let in_family = |code: &str| {
         classes.lookup(code, Kind::End).is_some() || classes.lookup(code, Kind::Junction).is_some()
@@ -266,7 +298,10 @@ fn raw_sites(index: &MapIndex) -> Vec<Site> {
                 }
             }
             FeatureGeometry::Line(points) => {
-                if let Some(c) = classes.lookup(code, Kind::Corner) {
+                if let Some(c) = classes
+                    .lookup(code, Kind::Corner)
+                    .filter(|_| !is_map_frame(points, &extent))
+                {
                     corners(points, points.len() > 2 && points.first() == points.last())
                         .into_iter()
                         .for_each(|at| push(at, c, true));
@@ -286,7 +321,7 @@ fn raw_sites(index: &MapIndex) -> Vec<Site> {
             }
             FeatureGeometry::Area(rings) => {
                 if let Some(c) = classes.lookup(code, Kind::Corner) {
-                    for ring in rings {
+                    for ring in rings.iter().filter(|r| !is_map_frame(r, &extent)) {
                         corners(ring, true)
                             .into_iter()
                             .for_each(|at| push(at, c, true));

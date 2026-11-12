@@ -1,0 +1,25 @@
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+event:
+  warning controls 65, 95: codes 65 and 95 in score course Score 33 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+0 errors, 1 warning, 0 hints; 0 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 65,95 --note "Training: Controls 65 and 95 stand about 260 m apart, so mixing them up is unlikely."
+accepted finding wkb2026.score.code_ambiguity at controls 65, 95
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+0 errors, 0 warnings, 0 hints; 1 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
+accepted:
+  warning controls 65, 95: codes 65 and 95 in score course Score 33 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 65 and 95 stand about 260 m apart, so mixing them up is unlikely.
+    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
+skipped:
+  wkb2026.start.capacity, event: the event has no start window; event start-window sets it
+  wkb2026.length.long, event: not checked at a training
+  wkb2026.length.middle, event: not checked at a training
+  wkb2026.length.ultralong, event: not checked at a training
+  wkb2026.difficulty.mix, event: not checked at a training
+0 errors, 0 warnings, 0 hints; 1 accepted, 5 skipped

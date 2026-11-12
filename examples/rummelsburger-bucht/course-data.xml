@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CourseData xmlns="http://www.orienteering.org/datastandard/3.0" iofVersion="3.0" createTime="2026-11-12T13:51:16Z" creator="freemapper-courseplan">
+  <Event>
+    <Name>Sprinttraining Rummelsburger Bucht</Name>
+  </Event>
+  <RaceCourseData>
+    <Map>
+      <Scale>4000</Scale>
+      <MapPositionTopLeft x="0" y="0" unit="mm"/>
+      <MapPositionBottomRight x="0" y="0" unit="mm"/>
+    </Map>
+    <Control type="Start">
+      <Id>S1</Id>
+      <Position lat="52.499618" lng="13.475932"/>
+      <MapPosition x="-120" y="-75" unit="mm"/>
+    </Control>
+    <Control type="Finish">
+      <Id>F1</Id>
+      <Position lat="52.493926" lng="13.485035"/>
+      <MapPosition x="48" y="69" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>31</Id>
+      <Position lat="52.498234" lng="13.478684"/>
+      <MapPosition x="-70.05" y="-40.78" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>32</Id>
+      <Position lat="52.496767" lng="13.483144"/>
+      <MapPosition x="9" y="-6.85" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>33</Id>
+      <Position lat="52.496339" lng="13.481741"/>
+      <MapPosition x="-13.67" y="7.12" unit="mm"/>
+    </Control>
+    <Control type="Control">
+      <Id>34</Id>
+      <Position lat="52.495172" lng="13.482758"/>
+      <MapPosition x="6.42" y="37.92" unit="mm"/>
+    </Control>
+    <Course>
+      <Name>A</Name>
+      <Length>1146.45</Length>
+      <CourseControl type="Start">
+        <Control>S1</Control>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>31</Control>
+        <MapText>1</MapText>
+        <MapTextPosition x="3.3" y="6.89" unit="mm"/>
+        <LegLength>242.19</LegLength>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>32</Control>
+        <MapText>2</MapText>
+        <MapTextPosition x="8.1" y="-3.57" unit="mm"/>
+        <LegLength>384.93</LegLength>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>33</Control>
+        <MapText>3</MapText>
+        <MapTextPosition x="-4.51" y="-4.27" unit="mm"/>
+        <LegLength>106.51</LegLength>
+      </CourseControl>
+      <CourseControl type="Control">
+        <Control>34</Control>
+        <MapText>4</MapText>
+        <MapTextPosition x="-5.21" y="-2.75" unit="mm"/>
+        <LegLength>155.58</LegLength>
+      </CourseControl>
+      <CourseControl type="Finish">
+        <Control>F1</Control>
+        <LegLength>257.24</LegLength>
+      </CourseControl>
+    </Course>
+    <ClassCourseAssignment>
+      <ClassName>Offen</ClassName>
+      <CourseName>A</CourseName>
+    </ClassCourseAssignment>
+  </RaceCourseData>
+</CourseData>

@@ -24,7 +24,7 @@ struct Setup {
 
 fn setup() -> Setup {
     let (map, kind) = luebeck_map();
-    let dir = root().join("examples/luebeck-sprint");
+    let dir = root().join("tests/fixtures/luebeck-sprint");
     let mut project = ProjectFile::load(&dir.join("luebeck-sprint.courseplan.toml"))
         .unwrap()
         .event;
