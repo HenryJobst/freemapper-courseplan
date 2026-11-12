@@ -22,10 +22,10 @@ fn luebeck() -> (tempfile::TempDir, PathBuf) {
     )
     .unwrap();
     let text = std::fs::read_to_string(
-        repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml"),
+        repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"),
     )
     .unwrap()
-    .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+    .replace("../maps/luebeck.omap", "luebeck.omap");
     let project = dir.path().join("event.courseplan.toml");
     std::fs::write(&project, text).unwrap();
     (dir, project)
@@ -177,10 +177,11 @@ fn info_names_controls_points_and_limit_of_a_score_course() {
     assert!(!text.contains("not supported yet"), "{text}");
 }
 
-/// The Luebeck score example (examples/luebeck-sprint/README.en.md) stays inside the bands and free of findings.
+/// The Luebeck score project (tests/fixtures/luebeck-sprint, once an example) stays inside the bands and free of
+/// findings.
 #[test]
 fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
-    let project = repo_root().join("examples/luebeck-sprint/luebeck-score.courseplan.toml");
+    let project = repo_root().join("tests/fixtures/luebeck-sprint/luebeck-score.courseplan.toml");
     let p = project.to_str().unwrap();
     let o = run("en", &["score", "length", p, "Score 15"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
@@ -198,17 +199,18 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     );
 }
 
-/// The Berlin score example (examples/berlin-kreuzberg/README.en.md): 45 minutes, both bands met on a fresh
-/// evaluation, and `check` quiet apart from the accepted code pair.
+/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 33 minutes, both bands met on a fresh
+/// evaluation, and `check` quiet apart from the accepted code pair, whose note is true: the two controls stand
+/// about 260 m apart.
 #[test]
-fn berlin_score_example_meets_its_bands_and_check_is_quiet() {
-    let project = repo_root().join("examples/berlin-kreuzberg/kreuzberg.courseplan.toml");
+fn gleisdreieck_score_example_meets_its_bands_and_check_is_quiet() {
+    let project = repo_root().join("examples/gleisdreieck/gleisdreieck-score.courseplan.toml");
     let p = project.to_str().unwrap();
-    let o = run("en", &["score", "length", p, "Score 45"]);
+    let o = run("en", &["score", "length", p, "Score 33"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     let text = out(&o);
     assert!(
-        text.contains("27 controls, time limit 45 minutes"),
+        text.contains("27 controls, time limit 33 minutes"),
         "{text}"
     );
     assert!(text.contains("both runners are inside the bands"), "{text}");
@@ -219,6 +221,22 @@ fn berlin_score_example_meets_its_bands_and_check_is_quiet() {
         "{}",
         out(&o)
     );
+    // The accepted note says the controls 65 and 95 stand about 260 m apart; the project says where.
+    let text = std::fs::read_to_string(&project).unwrap();
+    let doc: toml::Value = toml::from_str(&text).unwrap();
+    let at = |code: i64| {
+        let c = doc["controls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["code"].as_integer() == Some(code))
+            .unwrap_or_else(|| panic!("control {code}"));
+        let m = c["map_mm"].as_array().unwrap();
+        (m[0].as_float().unwrap(), m[1].as_float().unwrap())
+    };
+    let (a, b) = (at(65), at(95));
+    let metres = ((a.0 - b.0).powi(2) + (a.1 - b.1).powi(2)).sqrt() * 4.0;
+    assert!((250.0..270.0).contains(&metres), "{metres} m");
 }
 
 #[test]

@@ -298,7 +298,7 @@ Menü „Veranstaltung“, ebenso das Abgleichen mit Purple Pen.
 ### Starten
 
 ```sh
-freemapper-courseplan edit luebeck-sprint.courseplan.toml
+freemapper-courseplan edit rummelsburg-sprint.courseplan.toml
 ```
 
 Der Befehl lädt das Projekt, öffnet den Browser und gibt die Adresse in einer einzigen Zeile aus, etwa
@@ -633,7 +633,7 @@ unmittelbar vor dem Speichern, ob die Datei noch die ist, die er gelesen hat. Is
 eine Verschiebung gespeichert hat, während der Befehl lief, schreibt der Befehl nichts, gibt
 
 ```
-luebeck-sprint.courseplan.toml hat sich geändert, seit es gelesen wurde. Es wurde nichts geschrieben
+rummelsburg-sprint.courseplan.toml hat sich geändert, seit es gelesen wurde. Es wurde nichts geschrieben
 ```
 
 aus und endet mit Exit-Code 1. Führe den Befehl noch einmal aus; er liest dann den neuen Stand. Die Prüfung zählt jede
@@ -764,7 +764,7 @@ sie nicht; acht eigene Regeln lesen die Postenmenge, das Limit und die Verbindun
 
 Mehrere dieser Grenzen sind Vorschläge von freemapper-courseplan, keine Werte aus einer Quelle; die Quelle in der
 Zeile sagt, welche. Einen Befund an einem Postenpaar akzeptierst du mit `--controls`, einen an der ganzen Bahn mit
-`--course`, wie in den Beispielen `examples/luebeck-sprint/score-check.de.txt` und `examples/berlin-kreuzberg/check.de.txt`. Mannschafts- und Staffelbahnen bleiben
+`--course`, wie in den Beispielen `examples/gleisdreieck/check.de.txt` und `examples/rummelsburger-bucht/check.de.txt`. Mannschafts- und Staffelbahnen bleiben
 ungeprüft.
 
 ### Eine Ausnahme begründen
@@ -901,9 +901,10 @@ Als Ziel sind die Projektdatei, die Karte und die Zieldatei von `--iof-xml` im s
 liest das Programm nur bis zur festen Größengrenze; eine kaputte oder fremde Datei gibt eine Fehlermeldung. Passt die
 Datei nicht zur Karte, schreibt der Export nichts.
 
-**In Purple Pen 4.0 geöffnet.** Das Beispiel [`luebeck-sprint.ppen`](../../examples/luebeck-sprint/luebeck-sprint.ppen)
-lässt sich dort ohne Fehler öffnen, und der Inhalt wirkt richtig (geprüft vom Autor, 10.11.2026). Außerdem wird die
-Datei mit dem Leser von freemapper-course wieder eingelesen, und der Export einer eingelesenen Datei ergibt dieselben
+**In Purple Pen 4.0 geöffnet.** Der Export eines früheren Beispiels (Lübecker Altstadt) ließ sich dort ohne Fehler
+öffnen, und der Inhalt wirkte richtig (geprüft vom Autor, 10.11.2026); der Schreiber ist derselbe. Das jetzige Beispiel
+[`rummelsburg-sprint.ppen`](../../examples/rummelsburger-bucht/rummelsburg-sprint.ppen) ist noch nicht in Purple Pen
+geöffnet worden. Außerdem wird die Datei mit dem Leser von freemapper-course wieder eingelesen, und der Export einer eingelesenen Datei ergibt dieselben
 Bytes.
 
 Der KI-Assistent hat dafür das Werkzeug `export_ppen` mit `project`, `path` und `new`; der Pfad muss auf `.ppen`
@@ -1012,7 +1013,7 @@ stehen in ADR 0040.
 Mit `export` gibst du die Bahnen an Auswertungsprogramme weiter, die IOF-XML 3.0 lesen:
 
 ```sh
-freemapper-courseplan export luebeck-sprint.courseplan.toml --iof-xml course-data.xml
+freemapper-courseplan export rummelsburg-sprint.courseplan.toml --iof-xml course-data.xml
 ```
 
 Das Programm schreibt alle Einzel- und Score-Bahnen der Veranstaltung in die Datei: Posten mit Kartenposition, die
@@ -1032,7 +1033,7 @@ Was du wissen solltest:
   Kartenpositionen, und `export` sagt das. OE, OCAD und Condes sind mit diesen Positionen nicht getestet.
 - Abgeflaggte Strecken fehlen noch. Die Kartenausdehnung steht als 0/0 mm in der Datei.
 - Die Uhrzeit `createTime` ist UTC und trägt das Zeichen `Z`. Für die Bahnen spielt sie keine Rolle.
-- Das Beispiel [`course-data.xml`](../../examples/luebeck-sprint/course-data.xml) ist gegen das IOF-Schema
+- Das Beispiel [`course-data.xml`](../../examples/rummelsburger-bucht/course-data.xml) ist gegen das IOF-Schema
   geprüft, und ein Test liest den Export mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder
   ein. Ein Import in OE, Purple Pen oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Wer die Datei
   dort importiert, soll melden, was ankommt.

@@ -1,0 +1,25 @@
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+Veranstaltung:
+  Warnung Posten 65, 95: Die Codes 65 und 95 der Score-Bahn Score 33 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+0 Fehler, 1 Warnung, 0 Hinweise; 0 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 65,95 --note "Training: Die Posten 65 und 95 stehen rund 260 m auseinander, eine Verwechslung ist kaum möglich."
+Befund wkb2026.score.code_ambiguity bei Posten 65, 95 akzeptiert
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
+akzeptiert:
+  Warnung Posten 65, 95: Die Codes 65 und 95 der Score-Bahn Score 33 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 65 und 95 stehen rund 260 m auseinander, eine Verwechslung ist kaum möglich.
+    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+übersprungen:
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 1 akzeptiert, 5 übersprungen

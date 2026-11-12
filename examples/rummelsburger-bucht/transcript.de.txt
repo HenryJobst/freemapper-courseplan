@@ -1,0 +1,98 @@
+$ freemapper-courseplan init rummelsburg.omap --project rummelsburg-sprint.courseplan.toml --title "Sprinttraining Rummelsburger Bucht"
+rummelsburg-sprint.courseplan.toml
+
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind start --id S1 --at -120,-75
+Start S1 bei -120,-75 angelegt
+
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind finish --id F1 --at 48,69
+Ziel F1 bei 48,69 angelegt
+
+$ freemapper-courseplan special add rummelsburg-sprint.courseplan.toml --kind first-aid --id H1 --at -112,-68
+Erste-Hilfe-Stelle H1 bei -112,-68 angelegt
+
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -70.05,-40.78
+Posten 31 bei -70.05,-40.78 angelegt
+
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 9,-6.85
+Posten 32 bei 9,-6.85 angelegt
+
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at -13.67,7.12
+Posten 33 bei -13.67,7.12 angelegt
+
+$ freemapper-courseplan control add rummelsburg-sprint.courseplan.toml --at 6.42,37.92
+Posten 34 bei 6.42,37.92 angelegt
+
+$ freemapper-courseplan class add rummelsburg-sprint.courseplan.toml Offen
+Kategorie Offen angelegt
+
+$ freemapper-courseplan course add rummelsburg-sprint.courseplan.toml A --start S1 --finish F1 --controls 31,32,33,34 --classes Offen
+Bahn A angelegt
+
+$ freemapper-courseplan course leg rummelsburg-sprint.courseplan.toml A --after 1 --bend=-57,-43 --bend=-50,-50
+Strecke nach Position 1 der Bahn A gesetzt: Knickpunkte 2, nicht abgeflaggt
+
+$ freemapper-courseplan course leg rummelsburg-sprint.courseplan.toml A --after 3 --bend 6,27
+Strecke nach Position 3 der Bahn A gesetzt: Knickpunkte 1, nicht abgeflaggt
+
+$ freemapper-courseplan course leg rummelsburg-sprint.courseplan.toml A --after 4 --bend 6,41 --bend 13,34 --bend 20,50 --taped
+Strecke nach Position 4 der Bahn A gesetzt: Knickpunkte 3, abgeflaggt
+
+$ freemapper-courseplan course numbers rummelsburg-sprint.courseplan.toml A
+4 Postennummern auf Bahn A gesetzt
+
+$ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
+Titel: Sprinttraining Rummelsburger Bucht
+Karte: rummelsburg.omap
+Kartenart: Sprintkarte
+Regelprofil: wkb-2026
+Posten: 4, Querungsstellen: 0
+Bahnen: 1 (einzeln 1, Mannschaft 0, Staffel 0, Score 0)
+Kategorien: 1
+Bahn A: 4 Posten, 1,1 km, Anstieg – m
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+Bahn A:
+  Hinweis Bahn A, Strecke 31–32: Die Strecken am Posten 32 bilden einen Winkel von 67°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  Hinweis Bahn A, Strecke 32–33: Die Strecken am Posten 33 bilden einen Winkel von 76°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  Hinweis Bahn A, Strecke 33–34: Die Strecken am Posten 34 bilden einen Winkel von 171°, erwünscht sind höchstens 170° (wkb2026.leg.straight_angle_hint, Vorschlag von freemapper-courseplan)
+0 Fehler, 0 Warnungen, 3 Hinweise; 0 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:1 --note "Training: Der Winkel von 67° am Posten 32 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt."
+Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke 31–32 akzeptiert
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:2 --note "Training: Der Winkel von 76° am Posten 33 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt."
+Befund wkb2026.leg.acute_angle_hint bei Bahn A, Strecke 32–33 akzeptiert
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.straight_angle_hint --leg A:3 --note "Training: Die Bahn läuft am Posten 34 fast geradeaus weiter, weil die Gasse nach dem Posten es vorgibt."
+Befund wkb2026.leg.straight_angle_hint bei Bahn A, Strecke 33–34 akzeptiert
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+0 Fehler, 0 Warnungen, 0 Hinweise; 3 akzeptiert, 5 übersprungen
+check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml --all
+akzeptiert:
+  Hinweis Bahn A, Strecke 31–32: Die Strecken am Posten 32 bilden einen Winkel von 67°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    Begründung: Training: Der Winkel von 67° am Posten 32 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt.
+  Hinweis Bahn A, Strecke 32–33: Die Strecken am Posten 33 bilden einen Winkel von 76°, gefordert sind mindestens 90° (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    Begründung: Training: Der Winkel von 76° am Posten 33 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt.
+  Hinweis Bahn A, Strecke 33–34: Die Strecken am Posten 34 bilden einen Winkel von 171°, erwünscht sind höchstens 170° (wkb2026.leg.straight_angle_hint, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Bahn läuft am Posten 34 fast geradeaus weiter, weil die Gasse nach dem Posten es vorgibt.
+    Zur Prüfregel: Läuft die Bahn am Posten fast geradeaus weiter, ändert der Posten die Laufrichtung kaum, und hinter dem Kreis ist kein Platz für die Nummer. Die 170° hat der Nutzer festgelegt.
+übersprungen:
+  wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
+  wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.middle, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.length.ultralong, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+  wkb2026.difficulty.mix, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
+0 Fehler, 0 Warnungen, 0 Hinweise; 3 akzeptiert, 5 übersprungen
+
+$ freemapper-courseplan export rummelsburg-sprint.courseplan.toml --iof-xml course-data.xml
+1 Bahn nach course-data.xml geschrieben
+
+$ freemapper-courseplan export rummelsburg-sprint.courseplan.toml --ppen rummelsburg-sprint.ppen
+1 Bahn in das neue Purple-Pen-Event rummelsburg-sprint.ppen geschrieben
+sources.ppen nennt jetzt rummelsburg-sprint.ppen
+8 Objekte des Projekts, die keine hatten, haben eine Purple-Pen-Kennung bekommen
+

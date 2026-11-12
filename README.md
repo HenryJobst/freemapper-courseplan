@@ -48,22 +48,21 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 
 ## Beispiel
 
-<a href="examples/luebeck-sprint/"><img src="examples/luebeck-sprint/preview.jpg" width="260" align="right" alt="Skizze einer Sprintbahn in der Lübecker Altstadt"></a>
-
-Eine Sprintbahn mit sieben Posten in der Lübecker Altstadt, gelegt nur mit der Kommandozeile. Eine zweite Projektdatei dort ergänzt eine kurze Score-Bahn (9 Posten, 15 Minuten); die Karte ist für mehr zu klein. Das Bild ist eine
-Skizze: Die Karte stammt aus freemapper-print, die Bahn ist darübergezeichnet. Befehle, Projektdatei und Ausgaben
-stehen unter [`examples/luebeck-sprint`](examples/luebeck-sprint/); alle Beispiele zeigt
-[`examples/README.md`](examples/README.md). Eine Score-Bahn in üblicher Größe, 45 Minuten, zeigt [`examples/berlin-kreuzberg`](examples/berlin-kreuzberg/): eine mit freemapper aus offenen Daten gemachte Karte von Berlin-Kreuzberg.
+Eine Sprintbahn mit vier Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
+Knickpunkten, einer markierten Strecke und einem Erste-Hilfe-Posten. Dazu eine Score-Bahn von 33 Minuten
+(27 Posten, 83 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
+hat sie am 12.11.2026 für die freemapper-Suite freigegeben, nicht unter einer offenen Lizenz. Befehle, Projektdateien und Ausgaben stehen unter
+[`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) und [`examples/gleisdreieck`](examples/gleisdreieck/);
+alle Beispiele zeigt [`examples/README.md`](examples/README.md). 45 Minuten, die übliche Größe für Erwachsene,
+schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 33.
 
 ```text
-$ freemapper-courseplan info luebeck-sprint.courseplan.toml
-Titel: Sprinttraining Lübecker Altstadt
+$ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
+Titel: Sprinttraining Rummelsburger Bucht
 Kartenart: Sprintkarte
-Posten: 7, Querungsstellen: 0
-Bahn A: 7 Posten, 1,3 km, Anstieg 5 m
+Posten: 4, Querungsstellen: 0
+Bahn A: 4 Posten, 1,1 km, Anstieg – m
 ```
-
-<br clear="right">
 
 ## Installieren
 
@@ -108,8 +107,8 @@ Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben 
 Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferprofile sind eine
 erste Fassung; nimm die Längenbänder als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
 KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
-[Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Berliner Beispiel](examples/berlin-kreuzberg/) enthält eine fertige
-45-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
+[Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Gleisdreieck-Beispiel](examples/gleisdreieck/) enthält eine fertige
+33-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
@@ -126,7 +125,7 @@ fehlt, deshalb meldet es eine gerade Strecke durch ein Sperrgebiet nur als Warnu
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzel- und Score-Bahnen als IOF-XML 3.0 für die
 Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
 geprüft und lässt sich mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder einlesen; ein
-fertiges Beispiel ist [`course-data.xml`](examples/luebeck-sprint/course-data.xml). Ein Import in OE, Purple Pen
+fertiges Beispiel ist [`course-data.xml`](examples/rummelsburger-bucht/course-data.xml). Ein Import in OE, Purple Pen
 oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Rückmeldungen von Leuten mit OE sind willkommen. Ist die Karte georeferenziert, tragen Start, Posten und Ziel
 auch Breite und Länge (ADR 0039). Abgeflaggte Strecken schreibt das Programm noch nicht, Mannschafts- und
 Staffelbahnen überspringt es. Eine Score-Bahn trägt Zeitlimit, Abzug und Verbindungen in einem eigenen Erweiterungselement. Kapitel 10 des
@@ -142,9 +141,10 @@ mit Inhalt ersetzt `import` nur mit `--replace`; Kategorien und akzeptierte Befu
 KI-Assistent hat dafür das Werkzeug `export_ppen`. Eine vorhandene Datei ändert der Export an Ort und Stelle und
 lässt stehen, was das Projekt nicht kennt, etwa Lücken in Kreisen oder Kartenwechsel; mit `--new` schreibt er sie neu.
 Er löscht nie etwas und meldet, was in der Datei steht und im Projekt fehlt. Den Schreiber liefert `freemapper-course`
-in freemapper-core. Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen) ist ein
-Export. **Purple Pen 4.0 öffnet die Datei
-ohne Fehler, und der Inhalt wirkt richtig** (geprüft vom Autor, 10.11.2026).
+in freemapper-core. Das Beispiel [`rummelsburg-sprint.ppen`](examples/rummelsburger-bucht/rummelsburg-sprint.ppen) ist ein
+Export. **Diese Datei ist in Purple Pen noch nicht geöffnet worden.** Der Export eines früheren Beispiels (Lübecker
+Altstadt) hat Purple Pen 4.0 ohne Fehler geöffnet, und der Inhalt wirkte richtig (geprüft vom Autor, 10.11.2026); der
+Schreiber ist derselbe.
 
 `freemapper-courseplan sync <Projekt>` führt das Projekt und die verknüpfte `.ppen` in beide Richtungen zusammen. Es
 vergleicht Feld für Feld die Datei, wie der letzte Abgleich sie hinterlassen hat (die Basiskopie

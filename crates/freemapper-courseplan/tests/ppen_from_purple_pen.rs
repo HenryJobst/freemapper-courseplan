@@ -34,7 +34,7 @@ fn event_of(file: &[u8], map: &MapDocument) -> Event {
 }
 
 fn example_bytes() -> Vec<u8> {
-    std::fs::read(repo_root().join("examples/luebeck-sprint/luebeck-sprint.ppen")).unwrap()
+    std::fs::read(repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.ppen")).unwrap()
 }
 
 fn export_onto(event: &Event, map: &MapDocument, base: &[u8]) -> String {

@@ -3404,10 +3404,10 @@ mod sync_panel {
         )
         .unwrap();
         let text = std::fs::read_to_string(format!(
-            "{root}/examples/luebeck-sprint/luebeck-sprint.courseplan.toml"
+            "{root}/tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"
         ))
         .unwrap()
-        .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+        .replace("../maps/luebeck.omap", "luebeck.omap");
         let project = dir.join("event.courseplan.toml");
         std::fs::write(&project, text).unwrap();
         crate::export_cmd::export_ppen_file(

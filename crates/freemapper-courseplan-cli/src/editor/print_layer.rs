@@ -274,7 +274,7 @@ mod tests {
 
     fn setup(change: impl FnOnce(&mut Event)) -> Setup {
         let project = format!(
-            "{}/../../examples/luebeck-sprint/luebeck-sprint.courseplan.toml",
+            "{}/../../tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml",
             env!("CARGO_MANIFEST_DIR")
         );
         let file = ProjectFile::load(std::path::Path::new(&project)).unwrap();

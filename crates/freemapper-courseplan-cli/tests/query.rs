@@ -22,10 +22,10 @@ fn luebeck() -> (tempfile::TempDir, PathBuf) {
     )
     .unwrap();
     let text = std::fs::read_to_string(
-        repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml"),
+        repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"),
     )
     .unwrap()
-    .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+    .replace("../maps/luebeck.omap", "luebeck.omap");
     let project = dir.path().join("event.courseplan.toml");
     std::fs::write(&project, text).unwrap();
     (dir, project)

@@ -40,10 +40,10 @@ fn example(extra: &str) -> (tempfile::TempDir, PathBuf) {
     )
     .unwrap();
     let text = std::fs::read_to_string(
-        repo_root().join("examples/luebeck-sprint/luebeck-sprint.courseplan.toml"),
+        repo_root().join("tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml"),
     )
     .unwrap()
-    .replace("../../tests/fixtures/maps/luebeck.omap", "luebeck.omap");
+    .replace("../maps/luebeck.omap", "luebeck.omap");
     let project = dir.path().join("event.courseplan.toml");
     std::fs::write(&project, format!("{text}\n{extra}")).unwrap();
     (dir, project)
@@ -205,7 +205,7 @@ fn the_example_project_exports() {
         "en",
         &[
             "export",
-            "examples/luebeck-sprint/luebeck-sprint.courseplan.toml",
+            "tests/fixtures/luebeck-sprint/luebeck-sprint.courseplan.toml",
             "--iof-xml",
             out.to_str().unwrap(),
         ],

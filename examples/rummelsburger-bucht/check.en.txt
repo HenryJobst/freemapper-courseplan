@@ -1,0 +1,37 @@
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+course A:
+  hint course A, leg 31–32: the legs at control 32 form an angle of 67°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  hint course A, leg 32–33: the legs at control 33 form an angle of 76°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+  hint course A, leg 33–34: the legs at control 34 form an angle of 171°, at most 170° wanted (wkb2026.leg.straight_angle_hint, proposal of freemapper-courseplan)
+0 errors, 0 warnings, 3 hints; 0 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:1 --note "Training: the 67° angle at control 32 follows from the lanes between the closed areas and stays."
+accepted finding wkb2026.leg.acute_angle_hint at course A, leg 31–32
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.acute_angle_hint --leg A:2 --note "Training: the 76° angle at control 33 follows from the lanes between the closed areas and stays."
+accepted finding wkb2026.leg.acute_angle_hint at course A, leg 32–33
+
+$ freemapper-courseplan finding accept rummelsburg-sprint.courseplan.toml wkb2026.leg.straight_angle_hint --leg A:3 --note "Training: the course runs almost straight on at control 34 because the lane after the control dictates it."
+accepted finding wkb2026.leg.straight_angle_hint at course A, leg 33–34
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml
+0 errors, 0 warnings, 0 hints; 3 accepted, 5 skipped
+check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
+
+$ freemapper-courseplan check rummelsburg-sprint.courseplan.toml --all
+accepted:
+  hint course A, leg 31–32: the legs at control 32 form an angle of 67°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    note: Training: the 67° angle at control 32 follows from the lanes between the closed areas and stays.
+  hint course A, leg 32–33: the legs at control 33 form an angle of 76°, at least 90° required (wkb2026.leg.acute_angle_hint, BL12 5. Bahnkonzeption)
+    note: Training: the 76° angle at control 33 follows from the lanes between the closed areas and stays.
+  hint course A, leg 33–34: the legs at control 34 form an angle of 171°, at most 170° wanted (wkb2026.leg.straight_angle_hint, proposal of freemapper-courseplan)
+    note: Training: the course runs almost straight on at control 34 because the lane after the control dictates it.
+    about the rule: When the course runs almost straight on at a control, the control hardly changes the running direction, and there is no room for the number behind the circle. The user set the 170°.
+skipped:
+  wkb2026.start.capacity, event: the event has no start window; event start-window sets it
+  wkb2026.length.long, event: not checked at a training
+  wkb2026.length.middle, event: not checked at a training
+  wkb2026.length.ultralong, event: not checked at a training
+  wkb2026.difficulty.mix, event: not checked at a training
+0 errors, 0 warnings, 0 hints; 3 accepted, 5 skipped

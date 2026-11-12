@@ -2,12 +2,15 @@
 
 [English](README.en.md)
 
-Fertige Veranstaltungen auf Karten aus den
-[Beispielen von freemapper](https://github.com/HenryJobst/freemapper/tree/main/examples). Zu jeder gehören die
-Projektdatei, die Befehle, mit denen sie entstand, und ein Vorschaubild. Das Lübecker Beispiel hat in einer zweiten Projektdatei auch eine kurze Score-Bahn (15 Minuten; die Karte ist für mehr zu klein). Das Berliner Beispiel hat eine Score-Bahn von 45 Minuten. Zu beiden gehört die Ausgabe von `check`. Der Export nach IOF-XML 3.0
-liegt als `course-data.xml` bei; er ist gegen das IOF-Schema geprüft und wird vom IOF-Leser von freemapper-course wieder eingelesen und trägt Breite und Länge. Ein Import in OE ist nicht getestet. Der Export nach Purple Pen liegt als `luebeck-sprint.ppen` bei; ein Test liest ihn mit dem Leser von freemapper-course wieder ein. Purple Pen 4.0 öffnet ihn ohne Fehler. Das Druck-PDF von freemapper-print kommt später dazu.
+Fertige Veranstaltungen auf den Karten „Gleisdreieck“ und „Rummelsburger Bucht“ von Remo Madella (MOO Challenge
+Berlin 2025). Er hat beide am 12.11.2026 für die freemapper-Suite freigegeben; das ist keine offene Lizenz (siehe
+`ATTRIBUTION.txt` in jedem Ordner). Zu jedem Beispiel gehören die Projektdatei, die Befehle, mit denen es entstand, und
+die Ausgabe von `check`. Der Export nach IOF-XML 3.0 liegt als `course-data.xml` bei; er ist gegen das IOF-Schema
+geprüft, und ein Import in OE ist nicht getestet. Der Export nach Purple Pen liegt beim Rummelsburger Beispiel als
+`rummelsburg-sprint.ppen` bei; diese Datei ist in Purple Pen noch nicht geöffnet worden. Ein Vorschaubild gibt es
+noch nicht; das Druck-PDF von freemapper-print kommt später dazu.
 
-| Beispiel | Karte | Vorschau |
-|---|---|---|
-| [Sprinttraining Lübecker Altstadt](luebeck-sprint/) | Lübeck, 1:4000 | <a href="luebeck-sprint/"><img src="luebeck-sprint/preview.jpg" width="160" alt=""></a> |
-| [Score-Bahn 45 Minuten, Berlin-Kreuzberg](berlin-kreuzberg/) | Berlin, 1:4000, mit freemapper aus offenen Daten | keine Vorschau |
+| Beispiel | Karte |
+|---|---|
+| [Sprinttraining Rummelsburger Bucht](rummelsburger-bucht/) | Rummelsburger Bucht, 1:4000, 1,2 mal 1,0 km; Sprintbahn mit vier Posten, Knickpunkten, markierter Strecke und Erste-Hilfe-Posten |
+| [Score-Bahn 33 Minuten, Gleisdreieck](gleisdreieck/) | Gleisdreieck, 1:4000, 1,2 mal 1,8 km; 27 Posten mit 83 Punkten |

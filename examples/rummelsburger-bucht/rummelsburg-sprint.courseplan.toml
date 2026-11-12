@@ -1,0 +1,106 @@
+format = 1
+
+[event]
+title = "Sprinttraining Rummelsburger Bucht"
+discipline = "training"
+rule_profile = "wkb-2026"
+
+[sources]
+map = "rummelsburg.omap"
+ppen = "rummelsburg-sprint.ppen"
+
+[[specials]]
+kind = "start"
+id = "S1"
+map_mm = [-120.0, -75.0]
+ppen_id = 1
+
+[[specials]]
+kind = "finish"
+id = "F1"
+map_mm = [48.0, 69.0]
+ppen_id = 2
+
+[[specials]]
+kind = "first_aid"
+id = "H1"
+map_mm = [-112.0, -68.0]
+ppen_id = 1
+
+[[controls]]
+code = 31
+map_mm = [-70.05, -40.78]
+ppen_id = 3
+
+[[controls]]
+code = 32
+map_mm = [9.0, -6.85]
+ppen_id = 4
+
+[[controls]]
+code = 33
+map_mm = [-13.67, 7.12]
+ppen_id = 5
+
+[[controls]]
+code = 34
+map_mm = [6.42, 37.92]
+ppen_id = 6
+
+[[classes]]
+name = "Offen"
+
+[[courses]]
+name = "A"
+classes = ["Offen"]
+start = "S1"
+finish = "F1"
+kind = "individual"
+ppen_id = 1
+
+[[courses.controls]]
+code = 31
+bends = [[-57.0, -43.0], [-50.0, -50.0]]
+
+[courses.controls.number]
+direction = 295.6
+gap_mm = 2.0
+
+[[courses.controls]]
+code = 32
+
+[courses.controls.number]
+direction = 23.8
+gap_mm = 3.5
+
+[[courses.controls]]
+code = 33
+bends = [[6.0, 27.0]]
+
+[courses.controls.number]
+direction = 136.6
+gap_mm = 0.5
+
+[[courses.controls]]
+code = 34
+bends = [[6.0, 41.0], [13.0, 34.0], [20.0, 50.0]]
+taped = true
+
+[courses.controls.number]
+direction = 152.2
+gap_mm = 0.5
+
+[[accepted_findings]]
+rule = "wkb2026.leg.acute_angle_hint"
+note = "Training: Der Winkel von 67° am Posten 32 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt."
+legs = [{ course = "A", after = 1, from = "31", to = "32" }]
+
+[[accepted_findings]]
+rule = "wkb2026.leg.acute_angle_hint"
+note = "Training: Der Winkel von 76° am Posten 33 ergibt sich aus den Gassen zwischen den gesperrten Flächen und bleibt."
+legs = [{ course = "A", after = 2, from = "32", to = "33" }]
+
+[[accepted_findings]]
+rule = "wkb2026.leg.straight_angle_hint"
+note = "Training: Die Bahn läuft am Posten 34 fast geradeaus weiter, weil die Gasse nach dem Posten es vorgibt."
+legs = [{ course = "A", after = 3, from = "33", to = "34" }]
