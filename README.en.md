@@ -3,7 +3,7 @@
 [Deutsche Version](README.md) · [User manual](docs/manual/en.md) · [Glossary](docs/glossary.md) · [Changes](CHANGELOG.en.md)
 
 <!-- claude-cost:start -->
-[![AI effort (Claude API): $528](https://img.shields.io/badge/AI%20effort%20%28Claude%20API%29-%24528-8A2BE2)](docs/ai-cost/history.csv)
+[![AI effort (Claude API): $530](https://img.shields.io/badge/AI%20effort%20%28Claude%20API%29-%24530-8A2BE2)](docs/ai-cost/history.csv)
 <!-- claude-cost:end -->
 
 freemapper-courseplan is the course-setting program of the freemapper suite. You set courses by hand in an
