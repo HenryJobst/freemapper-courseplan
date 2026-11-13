@@ -476,6 +476,16 @@ pub(super) struct SetStartWindow {
 
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
+pub(super) struct SetEventDetails {
+    pub(super) project: String,
+    pub(super) date: Option<String>,
+    pub(super) organizer: Option<String>,
+    pub(super) no_date: Option<bool>,
+    pub(super) no_organizer: Option<bool>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
 pub(super) struct AddScoreCourse {
     pub(super) project: String,
     pub(super) name: Name,

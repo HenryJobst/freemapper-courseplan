@@ -155,7 +155,7 @@ setting.
 
 If you can run commands on the person's computer (Claude Code, Codex and similar), use the command line. Each call
 is a blocking command, and you can chain a whole course into one shell call, so it takes few turns; through MCP
-every step is a tool turn that re-reads the whole context, and the schemas of about 54 tools sit in that context
+every step is a tool turn that re-reads the whole context, and the schemas of about 55 tools sit in that context
 as well. Use MCP only when you cannot run commands (see the next section).
 
 `freemapper-courseplan --help` lists the commands, `freemapper-courseplan <command> --help` their switches and
@@ -185,6 +185,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--course NAME` for the start and finish of a score course, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles reach the target length bands, within a tolerance; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band beyond the tolerance exits with 1 and names each miss and what would help; one near the target exits with 0 and names the deviation. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
 | `export --csv FILE --course NAME`, `export --sheet FILE --course NAME` | Control list (`code,value,x_mm,y_mm`, map millimetres) and Markdown evaluation sheet of a score course; other courses are refused. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
+| `event set` | The date (`--date YYYY-MM-DD`) and the organizer (`--organizer TEXT`) of the event; `--no-date` and `--no-organizer` remove them. At least one option. `info` shows both; the IOF XML export writes them as `Event/StartTime/Date` and `Event/Organiser/Name` (only when set). Purple Pen has no field for them. |
 | `check` | Tests the courses; `--all` adds accepted findings, unmatched acceptances and skipped rules. |
 | `finding accept`, `finding remove` | Record or take back an intended exception (`--note` is required). |
 | `export`, `import`, `sync` | IOF XML and Purple Pen. `sync --dry-run` shows the merge first; `--json` prints the result as JSON. |
@@ -262,7 +263,7 @@ whole number.
 | Tool | Parameters besides `project` | What it does |
 |---|---|---|
 | `init_event` | `map`, `project?`, `title?` | Makes a project file from an OOM map (here `project` is where to write it). |
-| `event_info` | none | Summary: title, map, extent, counts, and per course controls, length, climb. |
+| `event_info` | none | Summary: title, date, organizer, map, extent, counts, and per course controls, length, climb. |
 | `list_controls` | none | Controls with code, kind, position, description, number placement. |
 | `list_courses` | none | Courses with start, finish, controls, classes, climb, print scale, length in km. |
 | `list_specials` | none | Special objects with geometry and courses. |
@@ -303,6 +304,7 @@ whole number.
 | `accept_finding` | `rule`, `note`, `controls?`, `legs?`, `course?` | Records an intended exception with its reason. `legs` holds `{course, after}` objects. |
 | `remove_accepted_finding` | `rule`, `controls?`, `legs?`, `course?` | Takes an exception back. |
 | `set_rule_profile` | `base`, `overlays?` | Sets the rule profile and overlays. |
+| `set_event_details` | `date?`, `organizer?`, `no_date?`, `no_organizer?` | Date as `YYYY-MM-DD` and organizer text of the event; give at least one, and never `date` with `no_date` or `organizer` with `no_organizer`. `event_info` returns both. |
 | `set_start_window` | `minutes?`, `no_start_window?` | Start window in minutes, or removes it. |
 | `export_iof_xml` | `path` | Writes IOF XML 3.0 CourseData (`.xml`). |
 | `export_score_csv`, `export_score_sheet` | `course`, `path` | CSV (`.csv`) or evaluation sheet (`.md`) of a score course. |

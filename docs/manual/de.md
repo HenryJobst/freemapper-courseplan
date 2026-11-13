@@ -441,8 +441,8 @@ die Datei, wie sie war, und eine Meldung nennt den Grund.
   erwarteten Starter; ein leeres Feld entfernt den Wert. „Kategorie löschen“ entfernt sie. Solange eine Bahn sie noch
   nutzt, lehnt der Editor das ab und sagt es über der Karte.
 - **Veranstaltung.** „Einstellungen“ unter „Veranstaltung“ im Baum zeigen die Disziplin, die du hier nicht ändern
-  kannst, das Regelprofil mit seinen Overlays, beides als Liste der Profile, die das Programm kennt, und das Startfenster
-  in Minuten. Ein leeres Startfenster entfernt es.
+  kannst, das Regelprofil mit seinen Overlays, beides als Liste der Profile, die das Programm kennt, das Datum (`JJJJ-MM-TT`),
+  den Veranstalter und das Startfenster in Minuten. Ein leeres Feld entfernt den Wert.
 
 ### Strecken und Knicke
 
@@ -936,12 +936,28 @@ vorher. Einen unbekannten Namen lehnt es mit der Liste der vorhandenen Profile a
 jedem Befund von `check` beginnt die Kennung der Prüfregel mit ihrem Profil (`wkb2026`, `norbb2021`). Wie eine
 Profildatei aufgebaut ist und wie man eine neue anlegt, steht in `crates/freemapper-courseplan/rules/README.md`.
 
+### Datum und Veranstalter
+
+`event set` legt das Datum der Veranstaltung und ihren Veranstalter in der Projektdatei ab:
+
+```sh
+freemapper-courseplan event set halle.courseplan.toml --date 2026-11-14 --organizer "OLV Beispiel"
+freemapper-courseplan event set halle.courseplan.toml --no-organizer
+```
+
+Das Datum hat die Form `JJJJ-MM-TT`, ohne Uhrzeit. Der Veranstalter ist ein Text, der nicht leer sein darf. Gib
+mindestens eine der Angaben `--date`, `--organizer`, `--no-date` und `--no-organizer` an; `--date` zusammen mit
+`--no-date` ist ein Aufruffehler, ebenso die beiden Veranstalter-Optionen. `info` zeigt beides. Der IOF-XML-Export
+schreibt sie als `Event/StartTime/Date` und `Event/Organiser/Name` und lässt ein Feld weg, das nicht gesetzt ist
+(siehe "Weitergeben" unten). freemapper-print übernimmt sie in den Titelblock. Purple Pen kennt keines von beiden,
+darum fassen Purple-Pen-Export, -Import und `sync` sie nicht an. Die Entscheidung steht in ADR 0090.
+
 ### Mit dem KI-Assistenten
 
-Der Assistent hat sechs Werkzeuge dafür: `check` liefert Befunde, akzeptierte und nicht zugeordnete Ausnahmen und
+Der Assistent hat sieben Werkzeuge dafür: `check` liefert Befunde, akzeptierte und nicht zugeordnete Ausnahmen und
 übersprungene Prüfregeln. `accept_finding` und `remove_accepted_finding` entsprechen `finding accept` und `finding
 remove`, `set_rule_profile` entspricht `event profile`, `set_start_window` und `set_class` entsprechen `event
-start-window` und `class set`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, jeden Befund in einem Satz zu
+start-window` und `class set`, `set_event_details` entspricht `event set`. Bitte ihn zum Beispiel, die Bahnen zu prüfen, jeden Befund in einem Satz zu
 erklären und dich zu fragen, bevor er einen akzeptiert. Die Begründung schreibst du oder diktierst sie ihm. Er soll
 sie nicht erfinden.
 
@@ -1132,6 +1148,9 @@ Kategorien. Eine vorhandene Datei ersetzt es erst, wenn die neue vollständig ge
 
 Was du wissen solltest:
 
+- Der Titel der Veranstaltung steht in `Event/Name`. Ein Datum, das du mit `event set` gesetzt hast, schreibt das
+  Programm als `Event/StartTime/Date`, einen Veranstalter als `Event/Organiser/Name`, in der Reihenfolge, die das
+  Schema verlangt. Ohne beide fehlen die Elemente.
 - Mannschafts- und Staffelbahnen schreibt das Programm nicht. Es nennt jede übersprungene Bahn mit
   ihrer Art.
 - Eine Score-Bahn steht mit dem Wert jedes Postens in `CourseControl/Score`. Für das Zeitlimit, den Abzug je angefangene Minute und die Pflichtverbindungen hat das Schema kein Element. Die Bahn trägt sie deshalb in einem `Extensions`-Element im Namensraum `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` mit `timeLimitMin`, `penaltyPerMin` und je Paar ein `Link`). Der Abzug ist der aufgelöste, der Standard eingeschlossen. Programme, die den Namensraum nicht kennen, übergehen ihn. Die Regel, dass bei gleicher Punktzahl die schnellere Läuferin oder der schnellere Läufer gewinnt, steht nicht in der Datei, sondern auf dem Auswertungsbogen (siehe Score-Bahnen).

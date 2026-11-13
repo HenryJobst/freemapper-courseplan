@@ -65,6 +65,7 @@ pub fn new_event(
         event: EventMeta {
             title,
             date: None,
+            organizer: None,
             discipline: Discipline::Training,
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: Vec::new(),

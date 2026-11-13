@@ -64,6 +64,7 @@ fn event() -> Event {
         event: EventMeta {
             title: "T".to_owned(),
             date: None,
+            organizer: None,
             discipline: Default::default(),
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: Vec::new(),
@@ -307,6 +308,43 @@ fn classes_map_to_courses() {
     assert!(xml.contains("<ClassName>H21</ClassName>"));
     assert!(xml.contains("<CourseName>A</CourseName>"));
     assert!(xml.find("<Course>").unwrap() < xml.find("<ClassCourseAssignment>").unwrap());
+}
+
+#[test]
+fn event_date_and_organizer_are_written_only_when_set() {
+    let plain = export(&event());
+    assert!(!plain.contains("<StartTime>"), "{plain}");
+    assert!(!plain.contains("<Organiser>"), "{plain}");
+
+    let mut e = event();
+    e.event.date = Some("2026-11-14".parse().unwrap());
+    e.event.organizer = Some("OLV <Beispiel> & Co".to_owned());
+    let xml = export(&e);
+    parse_names(&xml);
+    assert!(
+        xml.contains("<StartTime>\n      <Date>2026-11-14</Date>\n    </StartTime>"),
+        "{xml}"
+    );
+    assert_eq!(first_text(&xml, "Date"), "2026-11-14");
+    assert!(xml.contains("OLV &lt;Beispiel&gt; &amp; Co"), "{xml}");
+    // IOF 3.0 order of the children of Event: Name, StartTime, Organiser.
+    let name = xml.find("<Name>T</Name>").unwrap();
+    let start = xml.find("<StartTime>").unwrap();
+    let organiser = xml.find("<Organiser>").unwrap();
+    let race = xml.find("<RaceCourseData>").unwrap();
+    assert!(
+        name < start && start < organiser && organiser < race,
+        "{xml}"
+    );
+    assert_eq!(nth_text(&xml, "Name", 1), "OLV <Beispiel> & Co");
+
+    let mut only_organizer = event();
+    only_organizer.event.organizer = Some("OLV".to_owned());
+    let xml = export(&only_organizer);
+    assert!(
+        !xml.contains("<StartTime>") && xml.contains("<Organiser>"),
+        "{xml}"
+    );
 }
 
 #[test]

@@ -356,8 +356,19 @@ fn write_document(
         .with_attribute(("createTime", created))
         .with_attribute(("creator", CREATOR))
         .write_inner_content(|w| {
-            w.create_element("Event")
-                .write_inner_content(|w| text_element(w, "Name", &event.event.title))?;
+            w.create_element("Event").write_inner_content(|w| {
+                text_element(w, "Name", &event.event.title)?;
+                // The order of the children is fixed by the IOF 3.0 schema: Name, StartTime, Organiser.
+                if let Some(date) = event.event.date.as_ref().and_then(|d| d.date) {
+                    w.create_element("StartTime")
+                        .write_inner_content(|w| text_element(w, "Date", &date.to_string()))?;
+                }
+                if let Some(organizer) = &event.event.organizer {
+                    w.create_element("Organiser")
+                        .write_inner_content(|w| text_element(w, "Name", organizer))?;
+                }
+                Ok(())
+            })?;
             w.create_element("RaceCourseData")
                 .write_inner_content(|w| {
                     w.create_element("Map").write_inner_content(|w| {

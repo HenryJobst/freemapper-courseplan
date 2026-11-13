@@ -27,6 +27,11 @@ pub fn validate(event: &Event) -> Vec<ModelError> {
         errors.push(ModelError::DateNotADate(date.to_string()));
     }
 
+    if let Some(organizer) = &event.event.organizer {
+        check_name(&mut errors, "organizer", organizer);
+        check_len(&mut errors, "organizer", organizer, MAX_NAME_CHARS);
+    }
+
     for finding in &event.accepted_findings {
         check_len(
             &mut errors,

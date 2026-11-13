@@ -700,6 +700,51 @@ fn newer_format_is_reported_before_unknown_course_kind() {
 }
 
 #[test]
+fn blank_or_overlong_organizer_is_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    let load = |value: &str| {
+        let file = edited_minimal(
+            dir.path(),
+            "title = \"Test\"\n",
+            &format!("title = \"Test\"\norganizer = {value}\n"),
+        );
+        ProjectFile::load(&file)
+    };
+    for blank in ["\"\"", "\" \"", "\" OLV\""] {
+        let err = load(blank).unwrap_err();
+        let ProjectError::Invalid { errors, .. } = &err else {
+            panic!("unexpected error {err:?}");
+        };
+        assert!(
+            matches!(
+                &errors[..],
+                [ModelError::BlankName {
+                    what: "organizer",
+                    ..
+                }]
+            ),
+            "{errors:?}"
+        );
+    }
+    let long = format!("\"{}\"", "x".repeat(201));
+    let err = load(&long).unwrap_err();
+    let ProjectError::Invalid { errors, .. } = &err else {
+        panic!("unexpected error {err:?}");
+    };
+    assert!(
+        matches!(
+            &errors[..],
+            [ModelError::TooLong {
+                what: "organizer",
+                ..
+            }]
+        ),
+        "{errors:?}"
+    );
+    assert!(load("\"OLV Beispiel\"").is_ok());
+}
+
+#[test]
 fn event_date_with_time_or_offset_is_rejected() {
     let dir = tempfile::tempdir().unwrap();
     for value in [

@@ -297,6 +297,35 @@ export function classPanel(host, list, state, name, actions) {
   const detail = document.createElement("dd");
   detail.textContent = cls.name;
   list.append(term, detail);
+  const date = inputRow(list, {
+    id: "prop-date",
+    labelId: "editor-prop-date",
+    value: meta.date == null ? "" : String(meta.date),
+    errorId: "editor-error-date",
+  });
+  date.input.addEventListener("change", () => {
+    delete date.input.dataset.dirty;
+    // Empty removes the date; YYYY-MM-DD sets it. The program checks that the day exists.
+    const text = date.input.value.trim();
+    const bad = text !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(text);
+    date.input.setAttribute("aria-invalid", String(bad));
+    date.error.hidden = !bad;
+    if (!bad && text !== (meta.date == null ? "" : String(meta.date))) {
+      actions.setEvent(text === "" ? { no_date: true } : { date: text });
+    }
+  });
+  const organizer = inputRow(list, {
+    id: "prop-organizer",
+    labelId: "editor-prop-organizer",
+    value: meta.organizer ?? "",
+  });
+  organizer.input.addEventListener("change", () => {
+    delete organizer.input.dataset.dirty;
+    const text = organizer.input.value.trim();
+    if (text !== (meta.organizer ?? "")) {
+      actions.setEvent(text === "" ? { no_organizer: true } : { organizer: text });
+    }
+  });
   const known = actions.rules?.() ?? null;
   const meta = state.event.event;
   const names = known ? categoriesOf(known, meta.rule_profile, meta.rule_overlays ?? []) : null;

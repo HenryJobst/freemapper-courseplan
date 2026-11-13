@@ -77,6 +77,7 @@ pub fn valid_event(import: &PpenImport) -> Event {
         event: EventMeta {
             title: "Import".to_owned(),
             date: None,
+            organizer: None,
             discipline: Discipline::Training,
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: vec![],

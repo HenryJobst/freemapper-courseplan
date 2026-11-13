@@ -497,6 +497,7 @@ mod overlay {
             event: EventMeta {
                 title: "T".to_owned(),
                 date: None,
+                organizer: None,
                 discipline: Default::default(),
                 rule_profile: "wkb-2026".to_owned(),
                 rule_overlays: Vec::new(),
@@ -932,6 +933,7 @@ mod state {
             event: EventMeta {
                 title: "T".to_owned(),
                 date: None,
+                organizer: None,
                 discipline: Default::default(),
                 rule_profile: "wkb-2026".to_owned(),
                 rule_overlays: Vec::new(),

@@ -926,6 +926,7 @@ impl Localize for EditError {
                 "error-edit-too-many-bends",
                 &[("course", v(course)), ("limit", v(limit))],
             ),
+            EditError::BlankOrganizer => text(lang, "error-edit-blank-organizer", &[]),
             EditError::BlankRuleCategory { class } => text(
                 lang,
                 "error-edit-blank-rule-category",
@@ -1526,6 +1527,7 @@ mod tests {
             "special-object-id",
             "course-name",
             "class-name",
+            "organizer",
         ] {
             ids.insert(format!("word-name-{what}"));
         }
@@ -1856,6 +1858,7 @@ mod tests {
                 course: s("A"),
                 limit: 200,
             },
+            EditError::BlankOrganizer,
             EditError::BlankRuleCategory { class: s("H21") },
             EditError::BadSymbol {
                 column: 'D',

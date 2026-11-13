@@ -187,6 +187,7 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         event: EventMeta {
             title: "Test".to_owned(),
             date: None,
+            organizer: None,
             discipline: Discipline::Sprint,
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: Vec::new(),

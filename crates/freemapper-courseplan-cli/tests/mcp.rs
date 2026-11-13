@@ -6,7 +6,7 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use serde_json::{Value, json};
 
-const TOOLS: [&str; 54] = [
+const TOOLS: [&str; 55] = [
     "event_info",
     "list_controls",
     "list_courses",
@@ -59,6 +59,7 @@ const TOOLS: [&str; 54] = [
     "remove_accepted_finding",
     "set_rule_profile",
     "set_start_window",
+    "set_event_details",
     "check_update",
     "install_update",
 ];
@@ -1216,6 +1217,54 @@ fn an_acceptance_that_matches_nothing_is_returned_as_unmatched() {
     assert_eq!(removed["removed"][0]["legs"][0]["to"], "32");
     let report = session.ok("check", json!({ "project": project }));
     assert_eq!(report["unmatched"], json!([]));
+}
+
+#[test]
+fn set_event_details_sets_date_and_organizer() {
+    let mut session = Session::start();
+    let (_dir, project) = checked_workspace(&mut session);
+    let set = session.ok(
+        "set_event_details",
+        json!({ "project": project, "date": "2026-11-14", "organizer": " OLV Beispiel " }),
+    );
+    assert_eq!(set["date"], "2026-11-14");
+    assert_eq!(set["organizer"], "OLV Beispiel");
+    let info = session.ok("event_info", json!({ "project": project }));
+    assert_eq!(
+        (&info["date"], &info["organizer"]),
+        (&json!("2026-11-14"), &json!("OLV Beispiel"))
+    );
+    let cleared = session.ok(
+        "set_event_details",
+        json!({ "project": project, "no_date": true, "no_organizer": true }),
+    );
+    assert_eq!(
+        (&cleared["date"], &cleared["organizer"]),
+        (&Value::Null, &Value::Null)
+    );
+    let text = std::fs::read_to_string(&project).unwrap();
+    assert!(
+        !text.contains("organizer") && !text.contains("date ="),
+        "{text}"
+    );
+    for args in [
+        json!({ "project": project }),
+        json!({ "project": project, "date": "2026-11-14", "no_date": true }),
+        json!({ "project": project, "organizer": "X", "no_organizer": true }),
+    ] {
+        let (error, text) = session.call("set_event_details", args);
+        assert!(error && text.contains("no_date"), "{text}");
+    }
+    let (error, text) = session.call(
+        "set_event_details",
+        json!({ "project": project, "date": "14.11.2026" }),
+    );
+    assert!(error && text.contains("14.11.2026"), "{text}");
+    let (error, _) = session.call(
+        "set_event_details",
+        json!({ "project": project, "organizer": "" }),
+    );
+    assert!(error);
 }
 
 #[test]

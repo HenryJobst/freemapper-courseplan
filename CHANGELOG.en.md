@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- The event has a date and an organizer (ADR 0090), requested by freemapper-print for its title block. `event set PROJECT --date YYYY-MM-DD --organizer TEXT` sets them, `--no-date` and `--no-organizer` remove them. The tool is `set_event_details`, the event settings of the editor have a "Date" and an "Organizer" field, and `info` and `event_info` show both. The project file gets the optional key `organizer` in `[event]` (format stays 1; a program from before this version refuses a file that has it). The IOF XML export writes a set date as `Event/StartTime/Date` and a set organizer as `Event/Organiser/Name`, and nothing for a field that is not set. Purple Pen has no field for either, so `.ppen` export, import and `sync` leave them alone.
 - You can reject candidate sites (ADR 0089). `score reject --at X,Y` stores the position in the project file (new optional key `rejected_sites`, format stays 1), and `score suggest`, `score draft` and the candidate list of the editor leave out every site within 3 m of it. `score unreject --at X,Y` takes the rejection back. The tools are `reject_site` and `unreject_site`, the editor has a "Reject" button beside "Accept" in the candidate table. A program from before this version refuses a project file that has the new key.
 
 ### Changed

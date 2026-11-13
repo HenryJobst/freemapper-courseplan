@@ -424,8 +424,8 @@ why.
   empty field removes the value. "Delete category" removes it. The editor refuses this while a course still uses
   it, and says so above the map.
 - **Event.** "Event settings" in the tree shows the discipline, which you cannot change here, the rule profile with
-  its overlays, both as lists of the profiles the program knows, and the start window in minutes. An empty start
-  window removes it.
+  its overlays, both as lists of the profiles the program knows, the date (`YYYY-MM-DD`), the organizer and the start
+  window in minutes. An empty field removes the value.
 
 ### Legs and bends
 
@@ -891,12 +891,28 @@ refuses an unknown name with the list of available profiles. `info` shows the pr
 `check`, the rule id starts with its profile (`wkb2026`, `norbb2021`). How a profile file is built and how to add
 one is described in `crates/freemapper-courseplan/rules/README.en.md`.
 
+### Date and organizer
+
+`event set` stores the date of the event and its organizer in the project file:
+
+```sh
+freemapper-courseplan event set hall.courseplan.toml --date 2026-11-14 --organizer "OLV Example"
+freemapper-courseplan event set hall.courseplan.toml --no-organizer
+```
+
+The date is `YYYY-MM-DD`, without a time of day. The organizer is a text that is not empty. Give at least one of
+`--date`, `--organizer`, `--no-date` and `--no-organizer`; `--date` together with `--no-date` is a usage error, and so
+are the two organizer options. `info` shows both. The IOF XML export writes them as `Event/StartTime/Date` and
+`Event/Organiser/Name` and leaves out a field that is not set (see "Handing on" below). freemapper-print takes
+them for the title block. Purple Pen has no field for either, so the Purple Pen export, import and `sync` do not
+touch them. The decision is ADR 0090.
+
 ### With the AI assistant
 
-The assistant has six tools for this. `check` returns findings, accepted and unmatched exceptions and skipped
+The assistant has seven tools for this. `check` returns findings, accepted and unmatched exceptions and skipped
 rules. `accept_finding` and `remove_accepted_finding` match `finding accept` and `finding remove`,
-`set_rule_profile` matches `event profile`, and `set_start_window` and `set_class` match `event start-window` and
-`class set`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you before it
+`set_rule_profile` matches `event profile`, `set_start_window` and `set_class` match `event start-window` and
+`class set`, and `set_event_details` matches `event set`. Ask it, for example, to check the courses, explain each finding in one sentence and ask you before it
 accepts one. You write the note or dictate it. The assistant should not invent one.
 
 ## 9. Exchanging with Purple Pen
@@ -1078,6 +1094,9 @@ does nothing and exits with code 2.
 
 Things to know:
 
+- The event title goes into `Event/Name`. A date that was set with `event set` is written as `Event/StartTime/Date`
+  and an organizer as `Event/Organiser/Name`, in the order the schema demands. Without them the file has neither
+  element.
 - Team and relay courses are not written. The program names each skipped course with its kind.
 - A score course is written with the value of each control in `CourseControl/Score`. The schema has no element for the time limit, the penalty per started minute or the mandatory links, so the course carries them in an `Extensions` element in the namespace `https://github.com/HenryJobst/freemapper-courseplan/ns/score/1` (`ScoreCourse` with `timeLimitMin`, `penaltyPerMin` and one `Link` per pair). The penalty is the resolved one, the default included. Programs that do not know the namespace ignore it. The rule that the faster runner wins on equal points is not part of the file; it stands on the evaluation sheet (see Score courses).
 - If the target is the project file or the map, `export` stops with an error and leaves both untouched.
