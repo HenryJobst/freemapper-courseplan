@@ -199,18 +199,20 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     );
 }
 
-/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 34 minutes, both runners in their band or near
+/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 31 minutes, both runners in their band or near
 /// the target (ADR 0083) on a fresh evaluation, exit 0, and `check` quiet apart from four accepted code pairs whose
-/// notes are true: each note names the distance of the two controls.
+/// notes are true: each note names the distance of the two controls. No control stands deeper than 60 m in a dead end
+/// and no position is closer than 50 m to the edge of the mapped area (ADR 0085, ADR 0087), which the quiet `check`
+/// shows.
 #[test]
 fn gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet() {
     let project = repo_root().join("examples/gleisdreieck/gleisdreieck-score.courseplan.toml");
     let p = project.to_str().unwrap();
-    let o = run("en", &["score", "length", p, "Score 34", "--json"]);
+    let o = run("en", &["score", "length", p, "Score 31", "--json"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     let v: serde_json::Value = serde_json::from_str(&out(&o)).unwrap();
-    assert_eq!(v["controls"], 33, "{v}");
-    assert_eq!(v["time_limit_min"], 34);
+    assert_eq!(v["controls"], 30, "{v}");
+    assert_eq!(v["time_limit_min"], 31);
     assert_eq!(v["length"]["ok"], true, "{v}");
     let state = v["length"]["state"].as_str().unwrap();
     assert!(["in_band", "near"].contains(&state), "{v}");
@@ -256,11 +258,12 @@ fn gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet() {
     }
 }
 
-/// A draft never holds a control that `check` reports as standing in an out-of-bounds area (ADR 0082), on both
+/// A draft never holds a control that `check` reports as standing in an out-of-bounds area (ADR 0082), deeper in a
+/// dead end than the limit (ADR 0085) or closer than the margin to the edge of the mapped area (ADR 0087), on both
 /// example maps and with several seeds. A draft that misses its targets writes nothing and proves nothing, so only
 /// written drafts are checked; at least one per map must be written.
 #[test]
-fn drafts_on_the_example_maps_never_hold_a_control_in_an_out_of_bounds_area() {
+fn drafts_on_the_example_maps_keep_to_the_limits_of_check() {
     for (map, start, finish, limit) in [
         (
             "examples/gleisdreieck/gleisdreieck.omap",
@@ -272,7 +275,7 @@ fn drafts_on_the_example_maps_never_hold_a_control_in_an_out_of_bounds_area() {
             "examples/rummelsburger-bucht/rummelsburg.omap",
             "3,0",
             "10,5",
-            "15",
+            "12",
         ),
     ] {
         let mut written = 0;
@@ -316,11 +319,18 @@ fn drafts_on_the_example_maps_never_hold_a_control_in_an_out_of_bounds_area() {
             }
             written += 1;
             let checked = run("en", &["check", p]);
-            assert!(
-                !out(&checked).contains("in_forbidden"),
-                "{map}, seed {seed}: {}",
-                out(&checked)
-            );
+            for rule in [
+                "in_forbidden",
+                "control.dead_end",
+                "map.margin",
+                "map.inside",
+            ] {
+                assert!(
+                    !out(&checked).contains(rule),
+                    "{map}, seed {seed}: {rule}: {}",
+                    out(&checked)
+                );
+            }
         }
         assert!(written > 0, "{map}: no draft was written");
     }
@@ -883,4 +893,132 @@ fn course_without_csv_or_sheet_is_refused() {
     );
     assert_eq!(o.status.code(), Some(2), "{}", err(&o));
     assert!(!target.exists());
+}
+
+/// A draft refuses a start and finish that are further apart than `start_finish_max_m` or closer than `map_margin_m`
+/// to the edge of the mapped area (ADR 0086, ADR 0087), names the setting and writes nothing; the settings change that.
+#[test]
+fn a_draft_refuses_ends_that_break_the_settings() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("m.omap");
+    std::fs::copy(
+        repo_root().join("examples/gleisdreieck/gleisdreieck.omap"),
+        &target,
+    )
+    .unwrap();
+    let project = dir.path().join("m.courseplan.toml");
+    let p = project.to_str().unwrap();
+    let ok = |args: &[&str]| {
+        let o = run("en", args);
+        assert_eq!(o.status.code(), Some(0), "{args:?}: {}", err(&o));
+    };
+    ok(&["init", target.to_str().unwrap()]);
+    ok(&[
+        "special", "add", p, "--kind", "start", "--id", "S", "--at", "100,-290",
+    ]);
+    // 600 m from the start in a straight line.
+    ok(&[
+        "special", "add", p, "--kind", "finish", "--id", "F", "--at", "100,-140",
+    ]);
+    let draft = |extra: &[&str]| {
+        let mut args = vec![
+            "score",
+            "draft",
+            p,
+            "T",
+            "--time-limit",
+            "20",
+            "--start",
+            "S",
+            "--finish",
+            "F",
+        ];
+        args.extend_from_slice(extra);
+        run("en", &args)
+    };
+    let o = draft(&[]);
+    assert_eq!(o.status.code(), Some(1), "{}{}", out(&o), err(&o));
+    let message = err(&o);
+    assert!(
+        message.contains("are 600 m apart") && message.contains("start_finish_max_m"),
+        "{message}"
+    );
+    assert!(
+        message.contains("(100, -290)") && message.contains("(100, -140)"),
+        "{message}"
+    );
+    // The refusal is cheap: it comes before any map search, and nothing is written.
+    assert!(
+        !std::fs::read_to_string(&project)
+            .unwrap()
+            .contains("[[courses]]")
+    );
+    // A start 39 m from the edge of the mapped area breaks the margin of 50 m.
+    ok(&[
+        "special",
+        "add",
+        p,
+        "--kind",
+        "start",
+        "--id",
+        "E",
+        "--at",
+        "-64.643,-171.607",
+    ]);
+    ok(&[
+        "special", "add", p, "--kind", "finish", "--id", "G", "--at", "-60,-165",
+    ]);
+    let o = run(
+        "en",
+        &[
+            "score",
+            "draft",
+            p,
+            "T",
+            "--time-limit",
+            "20",
+            "--start",
+            "E",
+            "--finish",
+            "G",
+        ],
+    );
+    assert_eq!(o.status.code(), Some(1), "{}{}", out(&o), err(&o));
+    let message = err(&o);
+    assert!(
+        message.contains("The start at (-64.643, -171.607)")
+            && message.contains("from the edge of the mapped area")
+            && message.contains("map_margin_m"),
+        "{message}"
+    );
+    // The settings are stored and come back as the tool answers them.
+    let o = run(
+        "en",
+        &[
+            "score",
+            "settings",
+            p,
+            "--dead-end-max",
+            "80",
+            "--start-finish-max",
+            "700",
+            "--map-margin",
+            "30",
+            "--json",
+        ],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    let v: serde_json::Value = serde_json::from_str(&out(&o)).unwrap();
+    assert_eq!(
+        (
+            &v["dead_end_max_m"],
+            &v["start_finish_max_m"],
+            &v["map_margin_m"]
+        ),
+        (&json!(80), &json!(700), &json!(30))
+    );
+    // Out of range is refused with one sentence.
+    let o = run("en", &["score", "settings", p, "--dead-end-max", "10"]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("dead_end_max_m"), "{}", err(&o));
 }

@@ -919,6 +919,12 @@ fn checked_workspace(session: &mut Session) -> (tempfile::TempDir, PathBuf) {
         "add_special",
         json!({ "project": project, "kind": "finish", "id": "F1", "at": p(118.0, 82.0) }),
     );
+    // The points lie close to the edge of the mapped area of the small Lübeck map. The margin rule (ADR 0087) has
+    // its own tests, so it is off here.
+    session.ok(
+        "set_score_settings",
+        json!({ "project": project, "map_margin_m": 0 }),
+    );
     session.ok(
         "add_control",
         json!({ "project": project, "at": p(93.0, 89.0) }),

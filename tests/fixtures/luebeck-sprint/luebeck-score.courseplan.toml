@@ -204,3 +204,7 @@ legs = [{ course = "A", after = 6, from = "36", to = "37" }]
 rule = "wkb2026.score.limit_penalty"
 course = "Score 15"
 note = "Ein Entwurf für diese kleine Karte trifft die Bänder bei 15 Minuten. Bei 45 Minuten gehen vorher die freien Codes aus."
+
+# The controls stand close to the edge of the small mapped area (ADR 0087), so the margin rule is off here.
+[score]
+map_margin_m = 0
