@@ -84,9 +84,9 @@ on a shared Mac with a load average of 25 to 117, so the scatter is large (CPU t
 | `score draft`, 11 minutes, Rummelsburger Bucht | 1.9 s | 1.6 s |
 
 The quietest round (load about 25) gave 1.5 and 4.5 s after against 1.7 and 5.7 s before on Gleisdreieck. No slowdown is
-visible beyond the scatter. The analysis costs one more raster build of the fine surface (25 ms on Gleisdreieck) and 3
+visible beyond the scatter. The analysis costs one more raster build of the fine surface (about 20 to 50 ms on Gleisdreieck) and 3
 to 9 ms for each site the suggestion picks, and the filters leave fewer sites to route. The margin adds one build of a
-raster of the mapped area with two distance transforms, a few hundred milliseconds on Gleisdreieck.
+raster of the mapped area with two distance transforms; its time was not measured on its own and is inside the figures above.
 
 ## Consequences
 
