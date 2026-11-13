@@ -229,6 +229,20 @@ async function accept(candidate) {
   done(after);
 }
 
+// The user does not want this site: the project file keeps it, and no later list of candidates has it.
+async function reject(candidate) {
+  const at = results.candidates.indexOf(candidate);
+  const remaining = results.candidates.length - 1;
+  // The buttons count from the top, so the focus goes to the one now at the same place, or the last one.
+  const after = remaining > 0 ? `score-reject-${Math.min(at, remaining - 1)}` : "score-suggest";
+  ctx.focusAfter(after);
+  const written = await ctx.runOp("reject_site", { at: candidate.at });
+  if (!written) return done(`score-reject-${at}`);
+  results.candidates = results.candidates.filter((c) => c !== candidate);
+  ctx.say("editor-score-status-rejected");
+  done(after);
+}
+
 // --- Panel -----------------------------------------------------------------------------------------------------------
 
 // The defaults of the score settings, shown as placeholders (ADR 0083).
@@ -269,10 +283,16 @@ function candidateTable(candidates) {
       disabled: !c.code,
       label: `${t("editor-score-accept")} ${c.code ?? t("editor-score-no-code")}`,
     });
-    return [c.code ?? t("editor-score-no-code"), c.value, c.route_choice, c.difficulty, Math.round(c.effort_s), act];
+    const no = button(`score-reject-${candidates.indexOf(c)}`, "editor-score-reject", () => reject(c), {
+      label: `${t("editor-score-reject")} ${c.code ?? t("editor-score-no-code")}`,
+    });
+    no.title = t("editor-score-reject-title");
+    const actions = node("span", { class: "score-row-actions" });
+    actions.append(act, no);
+    return [c.code ?? t("editor-score-no-code"), c.value, c.route_choice, c.difficulty, Math.round(c.effort_s), actions];
   });
   const tbl = table(
-    ["editor-score-col-code", "editor-score-col-value", "editor-score-col-choice", "editor-score-col-difficulty", "editor-score-col-effort", "editor-score-accept"],
+    ["editor-score-col-code", "editor-score-col-value", "editor-score-col-choice", "editor-score-col-difficulty", "editor-score-col-effort", "editor-score-col-actions"],
     rows,
   );
   return tbl;

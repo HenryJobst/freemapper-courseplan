@@ -368,7 +368,7 @@ fn a_finish_in_the_blank_part_beside_the_map_is_an_error_and_the_example_is_clea
     assert_eq!(code(&out), Some(1), "{}", stdout(&out));
     assert!(
         stdout(&out).contains(
-            "finish F1 at 95, 0 mm on the map is outside the mapped area: the nearest map object, symbol 501.11, is 60 m away, at most 40 m allowed"
+            "finish F1 at 95, 0 mm on the map is outside the mapped area: the nearest map object, symbol 501.11, is 60 m away, at most 50 m allowed"
         ),
         "{}",
         stdout(&out)

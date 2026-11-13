@@ -6,6 +6,14 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- You can reject candidate sites (ADR 0089). `score reject --at X,Y` stores the position in the project file (new optional key `rejected_sites`, format stays 1), and `score suggest`, `score draft` and the candidate list of the editor leave out every site within 3 m of it. `score unreject --at X,Y` takes the rejection back. The tools are `reject_site` and `unreject_site`, the editor has a "Reject" button beside "Accept" in the candidate table. A program from before this version refuses a project file that has the new key.
+
+### Changed
+
+- The mapped area reaches 50 m beyond the map objects instead of 40 m (rule `wkb2026.map.inside`, `metres`, ADR 0088), the same number as the default margin. With the defaults, a control may stand at the outline of the objects; before it had to stand 10 m inside. Profiles that set `metres` themselves keep their value.
+
 ## [0.16.0] - 2026-11-13
 
 ### Added

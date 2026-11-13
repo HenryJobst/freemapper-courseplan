@@ -54,3 +54,5 @@ several seeds checks that written drafts have no `map_margin` finding.
   area than it has, and the margin shrinks the usable area further.
 
 Source: the user, 2026-11-12.
+
+Update 2026-11-13: the limit is 50 m since [0088](0088-mapped-area-limit-is-50-m.md); the 40 m above are the original value.

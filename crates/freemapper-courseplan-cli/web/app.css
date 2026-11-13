@@ -281,6 +281,7 @@ dialog button { font: inherit; }
 #layer-score text { fill: var(--sel); stroke: none; font-family: system-ui, sans-serif; font-weight: 700; }
 #layer-score .draft-control circle { stroke-width: 0.3px; }
 .score-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.3rem 0; }
+.score-row-actions { display: flex; gap: 0.2rem; }
 .score-table-wrap { overflow-x: auto; max-width: 100%; }
 .score-table { border-collapse: collapse; width: 100%; margin: 0.25rem 0; font-variant-numeric: tabular-nums; }
 .score-table { font-size: 0.82em; }

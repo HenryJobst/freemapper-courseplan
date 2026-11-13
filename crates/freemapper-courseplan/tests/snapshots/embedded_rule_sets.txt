@@ -6,7 +6,7 @@ wkb2026.distance.similar_half | similar_features | warning | enabled=true | map_
 wkb2026.distance.similar_sprint | similar_features | warning | enabled=true | map_kinds=[schoolyard,sprint] print_scales=[1000,2000,3000,4000] | { feature_search_mm = 1.0, groups = [["305", "306", "309"], ["111", "112"], ["109", "110"], ["516", "518"], ["505", "506", "507", "508"]], metres = 30.0 } | WKB26:B 7.2.1 | from wkb-2026
 wkb2026.distance.similar_sprint_full | similar_features | warning | enabled=true | map_kinds=[schoolyard,sprint] print_scales=[10000,15000,5000,7500] | { feature_search_mm = 1.0, groups = [["305", "306", "309"], ["111", "112"], ["109", "110"], ["516", "518"], ["505", "506", "507", "508"]], metres = 60.0 } | WKB26:B 7.2.1 | from wkb-2026
 wkb2026.map.edge | map_edge | warning | enabled=true |  | { metres = 10.0 } | claude:M2b plan, Task 4 | from wkb-2026
-wkb2026.map.inside | inside_map | error | enabled=true |  | { frame_percent = 80.0, ignore_symbols = ["601", "602"], metres = 40.0 } | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
+wkb2026.map.inside | inside_map | error | enabled=true |  | { frame_percent = 80.0, ignore_symbols = ["601", "602"], metres = 50.0 } | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
 wkb2026.map.margin | map_margin | error | enabled=true |  | {} | user:request 2026-11-12, ADR 0087 | from wkb-2026
 wkb2026.control.dead_end | control_dead_end | warning | enabled=true | map_kinds=[schoolyard,sprint] | {} | user:request 2026-11-12, ADR 0085 | from wkb-2026
 wkb2026.course.start_finish_distance | start_finish_distance | hint | enabled=true | map_kinds=[schoolyard,sprint] | {} | user:request 2026-11-12, ADR 0086 | from wkb-2026
@@ -48,7 +48,7 @@ wkb2026.distance.similar_half | similar_features | warning | enabled=true | map_
 wkb2026.distance.similar_sprint | similar_features | warning | enabled=true | map_kinds=[schoolyard,sprint] print_scales=[1000,2000,3000,4000] | { feature_search_mm = 1.0, groups = [["305", "306", "309"], ["111", "112"], ["109", "110"], ["516", "518"], ["505", "506", "507", "508"]], metres = 30.0 } | WKB26:B 7.2.1 | from wkb-2026
 wkb2026.distance.similar_sprint_full | similar_features | warning | enabled=true | map_kinds=[schoolyard,sprint] print_scales=[10000,15000,5000,7500] | { feature_search_mm = 1.0, groups = [["305", "306", "309"], ["111", "112"], ["109", "110"], ["516", "518"], ["505", "506", "507", "508"]], metres = 60.0 } | WKB26:B 7.2.1 | from wkb-2026
 wkb2026.map.edge | map_edge | warning | enabled=true |  | { metres = 10.0 } | claude:M2b plan, Task 4 | from wkb-2026
-wkb2026.map.inside | inside_map | error | enabled=true |  | { frame_percent = 80.0, ignore_symbols = ["601", "602"], metres = 40.0 } | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
+wkb2026.map.inside | inside_map | error | enabled=true |  | { frame_percent = 80.0, ignore_symbols = ["601", "602"], metres = 50.0 } | BL02:Mögliche Fehler bei der Bahnlegung (p. 10) | from wkb-2026
 wkb2026.map.margin | map_margin | error | enabled=true |  | {} | user:request 2026-11-12, ADR 0087 | from wkb-2026
 wkb2026.control.dead_end | control_dead_end | warning | enabled=true | map_kinds=[schoolyard,sprint] | {} | user:request 2026-11-12, ADR 0085 | from wkb-2026
 wkb2026.course.start_finish_distance | start_finish_distance | hint | enabled=true | map_kinds=[schoolyard,sprint] | {} | user:request 2026-11-12, ADR 0086 | from wkb-2026

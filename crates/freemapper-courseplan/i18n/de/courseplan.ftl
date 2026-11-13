@@ -765,7 +765,7 @@ mcp-instructions =
     Datei, wie sie war. Einzel- und Score-Bahnen lassen sich bearbeiten und prüfen, eine gemessene Länge haben nur Einzelbahnen. Eine
     Score-Bahn legt add_score_course an; ihre Posten setzen set_score_controls und set_control_value, ihre
     Pflichtverbindungen add_score_link und remove_score_link, Zeitlimit und Abzug set_score_course_details und die
-    Punktespanne und Paces der Veranstaltung set_score_settings. score_suggest listet Postenplätze, score_draft entwirft
+    Punktespanne und Paces der Veranstaltung set_score_settings. score_suggest listet Postenplätze, reject_site lässt einen von da an aus (unreject_site nimmt es zurück), score_draft entwirft
     eine Score-Bahn und schreibt nur mit apply true, score_length analysiert eine vorhandene. Alle drei brauchen
     Sekunden. Mannschafts- und Staffelbahnen lassen sich noch nicht bearbeiten. check prüft die Bahnen
     gegen das Regelprofil der Veranstaltung, das set_rule_profile ändert. Manche Prüfungen brauchen das Startfenster
@@ -1505,6 +1505,8 @@ editor-op-set-score-controls = Score-Posten ändern
 editor-op-set-control-value = Postenwert setzen
 editor-op-add-score-link = Verbindung hinzufügen
 editor-op-remove-score-link = Verbindung entfernen
+editor-op-reject-site = Standort ablehnen
+editor-op-unreject-site = Ablehnung zurücknehmen
 editor-op-set-score-settings = Score-Einstellungen ändern
 editor-op-set-score-course-details = Score-Bahn ändern
 score-near-suffix = Das liegt innerhalb der Toleranz von { $tolerance } Prozentpunkten und gilt als nahe am Ziel.
@@ -1527,6 +1529,8 @@ mcp-error-score-draft-ends = die Score-Bahn { $name } hat schon Start und Ziel; 
 mcp-tool-score-suggest = Schlägt Postenstellen für eine Score-Bahn aus der Karte vor, nach Routenwahl geordnet. Jeder Kandidat hat eine Position in Kartenmillimetern, den Symbolcode seines Objekts, route_choice und difficulty von 0 bis 1, effort_s (Sekunden vom Start für den guten Läufer) und den vorgeschlagenen Wert. Schreibt nichts. Braucht auf einer großen Karte Sekunden. Start und Ziel sind standardmäßig die der genannten Bahn, sonst der jeweils erste im Event; liegt ein Ende in einem gesperrten Gebiet, wird es abgelehnt.
 mcp-tool-score-draft = Entwirft eine Score-Bahn: Posten mit Werten und Codes, sodass der gute Läufer im Zeitlimit etwa 90 Prozent aller Punkte holt und der sehr gute Läufer alle Posten schafft und knapp unter dem Limit ins Ziel kommt. Schreibt nichts, solange apply nicht true ist; dann legt es die Score-Bahn an oder ersetzt die Posten einer vorhandenen Score-Bahn, eine Bahn anderer Art wird abgelehnt. links nennt Paare von Positionen, jede aus score_suggest, die direkt nacheinander gelaufen werden. Die Bänder sind Zielwerte mit einer Toleranz (Einstellungen good_band_percent, very_good_band_percent und band_tolerance_percent). Die Antwort length.state nennt in_band, near (innerhalb der Toleranz, ein Erfolg, die Abweichung steht in length.issues) oder missed; ein Entwurf, der verfehlt, kommt als Fehler zurück, der jede Abweichung mit ihrer Größe nennt und was helfen würde. Braucht Sekunden.
 mcp-tool-score-length = Analysiert die Länge einer vorhandenen Score-Bahn: die besten Runden des guten und des sehr guten Läufers im Limit, den Anteil an Punkten und am Limit und jede Abweichung von den Bändern mit ihrer Größe. length.state ist in_band, near (innerhalb der Toleranz) oder missed. Meldet nur; ändert die Bahn nie.
+mcp-param-reject-site-at = Position des abzulehnenden Standorts in Kartenmillimetern im Kartenmaßstab; ein Kandidat aus score_suggest hat eine. Ein Standort innerhalb von 3 m eines abgelehnten gilt als derselbe
+mcp-param-unreject-site-at = Position des Standorts, dessen Ablehnung zurückgenommen wird, in Kartenmillimetern im Kartenmaßstab; jeder abgelehnte Standort innerhalb von 3 m davon entfällt
 mcp-param-score-suggest-limit = Höchstzahl der Kandidaten [Standard: 60, höchstens 200]
 mcp-param-score-suggest-min-distance-mm = Kleinster Abstand in Kartenmillimetern zwischen Kandidaten, Posten, Start und Ziel [Standard: 15 m im Gelände bei 1:4000 und größeren Maßstäben, sonst 30 m]
 mcp-param-score-suggest-course = Name einer Score-Bahn. Ihr Start und ihr Ziel werden benutzt; eine zusätzlich angegebene Start- oder Ziel-Id hat Vorrang
@@ -1607,6 +1611,19 @@ cli-arg-score-draft-time-limit = Zeitlimit in Minuten
 cli-arg-score-draft-start = Id des Start-Sonderobjekts einer neuen Bahn [Standard: der erste Start]
 cli-arg-score-draft-finish = Id des Ziel-Sonderobjekts einer neuen Bahn [Standard: das erste Ziel]
 cli-arg-score-draft-link = Zwei Positionen von Kandidaten, X,Y;X,Y in Kartenmillimetern, die direkt nacheinander gelaufen werden; für mehr Verbindungen wiederholen
+cli-help-score-reject = Lehnt einen Kandidatenstandort ab, sodass suggest und draft ihn auslassen. Die Ablehnung steht in der Projektdatei; ein Standort innerhalb von 3 m gilt als derselbe. Mit --json ist die Antwort die des MCP-Werkzeugs reject_site
+cli-help-score-unreject = Nimmt die Ablehnung eines Standorts zurück. Mit --json ist die Antwort die des MCP-Werkzeugs unreject_site
+cli-arg-score-reject-at = Der abzulehnende Standort: X,Y in Kartenmillimetern, zum Beispiel eine Position aus score suggest
+cli-arg-score-unreject-at = Der Standort, dessen Ablehnung zurückgenommen wird: X,Y in Kartenmillimetern
+cli-score-rejected = Standort bei { $at } abgelehnt; insgesamt { $count } abgelehnt
+cli-score-rejected-already = Der Standort bei { $at } war schon abgelehnt; insgesamt { $count } abgelehnt
+cli-score-unrejected = Ablehnung bei { $at } zurückgenommen; { $count } bleiben abgelehnt
+mcp-tool-reject-site = Lehnt einen Kandidatenstandort aus score_suggest ab, sodass score_suggest und score_draft ihn von nun an auslassen. Die Ablehnung steht in der Projektdatei. Erwartet at, die Position des Standorts in Kartenmillimetern; ein Standort innerhalb von 3 m eines abgelehnten gilt als derselbe. Ein schon abgelehnter Standort ändert nichts. Liefert at, added (false, wenn er schon abgelehnt war) und rejected_sites, die Zahl der abgelehnten Standorte. Ein Posten, der am Standort steht, bleibt, wo er ist.
+mcp-tool-unreject-site = Nimmt die Ablehnung eines Standorts zurück, sodass score_suggest und score_draft ihn wieder anbieten dürfen. Erwartet at, die Position in Kartenmillimetern; jeder abgelehnte Standort innerhalb von 3 m davon entfällt. Ein Standort, der nicht abgelehnt ist, ist ein Fehler. Liefert at, removed und rejected_sites, die Zahl der abgelehnten Standorte, die bleiben.
+editor-score-col-actions = Aktionen
+editor-score-reject = Ablehnen
+editor-score-reject-title = Diesen Standort aus allen späteren Kandidatenlisten auslassen
+editor-score-status-rejected = Standort abgelehnt. Er kommt nicht wieder vor.
 cli-arg-score-draft-apply = Den Entwurf als Score-Bahn schreiben; eine Bahn dieses Namens wird ersetzt, wenn sie eine Score-Bahn ist
 cli-score-suggest = { $count ->
     [one] 1 Kandidat

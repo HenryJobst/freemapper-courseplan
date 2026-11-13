@@ -771,7 +771,7 @@ mcp-instructions =
     individual courses have a measured length. A score course is made by add_score_course; set_score_controls and
     set_control_value set its controls, add_score_link and remove_score_link its mandatory links,
     set_score_course_details the time limit and the penalty, and set_score_settings the point range and the paces
-    of the event. score_suggest lists control sites, score_draft drafts a score course and writes only with apply
+    of the event. score_suggest lists control sites, reject_site leaves one out from then on (unreject_site takes it back), score_draft drafts a score course and writes only with apply
     true, score_length analyses an existing one. All three take seconds. Team and relay courses cannot be edited yet.
     check tests the courses against the rule profile of the event, which set_rule_profile changes. Some checks
     need the start window (set_start_window) or the rule category and expected starters of a class (set_class);
@@ -1510,6 +1510,8 @@ editor-op-set-score-controls = Change score controls
 editor-op-set-control-value = Set control value
 editor-op-add-score-link = Add link
 editor-op-remove-score-link = Remove link
+editor-op-reject-site = Reject site
+editor-op-unreject-site = Take back rejection
 editor-op-set-score-settings = Change score settings
 editor-op-set-score-course-details = Change score course details
 score-near-suffix = That is within the tolerance of { $tolerance } percentage points, so it counts as near the target.
@@ -1532,6 +1534,8 @@ mcp-error-score-draft-ends = the score course { $name } has its own start and fi
 mcp-tool-score-suggest = Suggest control sites for a score course from the map, ranked by route choice. Each candidate has a position in map millimetres, the symbol code of its feature, route_choice and difficulty from 0 to 1, effort_s (seconds from the start for the good runner) and the suggested value. Writes nothing. Takes seconds on a large map. Start and finish default to those of the named course, else to the first of each in the event; ends that lie in a blocked area are refused.
 mcp-tool-score-draft = Draft a score course: a set of controls with values and codes so that the good runner scores about 90 percent of all points within the time limit and the very good runner takes every control and finishes just under the limit. Writes nothing unless apply is true; then it creates the score course or replaces the controls of an existing score course, and a course of another kind is refused. links names pairs of positions, each taken from score_suggest, to be run one directly after the other. The bands are targets with a tolerance (settings good_band_percent, very_good_band_percent and band_tolerance_percent). The answer length.state says in_band, near (within the tolerance, a success, with the deviation named in length.issues) or missed; a draft that misses comes back as an error naming each miss with its size, and what would help. Takes seconds.
 mcp-tool-score-length = Analyse the length of an existing score course: the best round trips of the good and the very good runner within the limit, the share of points and of the limit, and each deviation from the bands with its size. length.state is in_band, near (within the tolerance) or missed. Reports only; never changes the course.
+mcp-param-reject-site-at = Position of the site to reject, in map millimetres at map scale; a candidate from score_suggest has one. A site within 3 m of a rejected one counts as the same
+mcp-param-unreject-site-at = Position of the site whose rejection is taken back, in map millimetres at map scale; every rejected site within 3 m of it goes
 mcp-param-score-suggest-limit = Most candidates to return [default: 60, at most 200]
 mcp-param-score-suggest-min-distance-mm = Smallest distance in map millimetres between candidates, controls, start and finish [default: 15 m on the ground at 1:4000 and larger scales, else 30 m]
 mcp-param-score-suggest-course = Name of a score course. Its start and finish are used; a start or finish id given as well wins
@@ -1612,6 +1616,19 @@ cli-arg-score-draft-time-limit = Time limit in minutes
 cli-arg-score-draft-start = Id of the start special object of a new course [default: the first start]
 cli-arg-score-draft-finish = Id of the finish special object of a new course [default: the first finish]
 cli-arg-score-draft-link = Two positions of candidates, X,Y;X,Y in map millimetres, to run one directly after the other; repeat for more links
+cli-help-score-reject = Reject a candidate site so that suggest and draft leave it out. The rejection is stored in the project file; a site within 3 m counts as the same one. With --json the answer is the one of the MCP tool reject_site
+cli-help-score-unreject = Take back the rejection of a site. With --json the answer is the one of the MCP tool unreject_site
+cli-arg-score-reject-at = The site to reject: X,Y in map millimetres, for example a position from score suggest
+cli-arg-score-unreject-at = The site to take back: X,Y in map millimetres
+cli-score-rejected = rejected the site at { $at }; { $count } rejected in all
+cli-score-rejected-already = the site at { $at } was rejected already; { $count } rejected in all
+cli-score-unrejected = took back the rejection at { $at }; { $count } left
+mcp-tool-reject-site = Reject a candidate site of score_suggest, so that score_suggest and score_draft leave it out from now on. The rejection is stored in the project file. Pass at, the position of the site in map millimetres; a site within 3 m of a rejected one counts as the same. A site that is rejected already changes nothing. Returns at, added (false when it was rejected already) and rejected_sites, the number of rejected sites. A control that stands at the site stays where it is.
+mcp-tool-unreject-site = Take back the rejection of a site, so that score_suggest and score_draft may offer it again. Pass at, the position in map millimetres; every rejected site within 3 m of it goes. A site that is not rejected is an error. Returns at, removed and rejected_sites, the number of rejected sites that remain.
+editor-score-col-actions = Actions
+editor-score-reject = Reject
+editor-score-reject-title = Leave this site out of every later list of candidates
+editor-score-status-rejected = Site rejected. It will not come up again.
 cli-arg-score-draft-apply = Write the draft as the score course; a course of that name is replaced if it is a score course
 cli-score-suggest = { $count ->
     [one] 1 candidate

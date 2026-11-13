@@ -3,7 +3,7 @@
 //! `CoursePlanServer::call_json`, so `--json` prints what the MCP tool answers; without it the same value
 //! becomes one line from the catalog.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{ArgGroup, Subcommand};
 use freemapper_courseplan::text::{FluentValue, Lang, text};
@@ -107,6 +107,22 @@ pub enum ScoreCmd {
         start: Option<String>,
         #[arg(long, value_name = "ID")]
         finish: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Reject a candidate site
+    Reject {
+        project: PathBuf,
+        #[arg(long, value_name = "X,Y", allow_hyphen_values = true)]
+        at: String,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Take back the rejection of a site
+    Unreject {
+        project: PathBuf,
+        #[arg(long, value_name = "X,Y", allow_hyphen_values = true)]
+        at: String,
         #[arg(long)]
         json: bool,
     },
@@ -293,6 +309,8 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             }
             Ok(())
         }
+        ScoreCmd::Reject { project, at, json } => site(lang, &project, &at, json, true),
+        ScoreCmd::Unreject { project, at, json } => site(lang, &project, &at, json, false),
         ScoreCmd::Draft {
             project,
             name,
@@ -598,6 +616,39 @@ fn default_flag(value: &Value) -> String {
         "no"
     }
     .to_owned()
+}
+
+/// `score reject` and `score unreject`: the tools `reject_site` and `unreject_site`.
+fn site(lang: &Lang, project: &Path, at: &str, json: bool, reject: bool) -> Outcome {
+    let at = parse_point(lang, at)?;
+    let tool = if reject {
+        "reject_site"
+    } else {
+        "unreject_site"
+    };
+    let value = run_tool(
+        lang,
+        project,
+        tool,
+        json!({ "at": { "x": at.x, "y": at.y } }),
+    )?;
+    if json {
+        return print_json(&value);
+    }
+    let id = match (reject, value["added"].as_bool()) {
+        (true, Some(false)) => "cli-score-rejected-already",
+        (true, _) => "cli-score-rejected",
+        (false, _) => "cli-score-unrejected",
+    };
+    say(
+        lang,
+        id,
+        &[
+            ("at", xy(&value["at"])),
+            ("count", s(&value["rejected_sites"])),
+        ],
+    );
+    Ok(())
 }
 
 fn link(lang: &Lang, cmd: LinkCmd) -> Outcome {

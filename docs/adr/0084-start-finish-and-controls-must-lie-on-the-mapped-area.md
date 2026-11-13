@@ -79,3 +79,5 @@ the pictures of the manual. The examples README says where start and finish stan
   object would be exact, but the OOM files of these maps carry neither.
 
 Source: the user, 2026-11-12.
+
+Update 2026-11-13: the limit is 50 m since [0088](0088-mapped-area-limit-is-50-m.md); the 40 m above are the original value.

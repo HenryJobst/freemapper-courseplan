@@ -3,7 +3,8 @@
 //! a clone, validate, write back only a consistent result.
 
 use freemapper_courseplan_model::{
-    ControlCode, Course, CourseKind, Event, ScoreControl, ScoreLink, ScoreSettings, score_penalty,
+    ControlCode, Course, CourseKind, Event, MapPoint, ScoreControl, ScoreLink, ScoreSettings,
+    score_penalty,
 };
 
 use super::{EditError, apply, course_mut, not_found};
@@ -368,4 +369,40 @@ pub fn set_score_course_details(
         }
         Ok(limits_of(&course.kind, &settings).expect("a score course"))
     })
+}
+
+/// Rejects a candidate site (ADR 0089). A rejection within `tolerance_mm` of `at` already stands for the same
+/// site, so nothing is added then. Returns whether the list grew.
+pub fn reject_site(event: &mut Event, at: &MapPoint, tolerance_mm: f64) -> Result<bool, EditError> {
+    apply(event, |e| {
+        if e.rejected_sites.iter().any(|r| near(r, at, tolerance_mm)) {
+            return Ok(false);
+        }
+        e.rejected_sites.push(at.clone());
+        Ok(true)
+    })
+}
+
+/// Takes back the rejection of a site: removes every rejected site within `tolerance_mm` of `at` and returns
+/// how many there were. None is an error.
+pub fn unreject_site(
+    event: &mut Event,
+    at: &MapPoint,
+    tolerance_mm: f64,
+) -> Result<usize, EditError> {
+    apply(event, |e| {
+        let before = e.rejected_sites.len();
+        e.rejected_sites.retain(|r| !near(r, at, tolerance_mm));
+        match before - e.rejected_sites.len() {
+            0 => Err(not_found(
+                "rejected site",
+                format!("at {:.1}, {:.1}", at.x, at.y),
+            )),
+            removed => Ok(removed),
+        }
+    })
+}
+
+fn near(a: &MapPoint, b: &MapPoint, tolerance_mm: f64) -> bool {
+    (a.x - b.x).hypot(a.y - b.y) <= tolerance_mm
 }

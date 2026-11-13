@@ -386,7 +386,8 @@ fn margin_rule() -> Rule {
 }
 
 /// A finish inside the strip at `inward` mm from its lower left edge, which is the line y = x + 30 (the edge of
-/// the mapped area lies 10 mm, 40 m, beyond it).
+/// the mapped area lies 12.5 mm, 50 m, beyond it). A negative `inward` is outside the strip but still
+/// within the 50 m of the mapped area.
 fn finish_inside(inward: f64) -> Event {
     let k = inward / std::f64::consts::SQRT_2;
     with_start_finish(
@@ -398,14 +399,18 @@ fn finish_inside(inward: f64) -> Event {
 
 #[test]
 fn a_finish_just_under_the_margin_is_an_error() {
-    // 1.5 mm (6 m) inside the strip is 46 m from the edge of the mapped area: below the 50 m.
-    let r = report(&finish_inside(1.5), &strip_map(vec![]), vec![margin_rule()]);
+    // 1 mm (4 m) outside the strip is 46 m from the edge of the mapped area: below the 50 m.
+    let r = report(
+        &finish_inside(-1.0),
+        &strip_map(vec![]),
+        vec![margin_rule()],
+    );
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     let f = &r.findings[0];
     assert_eq!(f.severity, Severity::Error);
     assert_eq!(place_of(f), "F1");
     assert!(
-        en(f).starts_with("finish F1 at 61.1, 88.9 mm is 4"),
+        en(f).starts_with("finish F1 at 59.3, 90.7 mm is 4"),
         "{}",
         en(f)
     );
@@ -424,21 +429,21 @@ fn a_finish_just_under_the_margin_is_an_error() {
 
 #[test]
 fn a_finish_just_over_the_margin_gives_no_finding() {
-    // 3.5 mm (14 m) inside is 54 m from the edge.
-    let r = report(&finish_inside(3.5), &strip_map(vec![]), vec![margin_rule()]);
+    // 1 mm (4 m) inside is 54 m from the edge.
+    let r = report(&finish_inside(1.0), &strip_map(vec![]), vec![margin_rule()]);
     assert!(r.findings.is_empty(), "{:?}", r.findings);
 }
 
 #[test]
 fn a_finish_on_the_margin_is_judged_to_about_two_metres() {
-    // 2.5 mm (10 m) inside is 50 m from the edge. The raster measures to about 2 m, so the finding may go either
+    // On the strip's edge the finish is 50 m from the edge of the mapped area. The raster measures to about 2 m, so the finding may go either
     // way here, but 2 m either side it does not.
     let area = crate::mapped::MappedArea::build(
         &crate::map::MapIndex::from_document(&strip_map(vec![])),
         4000,
     )
     .unwrap();
-    let on = finish_inside(2.5);
+    let on = finish_inside(0.0);
     let at = match &on.specials[1] {
         freemapper_courseplan_model::SpecialObject::Finish { map_mm, .. } => map_mm.clone(),
         other => panic!("{other:?}"),
@@ -464,7 +469,7 @@ fn the_blank_part_is_left_to_inside_map() {
 
 #[test]
 fn the_margin_is_the_event_setting_and_zero_switches_it_off() {
-    let mut e = finish_inside(1.5);
+    let mut e = finish_inside(-1.0);
     e.score = Some(freemapper_courseplan_model::ScoreSettings {
         map_margin_m: 40,
         ..freemapper_courseplan_model::ScoreSettings::default()
@@ -489,8 +494,8 @@ fn the_margin_is_the_event_setting_and_zero_switches_it_off() {
 #[test]
 fn start_and_controls_keep_the_margin_too() {
     let e = with_start_finish(
-        event(&[("31", 61.0, 89.0)], vec![course("A", &["31"])]),
-        (60.5, 89.4),
+        event(&[("31", 59.0, 91.0)], vec![course("A", &["31"])]),
+        (59.5, 90.6),
         (100.0, 100.0),
     );
     let r = report(&e, &strip_map(vec![]), vec![margin_rule()]);

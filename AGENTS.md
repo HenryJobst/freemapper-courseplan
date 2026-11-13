@@ -62,7 +62,7 @@ Tell the person these limits before you start:
   line between controls is not the running route (ADR 0080). `check` does report a control that stands inside an
   out-of-bounds area, either a special object of its course or a map area with the symbol 520, 709 or 714 (709 and
   520 on forest maps), as an error (ADR 0081). It also reports a start, finish, control or crossing point that lies in the blank part of
-  the sheet, with no map object within 40 m, as an error (rule `wkb2026.map.inside`, ADR 0084); the map frame and layout
+  the sheet, with no map object within 50 m, as an error (rule `wkb2026.map.inside`, ADR 0084); the map frame and layout
   symbols such as the north lines pattern do not count as objects. It does not test start, finish or crossing points
   against out-of-bounds areas, nor controls that are on no course; look at those yourself. A start, finish, control or
   crossing point closer than 50 m to the edge of the mapped area is an error too (rule `wkb2026.map.margin`, ADR 0087), a
@@ -155,7 +155,7 @@ setting.
 
 If you can run commands on the person's computer (Claude Code, Codex and similar), use the command line. Each call
 is a blocking command, and you can chain a whole course into one shell call, so it takes few turns; through MCP
-every step is a tool turn that re-reads the whole context, and the schemas of about 52 tools sit in that context
+every step is a tool turn that re-reads the whole context, and the schemas of about 54 tools sit in that context
 as well. Use MCP only when you cannot run commands (see the next section).
 
 `freemapper-courseplan --help` lists the commands, `freemapper-courseplan <command> --help` their switches and
@@ -181,6 +181,7 @@ freemapper-courseplan check hall.courseplan.toml
 | `map extent`, `map near --at X,Y --radius MM` | Extent, scale and kind of the map; the map objects near a point (`--limit`, `--json`). |
 | `control`, `special`, `class`, `course` | Add, change and remove controls, special objects, classes and courses; `course numbers` places the control numbers; `course add --kind score --time-limit N [--penalty N]` adds a score course. Positions are `--at X,Y` in map millimetres. |
 | `score controls`, `score value`, `score link add\|remove`, `score settings`, `score course set` | Edit score courses: controls as `31,42=2` (the code carries the value), the value of one control, mandatory links, the event's score settings (`--value-max`, `--good-pace`, `--very-good-pace`, `--good-band`, `--very-good-band`, `--band-tolerance`, `--mix-hard`, `--seed`, `--dead-end-max`, `--start-finish-max`, `--map-margin`), time limit and penalty (`--no-penalty` restores the default). Each takes `--json`. |
+| `score reject`, `score unreject` | `reject --at X,Y` leaves a candidate site out of every later `suggest` and `draft`; the position is stored in the project file (`rejected_sites`) and a site within 3 m counts as the same. `unreject --at X,Y` takes it back. Use them when the person says a site is wrong; never reject on your own. Each takes `--json`. |
 | `score suggest`, `score draft`, `score length` | `suggest` ranks control sites by route choice (`--limit`, `--min-distance MM`, `--course NAME` for the start and finish of a score course, `--start`, `--finish`) and writes nothing. `draft NAME --time-limit MIN` works out a set of controls with codes so that both runner profiles reach the target length bands, within a tolerance; it writes only with `--apply`, then creates the score course or replaces the controls of an existing one. `--link "X,Y;X,Y"` (repeatable) names two candidate positions to run one after the other. A draft that misses a band beyond the tolerance exits with 1 and names each miss and what would help; one near the target exits with 0 and names the deviation. `length NAME` analyses an existing course and changes nothing. Each takes `--json`. |
 | `export --csv FILE --course NAME`, `export --sheet FILE --course NAME` | Control list (`code,value,x_mm,y_mm`, map millimetres) and Markdown evaluation sheet of a score course; other courses are refused. |
 | `event profile`, `event start-window` | Rule profile with overlays, and the start window (`--none` removes it). |
@@ -292,6 +293,7 @@ whole number.
 | `add_score_link`, `remove_score_link` | `name`, `a`, `b` | Mandatory link between two controls of a score course, either direction. A runner who skips it is disqualified. At most two links per control, no ring. |
 | `set_score_settings` | `value_max?`, `good_pace_s_per_km?`, `very_good_pace_s_per_km?`, `good_band_percent?`, `very_good_band_percent?`, `band_tolerance_percent?`, `mix_hard_percent?`, `seed?`, `dead_end_max_m?`, `start_finish_max_m?`, `map_margin_m?`, … | Event-wide score settings (no `name`, takes `project` only). The bands are `[low, high]` percent (the good runner scores that share of all points, the very good runner finishes after that share of the limit), the tolerance is 0 to 10 percentage points beyond a band that still count as near the target (default 3). |
 | `set_score_course_details` | `name`, `time_limit_min?`, `penalty_per_min?`, `no_penalty?` | Time limit and penalty of a score course; `no_penalty` goes back to the default penalty. |
+| `reject_site`, `unreject_site` | `at` | Reject a candidate site of `score_suggest` so that it and `score_draft` leave it out, or take the rejection back. A site within 3 m of a rejected one counts as the same. Answers `at`, `added` or `removed`, and `rejected_sites`. Only on the person's word. |
 | `score_suggest` | `limit?`, `min_distance_mm?`, `start?`, `finish?` | Control site candidates, best route choice first: position, `symbol_code`, `route_choice`, `difficulty`, `effort_s`, suggested `value`, and a free `code` that carries that value (`null` when no free code is left; only the best-ranked candidates get one, so the code space is not overrun). Writes nothing. Takes seconds. |
 | `score_draft` | `name`, `time_limit_min`, `start?`, `finish?`, `links?`, `apply?` | Draft of a score course: controls with code, value and position, and the length report. `links` is a list of `{a: {x, y}, b: {x, y}}`, each end a position from `score_suggest`. Writes only with `apply: true`. `length.state` is `in_band`, `near` (within the tolerance, a success) or `missed`. A draft that misses a band beyond the tolerance is an error result with one sentence per miss and the hint. |
 | `score_length` | `name` | Round trips of both runner profiles on an existing score course, with the bands, `length.state` and each deviation. Reports only. |

@@ -26,7 +26,7 @@ fn square(code: &str, x0: f64, y0: f64, x1: f64, y1: f64) -> MapFeature {
     )
 }
 
-/// A building of 300 by 300 m: the mapped area reaches 40 m beyond it.
+/// A building of 300 by 300 m: the mapped area reaches 50 m beyond it.
 fn one_building() -> MapIndex {
     MapIndex::from_features(vec![square("521", 0.0, 0.0, 300.0, 300.0)])
 }
@@ -58,26 +58,26 @@ fn the_transform_gives_exact_squared_distances() {
 #[test]
 fn the_margin_is_zero_in_the_blank_part_and_grows_inward() {
     let a = area(&one_building());
-    // 100 m beside the building, beyond the 40 m of the mapped area.
+    // 100 m beside the building, beyond the 50 m of the mapped area.
     assert_eq!(a.margin_m(&p(-100.0, 150.0)), 0.0);
-    // 100 m inside the building the nearest unmapped place is 140 m away (40 m beyond the wall).
+    // 100 m inside the building the nearest unmapped place is 150 m away (50 m beyond the wall).
     let deep = a.margin_m(&p(100.0, 150.0));
-    assert!((deep - 140.0).abs() <= 2.5, "{deep}");
+    assert!((deep - 150.0).abs() <= 2.5, "{deep}");
     let centre = a.margin_m(&p(150.0, 150.0));
-    assert!((centre - 190.0).abs() <= 2.5, "{centre}");
+    assert!((centre - 200.0).abs() <= 2.5, "{centre}");
 }
 
 #[test]
 fn just_under_on_and_just_over_the_boundary() {
     let a = area(&one_building());
-    // The wall at x = 0; the edge of the mapped area at x = -40. A place at x gets the margin x + 40.
-    for (x, want) in [(6.0, 46.0), (10.0, 50.0), (14.0, 54.0)] {
+    // The wall at x = 0; the edge of the mapped area at x = -50. A place at x gets the margin x + 50.
+    for (x, want) in [(-4.0, 46.0), (0.0, 50.0), (4.0, 54.0)] {
         let m = a.margin_m(&p(x, 150.0));
         assert!((m - want).abs() <= 2.5, "x {x}: {m}, wanted {want}");
     }
-    // The edge itself is at 40 m beyond the wall, and a place there has no margin.
-    assert!(a.margin_m(&p(-40.0, 150.0)) <= 2.5);
-    assert_eq!(a.margin_m(&p(-44.0, 150.0)), 0.0);
+    // The edge itself is at 50 m beyond the wall, and a place there has no margin.
+    assert!(a.margin_m(&p(-50.0, 150.0)) <= 2.5);
+    assert_eq!(a.margin_m(&p(-54.0, 150.0)), 0.0);
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn the_edge_of_the_raster_is_the_edge_of_the_mapped_area() {
 
 #[test]
 fn a_gap_between_buildings_is_mapped_and_deep() {
-    // Two buildings 60 m apart: the gap is within 40 m of an object everywhere, so it is mapped and a place in
+    // Two buildings 60 m apart: the gap is within 50 m of an object everywhere, so it is mapped and a place in
     // it is far from the edge along the gap too.
     let index = MapIndex::from_features(vec![
         square("521", 0.0, 0.0, 100.0, 300.0),

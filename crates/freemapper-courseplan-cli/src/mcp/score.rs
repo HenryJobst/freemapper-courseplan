@@ -20,12 +20,12 @@ use freemapper_courseplan::score::{
 };
 use freemapper_courseplan::text::{FluentValue, Localize, text};
 use freemapper_courseplan_model::{
-    Control, ControlCode, ControlKind, CourseKind, Event, MapPoint, ProjectFile, ScoreSettings,
-    SpecialObject,
+    Control, ControlCode, ControlKind, CourseKind, Event, MapPoint, ProjectFile,
+    REJECTED_SITE_TOLERANCE_M, ScoreSettings, SpecialObject,
 };
 use serde_json::{Value, json};
 
-use super::params::{CourseRef, ScoreApplyDraft, ScoreDraft, ScoreSuggest};
+use super::params::{CourseRef, ScoreApplyDraft, ScoreDraft, ScoreSuggest, SitePosition};
 use super::{Answer, CoursePlanServer, flag, pt};
 
 /// Grid edge in metres of the surface that serves the legs between controls; the one the length
@@ -292,6 +292,41 @@ impl CoursePlanServer {
         }
     }
 
+    /// The scale denominator of the project's map, for the tolerance of a rejected site.
+    fn map_scale(&self, file: &ProjectFile) -> Result<u32, String> {
+        Ok(self.read_map(file)?.georef.scale_denominator)
+    }
+
+    /// `reject_site`: the site no longer comes up in `score_suggest` and `score_draft` (ADR 0089).
+    pub(super) fn reject_site_op(&self, req: SitePosition) -> Answer {
+        self.edit(&req.project, |file| {
+            let tolerance = metres_to_mm(REJECTED_SITE_TOLERANCE_M, self.map_scale(file)?);
+            let at = req.at.map_point();
+            let added =
+                edit::reject_site(&mut file.event, &at, tolerance).map_err(|e| self.refused(e))?;
+            Ok(json!({
+                "at": point_json(&at),
+                "added": added,
+                "rejected_sites": file.event.rejected_sites.len(),
+            }))
+        })
+    }
+
+    /// `unreject_site`: takes the rejection back.
+    pub(super) fn unreject_site_op(&self, req: SitePosition) -> Answer {
+        self.edit(&req.project, |file| {
+            let tolerance = metres_to_mm(REJECTED_SITE_TOLERANCE_M, self.map_scale(file)?);
+            let at = req.at.map_point();
+            let removed = edit::unreject_site(&mut file.event, &at, tolerance)
+                .map_err(|e| self.refused(e))?;
+            Ok(json!({
+                "at": point_json(&at),
+                "removed": removed,
+                "rejected_sites": file.event.rejected_sites.len(),
+            }))
+        })
+    }
+
     pub(super) fn score_suggest_op(&self, req: ScoreSuggest) -> Answer {
         let file = self.load(&req.project)?;
         let world = self.score_world(&file)?;
@@ -358,6 +393,8 @@ impl CoursePlanServer {
                 line_margin_mm: line_margin_mm(world.scale),
                 dead_end: Some((&dead_ends, settings.dead_end_max_m)),
                 margin: mapped.as_ref().map(|m| (m, settings.map_margin_m)),
+                rejected: &event.rejected_sites,
+                rejected_tolerance_mm: metres_to_mm(REJECTED_SITE_TOLERANCE_M, world.scale),
             },
         )
         .map_err(|e| self.locs(&e))?;
@@ -728,6 +765,8 @@ impl CoursePlanServer {
                 line_margin_mm: line_margin_mm(world.scale),
                 dead_end: Some((&dead_ends, settings.dead_end_max_m)),
                 margin: mapped.as_ref().map(|m| (m, settings.map_margin_m)),
+                rejected: &event.rejected_sites,
+                rejected_tolerance_mm: metres_to_mm(REJECTED_SITE_TOLERANCE_M, world.scale),
             },
         )
         .map_err(|e| self.locs(&e))?;

@@ -228,6 +228,7 @@ pub(crate) fn event(controls: &[(&str, f64, f64)], courses: Vec<Course>) -> Even
         accepted_findings: vec![],
         sync: None,
         score: None,
+        rejected_sites: Vec::new(),
     }
 }
 

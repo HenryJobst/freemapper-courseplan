@@ -108,6 +108,8 @@ fn ctx<'a>(specials: &'a [SpecialObject], existing: &'a [MapPoint]) -> SuggestCo
         line_margin_mm: 1.0,
         dead_end: None,
         margin: None,
+        rejected: &[],
+        rejected_tolerance_mm: 0.0,
     }
 }
 
@@ -282,6 +284,27 @@ fn sites_on_a_forbidden_route_line_are_excluded() {
     }];
     let found = suggest(&index, &Fake::plain(), &ctx(&specials, &[])).unwrap();
     assert_eq!(positions(&found), vec![(60.0, 20.0)]);
+}
+
+#[test]
+fn sites_the_user_rejected_are_left_out_within_the_tolerance() {
+    let index = MapIndex::from_features(vec![
+        boulder(40.0, 20.0),
+        boulder(60.0, 20.0),
+        boulder(80.0, 20.0),
+    ]);
+    // A rejection a little beside the first site (0.4 mm, within 0.5 mm) and one exactly on the second.
+    let rejected = [p(40.3, 20.3), p(60.0, 20.0)];
+    let mut c = ctx(&[], &[]);
+    c.rejected = &rejected;
+    c.rejected_tolerance_mm = 0.5;
+    let found = suggest(&index, &Fake::plain(), &c).unwrap();
+    assert_eq!(positions(&found), vec![(80.0, 20.0)]);
+    // A rejection farther than the tolerance leaves the site alone.
+    let far = [p(40.0, 21.0)];
+    c.rejected = &far;
+    let found = suggest(&index, &Fake::plain(), &c).unwrap();
+    assert_eq!(sorted(positions(&found)).len(), 3);
 }
 
 #[test]
@@ -741,6 +764,8 @@ fn luebeck_timing_for_limit_60() {
         limit: 60,
         dead_end: None,
         margin: None,
+        rejected: &[],
+        rejected_tolerance_mm: 0.0,
     };
     // The example's start flag lies inside a building (ADR 0062).
     let flagged = SuggestContext {
@@ -1050,11 +1075,11 @@ fn sites_too_close_to_the_edge_of_the_mapped_area_are_left_out() {
             p(0.0, 300.0),
         ]]),
     );
-    // The edge of the mapped area lies 40 m beyond the wall: x = 20 has a margin of 60 m, x = 5 one of 45 m.
+    // The edge of the mapped area lies 50 m beyond the wall: x = 20 has a margin of 70 m, x = -5 (outside the wall) one of 45 m.
     let index = MapIndex::from_features(vec![
         building,
         boulder(20.0, 150.0),
-        boulder(5.0, 150.0),
+        boulder(-5.0, 150.0),
         boulder(150.0, 150.0),
     ]);
     let area = MappedArea::build(&index, 1000).unwrap();
@@ -1067,9 +1092,9 @@ fn sites_too_close_to_the_edge_of_the_mapped_area_are_left_out() {
     let found = suggest(&index, &travel, &c).unwrap();
     let at = |x: f64, y: f64| found.iter().any(|c| c.at == p(x, y));
     assert!(at(20.0, 150.0) && at(150.0, 150.0));
-    assert!(!at(5.0, 150.0), "45 m from the edge is too close");
+    assert!(!at(-5.0, 150.0), "45 m from the edge is too close");
     // At 40 m the one at 45 m stays.
     c.margin = Some((&area, 40));
     let looser = suggest(&index, &travel, &c).unwrap();
-    assert!(looser.iter().any(|c| c.at == p(5.0, 150.0)));
+    assert!(looser.iter().any(|c| c.at == p(-5.0, 150.0)));
 }
