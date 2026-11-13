@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- Die kartierte Fläche reicht 50 m statt 40 m über die Kartenobjekte hinaus (Regel `wkb2026.map.inside`, `metres`, ADR 0088), dieselbe Zahl wie der Standard-Randabstand. Mit den Standardwerten darf ein Posten am Umriss der Objekte stehen; vorher musste er 10 m innerhalb liegen. Profile, die `metres` selbst setzen, behalten ihren Wert.
+
 ## [0.16.0] - 2026-11-13
 
 ### Hinzugefügt

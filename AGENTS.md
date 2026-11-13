@@ -62,7 +62,7 @@ Tell the person these limits before you start:
   line between controls is not the running route (ADR 0080). `check` does report a control that stands inside an
   out-of-bounds area, either a special object of its course or a map area with the symbol 520, 709 or 714 (709 and
   520 on forest maps), as an error (ADR 0081). It also reports a start, finish, control or crossing point that lies in the blank part of
-  the sheet, with no map object within 40 m, as an error (rule `wkb2026.map.inside`, ADR 0084); the map frame and layout
+  the sheet, with no map object within 50 m, as an error (rule `wkb2026.map.inside`, ADR 0084); the map frame and layout
   symbols such as the north lines pattern do not count as objects. It does not test start, finish or crossing points
   against out-of-bounds areas, nor controls that are on no course; look at those yourself. A start, finish, control or
   crossing point closer than 50 m to the edge of the mapped area is an error too (rule `wkb2026.map.margin`, ADR 0087), a

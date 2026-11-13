@@ -790,7 +790,7 @@ Lage trotzdem, akzeptierst du den Befund mit einer Begründung.
 Start, Ziel, Posten und Querungsstellen müssen außerdem auf der kartierten Fläche liegen. Viele Karten sind keine
 Rechtecke: Die Rummelsburger Bucht ist ein schräger Streifen, und der Rest des Blatts ist weiß, obwohl er im Rechteck
 um alle Kartenobjekte liegt (woran die Warnung `wkb2026.map.edge` misst). Eine Stelle im weißen Teil ist ein Fehler,
-Regel `wkb2026.map.inside`. Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 40 m entfernt liegt. Der
+Regel `wkb2026.map.inside`. Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 50 m entfernt liegt. Der
 Blattrahmen und Layoutsymbole wie das Nordlinienmuster (601) zählen nicht als Objekte. Die Meldung nennt die Stelle in
 Kartenmillimetern und das nächste Objekt. Ein Platz zwischen Gebäuden ohne Objekt darin bleibt innen, solange er nicht
 viel breiter als 80 m ist; bei einer Karte mit großen leeren Flächen akzeptierst du den Befund mit einer Begründung oder
@@ -798,7 +798,7 @@ bittest um einen größeren Wert in der Regel (ADR 0084).
 
 Start, Ziel, Posten und Querungsstellen müssen außerdem mindestens 50 m vom Rand der kartierten Fläche entfernt bleiben,
 damit der Läufer immer auf kartiertem Gebiet laufen kann (Fehler, Regel `wkb2026.map.margin`, ADR 0087). Der Rand ist
-dort, wo kein Kartenobjekt mehr innerhalb von 40 m liegt, dieselbe Grenze wie oben. Der Abstand wird auf einem Raster
+dort, wo kein Kartenobjekt mehr innerhalb von 50 m liegt, dieselbe Grenze wie oben. Der Abstand wird auf einem Raster
 der kartierten Fläche gemessen und stimmt auf etwa 2 m. Eine Stelle außerhalb der kartierten Fläche bekommt nur den
 Fehler von oben. Die Einstellung heißt `map_margin_m` (0 bis 200, 0 schaltet die Regel ab) und ändert sich mit
 `score settings --map-margin`.

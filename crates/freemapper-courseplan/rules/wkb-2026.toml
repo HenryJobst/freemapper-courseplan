@@ -208,7 +208,7 @@ note = { de = "Start, Ziel, Posten und Querungsstellen müssen auf der kartierte
 [rules.values]
 # A position is inside when a map object lies within this distance (ground metres); open squares
 # between buildings stay inside, the blank part beside a strip of terrain does not.
-metres = 40.0
+metres = 50.0
 # An axis-aligned rectangle line that spans this percentage of the terrain extent in both directions is the
 # sheet frame, not terrain.
 frame_percent = 80.0
@@ -221,7 +221,7 @@ id = "wkb2026.map.margin"
 key = "map_margin"
 severity = "error"
 source = { doc = "user", section = "request 2026-11-12, ADR 0087" }
-note = { de = "Start, Ziel, Posten und Querungsstellen müssen mindestens map_margin_m (Standard 50 m, Ereignis-Einstellung der Score-Tabelle) vom Rand der kartierten Fläche entfernt sein; der Läufer muss immer auf kartiertem Gebiet laufen können (Nutzer, 2026-11-12). Der Rand ist dort, wo kein Kartenobjekt mehr innerhalb von 40 m liegt, dieselbe Grenze wie bei map.inside. Gemessen wird auf einem Raster der kartierten Fläche, auf etwa 2 m genau. Eine Stelle außerhalb der kartierten Fläche meldet map.inside, nicht diese Regel. map.edge misst weiter gegen das Rechteck um die Objekte.", en = "Start, finish, controls and crossing points must lie at least map_margin_m (default 50 m, an event setting in the score table) from the edge of the mapped area; the runner must always be able to run on mapped ground (user, 2026-11-12). The edge is where no map object lies within 40 m any more, the same limit as map.inside. The distance is measured on a raster of the mapped area, to about 2 m. A position outside the mapped area is reported by map.inside, not by this rule. map.edge still measures against the box around the objects." }
+note = { de = "Start, Ziel, Posten und Querungsstellen müssen mindestens map_margin_m (Standard 50 m, Ereignis-Einstellung der Score-Tabelle) vom Rand der kartierten Fläche entfernt sein; der Läufer muss immer auf kartiertem Gebiet laufen können (Nutzer, 2026-11-12). Der Rand ist dort, wo kein Kartenobjekt mehr innerhalb von 50 m liegt, dieselbe Grenze wie bei map.inside. Gemessen wird auf einem Raster der kartierten Fläche, auf etwa 2 m genau. Eine Stelle außerhalb der kartierten Fläche meldet map.inside, nicht diese Regel. map.edge misst weiter gegen das Rechteck um die Objekte.", en = "Start, finish, controls and crossing points must lie at least map_margin_m (default 50 m, an event setting in the score table) from the edge of the mapped area; the runner must always be able to run on mapped ground (user, 2026-11-12). The edge is where no map object lies within 50 m any more, the same limit as map.inside. The distance is measured on a raster of the mapped area, to about 2 m. A position outside the mapped area is reported by map.inside, not by this rule. map.edge still measures against the box around the objects." }
 
 [[rules]]
 id = "wkb2026.control.dead_end"

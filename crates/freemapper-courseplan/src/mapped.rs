@@ -15,7 +15,7 @@ use crate::map::{FeatureGeometry, MapIndex};
 
 /// A place is mapped when a map object lies within this many metres of it. The value of the rule
 /// `wkb2026.map.inside`; a test compares both.
-pub const MAPPED_METRES: f64 = 40.0;
+pub const MAPPED_METRES: f64 = 50.0;
 
 /// Edge of a raster cell in metres on the ground.
 const CELL_M: f64 = 2.0;

@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- The mapped area reaches 50 m beyond the map objects instead of 40 m (rule `wkb2026.map.inside`, `metres`, ADR 0088), the same number as the default margin. With the defaults, a control may stand at the outline of the objects; before it had to stand 10 m inside. Profiles that set `metres` themselves keep their value.
+
 ## [0.16.0] - 2026-11-13
 
 ### Added

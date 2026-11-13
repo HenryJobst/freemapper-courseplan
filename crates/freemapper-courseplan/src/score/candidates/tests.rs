@@ -1050,11 +1050,11 @@ fn sites_too_close_to_the_edge_of_the_mapped_area_are_left_out() {
             p(0.0, 300.0),
         ]]),
     );
-    // The edge of the mapped area lies 40 m beyond the wall: x = 20 has a margin of 60 m, x = 5 one of 45 m.
+    // The edge of the mapped area lies 50 m beyond the wall: x = 20 has a margin of 70 m, x = -5 (outside the wall) one of 45 m.
     let index = MapIndex::from_features(vec![
         building,
         boulder(20.0, 150.0),
-        boulder(5.0, 150.0),
+        boulder(-5.0, 150.0),
         boulder(150.0, 150.0),
     ]);
     let area = MappedArea::build(&index, 1000).unwrap();
@@ -1067,9 +1067,9 @@ fn sites_too_close_to_the_edge_of_the_mapped_area_are_left_out() {
     let found = suggest(&index, &travel, &c).unwrap();
     let at = |x: f64, y: f64| found.iter().any(|c| c.at == p(x, y));
     assert!(at(20.0, 150.0) && at(150.0, 150.0));
-    assert!(!at(5.0, 150.0), "45 m from the edge is too close");
+    assert!(!at(-5.0, 150.0), "45 m from the edge is too close");
     // At 40 m the one at 45 m stays.
     c.margin = Some((&area, 40));
     let looser = suggest(&index, &travel, &c).unwrap();
-    assert!(looser.iter().any(|c| c.at == p(5.0, 150.0)));
+    assert!(looser.iter().any(|c| c.at == p(-5.0, 150.0)));
 }

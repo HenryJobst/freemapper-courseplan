@@ -754,7 +754,7 @@ want the position anyway, accept the finding with a reason.
 A start, finish, control or crossing point must also lie on the mapped area. Many maps are not rectangles: the
 Rummelsburger Bucht is a diagonal strip, and the rest of the sheet is blank, although it lies inside the rectangle
 around all map objects (which is what the warning `wkb2026.map.edge` measures against). A position in the blank part
-is an error, rule `wkb2026.map.inside`. A position counts as mapped when a map object lies within 40 m of it. The sheet
+is an error, rule `wkb2026.map.inside`. A position counts as mapped when a map object lies within 50 m of it. The sheet
 frame and layout symbols such as the north lines pattern (601) do not count as objects. The message names the
 position in map millimetres and the nearest object. A square between buildings with no object in it stays inside as
 long as it is not much wider than 80 m; on a map with large empty areas, accept the finding with a reason or ask for a
@@ -762,7 +762,7 @@ larger value in the rule (ADR 0084).
 
 A start, finish, control or crossing point must also keep at least 50 m from the edge of the mapped area, so that the
 runner can always run on mapped ground (error, rule `wkb2026.map.margin`, ADR 0087). The edge is where no map object lies
-within 40 m any more, the same limit as above. The distance is measured on a raster of the mapped area and is right to
+within 50 m any more, the same limit as above. The distance is measured on a raster of the mapped area and is right to
 about 2 m. A position outside the mapped area gets only the error above. The setting is `map_margin_m` (0 to 200, 0
 switches the rule off), changed with `score settings --map-margin`.
 
