@@ -128,3 +128,6 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0082](0082-score-candidates-keep-out-of-out-of-bounds-map-areas.md) | Score candidates keep out of out-of-bounds map areas | Accepted | 2026-11-12 |
 | [0083](0083-length-bands-are-targets-with-a-tolerance.md) | Length bands are targets with a tolerance | Accepted | 2026-11-12 |
 | [0084](0084-start-finish-and-controls-must-lie-on-the-mapped-area.md) | Start, finish and controls must lie on the mapped area | Accepted | 2026-11-12 |
+| [0085](0085-controls-must-not-stand-deep-in-dead-ends.md) | Controls must not stand deep in dead ends | Accepted | 2026-11-12 |
+| [0086](0086-start-and-finish-stay-close-together.md) | Start and finish stay close together | Accepted | 2026-11-12 |
+| [0087](0087-start-finish-and-controls-keep-a-margin-from-the-edge-of-the-mapped-area.md) | Start, finish and controls keep a margin from the edge of the mapped area | Accepted | 2026-11-12 |

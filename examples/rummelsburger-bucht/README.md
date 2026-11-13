@@ -109,14 +109,17 @@ melden, ob sich alles laden lässt und ob Posten, Bahn und Nummern an der richti
 
 ## Score-Bahn auf dieser Karte
 
-Die Karte ist für eine Score-Bahn klein. Mit Start `S1` und Ziel `F1` gelingt ein Entwurf mit 15 Minuten (12 Posten,
-28 Punkte; der gute Läufer holt 26 davon, 92,9 Prozent, der sehr gute alle und ist nach 99,1 Prozent des Limits im
-Ziel) und mit 16 Minuten (14 Posten, 40 Punkte, 92,5 und 97,6 Prozent). Bei 17 Minuten liegt der gute Läufer mit 93,8
-Prozent knapp über dem Band, noch innerhalb der Toleranz (ADR 0083). Ab 18 Minuten reichen die Stellen nicht: Der sehr
-gute Läufer ist nach 90,4 Prozent des Limits im Ziel statt nach 95 bis 100, bei 20 Minuten nach 81,3, bei 30 nach 54,2
-und bei 45 nach 36,2 Prozent. Der Rahmen um das Blatt liefert keine Stellen mehr (ADR 0078, ADR 0084); eine frühere
-Fassung dieser Zahlen hatte Posten in den Ecken des Rahmens. Für längere Bahnen nimm [`../gleisdreieck/`](../gleisdreieck/),
-die größere Karte. Das sind Läufe mit `score draft` ohne `--apply`; das Projekt hier enthält keine Score-Bahn.
+Die Karte ist für eine Score-Bahn klein. Mit Start `S1` und Ziel `F1` gelingt ein Entwurf mit 10 Minuten (9 Posten,
+25 Punkte; der gute Läufer holt 23 davon, 92,0 Prozent, der sehr gute alle und ist nach 95,5 Prozent des Limits im
+Ziel) und mit 11 Minuten (12 Posten, 34 Punkte, 91,2 und 95,4 Prozent). Bei 12 Minuten (14 Posten, 24 Punkte) holt der
+gute Läufer 95,8 Prozent und der sehr gute ist nach 94,3 Prozent des Limits im Ziel, beide knapp außerhalb der Bänder,
+aber innerhalb der Toleranz (ADR 0083). Ab 13 Minuten reichen die Stellen nicht: Der sehr gute Läufer ist nach 91,3
+Prozent des Limits im Ziel statt nach 95 bis 100, bei 15 Minuten nach 79,1, bei 20 nach 59,4, bei 30 nach 39,6 und bei
+45 nach 26,4 Prozent; der beste Versuch hat 16 Posten mit 28 Punkten. Stellen halten seit ADR 0087 50 m Abstand vom
+Rand der kartierten Fläche, das lässt von diesem schmalen Streifen weniger übrig: Vorher gingen 16 Minuten, und 17
+waren nahe am Ziel. Der Rahmen um das Blatt liefert keine Stellen mehr (ADR 0078, ADR 0084). Für längere Bahnen nimm
+[`../gleisdreieck/`](../gleisdreieck/), die größere Karte. Das sind Läufe mit `score draft` ohne `--apply`; das Projekt
+hier enthält keine Score-Bahn.
 
 ## Herkunft und Lizenz
 

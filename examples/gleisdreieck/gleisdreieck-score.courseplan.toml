@@ -19,166 +19,150 @@ id = "F-score"
 map_mm = [100.0, -275.0]
 
 [[controls]]
-code = 75
-map_mm = [19.691, 53.558]
-
-[[controls]]
-code = 34
-map_mm = [-64.643, -171.607]
-
-[[controls]]
-code = 35
-map_mm = [-112.249, -34.932]
-
-[[controls]]
-code = 93
-map_mm = [87.141, -81.773]
-
-[[controls]]
-code = 74
-map_mm = [63.27, -63.019]
-
-[[controls]]
-code = 33
-map_mm = [-45.879, -233.955]
-
-[[controls]]
-code = 84
-map_mm = [-18.704, -52.704]
-
-[[controls]]
-code = 55
-map_mm = [78.466, 20.225]
-
-[[controls]]
-code = 91
-map_mm = [84.714, -174.006]
-
-[[controls]]
-code = 64
-map_mm = [-87.777, -103.276]
-
-[[controls]]
-code = 73
-map_mm = [-21.479611328125003, -173.777984375]
-
-[[controls]]
-code = 65
-map_mm = [-58.494, 32.761]
-
-[[controls]]
-code = 45
-map_mm = [40.806, -15.587]
+code = 94
+map_mm = [-41.071, 61.685]
 
 [[controls]]
 code = 54
-map_mm = [25.042, -108.754]
+map_mm = [87.141, -81.773]
 
 [[controls]]
-code = 32
-map_mm = [23.388, -277.85]
+code = 93
+map_mm = [-87.777, -103.276]
 
 [[controls]]
 code = 62
-map_mm = [3.063, -234.819]
+map_mm = [-45.879, -233.955]
 
 [[controls]]
-code = 72
-map_mm = [35.224, -215.907]
+code = 53
+map_mm = [54.069, -183.713]
 
 [[controls]]
-code = 81
-map_mm = [102.241, -201.481]
+code = 84
+map_mm = [54.408, 14.093]
 
 [[controls]]
-code = 71
-map_mm = [119.61, -220.507]
-
-[[controls]]
-code = 63
-map_mm = [28.36, -184.081]
-
-[[controls]]
-code = 52
-map_mm = [38.002, -257.312]
-
-[[controls]]
-code = 44
-map_mm = [8.835, -166.572]
-
-[[controls]]
-code = 94
-map_mm = [-12.288, 1.806]
-
-[[controls]]
-code = 61
-map_mm = [63.979, -251.122]
-
-[[controls]]
-code = 41
-map_mm = [11.973, -300.978]
-
-[[controls]]
-code = 42
-map_mm = [-18.342, -260.962]
-
-[[controls]]
-code = 51
-map_mm = [136.823, -266.047]
+code = 64
+map_mm = [-18.704, -52.704]
 
 [[controls]]
 code = 31
-map_mm = [36.571, -308.88]
+map_mm = [23.388, -277.85]
 
 [[controls]]
-code = 43
-map_mm = [-11.2, -208.488]
+code = 44
+map_mm = [21.832, -113.438]
+
+[[controls]]
+code = 63
+map_mm = [-21.479611328125003, -173.777984375]
+
+[[controls]]
+code = 45
+map_mm = [35.532, 73.237]
 
 [[controls]]
 code = 92
 map_mm = [98.916, -142.407]
 
 [[controls]]
-code = 53
+code = 74
+map_mm = [-39.125, 0.243]
+
+[[controls]]
+code = 91
+map_mm = [102.241, -201.481]
+
+[[controls]]
+code = 52
+map_mm = [3.063, -234.819]
+
+[[controls]]
+code = 82
+map_mm = [84.714, -174.006]
+
+[[controls]]
+code = 73
+map_mm = [8.835, -166.572]
+
+[[controls]]
+code = 61
+map_mm = [63.979, -251.122]
+
+[[controls]]
+code = 34
+map_mm = [-44.651, -148.332]
+
+[[controls]]
+code = 71
+map_mm = [124.847, -237.286]
+
+[[controls]]
+code = 72
 map_mm = [-43.325, -192.607]
+
+[[controls]]
+code = 81
+map_mm = [98.562, -235.451]
+
+[[controls]]
+code = 41
+map_mm = [58.665, -276.985]
+
+[[controls]]
+code = 33
+map_mm = [-11.2, -208.488]
 
 [[controls]]
 code = 83
 map_mm = [63.495, -147.369]
 
 [[controls]]
-code = 82
-map_mm = [54.069, -183.713]
+code = 43
+map_mm = [28.36, -184.081]
+
+[[controls]]
+code = 42
+map_mm = [38.002, -257.312]
+
+[[controls]]
+code = 51
+map_mm = [-18.342, -260.962]
+
+[[controls]]
+code = 32
+map_mm = [36.571, -308.88]
+
+[[controls]]
+code = 35
+map_mm = [-110.641, -71.144]
 
 [[courses]]
-name = "Score 34"
+name = "Score 31"
 start = "S-score"
 finish = "F-score"
 kind = "score"
-time_limit_min = 34
+time_limit_min = 31
 
 [[courses.controls]]
-code = 75
-value = 5
-
-[[courses.controls]]
-code = 34
+code = 94
 value = 4
 
 [[courses.controls]]
-code = 35
-value = 5
+code = 54
+value = 4
 
 [[courses.controls]]
 code = 93
 value = 3
 
 [[courses.controls]]
-code = 74
-value = 4
+code = 62
+value = 2
 
 [[courses.controls]]
-code = 33
+code = 53
 value = 3
 
 [[courses.controls]]
@@ -186,40 +170,60 @@ code = 84
 value = 4
 
 [[courses.controls]]
-code = 55
-value = 5
-
-[[courses.controls]]
-code = 91
-value = 1
-
-[[courses.controls]]
 code = 64
 value = 4
 
 [[courses.controls]]
-code = 73
-value = 3
+code = 31
+value = 1
 
 [[courses.controls]]
-code = 65
-value = 5
+code = 44
+value = 4
+
+[[courses.controls]]
+code = 63
+value = 3
 
 [[courses.controls]]
 code = 45
 value = 5
 
 [[courses.controls]]
-code = 54
+code = 92
+value = 2
+
+[[courses.controls]]
+code = 74
 value = 4
 
 [[courses.controls]]
-code = 32
+code = 91
+value = 1
+
+[[courses.controls]]
+code = 52
 value = 2
 
 [[courses.controls]]
-code = 62
+code = 82
 value = 2
+
+[[courses.controls]]
+code = 73
+value = 3
+
+[[courses.controls]]
+code = 61
+value = 1
+
+[[courses.controls]]
+code = 34
+value = 4
+
+[[courses.controls]]
+code = 71
+value = 1
 
 [[courses.controls]]
 code = 72
@@ -230,32 +234,20 @@ code = 81
 value = 1
 
 [[courses.controls]]
-code = 71
+code = 41
 value = 1
 
 [[courses.controls]]
-code = 63
+code = 33
 value = 3
 
 [[courses.controls]]
-code = 52
-value = 2
+code = 83
+value = 3
 
 [[courses.controls]]
-code = 44
-value = 4
-
-[[courses.controls]]
-code = 94
-value = 4
-
-[[courses.controls]]
-code = 61
-value = 1
-
-[[courses.controls]]
-code = 41
-value = 1
+code = 43
+value = 3
 
 [[courses.controls]]
 code = 42
@@ -266,45 +258,29 @@ code = 51
 value = 1
 
 [[courses.controls]]
-code = 31
-value = 1
-
-[[courses.controls]]
-code = 43
-value = 3
-
-[[courses.controls]]
-code = 92
+code = 32
 value = 2
 
 [[courses.controls]]
-code = 53
-value = 3
-
-[[courses.controls]]
-code = 83
-value = 3
-
-[[courses.controls]]
-code = 82
-value = 2
-
-[[accepted_findings]]
-rule = "wkb2026.score.code_ambiguity"
-controls = [63, 93]
-note = "Training: Die Posten 63 und 93 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich."
-
-[[accepted_findings]]
-rule = "wkb2026.score.code_ambiguity"
-controls = [61, 91]
-note = "Training: Die Posten 61 und 91 stehen rund 320 m auseinander, eine Verwechslung ist kaum möglich."
+code = 35
+value = 5
 
 [[accepted_findings]]
 rule = "wkb2026.score.code_ambiguity"
 controls = [64, 94]
-note = "Training: Die Posten 64 und 94 stehen rund 520 m auseinander, eine Verwechslung ist kaum möglich."
+note = "Training: Die Posten 64 und 94 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich."
+
+[[accepted_findings]]
+rule = "wkb2026.score.code_ambiguity"
+controls = [63, 93]
+note = "Training: Die Posten 63 und 93 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich."
 
 [[accepted_findings]]
 rule = "wkb2026.score.code_ambiguity"
 controls = [62, 92]
-note = "Training: Die Posten 62 und 92 stehen rund 530 m auseinander, eine Verwechslung ist kaum möglich."
+note = "Training: Die Posten 62 und 92 stehen rund 690 m auseinander, eine Verwechslung ist kaum möglich."
+
+[[accepted_findings]]
+rule = "wkb2026.score.code_ambiguity"
+controls = [61, 91]
+note = "Training: Die Posten 61 und 91 stehen rund 250 m auseinander, eine Verwechslung ist kaum möglich."

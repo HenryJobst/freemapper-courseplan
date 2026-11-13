@@ -51,12 +51,12 @@ Das Programm braucht kein OCAD und läuft auf macOS, Linux und Windows.
 ## Beispiel
 
 Eine Sprintbahn mit vier Posten auf der Karte „Rummelsburger Bucht“, gelegt nur mit der Kommandozeile, mit
-geraden Strecken und einem Erste-Hilfe-Posten, Start und Ziel im Park. Dazu eine Score-Bahn von 34 Minuten
-(33 Posten, 95 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
+geraden Strecken und einem Erste-Hilfe-Posten, Start und Ziel im Park. Dazu eine Score-Bahn von 31 Minuten
+(30 Posten, 80 Punkte) auf der Karte „Gleisdreieck“. Beide Karten sind von Remo Madella (MOO Challenge Berlin 2025); er
 hat sie am 12.11.2026 für die freemapper-Suite freigegeben, nicht unter einer offenen Lizenz. Befehle, Projektdateien und Ausgaben stehen unter
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) und [`examples/gleisdreieck`](examples/gleisdreieck/);
 alle Beispiele zeigt [`examples/README.md`](examples/README.md). 45 Minuten, die übliche Größe für Erwachsene,
-schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 34, mit dem guten Läufer nahe am Ziel.
+schafft das Programm auf keiner der beiden Karten; auf dem Gleisdreieck sind es 31, beide Läufer im Band.
 
 ```text
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
@@ -113,7 +113,8 @@ Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höh
 erste Fassung; nimm die Längenbänder (Zielwerte mit Toleranz, einstellbar) als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
 KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
 [Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Gleisdreieck-Beispiel](examples/gleisdreieck/) enthält eine fertige
-34-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070, 0082 und 0083.
+31-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070 und 0082 bis 0087. Erzeugte Bahnen halten drei Grenzen ein, die du einstellen kannst: kein Posten tief in einer
+Sackgasse, Start und Ziel nah beieinander und ein Abstand zum Rand der kartierten Fläche; `check` meldet dieselben Grenzen für jede Bahn.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
 Prüfregel und Quelle. Eingebaut sind das Profil `wkb-2026` (Wettkampfbestimmungen 2026) und der Aufsatz
