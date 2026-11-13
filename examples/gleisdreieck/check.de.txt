@@ -1,23 +1,24 @@
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 Veranstaltung:
-  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+Bahn Score 32:
+  Warnung Bahn Score 32: In der Score-Bahn Score 32 sind 5 von 26 Posten schwer, also 19,2 Prozent. Die Einstellung verlangt 40 Prozent bei 15 Punkten Toleranz (wkb2026.score.mix, Entscheidung des Projektinhabers)
 0 Fehler, 4 Warnungen, 0 Hinweise; 0 akzeptiert, 5 übersprungen
 check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note "Training: Die Posten 64 und 94 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich."
-Befund wkb2026.score.code_ambiguity bei Posten 64, 94 akzeptiert
-
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Die Posten 63 und 93 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Die Posten 63 und 93 stehen rund 760 m auseinander, eine Verwechslung ist kaum möglich."
 Befund wkb2026.score.code_ambiguity bei Posten 63, 93 akzeptiert
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Die Posten 62 und 92 stehen rund 690 m auseinander, eine Verwechslung ist kaum möglich."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Die Posten 61 und 91 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich."
+Befund wkb2026.score.code_ambiguity bei Posten 61, 91 akzeptiert
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Die Posten 62 und 92 stehen rund 300 m auseinander, eine Verwechslung ist kaum möglich."
 Befund wkb2026.score.code_ambiguity bei Posten 62, 92 akzeptiert
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Die Posten 61 und 91 stehen rund 250 m auseinander, eine Verwechslung ist kaum möglich."
-Befund wkb2026.score.code_ambiguity bei Posten 61, 91 akzeptiert
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.mix --course "Score 32" --note "Training: Die Längenbänder gehen vor der Mischung. Nach dem Ausschluss von Sackgassen und Kartenrand bleiben wenige Stellen, und nur 5 von 26 Posten sind schwer."
+Befund wkb2026.score.mix bei Bahn Score 32 akzeptiert
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 0 Fehler, 0 Warnungen, 0 Hinweise; 4 akzeptiert, 5 übersprungen
@@ -25,18 +26,18 @@ check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahme
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
 akzeptiert:
-  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 64 und 94 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 63 und 93 stehen rund 760 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 63 und 93 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 61 und 91 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 62 und 92 stehen rund 690 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 62 und 92 stehen rund 300 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 61 und 91 stehen rund 250 m auseinander, eine Verwechslung ist kaum möglich.
-    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+  Warnung Bahn Score 32: In der Score-Bahn Score 32 sind 5 von 26 Posten schwer, also 19,2 Prozent. Die Einstellung verlangt 40 Prozent bei 15 Punkten Toleranz (wkb2026.score.mix, Entscheidung des Projektinhabers)
+    Begründung: Training: Die Längenbänder gehen vor der Mischung. Nach dem Ausschluss von Sackgassen und Kartenrand bleiben wenige Stellen, und nur 5 von 26 Posten sind schwer.
+    Zur Prüfregel: Der Anteil schwerer Posten soll zur Einstellung mix_hard_percent passen.
 übersprungen:
   wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
   wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet

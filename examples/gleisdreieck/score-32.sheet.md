@@ -1,10 +1,10 @@
-# Evaluation sheet for Score 31
+# Evaluation sheet for Score 32
 
 - Event: Score course Gleisdreieck
-- Time limit: 31 minutes
+- Time limit: 32 minutes
 - Penalty: 5 points for each started minute over the limit. The course sets no penalty, so this is the default.
 - Equal points: the faster runner wins.
-- Points in all: 80 on 30 controls
+- Points in all: 63 on 26 controls
 
 ## Mandatory links
 
@@ -23,7 +23,6 @@ This course has no mandatory links.
 | 42 | 2 |
 | 43 | 3 |
 | 44 | 4 |
-| 45 | 5 |
 | 51 | 1 |
 | 52 | 2 |
 | 53 | 3 |
@@ -35,12 +34,9 @@ This course has no mandatory links.
 | 71 | 1 |
 | 72 | 2 |
 | 73 | 3 |
-| 74 | 4 |
 | 81 | 1 |
 | 82 | 2 |
 | 83 | 3 |
-| 84 | 4 |
 | 91 | 1 |
 | 92 | 2 |
 | 93 | 3 |
-| 94 | 4 |

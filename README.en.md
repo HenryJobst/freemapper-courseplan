@@ -52,12 +52,12 @@ The program needs no OCAD and runs on macOS, Linux and Windows.
 ## Example
 
 A sprint course with four controls on the map "Rummelsburger Bucht", set with the command line only, with straight
-legs and a first aid post, start and finish in the park. Also a 31-minute score course (30 controls, 80 points) on the map "Gleisdreieck".
+legs and a first aid post, start and finish in the park. Also a 32-minute score course (26 controls, 63 points) on the map "Gleisdreieck".
 Both maps are by Remo Madella (MOO Challenge Berlin 2025); he released them on 2026-11-12 for use within the
 freemapper suite, not under an open licence. Commands, project files and output are in
 [`examples/rummelsburger-bucht`](examples/rummelsburger-bucht/) and [`examples/gleisdreieck`](examples/gleisdreieck/);
 [`examples/README.en.md`](examples/README.en.md) lists all examples. The program does not reach 45 minutes, the usual
-size for adults, on either map; on Gleisdreieck it reaches 31, with both runners inside their bands.
+size for adults, on either map; on Gleisdreieck it reaches 32, with the good runner near the target.
 
 ```text
 $ freemapper-courseplan info rummelsburg-sprint.courseplan.toml
@@ -112,7 +112,7 @@ has a Score panel, and `export --csv` and `export --sheet` write the control lis
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
 length bands (targets with a tolerance, both settable) as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
-[user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 31-minute course, and the
+[user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 32-minute course, and the
 decisions are in ADR 0060 to 0070 and 0082 to 0087. Generated courses keep three limits you can set: no control deep in a dead end, start and
 finish close together, and a margin from the edge of the mapped area; `check` reports the same limits for any course.
 

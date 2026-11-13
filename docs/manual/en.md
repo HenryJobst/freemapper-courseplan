@@ -442,15 +442,15 @@ dashed line between its two controls. Select the course in the tree to open the 
 
 ![The Gleisdreieck map with candidate controls as dashed blue circles with their values, and the Score panel on the right.](images/editor-score-candidates-en.jpg)
 
-*A new score course "Score 31" with a limit of 31 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. Start and finish lie at the top right. The panel on the right holds the buttons and the settings, scrolled to the three limits of the practical sprint (deepest dead end, start to finish, distance from the map edge) and the target bands. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*A new score course "Score 32" with a limit of 32 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. Start and finish lie at the top right. The panel on the right holds the buttons and the settings, scrolled to the three limits of the practical sprint (deepest dead end, start to finish, distance from the map edge) and the target bands. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![A draft score course on the Gleisdreieck map with the draft controls and the length report of both runner profiles in the panel.](images/editor-score-draft-en.jpg)
 
-*The result of "Draft course". The draft controls show their codes. The panel lists the length report: both runners are inside their bands, and the report says so. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*The result of "Draft course". The draft controls show their codes. The panel lists the length report: the very good runner is inside the band, and the good runner is 2.2 percentage points above it, within the tolerance of 3, so the report says that every runner is in the band or near the target. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![The finished score course on the Gleisdreieck map with its controls as circles, the length report and a warning in the panel.](images/editor-score-applied-en.jpg)
 
-*After "Apply draft" and "Check length". The course has 30 controls worth 80 points. The four findings at the bottom are warnings that pairs of codes such as 63 and 93 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*After "Apply draft" and "Check length". The course has 26 controls worth 63 points. The four findings at the bottom are warnings: three pairs of codes such as 63 and 93 look alike when turned upside down, and the share of hard controls is below the setting. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
   settings: highest value, the paces, the share of hard controls, the seed, the four distances (value 1 from, controls apart, reach from the start,

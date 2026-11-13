@@ -167,23 +167,41 @@ fn small_obstacles(side: usize, free: &dyn Fn(usize) -> bool, max_cells: usize) 
 
 /// How far (in cells) a place on a wall or in a blocked cell looks for a free cell to stand in.
 const SNAP_CELLS: i64 = 4;
-/// Free cells tried for a place on a wall before it counts as unjudged.
-const MAX_TRIES: usize = 40;
+/// Most free cells around a place on a wall that are judged (all of them within the snap radius).
+const MAX_TRIES: usize = 80;
+/// A free place is also judged from the free cells this many cells away in the eight directions.
+const NEAR_CELLS: i64 = 3;
 
 impl CostSurface {
     /// The cells to stand in for `p`: its own when free, else the free cells within [`SNAP_CELLS`], nearest first
     /// and whatever lies between: a control stands on the line of a wall or a kerb, and the runner stands beside
-    /// it. The lower cell index wins a tie. A free cell may be a speck between two lines, so the caller takes the
-    /// first one that has room around it.
+    /// it. The lower cell index wins a tie. The caller judges several of them and takes the deepest.
     fn stand_cells(&self, p: &MapPoint) -> Vec<usize> {
         let Some(cell) = self.grid.cell_of(p) else {
             return Vec::new();
         };
-        if self.grid.factor[cell].is_finite() {
-            return vec![cell];
-        }
         let w = self.grid.width as i64;
         let (col, row) = ((cell as i64) % w, (cell as i64) / w);
+        if self.grid.factor[cell].is_finite() {
+            // A free cell near a wall may stand beside another region: a control at the corner of a quay end,
+            // with a fence or a thin building between it and the quay (ADR 0085). The free cells at NEAR_CELLS in
+            // the eight directions are judged too, and the deepest answer counts.
+            let mut out = vec![cell];
+            for (dx, dy) in STEPS {
+                let (c, r) = (
+                    col + i64::from(dx) * NEAR_CELLS,
+                    row + i64::from(dy) * NEAR_CELLS,
+                );
+                if c < 0 || r < 0 || c >= w || r >= self.grid.height as i64 {
+                    continue;
+                }
+                let idx = (r * w + c) as usize;
+                if self.grid.factor[idx].is_finite() {
+                    out.push(idx);
+                }
+            }
+            return out;
+        }
         let mut found: Vec<(i64, usize)> = Vec::new();
         for dy in -SNAP_CELLS..=SNAP_CELLS {
             for dx in -SNAP_CELLS..=SNAP_CELLS {
@@ -205,10 +223,15 @@ impl CostSurface {
     /// is not on the surface or the walkable region around it is smaller than the horizon, so that nothing
     /// can be told (a tiny map, an island).
     pub fn dead_end(&self, p: &MapPoint, limit_m: f64) -> Option<DeadEnd> {
-        self.stand_cells(p)
+        // A place on a wall stands in several regions at once (a corner between a quay and open ground). The
+        // deepest of them counts, so the control is judged by the worst way a runner may have to take (ADR 0085).
+        let cells = self.stand_cells(p);
+        let step = cells.len().div_ceil(MAX_TRIES).max(1);
+        cells
             .into_iter()
-            .take(MAX_TRIES)
-            .find_map(|start| self.dead_end_from(start, limit_m))
+            .step_by(step)
+            .filter_map(|start| self.dead_end_from(start, limit_m))
+            .max_by(|a, b| a.depth_m.total_cmp(&b.depth_m))
     }
 
     fn dead_end_from(&self, start: usize, limit_m: f64) -> Option<DeadEnd> {
