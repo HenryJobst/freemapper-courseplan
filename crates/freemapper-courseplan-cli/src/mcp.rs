@@ -1291,6 +1291,14 @@ impl CoursePlanServer {
         reply(self.set_start_window_op(req))
     }
 
+    #[tool(description = "Set the date and the organizer")]
+    async fn set_event_details(
+        &self,
+        Parameters(req): Parameters<SetEventDetails>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.set_event_details_op(req))
+    }
+
     #[tool(description = "Start an event from an OOM map")]
     async fn init_event(
         &self,
@@ -1316,6 +1324,8 @@ impl CoursePlanServer {
                 .collect::<Result<Vec<_>, _>>()?;
             Ok(json!({
                 "title": event.event.title,
+                "date": event.event.date.as_ref().map(ToString::to_string),
+                "organizer": event.event.organizer,
                 "map": event.sources.map.display().to_string(),
                 "map_kind": map_kind_for_file(&doc, &file.map_path()).name(),
                 "scale": scale,
@@ -2196,6 +2206,31 @@ impl CoursePlanServer {
         })
     }
 
+    fn set_event_details_op(&self, req: SetEventDetails) -> Answer {
+        let (no_date, no_organizer) = (flag(req.no_date), flag(req.no_organizer));
+        let none_given = req.date.is_none() && req.organizer.is_none() && !no_date && !no_organizer;
+        if none_given
+            || (req.date.is_some() && no_date)
+            || (req.organizer.is_some() && no_organizer)
+        {
+            return Err(text(&self.lang, "mcp-error-event-details-choice", &[]));
+        }
+        self.edit(&req.project, |file| {
+            if req.date.is_some() || no_date {
+                edit::set_event_date(&mut file.event, req.date.as_deref())
+                    .map_err(|e| self.refused(e))?;
+            }
+            if req.organizer.is_some() || no_organizer {
+                edit::set_organizer(&mut file.event, req.organizer.as_deref())
+                    .map_err(|e| self.refused(e))?;
+            }
+            Ok(json!({
+                "date": file.event.event.date.as_ref().map(ToString::to_string),
+                "organizer": file.event.event.organizer,
+            }))
+        })
+    }
+
     fn set_start_window_op(&self, req: SetStartWindow) -> Answer {
         self.edit(&req.project, |file| {
             match (req.minutes, flag(req.no_start_window)) {
@@ -2264,6 +2299,7 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "remove_accepted_finding",
     "set_rule_profile",
     "set_start_window",
+    "set_event_details",
     "resolve_sync_conflict",
 ];
 
@@ -2399,6 +2435,7 @@ impl CoursePlanServer {
             "remove_accepted_finding" => run!(RemoveAcceptedFinding, remove_accepted_finding_op),
             "set_rule_profile" => run!(SetRuleProfile, set_rule_profile_op),
             "set_start_window" => run!(SetStartWindow, set_start_window_op),
+            "set_event_details" => run!(SetEventDetails, set_event_details_op),
             "init_event" => run!(InitEvent, init_event_op),
             _ => Err(OpError::UnknownTool),
         }
@@ -2562,6 +2599,7 @@ mod tests {
             event: EventMeta {
                 title: "T".to_owned(),
                 date: None,
+                organizer: None,
                 discipline: Default::default(),
                 rule_profile: "wkb-2026".to_owned(),
                 rule_overlays: Vec::new(),
@@ -2936,7 +2974,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 54);
+            assert_eq!(tools.len(), 55);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

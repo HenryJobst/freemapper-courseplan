@@ -133,3 +133,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0087](0087-start-finish-and-controls-keep-a-margin-from-the-edge-of-the-mapped-area.md) | Start, finish and controls keep a margin from the edge of the mapped area | Accepted | 2026-11-12 |
 | [0088](0088-mapped-area-limit-is-50-m.md) | The mapped area reaches 50 m beyond the map objects | Accepted | 2026-11-13 |
 | [0089](0089-rejected-sites-per-project.md) | The user can reject candidate sites, per project | Accepted | 2026-11-13 |
+| [0090](0090-event-date-and-organizer.md) | The event has a date and an organizer, and the IOF XML export carries them | Accepted | 2026-11-13 |

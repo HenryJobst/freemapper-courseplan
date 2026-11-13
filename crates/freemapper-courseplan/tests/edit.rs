@@ -4,8 +4,8 @@ use freemapper_courseplan::check::Place;
 use freemapper_courseplan::edit::*;
 use freemapper_courseplan_model::{
     AcceptedFinding, Class, Control, ControlCode, ControlDescription, ControlKind, Course,
-    CourseControl, CourseKind, Event, EventMeta, FORMAT_VERSION, LegRef, MapPoint, NumberPlacement,
-    ScoreControl, Sources, SpecialObject,
+    CourseControl, CourseKind, Event, EventMeta, FORMAT_VERSION, LegRef, MapPoint, ModelError,
+    NumberPlacement, ScoreControl, Sources, SpecialObject,
 };
 
 fn code(s: &str) -> ControlCode {
@@ -64,6 +64,7 @@ fn event() -> Event {
         event: EventMeta {
             title: "T".to_owned(),
             date: None,
+            organizer: None,
             discipline: Default::default(),
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: Vec::new(),
@@ -1155,6 +1156,52 @@ fn the_start_window_can_be_cleared() {
     assert_eq!(e.event.start_window_min, None);
     // Clearing what is not set is fine.
     clear_start_window(&mut e).unwrap();
+}
+
+#[test]
+fn the_event_date_is_a_plain_date() {
+    let mut e = event();
+    set_event_date(&mut e, Some(" 2026-11-14 ")).unwrap();
+    assert_eq!(e.event.date, Some("2026-11-14".parse().unwrap()));
+    let before = e.clone();
+    for bad in [
+        "14.11.2026",
+        "2026-13-45",
+        "2026-11-14T10:00:00",
+        "10:00:00",
+        "",
+    ] {
+        let err = set_event_date(&mut e, Some(bad)).unwrap_err();
+        assert!(
+            matches!(&err, EditError::Invalid(errors)
+                if matches!(&errors[..], [ModelError::DateNotADate(_)])),
+            "{bad}: {err:?}"
+        );
+        assert_eq!(e, before);
+    }
+    set_event_date(&mut e, None).unwrap();
+    assert_eq!(e.event.date, None);
+    set_event_date(&mut e, None).unwrap();
+}
+
+#[test]
+fn the_organizer_is_trimmed_and_never_empty() {
+    let mut e = event();
+    set_organizer(&mut e, Some("  OLV Beispiel ")).unwrap();
+    assert_eq!(e.event.organizer.as_deref(), Some("OLV Beispiel"));
+    let before = e.clone();
+    assert_eq!(
+        set_organizer(&mut e, Some("   ")).unwrap_err(),
+        EditError::BlankOrganizer
+    );
+    assert!(matches!(
+        set_organizer(&mut e, Some("OLV\u{202E}")).unwrap_err(),
+        EditError::Invalid(_)
+    ));
+    assert!(set_organizer(&mut e, Some(&"x".repeat(201))).is_err());
+    assert_eq!(e, before);
+    set_organizer(&mut e, None).unwrap();
+    assert_eq!(e.event.organizer, None);
 }
 
 #[test]

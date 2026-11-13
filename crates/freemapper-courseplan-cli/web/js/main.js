@@ -581,6 +581,7 @@ const removeCourse = (name) => runAndSay("remove_course", { name }, "editor-stat
 const setClass = (name, body) => runAndSay("set_class", { name, ...body }, "editor-status-class-changed");
 const removeClass = (name) => runAndSay("remove_class", { name }, "editor-status-class-deleted", () => selectKey("all"));
 const setProfile = (base, overlays) => runAndSay("set_rule_profile", { base, overlays }, "editor-status-profile-changed");
+const setEvent = (body) => runAndSay("set_event_details", body, "editor-status-event-changed");
 const setWindow = (minutes) =>
   runAndSay("set_start_window", minutes === null ? { no_start_window: true } : { minutes }, "editor-status-window-changed");
 
@@ -789,6 +790,7 @@ const propActions = {
   removeClass,
   setProfile,
   setWindow,
+  setEvent,
   setTaped,
   setSpecialCourses,
 };

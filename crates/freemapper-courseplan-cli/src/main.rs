@@ -150,7 +150,7 @@ enum Command {
         #[command(subcommand)]
         action: FindingCmd,
     },
-    /// Set event-wide settings: the rule profile
+    /// Set event-wide settings: the rule profile, start window, date and organizer
     Event {
         #[command(subcommand)]
         action: EventCmd,
@@ -713,6 +713,12 @@ fn info(lang: &Lang, path: &Path) -> Result<(), String> {
     let value = |id: &str, v: String| line(id, &[("value", FluentValue::from(v))]);
     let number = |id: &str, n: usize| line(id, &[("count", FluentValue::from(n))]);
     value("cli-info-title", event.event.title.clone());
+    if let Some(date) = &event.event.date {
+        value("cli-info-date", date.to_string());
+    }
+    if let Some(organizer) = &event.event.organizer {
+        value("cli-info-organizer", organizer.clone());
+    }
     value("cli-info-map", event.sources.map.display().to_string());
     value("cli-info-map-kind", text(lang, kind, &[]));
     let profile = FluentValue::from(event.event.rule_profile.clone());

@@ -765,6 +765,77 @@ fn an_acceptance_whose_leg_changed_is_listed_as_not_matched() {
 }
 
 #[test]
+fn event_set_writes_date_and_organizer_and_info_shows_them() {
+    let (dir, project) = project();
+    let p = project.to_str().unwrap();
+    let d = dir.path();
+    let before = stdout(&run(d, &["info", p]));
+    assert!(
+        !before.contains("date:") && !before.contains("organizer:"),
+        "{before}"
+    );
+    let set = run(
+        d,
+        &[
+            "event",
+            "set",
+            p,
+            "--date",
+            "2026-11-14",
+            "--organizer",
+            "OLV Beispiel",
+        ],
+    );
+    assert_eq!(code(&set), Some(0), "{}", stderr(&set));
+    assert_eq!(
+        stdout(&set).trim(),
+        "set the date to 2026-11-14\nset the organizer to OLV Beispiel"
+    );
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(file.contains("date = 2026-11-14\n"), "{file}");
+    assert!(file.contains("organizer = \"OLV Beispiel\"\n"), "{file}");
+    let info = stdout(&run(d, &["info", p]));
+    assert!(info.contains("date: 2026-11-14"), "{info}");
+    assert!(info.contains("organizer: OLV Beispiel"), "{info}");
+    let de = stdout(&run_lang(d, "de", &["info", p]));
+    assert!(
+        de.contains("Datum: 2026-11-14") && de.contains("Veranstalter: OLV Beispiel"),
+        "{de}"
+    );
+    let de_set = run_lang(d, "de", &["event", "set", p, "--no-date"]);
+    assert_eq!(stdout(&de_set).trim(), "Datum entfernt");
+
+    // Refusals leave the file as it was.
+    let before = std::fs::read(&project).unwrap();
+    let bad = run(d, &["event", "set", p, "--date", "14.11.2026"]);
+    assert_eq!(code(&bad), Some(1));
+    assert!(
+        stderr(&bad).contains("event date 14.11.2026 is not a date"),
+        "{}",
+        stderr(&bad)
+    );
+    let blank = run(d, &["event", "set", p, "--organizer", "  "]);
+    assert_eq!(code(&blank), Some(1));
+    assert_eq!(code(&run(d, &["event", "set", p])), Some(2));
+    assert_eq!(
+        code(&run(
+            d,
+            &["event", "set", p, "--date", "2026-11-14", "--no-date"]
+        )),
+        Some(2)
+    );
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+
+    let none = run(d, &["event", "set", p, "--no-organizer"]);
+    assert_eq!(stdout(&none).trim(), "removed the organizer");
+    let file = std::fs::read_to_string(&project).unwrap();
+    assert!(
+        !file.contains("organizer") && !file.contains("date ="),
+        "{file}"
+    );
+}
+
+#[test]
 fn start_window_and_class_settings_feed_the_start_capacity_check() {
     let (dir, project) = project();
     let p = project.to_str().unwrap();

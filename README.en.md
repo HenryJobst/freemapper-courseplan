@@ -113,7 +113,7 @@ come from a raster of the map symbols without elevation, and the runner profiles
 length bands (targets with a tolerance, both settable) as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
 [user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 32-minute course, and the
-decisions are in ADR 0060 to 0070 and 0082 to 0089. Generated courses keep three limits you can set: no control deep in a dead end, start and
+decisions are in ADR 0060 to 0070 and 0082 to 0090. Generated courses keep three limits you can set: no control deep in a dead end, start and
 finish close together, and a margin from the edge of the mapped area; `check` reports the same limits for any course.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with
@@ -130,7 +130,7 @@ missing, so the rule that the best route must not lead through an out-of-bounds 
 across such an area gets no finding (ADR 0080). A control inside an out-of-bounds area is an error (ADR 0081).
 
 `freemapper-courseplan export <project> --iof-xml <file>` writes the individual and score courses as IOF XML 3.0 for result
-software; the AI assistant has the tool `export_iof_xml`. The output validates against the IOF schema and reads
+software; the AI assistant has the tool `export_iof_xml`. Date and organizer, which `event set <project> --date YYYY-MM-DD --organizer TEXT` stores, go in as `Event/StartTime/Date` and `Event/Organiser/Name` (ADR 0090). The output validates against the IOF schema and reads
 back through the IOF reader of freemapper-course (freemapper-print's); a finished example is
 [`course-data.xml`](examples/rummelsburger-bucht/course-data.xml). An import into OE, Purple Pen or Condes has not been
 tested, because nobody on the project has OE. Reports from people with OE are welcome. If the map is georeferenced, the start, controls and finish also carry

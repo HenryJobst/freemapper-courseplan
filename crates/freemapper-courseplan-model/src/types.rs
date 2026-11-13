@@ -539,6 +539,9 @@ pub struct EventMeta {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     /// Local date, written as an unquoted TOML date.
     pub date: Option<toml::value::Datetime>,
+    /// Name of the organizer, as the event prints it (ADR 0090). Not empty when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub organizer: Option<String>,
     #[serde(default)]
     pub discipline: Discipline,
     #[serde(default = "default_rule_profile")]
@@ -834,6 +837,7 @@ mod tests {
             event: EventMeta {
                 title: "Test".to_owned(),
                 date: Some("2026-11-14".parse().unwrap()),
+                organizer: Some("OLV Beispiel".to_owned()),
                 discipline: Discipline::Sprint,
                 rule_profile: "wkb-2026".to_owned(),
                 rule_overlays: vec!["nor-bb-2021".to_owned()],
@@ -1036,6 +1040,18 @@ mod tests {
         let none = read("title = \"T\"\n");
         assert_eq!(none.date, None);
         assert!(!toml::to_string(&none).unwrap().contains("date"));
+    }
+
+    #[test]
+    fn event_organizer_is_written_only_when_set() {
+        let read = |text: &str| -> EventMeta { toml::from_str(text).unwrap() };
+        let meta = read("title = \"T\"\norganizer = \"OLV Beispiel\"\n");
+        assert_eq!(meta.organizer.as_deref(), Some("OLV Beispiel"));
+        let text = toml::to_string(&meta).unwrap();
+        assert!(text.contains("organizer = \"OLV Beispiel\"\n"), "{text}");
+        let none = read("title = \"T\"\n");
+        assert_eq!(none.organizer, None);
+        assert!(!toml::to_string(&none).unwrap().contains("organizer"));
     }
 
     #[test]

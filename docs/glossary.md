@@ -75,6 +75,8 @@ SportSoftware (Auswertung), **ISSprOM**, **ISOM**, **IOF-XML 3.0**, **OOM** wie 
 | Deutsch | English | Definition | Code |
 |---|---|---|---|
 | Disziplin | discipline | Sprint, Mittel, Lang, Ultralang oder Training. Training schaltet die Tabellenprüfungen ab. | `Discipline` |
+| Datum | date | Tag der Veranstaltung als `JJJJ-MM-TT`, ohne Uhrzeit; optional. Im IOF-XML-Export `Event/StartTime/Date` (ADR 0090). | `EventMeta::date` |
+| Veranstalter | organizer | Name des Veranstalters als nicht leerer Text; optional. Im IOF-XML-Export `Event/Organiser/Name` (ADR 0090). | `EventMeta::organizer` |
 | Kategorie | class | Startklasse mit freiem Namen, passend zu OE; optional einer Regelkategorie zugeordnet. | `Class` |
 | Regelkategorie | rule category | Kategorie nach dem Regelwerk eines Profils, etwa nach WKB (H21, D-12, 130T …), an der Längentabelle und Schwierigkeitsstufe hängen. | `RuleCategory` |
 | Kartenpunkt | map point | Punkt in Millimetern auf der Karte im Kartenmaßstab, `f64`, y nach unten. `omap::MapCoord` ist die Dateiform der OOM in 1/1000 mm. | `MapPoint` |

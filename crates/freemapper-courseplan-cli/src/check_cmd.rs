@@ -1,4 +1,4 @@
-//! `check`, `finding accept`/`remove`, `event profile` and `event start-window`. `check` prints
+//! `check`, `finding accept`/`remove`, `event profile`, `event start-window` and `event set`. `check` prints
 //! the findings grouped by course and a summary; it exits with 1 when a finding that is not
 //! accepted is an error.
 
@@ -82,6 +82,22 @@ pub enum EventCmd {
         minutes: Option<String>,
         #[arg(long)]
         none: bool,
+    },
+    /// Set or remove the date and the organizer
+    #[command(group(
+        ArgGroup::new("what").required(true).multiple(true)
+            .args(["date", "organizer", "no_date", "no_organizer"])
+    ))]
+    Set {
+        project: PathBuf,
+        #[arg(long, value_name = "YYYY-MM-DD", conflicts_with = "no_date")]
+        date: Option<String>,
+        #[arg(long, value_name = "TEXT", conflicts_with = "no_organizer")]
+        organizer: Option<String>,
+        #[arg(long)]
+        no_date: bool,
+        #[arg(long)]
+        no_organizer: bool,
     },
 }
 
@@ -453,6 +469,44 @@ pub fn event(lang: &Lang, cmd: EventCmd) -> Outcome {
                     save(lang, &mut file)?;
                     say(lang, "cli-event-start-window-removed", &[]);
                 }
+            }
+        }
+        EventCmd::Set {
+            project,
+            date,
+            organizer,
+            no_date,
+            no_organizer,
+        } => {
+            let mut file = load(lang, &project)?;
+            if date.is_some() || no_date {
+                edit::set_event_date(&mut file.event, date.as_deref())
+                    .map_err(|e| refused(lang, e))?;
+            }
+            if organizer.is_some() || no_organizer {
+                edit::set_organizer(&mut file.event, organizer.as_deref())
+                    .map_err(|e| refused(lang, e))?;
+            }
+            save(lang, &mut file)?;
+            match (&date, no_date) {
+                (Some(_), _) => {
+                    let value = file.event.event.date.as_ref().map(ToString::to_string);
+                    say(
+                        lang,
+                        "cli-event-date-set",
+                        &[("value", v(value.unwrap_or_default()))],
+                    );
+                }
+                (None, true) => say(lang, "cli-event-date-removed", &[]),
+                (None, false) => {}
+            }
+            match (&organizer, no_organizer) {
+                (Some(_), _) => {
+                    let value = file.event.event.organizer.clone().unwrap_or_default();
+                    say(lang, "cli-event-organizer-set", &[("value", v(value))]);
+                }
+                (None, true) => say(lang, "cli-event-organizer-removed", &[]),
+                (None, false) => {}
             }
         }
     }

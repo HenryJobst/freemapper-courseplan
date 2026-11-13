@@ -186,6 +186,7 @@ fn event_of(stops: &[Stop], start: Pt, finish: Pt, start_bends: &[Pt]) -> Event 
         event: EventMeta {
             title: "cases".to_owned(),
             date: None,
+            organizer: None,
             discipline: Default::default(),
             rule_profile: "wkb-2026".to_owned(),
             rule_overlays: Vec::new(),

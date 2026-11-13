@@ -137,6 +137,9 @@ pub enum EditError {
     /// A start window of 0 minutes means no window; the start capacity check needs at least 1.
     #[error("the start window must be at least 1 minute")]
     StartWindowZero,
+    /// An organizer must not be empty; clear it instead.
+    #[error("the organizer is empty; give a name or clear it")]
+    BlankOrganizer,
     /// A leg carries at most [`MAX_BENDS`] bends.
     #[error("a leg of course {course} may have at most {limit} bends")]
     TooManyBends { course: String, limit: usize },
@@ -892,6 +895,40 @@ pub fn set_start_window(event: &mut Event, minutes: u32) -> Result<(), EditError
     }
     apply(event, |e| {
         e.event.start_window_min = Some(minutes);
+        Ok(())
+    })
+}
+
+/// Sets or, with `None`, clears the date of the event. The text is `YYYY-MM-DD`, without time or offset
+/// (ADR 0090).
+pub fn set_event_date(event: &mut Event, date: Option<&str>) -> Result<(), EditError> {
+    let parsed = match date {
+        None => None,
+        Some(text) => {
+            let text = text.trim();
+            let bad = || EditError::Invalid(vec![ModelError::DateNotADate(text.to_owned())]);
+            let parsed: toml::value::Datetime = text.parse().map_err(|_| bad())?;
+            if parsed.date.is_none() || parsed.time.is_some() || parsed.offset.is_some() {
+                return Err(bad());
+            }
+            Some(parsed)
+        }
+    };
+    apply(event, |e| {
+        e.event.date = parsed;
+        Ok(())
+    })
+}
+
+/// Sets or, with `None`, clears the organizer of the event. The name is trimmed; an empty one is refused
+/// (ADR 0090).
+pub fn set_organizer(event: &mut Event, organizer: Option<&str>) -> Result<(), EditError> {
+    let organizer = match organizer.map(str::trim) {
+        Some("") => return Err(EditError::BlankOrganizer),
+        other => other.map(str::to_owned),
+    };
+    apply(event, |e| {
+        e.event.organizer = organizer;
         Ok(())
     })
 }

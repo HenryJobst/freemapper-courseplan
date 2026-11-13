@@ -114,7 +114,7 @@ Auswertungsbogen. Die Routen kommen aus einem Raster der Kartensymbole ohne Höh
 erste Fassung; nimm die Längenbänder (Zielwerte mit Toleranz, einstellbar) als guten Ausgangspunkt und prüfe das Ergebnis auf der Karte. Der
 KI-Assistent hat die Werkzeuge `score_suggest`, `score_draft`, `score_length` und die Werkzeuge zum Bearbeiten.
 [Kapitel 3 des Handbuchs](docs/manual/de.md#score-bahnen) erklärt es, das [Gleisdreieck-Beispiel](examples/gleisdreieck/) enthält eine fertige
-32-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070 und 0082 bis 0089. Erzeugte Bahnen halten drei Grenzen ein, die du einstellen kannst: kein Posten tief in einer
+32-Minuten-Bahn, und die Entscheidungen stehen in ADR 0060 bis 0070 und 0082 bis 0090. Erzeugte Bahnen halten drei Grenzen ein, die du einstellen kannst: kein Posten tief in einer
 Sackgasse, Start und Ziel nah beieinander und ein Abstand zum Rand der kartierten Fläche; `check` meldet dieselben Grenzen für jede Bahn.
 
 `freemapper-courseplan check <Projekt>` prüft die Einzel- und Score-Bahnen gegen ein Regelprofil, jeder Befund mit Schwere, Ort,
@@ -132,7 +132,7 @@ gerade Strecke über ein Sperrgebiet bekommt keinen Befund (ADR 0080). Ein Poste
 Fehler (ADR 0081).
 
 `freemapper-courseplan export <Projekt> --iof-xml <Datei>` schreibt die Einzel- und Score-Bahnen als IOF-XML 3.0 für die
-Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Die Ausgabe ist gegen das IOF-Schema
+Auswertung; der KI-Assistent hat dafür das Werkzeug `export_iof_xml`. Datum und Veranstalter, die `event set <Projekt> --date JJJJ-MM-TT --organizer TEXT` einträgt, stehen als `Event/StartTime/Date` und `Event/Organiser/Name` darin (ADR 0090). Die Ausgabe ist gegen das IOF-Schema
 geprüft und lässt sich mit dem IOF-Leser von freemapper-course (dem von freemapper-print) wieder einlesen; ein
 fertiges Beispiel ist [`course-data.xml`](examples/rummelsburger-bucht/course-data.xml). Ein Import in OE, Purple Pen
 oder Condes ist nicht getestet, weil im Projekt niemand OE hat. Rückmeldungen von Leuten mit OE sind willkommen. Ist die Karte georeferenziert, tragen Start, Posten und Ziel
