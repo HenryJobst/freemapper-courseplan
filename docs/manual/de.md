@@ -507,19 +507,20 @@ Eigenschaften das Score-Fenster.
 
 ![Die Karte Gleisdreieck mit Kandidaten als gestrichelten blauen Kreisen mit ihren Werten und rechts das Score-Fenster.](images/editor-score-candidates-de.jpg)
 
-*Eine neue Score-Bahn „Score 34“ mit 34 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Rechts stehen die Knöpfe und die Einstellungen, bis zu den Zielspannen und ihrer Toleranz gescrollt. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Eine neue Score-Bahn „Score 31“ mit 31 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Start und Ziel liegen oben rechts. Rechts stehen die Knöpfe und die Einstellungen, bis zu den drei Grenzen (tiefste Sackgasse, Start bis Ziel, Abstand vom Kartenrand) und den Zielspannen gescrollt. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Ein Entwurf einer Score-Bahn auf der Karte Gleisdreieck mit den Entwurfsposten und rechts dem Längenbericht beider Läuferprofile.](images/editor-score-draft-de.jpg)
 
-*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht: Der sehr gute Läufer liegt in seiner Spanne, der gute 1,7 Prozentpunkte darüber, innerhalb der Toleranz von 3. Der Bericht sagt deshalb, dass jeder Läufer in seiner Spanne oder nahe am Ziel liegt. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht: Beide Läufer liegen in ihren Spannen, und der Bericht sagt das. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Die fertige Score-Bahn auf der Karte Gleisdreieck mit ihren Posten als Kreisen, dem Längenbericht und einer Warnung rechts.](images/editor-score-applied-de.jpg)
 
-*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 33 Posten mit zusammen 95 Punkten. Die vier Befunde unten sind Warnungen, denn Paare von Kennzahlen wie 63 und 93 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 30 Posten mit zusammen 80 Punkten. Die vier Befunde unten sind Warnungen, denn Paare von Kennzahlen wie 63 und 93 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
-  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert und die vier Abstände (Wert 1 ab,
-  Posten auseinander, Reichweite vom Start, hohe Werte auseinander). Die beiden
+  gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert, die vier Abstände (Wert 1 ab,
+  Posten auseinander, Reichweite vom Start, hohe Werte auseinander) und die drei Grenzen aus ADR 0085 bis 0087 (tiefste
+  Sackgasse, Start bis Ziel, Abstand vom Kartenrand). Die beiden
   Spannen und die Toleranz sind Felder (beide Enden jeder Spanne); die Standardwerte stehen als Platzhalter darin, und der Längenbericht sagt „im Band“, „nahe am Ziel“ oder „verfehlt“. „Neue Score-Bahn...“ im Baum legt eine Bahn mit 45 Minuten Limit an; die
   Veranstaltung braucht dafür einen Start und ein Ziel.
 - **Posten vorschlagen.** Zeigt geordnete Kandidaten als gestrichelte Kreise mit ihrem Wert und als Tabelle.
@@ -794,6 +795,24 @@ Blattrahmen und Layoutsymbole wie das Nordlinienmuster (601) zählen nicht als O
 Kartenmillimetern und das nächste Objekt. Ein Platz zwischen Gebäuden ohne Objekt darin bleibt innen, solange er nicht
 viel breiter als 80 m ist; bei einer Karte mit großen leeren Flächen akzeptierst du den Befund mit einer Begründung oder
 bittest um einen größeren Wert in der Regel (ADR 0084).
+
+Start, Ziel, Posten und Querungsstellen müssen außerdem mindestens 50 m vom Rand der kartierten Fläche entfernt bleiben,
+damit der Läufer immer auf kartiertem Gebiet laufen kann (Fehler, Regel `wkb2026.map.margin`, ADR 0087). Der Rand ist
+dort, wo kein Kartenobjekt mehr innerhalb von 40 m liegt, dieselbe Grenze wie oben. Der Abstand wird auf einem Raster
+der kartierten Fläche gemessen und stimmt auf etwa 2 m. Eine Stelle außerhalb der kartierten Fläche bekommt nur den
+Fehler von oben. Die Einstellung heißt `map_margin_m` (0 bis 200, 0 schaltet die Regel ab) und ändert sich mit
+`score settings --map-margin`.
+
+Zwei Empfehlungen des Nutzers, keine Regeln der WKB, gelten für Sprint- und Schulhofkarten. Ein Posten tief in einer
+Sackgasse nimmt dem Läufer die Routenwahl, er läuft nur eine lange Strecke hinein und wieder heraus. `check` warnt, wenn
+ein Posten mehr als 60 m tief in einer Sackgasse liegt (Regel `wkb2026.control.dead_end`, ADR 0085). Die Tiefe ist die
+Gehstrecke vom Posten bis dorthin, wo das Wegenetz wieder eine Wahl bietet; ein großer offener Platz oder Innenhof ist
+keine Sackgasse. Die Grenze ist die Einstellung `dead_end_max_m` (20 bis 300, `score settings --dead-end-max`). Start und
+Ziel eines Sprints liegen meist nah beieinander: `check` gibt einen Hinweis, wenn sie in der Luftlinie mehr als 400 m
+auseinander liegen (Regel `wkb2026.course.start_finish_distance`, ADR 0086, Einstellung `start_finish_max_m`, 50 bis
+2000, `score settings --start-finish-max`). Eine Bahn von Hand darf von allen dreien abweichen; `score suggest` und
+`score draft` halten sie ein. `score draft` lehnt einen Start und ein Ziel ab, die weiter auseinander oder näher am Rand
+liegen, als die Einstellungen erlauben, und nennt die Einstellung, die du ändern kannst.
 
 ### Übersprungene Prüfregeln
 

@@ -10,11 +10,13 @@ use freemapper_courseplan_model::MapPoint;
 use crate::map::MapIndex;
 use crate::score::ScoreError;
 
+mod dead_end;
 mod raster;
 mod search;
 #[cfg(test)]
 mod tests;
 
+pub use dead_end::{DeadEnd, HORIZON_MARGIN_M, OPEN_WIDTH_M};
 use raster::Grid;
 use search::Searcher;
 

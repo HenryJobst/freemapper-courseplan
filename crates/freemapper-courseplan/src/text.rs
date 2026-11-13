@@ -1008,6 +1008,37 @@ impl Localize for ScoreError {
                 "error-score-finish-unreachable",
                 &[("x", v(at.x)), ("y", v(at.y))],
             ),
+            ScoreError::StartFinishTooFar {
+                start,
+                finish,
+                metres,
+                limit_m,
+            } => t(
+                "error-score-start-finish-too-far",
+                &[
+                    ("start_x", v(start.x)),
+                    ("start_y", v(start.y)),
+                    ("finish_x", v(finish.x)),
+                    ("finish_y", v(finish.y)),
+                    ("metres", v(metres.round() as i64)),
+                    ("limit", v(*limit_m)),
+                ],
+            ),
+            ScoreError::EndTooCloseToMapEdge {
+                kind,
+                at,
+                metres,
+                limit_m,
+            } => t(
+                "error-score-end-too-close-to-map-edge",
+                &[
+                    ("kind", v(*kind)),
+                    ("x", v(at.x)),
+                    ("y", v(at.y)),
+                    ("metres", v(metres.round() as i64)),
+                    ("limit", v(*limit_m)),
+                ],
+            ),
             ScoreError::UnknownCourse(name) => {
                 t("error-score-unknown-course", &[("course", v(name))])
             }
@@ -1312,6 +1343,15 @@ mod tests {
             "min_gap",
             "reach",
             "high_gap",
+            "bound",
+            "finish",
+            "dead_end",
+            "start_finish",
+            "map_margin",
+            "start_x",
+            "start_y",
+            "finish_x",
+            "finish_y",
         ]
         .iter()
         .map(|n| (*n, v("sample")))
@@ -1382,7 +1422,7 @@ mod tests {
 
     /// Every non-test source file directly under `src/check/`; the guard test below fails when a
     /// new module is missing here, so its message ids are scanned.
-    const CHECK_SOURCES: [(&str, &str); 15] = [
+    const CHECK_SOURCES: [(&str, &str); 16] = [
         ("mod.rs", include_str!("check/mod.rs")),
         ("codes.rs", include_str!("check/codes.rs")),
         ("context.rs", include_str!("check/context.rs")),
@@ -1392,6 +1432,7 @@ mod tests {
         ("inside.rs", include_str!("check/inside.rs")),
         ("legs.rs", include_str!("check/legs.rs")),
         ("numbers.rs", include_str!("check/numbers.rs")),
+        ("practical.rs", include_str!("check/practical.rs")),
         ("score.rs", include_str!("check/score.rs")),
         ("start.rs", include_str!("check/start.rs")),
         ("stops.rs", include_str!("check/stops.rs")),
@@ -1829,6 +1870,18 @@ mod tests {
                 to: p(0.0, 7.5),
             },
             ScoreError::StartUnreachable { at: p(1.25, -3.0) },
+            ScoreError::StartFinishTooFar {
+                start: p(1.0, 2.0),
+                finish: p(200.0, 90.0),
+                metres: 812.4,
+                limit_m: 400,
+            },
+            ScoreError::EndTooCloseToMapEdge {
+                kind: "finish",
+                at: p(5.0, 6.5),
+                metres: 12.0,
+                limit_m: 50,
+            },
             ScoreError::FinishUnreachable { at: p(100.0, 80.5) },
             ScoreError::MapEmpty,
             ScoreError::BadRouteSetting {

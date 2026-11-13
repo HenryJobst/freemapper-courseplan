@@ -15,6 +15,8 @@ use crate::query_cmd::{print_json, run_tool};
 type Outcome = Result<(), Failure>;
 
 // The help texts come from the catalog (see `edit_cmd::localize_groups`), not from doc comments.
+// `Settings` has one option per setting, so it is the large variant; the value is parsed once and dropped.
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 pub enum ScoreCmd {
     /// Replace the controls of a score course
@@ -47,7 +49,7 @@ pub enum ScoreCmd {
             .args([
                 "value_max", "good_pace", "very_good_pace", "good_band", "very_good_band",
                 "band_tolerance", "mix_hard", "seed", "value1_min", "min_gap", "max_reach",
-                "auto_reach", "high_value_gap",
+                "auto_reach", "high_value_gap", "dead_end_max", "start_finish_max", "map_margin",
             ])
     ))]
     Settings {
@@ -78,6 +80,12 @@ pub enum ScoreCmd {
         auto_reach: bool,
         #[arg(long, value_name = "M")]
         high_value_gap: Option<String>,
+        #[arg(long, value_name = "M")]
+        dead_end_max: Option<String>,
+        #[arg(long, value_name = "M")]
+        start_finish_max: Option<String>,
+        #[arg(long, value_name = "M")]
+        map_margin: Option<String>,
         #[arg(long)]
         json: bool,
     },
@@ -390,6 +398,9 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             max_reach,
             auto_reach,
             high_value_gap,
+            dead_end_max,
+            start_finish_max,
+            map_margin,
             json,
         } => {
             let mut args = json!({});
@@ -407,6 +418,15 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
             }
             if let Some(v) = high_value_gap {
                 args["high_value_gap_m"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = dead_end_max {
+                args["dead_end_max_m"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = start_finish_max {
+                args["start_finish_max_m"] = json!(parse_count(lang, &v)?);
+            }
+            if let Some(v) = map_margin {
+                args["map_margin_m"] = json!(parse_count(lang, &v)?);
             }
             if let Some(v) = value_max {
                 args["value_max"] = json!(clamp_u8(parse_count(lang, &v)?));
@@ -462,6 +482,9 @@ pub fn score(lang: &Lang, cmd: ScoreCmd) -> Outcome {
                         },
                     ),
                     ("high_gap", s(&value["high_value_gap_m"])),
+                    ("dead_end", s(&value["dead_end_max_m"])),
+                    ("start_finish", s(&value["start_finish_max_m"])),
+                    ("map_margin", s(&value["map_margin_m"])),
                 ],
             );
             Ok(())

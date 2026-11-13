@@ -57,6 +57,9 @@ fn project() -> (tempfile::TempDir, PathBuf) {
         vec![
             "special", "add", p, "--kind", "finish", "--id", "F1", "--at", "118,82",
         ],
+        // These points lie close to the edge of the mapped area of the small Lübeck map. The margin rule
+        // (ADR 0087) has its own tests, so it is off here.
+        vec!["score", "settings", p, "--map-margin", "0"],
         vec!["control", "add", p, "--at", "93,89"],
         vec!["control", "add", p, "--at", "113,89"],
         vec![

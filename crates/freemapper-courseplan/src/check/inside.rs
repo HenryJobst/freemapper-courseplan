@@ -116,15 +116,18 @@ fn extent_of(features: &[&MapFeature]) -> Option<(MapPoint, MapPoint)> {
 /// The map objects that count as terrain: everything but the ignored symbols and the frame. The
 /// frame is found against the extent of the objects that are not ignored, since an ignored area
 /// such as the north lines pattern often reaches beyond the sheet.
-fn content<'i>(ctx: &'i CheckContext<'_>, ignored: &[String], percent: f64) -> Vec<&'i MapFeature> {
-    let kept: Vec<&MapFeature> = ctx
-        .index
+pub(crate) fn terrain_features<'i, S: AsRef<str>>(
+    index: &'i MapIndex,
+    ignored: &[S],
+    percent: f64,
+) -> Vec<&'i MapFeature> {
+    let kept: Vec<&MapFeature> = index
         .features()
         .iter()
         .filter(|f| {
             !f.symbol_code
                 .as_deref()
-                .is_some_and(|c| ignored.iter().any(|i| symbol_matches(c, i)))
+                .is_some_and(|c| ignored.iter().any(|i| symbol_matches(c, i.as_ref())))
         })
         .collect();
     let Some(extent) = extent_of(&kept) else {
@@ -136,6 +139,10 @@ fn content<'i>(ctx: &'i CheckContext<'_>, ignored: &[String], percent: f64) -> V
             _ => true,
         })
         .collect()
+}
+
+fn content<'i>(ctx: &'i CheckContext<'_>, ignored: &[String], percent: f64) -> Vec<&'i MapFeature> {
+    terrain_features(&ctx.index, ignored, percent)
 }
 
 /// The nearest of these objects to `at`, with its distance in mm.
@@ -208,6 +215,45 @@ pub(super) fn inside_map(
                     ),
                     ("metres", ArgValue::Int(metres.floor() as i64)),
                     ("limit", ArgValue::Number(limit)),
+                ],
+            ));
+        }
+    }
+}
+
+/// `map_margin`: a start, finish, control or crossing point closer than `map_margin_m` of the event settings
+/// to the edge of the mapped area (ADR 0087). The edge is where no map object lies within the `metres` of
+/// `inside_map` any more; the distance is measured on a raster of the mapped area, to about 2 m. A position in
+/// the blank part is the business of `inside_map` and gets no second finding here.
+pub(super) fn map_margin(
+    ctx: &CheckContext<'_>,
+    run: &RuleRun<'_>,
+    findings: &mut Vec<Finding>,
+    skipped: &mut Vec<Skipped>,
+) {
+    let limit = ctx.event.score_settings().map_margin_m;
+    if limit == 0 {
+        return;
+    }
+    let Some(area) = crate::mapped::MappedArea::build(&ctx.index, ctx.map_scale) else {
+        skipped.push(run.skipped(Location::Event, SKIP_NO_MAP_EXTENT, Vec::new()));
+        return;
+    };
+    for stop in stops_to_test(ctx, run) {
+        let margin = area.margin_m(&stop.at);
+        if margin > 0.0 && margin < f64::from(limit) {
+            findings.push(run.finding(
+                Location::Control {
+                    code: ControlCode(stop.id.clone()),
+                },
+                "check-map-margin",
+                vec![
+                    ("id", ArgValue::Text(stop.id.clone())),
+                    ("kind", ArgValue::Text(stop.kind.word().to_owned())),
+                    ("x", ArgValue::Number(stop.at.x)),
+                    ("y", ArgValue::Number(stop.at.y)),
+                    ("metres", ArgValue::Int(margin.floor() as i64)),
+                    ("limit", ArgValue::Int(i64::from(limit))),
                 ],
             ));
         }

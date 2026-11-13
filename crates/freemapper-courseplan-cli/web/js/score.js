@@ -365,6 +365,9 @@ export function panel(host, state, course) {
       ["score-min-gap", "editor-score-min-gap", "min_gap_m"],
       ["score-max-reach", "editor-score-max-reach", "max_reach_m"],
       ["score-high-value-gap", "editor-score-high-value-gap", "high_value_gap_m"],
+      ["score-dead-end-max", "editor-score-dead-end-max", "dead_end_max_m"],
+      ["score-start-finish-max", "editor-score-start-finish-max", "start_finish_max_m"],
+      ["score-map-margin", "editor-score-map-margin", "map_margin_m"],
     ]) {
       const input = numberRow(settings, id, labelId, s[key], (n) => change("set_score_settings", { [key]: n }, id));
       if (key === "max_reach_m") {

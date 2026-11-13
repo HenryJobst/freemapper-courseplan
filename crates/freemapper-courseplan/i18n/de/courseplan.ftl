@@ -196,6 +196,17 @@ check-inside-map = { $kind ->
         [crossing] Querungsstelle
        *[control] Posten
     } { $id } liegt bei { $x }, { $y } mm auf der Karte außerhalb der kartierten Fläche: das nächste Kartenobjekt, Symbol { $symbol }, ist { $metres } m entfernt, erlaubt sind höchstens { $limit } m
+check-map-margin = { $kind ->
+        [start] Start
+        [finish] Ziel
+        [crossing] Querungsstelle
+       *[control] Posten
+    } { $id } bei { $x }, { $y } mm ist { $metres } m vom Rand der kartierten Fläche entfernt, verlangt sind mindestens { $limit } m
+check-control-dead-end = Posten { $id } liegt { $bound ->
+        [atleast] mindestens { $metres } m
+       *[exact] { $metres } m
+    } tief in einer Sackgasse, erlaubt sind höchstens { $limit } m. Dort gibt es keine Routenwahl, der Läufer läuft eine lange Strecke hinein und wieder heraus.
+check-start-finish-distance = Start { $start } und Ziel { $finish } der Bahn { $course } liegen { $metres } m auseinander. Bei Sprints liegen sie meist höchstens { $limit } m auseinander (Einstellung start_finish_max_m).
 check-leg-through-control = { $metres ->
         [0] Die Strecke führt über { $stop_kind ->
             [start] den Start
@@ -1354,6 +1365,9 @@ word-score-problem-must-not-exceed-100 = darf 100 nicht überschreiten
 error-model-link-cycle = Bahn { $course } verbindet { $a } und { $b } und schließt damit einen Kreis; Verbindungen müssen Ketten bilden
 word-score-problem-must-be-below-the-good-pace = muss unter der Pace des guten Läufers liegen
 word-score-problem-must-be-0-to-10 = muss zwischen 0 und 10 liegen
+word-score-problem-must-be-20-to-300 = muss zwischen 20 und 300 liegen
+word-score-problem-must-be-50-to-2000 = muss zwischen 50 und 2000 liegen
+word-score-problem-must-be-0-to-200 = muss zwischen 0 und 200 liegen
 word-score-problem-must-not-start-below-the-good-band = darf nicht unter dem Band des guten Läufers beginnen
 
 ## Score-Bahnen (ADR 0067)
@@ -1369,6 +1383,11 @@ error-edit-value-max-below-control = Der höchste Wert kann nicht { $value_max }
 error-score-unreachable = Auf dieser Karte gibt es keinen Weg von ({ $from_x }, { $from_y }) nach ({ $to_x }, { $to_y })
 error-score-start-unreachable = Der Start bei ({ $x }, { $y }) ist nicht erreichbar, er liegt in einem gesperrten Bereich
 error-score-finish-unreachable = Das Ziel bei ({ $x }, { $y }) ist nicht erreichbar, es liegt in einem gesperrten Bereich
+error-score-start-finish-too-far = Start bei ({ $start_x }, { $start_y }) und Ziel bei ({ $finish_x }, { $finish_y }) liegen { $metres } m auseinander. Eine erzeugte Bahn erlaubt höchstens { $limit } m. Verschiebe einen von beiden oder erhöhe die Einstellung start_finish_max_m (score settings --start-finish-max).
+error-score-end-too-close-to-map-edge = { $kind ->
+        [start] Der Start
+       *[finish] Das Ziel
+    } bei ({ $x }, { $y }) ist { $metres } m vom Rand der kartierten Fläche entfernt. Eine erzeugte Bahn braucht mindestens { $limit } m. Verschiebe es nach innen oder senke die Einstellung map_margin_m (score settings --map-margin).
 error-score-map-empty = Die Karte hat keine Objekte, daher gibt es nichts, worauf sich Wege suchen lassen
 error-score-bad-route-setting = Die Wegeeinstellung { $name } liegt außerhalb des Bereichs: { $value }
 error-score-grid-too-large = Die Karte bräuchte { $cells } Rasterzellen, mehr als die Grenze von { $limit }
@@ -1381,7 +1400,7 @@ error-score-bad-link = Die Verbindung zwischen Posten { $a } und { $b } nennt ei
 error-score-link-end-not-candidate = Ein Ende der gewünschten Verbindung { $link } liegt auf keinem Kandidaten
 error-score-links-not-a-chain = Die Verbindungen an Posten { $control } bilden keine Kette: Ein Posten hat höchstens zwei Verbindungen, und sie dürfen keinen Ring schließen
 error-score-link-tour-not-found = Es wurde keine Runde gefunden, die alle Verbindungen im Zeitlimit hält. Die Verbindung zwischen Posten { $a } und { $b } passt am schlechtesten. Bei größeren Bahnen sucht das Programm nicht erschöpfend, das ist also kein Beweis
-mcp-error-no-score-settings-change = nichts zu ändern; gib mindestens eines von value_max, good_pace_s_per_km, very_good_pace_s_per_km, good_band_percent, very_good_band_percent, band_tolerance_percent, mix_hard_percent, seed, value1_min_m, min_gap_m, max_reach_m, auto_reach und high_value_gap_m an
+mcp-error-no-score-settings-change = nichts zu ändern; gib mindestens eines von value_max, good_pace_s_per_km, very_good_pace_s_per_km, good_band_percent, very_good_band_percent, band_tolerance_percent, mix_hard_percent, seed, value1_min_m, min_gap_m, max_reach_m, auto_reach, high_value_gap_m, dead_end_max_m, start_finish_max_m und map_margin_m an
 mcp-error-no-score-course-change = nichts zu ändern; gib time_limit_min, penalty_per_min oder no_penalty an
 mcp-error-score-code-empty = Ein Posten einer Score-Bahn braucht einen Code
 mcp-tool-add-score-course = Eine Score-Bahn ohne Posten anlegen, aus Start, Ziel und einem Zeitlimit in Minuten. Ohne Abzug speichert die Bahn keinen und nimmt den Standard: den höchsten Postenwert der Bahn, mindestens value_max, damit sich eine Minute zu viel nie lohnt. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück. Die Posten kommen mit set_score_controls dazu.
@@ -1389,7 +1408,7 @@ mcp-tool-set-score-controls = Die Posten einer Score-Bahn ersetzen, in beliebige
 mcp-tool-set-control-value = Den Wert eines Postens einer Score-Bahn setzen. Der Code trägt den Wert, daher wird nur der Wert des Codes angenommen; um einem Posten einen anderen Wert zu geben, ändere seinen Code mit set_control_code, der Wert folgt. Der Aufruf repariert einen gespeicherten Wert, der nicht mehr zum Code passt. Gibt name, code und value zurück.
 mcp-tool-add-score-link = Verlangen, dass zwei Posten einer Score-Bahn direkt nacheinander gelaufen werden, in beliebiger Richtung. Wer es nicht tut, wird disqualifiziert. Beide Posten müssen zur Bahn gehören, ein Posten hat höchstens zwei Verbindungen, und Verbindungen dürfen keinen Ring schließen. Gibt name, a, b und links zurück, alle Verbindungen der Bahn.
 mcp-tool-remove-score-link = Die Verbindung zwischen zwei Posten einer Score-Bahn entfernen; die Reihenfolge der beiden ist gleich. Gibt name, a, b und links zurück, die verbleibenden Verbindungen.
-mcp-tool-set-score-settings = Die Score-Einstellungen ändern, die alle Score-Bahnen der Veranstaltung teilen: value_max (höchster Punktewert, 1 bis 9), good_pace_s_per_km und very_good_pace_s_per_km (Sekunden je Kilometer), good_band_percent und very_good_band_percent (Zielbänder als [unten, oben] in Prozent; der gute Läufer holt diesen Anteil aller Punkte, der sehr gute Läufer ist nach diesem Anteil des Limits im Ziel), band_tolerance_percent (Prozentpunkte außerhalb eines Bandes, die noch als nahe am Ziel gelten, 0 bis 10), mix_hard_percent (Anteil schwerer Posten), seed (legt die Entwurfssuche fest), value1_min_m (kleinster Abstand eines Postens von Start und Ziel in Metern), min_gap_m (kleinster Abstand zweier Posten, mindestens 100 m), max_reach_m (größter Abstand vom Start; auto_reach stellt ihn zurück auf ein Viertel der Strecke, die der gute Läufer im Zeitlimit schafft) und high_value_gap_m (kleinster Abstand zweier hochwertiger Posten). Nicht genannte Felder bleiben. Gibt alle Einstellungen zurück.
+mcp-tool-set-score-settings = Die Score-Einstellungen ändern, die alle Score-Bahnen der Veranstaltung teilen: value_max (höchster Punktewert, 1 bis 9), good_pace_s_per_km und very_good_pace_s_per_km (Sekunden je Kilometer), good_band_percent und very_good_band_percent (Zielbänder als [unten, oben] in Prozent; der gute Läufer holt diesen Anteil aller Punkte, der sehr gute Läufer ist nach diesem Anteil des Limits im Ziel), band_tolerance_percent (Prozentpunkte außerhalb eines Bandes, die noch als nahe am Ziel gelten, 0 bis 10), mix_hard_percent (Anteil schwerer Posten), seed (legt die Entwurfssuche fest), value1_min_m (kleinster Abstand eines Postens von Start und Ziel in Metern), min_gap_m (kleinster Abstand zweier Posten, mindestens 100 m), max_reach_m (größter Abstand vom Start; auto_reach stellt ihn zurück auf ein Viertel der Strecke, die der gute Läufer im Zeitlimit schafft), high_value_gap_m (kleinster Abstand zweier hochwertiger Posten), dead_end_max_m (größte Strecke in eine Sackgasse hinein, die ein Posten verlangen darf, 20 bis 300 m, Standard 60), start_finish_max_m (größter Abstand zwischen Start und Ziel einer erzeugten Bahn, 50 bis 2000 m, Standard 400) und map_margin_m (kleinster Abstand von Start, Ziel und Posten zum Rand der kartierten Fläche, 0 bis 200 m, Standard 50). Die letzten drei steuern auch check, das warnt, einen Hinweis gibt oder einen Fehler meldet. Nicht genannte Felder bleiben. Gibt alle Einstellungen zurück.
 mcp-tool-set-score-course-details = Das Zeitlimit in Minuten oder den Abzug je angefangene Minute einer Score-Bahn ändern. penalty_per_min speichert einen Abzug; no_penalty kehrt zum Standard zurück, dem höchsten Postenwert der Bahn, mindestens value_max. Gibt name, time_limit_min, penalty_per_min und penalty_is_default zurück.
 mcp-param-time-limit-min = Zeitlimit in Minuten, mindestens 1
 mcp-param-penalty-per-min = Abzug in Punkten je angefangene Minute über dem Limit [Standard: der höchste Postenwert der Bahn, mindestens value_max]
@@ -1436,16 +1455,25 @@ cli-arg-score-settings-min-gap = Kleinster Abstand zweier Posten in Metern, mind
 cli-arg-score-settings-max-reach = Größter Abstand eines Postens vom Start in Metern
 cli-arg-score-settings-auto-reach = Reichweite aus dem Zeitlimit: ein Viertel der Strecke, die der gute Läufer schafft
 cli-arg-score-settings-high-value-gap = Kleinster Abstand zweier hochwertiger Posten in Metern
+cli-arg-score-settings-dead-end-max = Größte Strecke in Metern in eine Sackgasse hinein, die ein Posten verlangen darf, 20 bis 300 [Standard: 60]
+cli-arg-score-settings-start-finish-max = Größter Abstand in Metern zwischen Start und Ziel einer erzeugten Bahn, 50 bis 2000 [Standard: 400]
+cli-arg-score-settings-map-margin = Kleinster Abstand in Metern von Start, Ziel und Posten zum Rand der kartierten Fläche, 0 bis 200 [Standard: 50]
 cli-score-reach-automatic = automatisch
 mcp-param-value1-min-m = Kleinster Abstand eines Postens von Start und Ziel in Metern
 mcp-param-min-gap-m = Kleinster Abstand zweier Posten in Metern, mindestens 100
 mcp-param-max-reach-m = Größter Abstand eines Postens vom Start in Metern
 mcp-param-auto-reach = true stellt die Reichweite auf automatisch zurück: ein Viertel der Strecke, die der gute Läufer im Zeitlimit schafft
+mcp-param-dead-end-max-m = Größte Strecke in Metern in eine Sackgasse hinein, die ein Posten verlangen darf, 20 bis 300 [Standard: 60]. Entwurf und Vorschlag lassen tiefere Stellen aus, check warnt vor tieferen Posten.
+mcp-param-start-finish-max-m = Größter Abstand in Metern zwischen Start und Ziel einer erzeugten Bahn, 50 bis 2000 [Standard: 400]. Ein Entwurf lehnt ein weiteres Paar ab, check gibt für ein weiteres einen Hinweis.
+mcp-param-map-margin-m = Kleinster Abstand in Metern von Start, Ziel und Posten zum Rand der kartierten Fläche, 0 bis 200 [Standard: 50]. Entwurf und Vorschlag halten ihn ein, check meldet einen kleineren als Fehler.
 mcp-param-high-value-gap-m = Kleinster Abstand zweier hochwertiger Posten in Metern (die oberen 40 Prozent der Werte)
 editor-score-value1-min = Wert 1 ab (m)
 editor-score-min-gap = Posten auseinander (m)
 editor-score-max-reach = Reichweite vom Start (m, leer: automatisch)
 editor-score-high-value-gap = Hohe Werte auseinander (m)
+editor-score-dead-end-max = Tiefste Sackgasse (m)
+editor-score-start-finish-max = Start bis Ziel höchstens (m)
+editor-score-map-margin = Abstand vom Kartenrand (m)
 cli-arg-score-course-set-time-limit = Zeitlimit in Minuten
 cli-arg-score-course-set-penalty = Abzug in Punkten je angefangene Minute über dem Limit
 cli-arg-score-course-set-no-penalty = Zum Standardabzug zurückkehren, dem höchsten Postenwert der Bahn, mindestens dem höchsten Wert der Veranstaltung
@@ -1461,7 +1489,7 @@ cli-score-controls = { $name }: { $count } Posten, { $total } Punkte ({ $list })
 cli-score-value = Posten { $code } von { $name } zählt { $value } Punkte
 cli-score-link-added = { $a } und { $b } in { $name } verbunden
 cli-score-link-removed = Verbindung zwischen { $a } und { $b } in { $name } entfernt
-cli-score-settings = Score-Einstellungen: höchster Wert { $value_max }, guter Läufer { $good } s/km, sehr guter Läufer { $very_good } s/km, Band des guten Läufers { $good_band } Prozent, Band des sehr guten Läufers { $very_good_band } Prozent, Toleranz { $tolerance } Prozentpunkte, { $mix_hard } Prozent schwere Posten, Startwert { $seed }, Wert 1 ab { $value1_min } m, Posten { $min_gap } m auseinander, hohe Werte { $high_gap } m auseinander, Reichweite { $reach }
+cli-score-settings = Score-Einstellungen: höchster Wert { $value_max }, guter Läufer { $good } s/km, sehr guter Läufer { $very_good } s/km, Band des guten Läufers { $good_band } Prozent, Band des sehr guten Läufers { $very_good_band } Prozent, Toleranz { $tolerance } Prozentpunkte, { $mix_hard } Prozent schwere Posten, Startwert { $seed }, Wert 1 ab { $value1_min } m, Posten { $min_gap } m auseinander, hohe Werte { $high_gap } m auseinander, Reichweite { $reach }, tiefste Sackgasse { $dead_end } m, Start bis Ziel höchstens { $start_finish } m, { $map_margin } m vom Kartenrand
 cli-score-course-set = { $name }: { $limit } Minuten, { $penalty } Punkte Abzug je Minute über dem Limit{ $default ->
     [yes] { " " }(der Standard)
    *[no] { "" }

@@ -64,7 +64,7 @@ title = "IRF Rules of Rogaining"
 url = "https://rogaining.com/rules"
 
 [sources.user]
-title = "Decisions of the project owner for score courses (docs/superpowers/specs/2026-11-11-score-courses-design.md, section 3)"
+title = "Decisions of the project owner: for score courses (docs/superpowers/specs/2026-11-11-score-courses-design.md, section 3) and for the practical sprint (ADR 0085 to 0087)"
 
 [sources.claude]
 title = "Values chosen in plan M2b (docs/superpowers/plans/2026-11-09-m2b-check-rules.md) where no source gives a number"
@@ -215,6 +215,29 @@ frame_percent = 80.0
 # Layout symbols that mappers lay over the whole print area: 601 north lines pattern, 602 registration
 # mark. They are no terrain.
 ignore_symbols = ["601", "602"]
+
+[[rules]]
+id = "wkb2026.map.margin"
+key = "map_margin"
+severity = "error"
+source = { doc = "user", section = "request 2026-11-12, ADR 0087" }
+note = { de = "Start, Ziel, Posten und Querungsstellen müssen mindestens map_margin_m (Standard 50 m, Ereignis-Einstellung der Score-Tabelle) vom Rand der kartierten Fläche entfernt sein; der Läufer muss immer auf kartiertem Gebiet laufen können (Nutzer, 2026-11-12). Der Rand ist dort, wo kein Kartenobjekt mehr innerhalb von 40 m liegt, dieselbe Grenze wie bei map.inside. Gemessen wird auf einem Raster der kartierten Fläche, auf etwa 2 m genau. Eine Stelle außerhalb der kartierten Fläche meldet map.inside, nicht diese Regel. map.edge misst weiter gegen das Rechteck um die Objekte.", en = "Start, finish, controls and crossing points must lie at least map_margin_m (default 50 m, an event setting in the score table) from the edge of the mapped area; the runner must always be able to run on mapped ground (user, 2026-11-12). The edge is where no map object lies within 40 m any more, the same limit as map.inside. The distance is measured on a raster of the mapped area, to about 2 m. A position outside the mapped area is reported by map.inside, not by this rule. map.edge still measures against the box around the objects." }
+
+[[rules]]
+id = "wkb2026.control.dead_end"
+key = "control_dead_end"
+severity = "warning"
+map_kinds = ["sprint", "schoolyard"]
+source = { doc = "user", section = "request 2026-11-12, ADR 0085" }
+note = { de = "Empfehlung des Nutzers, keine WKB-Regel: Posten sollen nicht weit in einer Sackgasse stehen, denn dort gibt es keine Routenwahl und der Läufer läuft eine lange Strecke hinein und wieder heraus. Kurze Stücke in Innenhöfe sind in Ordnung. Die Grenze ist die Einstellung dead_end_max_m (Standard 60 m). Die Tiefe ist die Gehstrecke vom Posten bis dorthin, wo das Wegenetz wieder eine Wahl bietet (ADR 0085).", en = "A recommendation of the user, not a WKB rule: controls should not stand deep in a dead end, because the runner has no route choice there and runs one long leg in and out. Short stretches into courtyards are fine. The limit is the setting dead_end_max_m (default 60 m). The depth is the walk from the control to where the path network offers a choice again (ADR 0085)." }
+
+[[rules]]
+id = "wkb2026.course.start_finish_distance"
+key = "start_finish_distance"
+severity = "hint"
+map_kinds = ["sprint", "schoolyard"]
+source = { doc = "user", section = "request 2026-11-12, ADR 0086" }
+note = { de = "Empfehlung des Nutzers aus der Praxis, keine WKB-Regel: Bei Sprints liegen Start und Ziel meist nah beieinander, alles andere ist für Veranstalter und Läufer unpraktisch. Die Grenze für die Luftlinie ist die Einstellung start_finish_max_m (Standard 400 m). Eine Bahn von Hand darf abweichen; erzeugte Bahnen halten die Grenze ein (ADR 0086).", en = "A recommendation of the user from practice, not a WKB rule: at sprint events start and finish usually lie close together, anything else is impractical for organisers and runners. The limit for the straight line is the setting start_finish_max_m (default 400 m). A course made by hand may deviate; generated courses keep the limit (ADR 0086)." }
 
 [[rules]]
 id = "wkb2026.leg.through_control"

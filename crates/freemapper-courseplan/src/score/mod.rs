@@ -2,6 +2,7 @@
 
 pub mod candidates;
 pub mod code;
+pub mod dead_end;
 pub mod draft;
 pub mod links;
 pub mod points;
@@ -32,6 +33,26 @@ pub enum ScoreError {
     #[error("the finish at ({}, {}) cannot be reached: it lies in a blocked area", at.x, at.y)]
     FinishUnreachable {
         at: freemapper_courseplan_model::MapPoint,
+    },
+    #[error(
+        "The start at ({}, {}) and the finish at ({}, {}) are {metres:.0} m apart. A generated course allows at most {limit_m} m. Move one of them or raise the setting start_finish_max_m (score settings --start-finish-max).",
+        start.x, start.y, finish.x, finish.y
+    )]
+    StartFinishTooFar {
+        start: freemapper_courseplan_model::MapPoint,
+        finish: freemapper_courseplan_model::MapPoint,
+        metres: f64,
+        limit_m: u32,
+    },
+    #[error(
+        "The {kind} at ({}, {}) is {metres:.0} m from the edge of the mapped area. A generated course needs at least {limit_m} m. Move it inward or lower the setting map_margin_m (score settings --map-margin).",
+        at.x, at.y
+    )]
+    EndTooCloseToMapEdge {
+        kind: &'static str,
+        at: freemapper_courseplan_model::MapPoint,
+        metres: f64,
+        limit_m: u32,
     },
     #[error("course {0} does not exist")]
     UnknownCourse(String),

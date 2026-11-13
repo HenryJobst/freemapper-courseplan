@@ -416,6 +416,11 @@ fn settings_out_of_range_are_refused() {
         ("max_reach_m = 0", "max_reach_m"),
         ("max_reach_m = 100", "max_reach_m"),
         ("high_value_gap_m = 99", "high_value_gap_m"),
+        ("dead_end_max_m = 19", "dead_end_max_m"),
+        ("dead_end_max_m = 301", "dead_end_max_m"),
+        ("start_finish_max_m = 49", "start_finish_max_m"),
+        ("start_finish_max_m = 2001", "start_finish_max_m"),
+        ("map_margin_m = 201", "map_margin_m"),
     ] {
         let errors = bad(settings);
         assert_eq!(errors.len(), 1, "{settings}: {errors:?}");
@@ -424,6 +429,32 @@ fn settings_out_of_range_are_refused() {
             "{settings}: {errors:?}"
         );
     }
+}
+
+#[test]
+fn the_practical_sprint_settings_have_their_ranges_and_defaults() {
+    for ok in [
+        "dead_end_max_m = 20",
+        "dead_end_max_m = 300",
+        "start_finish_max_m = 50",
+        "start_finish_max_m = 2000",
+        "map_margin_m = 0",
+        "map_margin_m = 200",
+    ] {
+        let text = format!("\n[score]\n{ok}\n");
+        assert_eq!(validate(&event(&text)), vec![], "{ok}");
+    }
+    let d = ScoreSettings::default();
+    assert_eq!(
+        (d.dead_end_max_m, d.start_finish_max_m, d.map_margin_m),
+        (60, 400, 50)
+    );
+    // An event that gives none of them gets the defaults, with or without a [score] table.
+    assert_eq!(event("").score_settings().dead_end_max_m, 60);
+    assert_eq!(
+        event("\n[score]\nseed = 2\n").score_settings().map_margin_m,
+        50
+    );
 }
 
 #[test]

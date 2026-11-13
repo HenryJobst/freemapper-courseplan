@@ -403,4 +403,13 @@ fn check_score_settings(errors: &mut Vec<ModelError>, s: &ScoreSettings) {
     if s.high_value_gap_m < s.min_gap_m {
         bad("high_value_gap_m", "must not be below min_gap_m");
     }
+    if !(20..=300).contains(&s.dead_end_max_m) {
+        bad("dead_end_max_m", "must be 20 to 300");
+    }
+    if !(50..=2000).contains(&s.start_finish_max_m) {
+        bad("start_finish_max_m", "must be 50 to 2000");
+    }
+    if s.map_margin_m > 200 {
+        bad("map_margin_m", "must be 0 to 200");
+    }
 }

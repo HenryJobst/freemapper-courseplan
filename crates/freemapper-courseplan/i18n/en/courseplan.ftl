@@ -196,6 +196,17 @@ check-inside-map = { $kind ->
         [crossing] crossing point
        *[control] control
     } { $id } at { $x }, { $y } mm on the map is outside the mapped area: the nearest map object, symbol { $symbol }, is { $metres } m away, at most { $limit } m allowed
+check-map-margin = { $kind ->
+        [start] start
+        [finish] finish
+        [crossing] crossing point
+       *[control] control
+    } { $id } at { $x }, { $y } mm is { $metres } m from the edge of the mapped area, at least { $limit } m required
+check-control-dead-end = Control { $id } is { $bound ->
+        [atleast] at least { $metres } m
+       *[exact] { $metres } m
+    } deep in a dead end, more than the { $limit } m allowed. A runner has no route choice there and runs one long leg in and out.
+check-start-finish-distance = Start { $start } and finish { $finish } of course { $course } are { $metres } m apart. Sprint events usually keep them within { $limit } m (setting start_finish_max_m).
 check-leg-through-control = { $metres ->
         [0] the leg runs over { $stop_kind ->
             [start] start
@@ -1359,6 +1370,9 @@ word-score-problem-must-not-exceed-100 = must not exceed 100
 error-model-link-cycle = course { $course } links { $a } and { $b }, which closes a loop; links must form chains
 word-score-problem-must-be-below-the-good-pace = must be below the good pace
 word-score-problem-must-be-0-to-10 = must be 0 to 10
+word-score-problem-must-be-20-to-300 = must be 20 to 300
+word-score-problem-must-be-50-to-2000 = must be 50 to 2000
+word-score-problem-must-be-0-to-200 = must be 0 to 200
 word-score-problem-must-not-start-below-the-good-band = must not start below the good band
 
 ## Score courses (ADR 0067)
@@ -1374,6 +1388,11 @@ error-edit-value-max-below-control = The highest value cannot be { $value_max }:
 error-score-unreachable = no route from ({ $from_x }, { $from_y }) to ({ $to_x }, { $to_y }) on this map
 error-score-start-unreachable = the start at ({ $x }, { $y }) cannot be reached: it lies in a blocked area
 error-score-finish-unreachable = the finish at ({ $x }, { $y }) cannot be reached: it lies in a blocked area
+error-score-start-finish-too-far = The start at ({ $start_x }, { $start_y }) and the finish at ({ $finish_x }, { $finish_y }) are { $metres } m apart. A generated course allows at most { $limit } m. Move one of them or raise the setting start_finish_max_m (score settings --start-finish-max).
+error-score-end-too-close-to-map-edge = The { $kind ->
+        [start] start
+       *[finish] finish
+    } at ({ $x }, { $y }) is { $metres } m from the edge of the mapped area. A generated course needs at least { $limit } m. Move it inward or lower the setting map_margin_m (score settings --map-margin).
 error-score-map-empty = the map has no objects, so there is nothing to search routes on
 error-score-bad-route-setting = route setting { $name } is out of range: { $value }
 error-score-grid-too-large = the map would need { $cells } raster cells, more than the limit of { $limit }
@@ -1386,7 +1405,7 @@ error-score-bad-link = the link between controls { $a } and { $b } names a contr
 error-score-link-end-not-candidate = an end of the requested link { $link } lies on no candidate
 error-score-links-not-a-chain = the links at control { $control } do not form a chain: a control may have at most two links and they may not close a ring
 error-score-link-tour-not-found = no tour was found that holds every link within the time limit; the link between controls { $a } and { $b } fits worst. The search is not exhaustive for larger courses, so this is no proof
-mcp-error-no-score-settings-change = nothing to change; give at least one of value_max, good_pace_s_per_km, very_good_pace_s_per_km, good_band_percent, very_good_band_percent, band_tolerance_percent, mix_hard_percent, seed, value1_min_m, min_gap_m, max_reach_m, auto_reach and high_value_gap_m
+mcp-error-no-score-settings-change = nothing to change; give at least one of value_max, good_pace_s_per_km, very_good_pace_s_per_km, good_band_percent, very_good_band_percent, band_tolerance_percent, mix_hard_percent, seed, value1_min_m, min_gap_m, max_reach_m, auto_reach, high_value_gap_m, dead_end_max_m, start_finish_max_m and map_margin_m
 mcp-error-no-score-course-change = nothing to change; give time_limit_min, penalty_per_min or no_penalty
 mcp-error-score-code-empty = a control of a score course needs a code
 mcp-tool-add-score-course = Add a score course without controls, from a start, a finish and a time limit in minutes. Without a penalty the course has no stored penalty and uses the default: the highest control value of the course, at least value_max, so a minute over never pays off. Returns name, time_limit_min, penalty_per_min and penalty_is_default. Add the controls with set_score_controls.
@@ -1394,7 +1413,7 @@ mcp-tool-set-score-controls = Replace the controls of a score course, in any ord
 mcp-tool-set-control-value = Set the value of one control of a score course. The code carries the value, so only the value of the code is accepted; to give a control another value, change its code with set_control_code, and the value follows. The call repairs a stored value that no longer matches its code. Returns name, code and value.
 mcp-tool-add-score-link = Require two controls of a score course to be run directly one after the other, in either direction. A runner who does not is disqualified. Both controls must be in the course, a control takes at most two links, and links may not close a ring. Returns name, a, b and links, all links of the course.
 mcp-tool-remove-score-link = Remove the link between two controls of a score course; either order matches. Returns name, a, b and links, the links that remain.
-mcp-tool-set-score-settings = Change the score settings that all score courses of the event share: value_max (highest point value, 1 to 9), good_pace_s_per_km and very_good_pace_s_per_km (seconds per kilometre), good_band_percent and very_good_band_percent (target bands as [low, high] percent; the good runner scores that share of all points, the very good runner finishes after that share of the limit), band_tolerance_percent (percentage points outside a band that still count as near the target, 0 to 10), mix_hard_percent (share of hard controls), seed (fixes the draft search), value1_min_m (nearest distance of any control to start and finish, in metres), min_gap_m (least distance between two controls, at least 100 m), max_reach_m (farthest distance from the start; auto_reach returns it to a quarter of the ground the good runner covers in the time limit) and high_value_gap_m (least distance between two high-valued controls). Fields not given stay as they are. Returns all settings.
+mcp-tool-set-score-settings = Change the score settings that all score courses of the event share: value_max (highest point value, 1 to 9), good_pace_s_per_km and very_good_pace_s_per_km (seconds per kilometre), good_band_percent and very_good_band_percent (target bands as [low, high] percent; the good runner scores that share of all points, the very good runner finishes after that share of the limit), band_tolerance_percent (percentage points outside a band that still count as near the target, 0 to 10), mix_hard_percent (share of hard controls), seed (fixes the draft search), value1_min_m (nearest distance of any control to start and finish, in metres), min_gap_m (least distance between two controls, at least 100 m), max_reach_m (farthest distance from the start; auto_reach returns it to a quarter of the ground the good runner covers in the time limit), high_value_gap_m (least distance between two high-valued controls), dead_end_max_m (farthest walk into a dead end that a control may need, 20 to 300 m, default 60), start_finish_max_m (farthest distance between start and finish of a generated course, 50 to 2000 m, default 400) and map_margin_m (least distance of start, finish and controls from the edge of the mapped area, 0 to 200 m, default 50). The last three also steer check, which warns, hints or reports an error. Fields not given stay as they are. Returns all settings.
 mcp-tool-set-score-course-details = Change the time limit in minutes or the penalty per started minute of a score course. penalty_per_min stores a penalty; no_penalty goes back to the default, the highest control value of the course, at least value_max. Returns name, time_limit_min, penalty_per_min and penalty_is_default.
 mcp-param-time-limit-min = Time limit in minutes, at least 1
 mcp-param-penalty-per-min = Points deducted per started minute over the limit [default: the highest control value of the course, at least value_max]
@@ -1441,16 +1460,25 @@ cli-arg-score-settings-min-gap = Least distance in metres between two controls, 
 cli-arg-score-settings-max-reach = Farthest distance in metres of a control from the start
 cli-arg-score-settings-auto-reach = Reach from the time limit: a quarter of the ground the good runner covers
 cli-arg-score-settings-high-value-gap = Least distance in metres between two high-valued controls
+cli-arg-score-settings-dead-end-max = Farthest walk in metres into a dead end that a control may need, 20 to 300 [default: 60]
+cli-arg-score-settings-start-finish-max = Farthest distance in metres between start and finish of a generated course, 50 to 2000 [default: 400]
+cli-arg-score-settings-map-margin = Least distance in metres from start, finish and controls to the edge of the mapped area, 0 to 200 [default: 50]
 cli-score-reach-automatic = automatic
 mcp-param-value1-min-m = Nearest distance in metres of any control to start and finish
 mcp-param-min-gap-m = Least distance in metres between two controls, at least 100
 mcp-param-max-reach-m = Farthest distance in metres of a control from the start
 mcp-param-auto-reach = true returns the reach to automatic: a quarter of the ground the good runner covers in the time limit
+mcp-param-dead-end-max-m = Farthest walk in metres into a dead end that a control may need, 20 to 300 [default: 60]. Draft and suggest leave out deeper sites; check warns about deeper controls.
+mcp-param-start-finish-max-m = Farthest distance in metres between start and finish of a generated course, 50 to 2000 [default: 400]. A draft refuses a farther pair; check gives a hint for a farther one.
+mcp-param-map-margin-m = Least distance in metres from start, finish and controls to the edge of the mapped area, 0 to 200 [default: 50]. Draft and suggest keep to it; check reports a closer one as an error.
 mcp-param-high-value-gap-m = Least distance in metres between two high-valued controls (the upper 40 percent of the values)
 editor-score-value1-min = Value 1 from (m)
 editor-score-min-gap = Controls apart (m)
 editor-score-max-reach = Reach from start (m, empty: automatic)
 editor-score-high-value-gap = High values apart (m)
+editor-score-dead-end-max = Deepest dead end (m)
+editor-score-start-finish-max = Start to finish at most (m)
+editor-score-map-margin = Distance from map edge (m)
 cli-arg-score-course-set-time-limit = Time limit in minutes
 cli-arg-score-course-set-penalty = Points deducted per started minute over the limit
 cli-arg-score-course-set-no-penalty = Go back to the default penalty, the highest control value of the course, at least the highest value of the event
@@ -1466,7 +1494,7 @@ cli-score-controls = { $name }: { $count } controls, { $total } points ({ $list 
 cli-score-value = control { $code } of { $name } is worth { $value } points
 cli-score-link-added = linked { $a } and { $b } in { $name }
 cli-score-link-removed = removed the link between { $a } and { $b } in { $name }
-cli-score-settings = score settings: highest value { $value_max }, good runner { $good } s/km, very good runner { $very_good } s/km, good runner band { $good_band } percent, very good runner band { $very_good_band } percent, tolerance { $tolerance } percentage points, { $mix_hard } percent hard controls, seed { $seed }, value 1 from { $value1_min } m, controls { $min_gap } m apart, high values { $high_gap } m apart, reach { $reach }
+cli-score-settings = score settings: highest value { $value_max }, good runner { $good } s/km, very good runner { $very_good } s/km, good runner band { $good_band } percent, very good runner band { $very_good_band } percent, tolerance { $tolerance } percentage points, { $mix_hard } percent hard controls, seed { $seed }, value 1 from { $value1_min } m, controls { $min_gap } m apart, high values { $high_gap } m apart, reach { $reach }, deepest dead end { $dead_end } m, start to finish at most { $start_finish } m, { $map_margin } m from the map edge
 cli-score-course-set = { $name }: { $limit } minutes, { $penalty } points per minute over the limit{ $default ->
     [yes] { " " }(the default)
    *[no] { "" }

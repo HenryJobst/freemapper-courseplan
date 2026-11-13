@@ -101,6 +101,8 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Spitzer Winkel: Abgehende führen Ankommende zum Posten | DE-Bundesland: < 90° vermeiden | IOF-A2 3.5.4; BL12 | A |
 | Sprint: nicht durch unpassierbare Objekte hindurch stempelbar | – | IOF-SG; BOF B10.9.8 | A/B |
 | Posten nicht zu nah am Kartenrand | – | BL02 | A; geprüft (`map_edge`, 10 m zum Rechteck um die Kartenobjekte) |
+| Posten, Start und Ziel mindestens 50 m vom Rand der kartierten Fläche, damit der Läufer immer auf kartiertem Gebiet läuft | 50 m, einstellbar (0 bis 200) | Nutzer, 2026-11-12 (keine Quelle der Regelwerke) | A; geprüft (`map_margin`, ADR 0087), Entwürfe halten es ein |
+| Posten nicht tief in einer Sackgasse: dort keine Routenwahl, nur eine lange Strecke hinein und heraus; kurze Stücke in Innenhöfe sind in Ordnung | 60 m, einstellbar (20 bis 300) | Nutzer, 2026-11-12 (Empfehlung, keine WKB-Regel) | A; geprüft als Warnung (`control_dead_end`, ADR 0085), Entwürfe halten es ein |
 | Viel angelaufene Posten: mehrere Stationen | – | WKB26 B 7.2.10 | A (Frequenz aus Bahnen × Teilnehmer) |
 
 ### 3.2 Schenkel und Bahnaufbau
@@ -121,6 +123,7 @@ Spiegelseiten und wurden nicht mit dem Original abgeglichen.
 | Sprint-Qualitätsmaß: jeder Schenkel 0–3 Punkte; Summe > 20 gut, < 15 schlecht | – | IOF-SG App. 2 | B (guter Testfall für KI) |
 | Pflichtquerung: Vorposten meist ≤ 100 m vor der Barriere | – | BOF B3.1.17 | A |
 | Faustregel 1–2 Posten pro km | – | BL02 (2002, veraltet?) | A |
+| Sprint: Start und Ziel liegen meist nah beieinander, anderes ist für Veranstalter und Läufer unpraktisch | 400 m Luftlinie, einstellbar (50 bis 2000) | Nutzer, 2026-11-12 (Praxis, keine WKB-Regel) | A; Hinweis (`start_finish_distance`, ADR 0086), Entwürfe halten es ein |
 
 ### 3.3 Länge, Steigung, Siegerzeit
 

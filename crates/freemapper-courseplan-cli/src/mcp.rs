@@ -1844,6 +1844,9 @@ impl CoursePlanServer {
                     req.max_reach_m.map(Some)
                 },
                 high_value_gap_m: req.high_value_gap_m,
+                dead_end_max_m: req.dead_end_max_m,
+                start_finish_max_m: req.start_finish_max_m,
+                map_margin_m: req.map_margin_m,
             };
             if flag(req.auto_reach) && req.max_reach_m.is_some() {
                 return Err(text(

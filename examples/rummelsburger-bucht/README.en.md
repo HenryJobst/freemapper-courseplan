@@ -107,13 +107,15 @@ whether controls, course and numbers sit in the right place.
 
 ## A score course on this map
 
-The map is small for a score course. With start `S1` and finish `F1` a draft succeeds at 15 minutes (12 controls,
-28 points; the good runner takes 26 of them, 92.9 percent, the very good runner all of them and finishes after 99.1
-percent of the limit) and at 16 minutes (14 controls, 40 points, 92.5 and 97.6 percent). At 17 minutes the good runner
-scores 93.8 percent, just above the band but within the tolerance (ADR 0083). From 18 minutes the sites run out: the
-very good runner is back after 90.4 percent of the limit instead of 95 to 100, at 20 minutes after 81.3, at 30 after
-54.2 and at 45 after 36.2 percent. The frame around the sheet gives no sites any more (ADR 0078, ADR 0084); an earlier
-version of these numbers had controls at the corners of the frame. For longer courses use
+The map is small for a score course. With start `S1` and finish `F1` a draft succeeds at 10 minutes (9 controls,
+25 points; the good runner takes 23 of them, 92.0 percent, the very good runner all of them and finishes after 95.5
+percent of the limit) and at 11 minutes (12 controls, 34 points, 91.2 and 95.4 percent). At 12 minutes (14 controls,
+24 points) the good runner scores 95.8 percent and the very good runner finishes after 94.3 percent of the limit, both
+just outside the bands but within the tolerance (ADR 0083). From 13 minutes the sites run out: the very good runner is
+back after 91.3 percent of the limit instead of 95 to 100, at 15 minutes after 79.1, at 20 after 59.4, at 30 after
+39.6 and at 45 after 26.4 percent; the closest attempt has 16 controls worth 28 points. Sites keep 50 m from the edge
+of the mapped area since ADR 0087, which leaves less of this narrow strip: before, 16 minutes worked and 17 were near
+the target. The frame around the sheet gives no sites any more (ADR 0078, ADR 0084). For longer courses use
 [`../gleisdreieck/`](../gleisdreieck/), the larger map. These were runs of `score draft` without `--apply`; the
 project here holds no score course.
 

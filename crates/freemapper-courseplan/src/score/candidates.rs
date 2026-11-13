@@ -9,7 +9,9 @@ use crate::check::{
     symbol_matches, terrain_extent,
 };
 use crate::map::{FeatureGeometry, MapIndex};
+use crate::mapped::MappedArea;
 use crate::score::ScoreError;
+use crate::score::dead_end::DeadEnds;
 use crate::score::travel::{LegRoutes, Route, RouteParams, TravelTime};
 
 /// A site where a control could stand, with the numbers the score builder works from.
@@ -46,6 +48,12 @@ pub struct SuggestContext<'a> {
     /// Sites closer than this to a forbidden-route line are left out, in map millimetres
     /// ([`FORBIDDEN_LINE_MARGIN_M`] on the ground).
     pub line_margin_mm: f64,
+    /// The dead-end analysis of the map and its limit in metres: a site deeper in a dead end is left out
+    /// (ADR 0085). None keeps all.
+    pub dead_end: Option<(&'a DeadEnds, u32)>,
+    /// The mapped area and the least distance in metres a site must keep from its edge (ADR 0087). None keeps
+    /// all.
+    pub margin: Option<(&'a MappedArea, u32)>,
 }
 
 /// Distance in metres on the ground from a forbidden-route line within which a site is rejected: about
@@ -552,6 +560,10 @@ pub fn suggest_with(
                 .any(|rings| point_in_area(&s.at, rings))
         })
         .filter(|s| {
+            ctx.margin
+                .is_none_or(|(area, least)| area.margin_m(&s.at) >= f64::from(least))
+        })
+        .filter(|s| {
             dist(&s.at, &ctx.start) >= ctx.min_end_distance_mm
                 && dist(&s.at, &ctx.finish) >= ctx.min_end_distance_mm
         })
@@ -619,9 +631,16 @@ pub fn suggest_with(
             }
         }
         let Some((i, _)) = best else { break };
+        used[i] = true;
+        // A site deep in a dead end is left out, and the pick does not count as a try (ADR 0085). The depth is
+        // asked at the site, as `check` asks it at a control.
+        if let Some((analysis, limit)) = ctx.dead_end
+            && analysis.too_deep(&pool[i].0.at, limit).is_some()
+        {
+            continue;
+        }
         tries += 1;
         let (site, end) = pool[i].clone();
-        used[i] = true;
         // Reachable: from the start on the fine surface (effort, from the free place `end`), to the finish
         // and from the start with alternatives on the coarse one, routed from the site itself as the
         // tours do (route choice).

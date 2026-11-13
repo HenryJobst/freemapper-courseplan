@@ -442,19 +442,19 @@ dashed line between its two controls. Select the course in the tree to open the 
 
 ![The Gleisdreieck map with candidate controls as dashed blue circles with their values, and the Score panel on the right.](images/editor-score-candidates-en.jpg)
 
-*A new score course "Score 34" with a limit of 34 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. The panel on the right holds the buttons and the settings, scrolled to the target bands and their tolerance. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*A new score course "Score 31" with a limit of 31 minutes, after "Suggest controls". Each candidate is a dashed circle with its value. Start and finish lie at the top right. The panel on the right holds the buttons and the settings, scrolled to the three limits of the practical sprint (deepest dead end, start to finish, distance from the map edge) and the target bands. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![A draft score course on the Gleisdreieck map with the draft controls and the length report of both runner profiles in the panel.](images/editor-score-draft-en.jpg)
 
-*The result of "Draft course". The draft controls show their codes. The panel lists the length report: the very good runner is inside the band, and the good runner is 1.7 percentage points above it, within the tolerance of 3, so the report says that every runner is in the band or near the target. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*The result of "Draft course". The draft controls show their codes. The panel lists the length report: both runners are inside their bands, and the report says so. Nothing is written until you choose "Apply draft". Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![The finished score course on the Gleisdreieck map with its controls as circles, the length report and a warning in the panel.](images/editor-score-applied-en.jpg)
 
-*After "Apply draft" and "Check length". The course has 33 controls worth 95 points. The four findings at the bottom are warnings that pairs of codes such as 63 and 93 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
+*After "Apply draft" and "Check length". The course has 30 controls worth 80 points. The four findings at the bottom are warnings that pairs of codes such as 63 and 93 look alike when turned upside down. Map: Remo Madella, MOO Challenge Berlin 2025, see examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Fields.** Time limit, penalty per minute (the box "Default penalty" goes back to the default) and the shared
-  settings: highest value, the paces, the share of hard controls, the seed and the four distances (value 1 from, controls apart, reach from the start,
-  high values apart). The two bands (both ends of each) and the tolerance are fields too; the defaults show as placeholders, and the length report says "in the band", "near the target" or "missed".
+  settings: highest value, the paces, the share of hard controls, the seed, the four distances (value 1 from, controls apart, reach from the start,
+  high values apart) and the three limits of ADR 0085 to 0087 (deepest dead end, start to finish, distance from the map edge). The two bands (both ends of each) and the tolerance are fields too; the defaults show as placeholders, and the length report says "in the band", "near the target" or "missed".
   "New score course..." in the tree makes a course with a 45 minute limit; the event needs one start and one finish.
 - **Suggest controls.** Shows ranked candidates as dashed circles with their value, and as a table. "Accept" adds
   one to the course, as two steps for undo. A candidate without a free code cannot be accepted.
@@ -759,6 +759,23 @@ frame and layout symbols such as the north lines pattern (601) do not count as o
 position in map millimetres and the nearest object. A square between buildings with no object in it stays inside as
 long as it is not much wider than 80 m; on a map with large empty areas, accept the finding with a reason or ask for a
 larger value in the rule (ADR 0084).
+
+A start, finish, control or crossing point must also keep at least 50 m from the edge of the mapped area, so that the
+runner can always run on mapped ground (error, rule `wkb2026.map.margin`, ADR 0087). The edge is where no map object lies
+within 40 m any more, the same limit as above. The distance is measured on a raster of the mapped area and is right to
+about 2 m. A position outside the mapped area gets only the error above. The setting is `map_margin_m` (0 to 200, 0
+switches the rule off), changed with `score settings --map-margin`.
+
+Two recommendations of the project owner, not rules of the WKB, apply to sprint and schoolyard maps. A control that
+stands deep in a dead end gives the runner no route choice, only one long leg in and out. `check` warns when a control
+lies more than 60 m deep in a dead end (rule `wkb2026.control.dead_end`, ADR 0085). The depth is the walk from the
+control to where the path network offers a choice again; a large open area or courtyard is no dead end. The limit is
+the setting `dead_end_max_m` (20 to 300, `score settings --dead-end-max`). Start and finish of a sprint usually lie
+close together: `check` gives a hint when they are more than 400 m apart in a straight line (rule
+`wkb2026.course.start_finish_distance`, ADR 0086, setting `start_finish_max_m`, 50 to 2000,
+`score settings --start-finish-max`). A course made by hand may deviate from all three; `score suggest` and `score draft`
+keep to them. `score draft` refuses a start and finish that are further apart or closer to the edge than the settings
+allow, and says which setting to change.
 
 ### Skipped rules
 
