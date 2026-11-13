@@ -105,7 +105,8 @@ Pflichtverbindungen, die man direkt nacheinander laufen muss. Der Code trägt de
 `course add --kind score` legt die Bahn an, `score controls`, `score value`, `score link`, `score settings` und
 `score course set` bearbeiten sie. `score suggest` ordnet Postenstellen auf der Karte nach Routenwahl,
 `score draft` wählt Posten, Werte und Codes so, dass ein guter Läufer etwa 90 Prozent der Punkte holt und ein sehr
-guter Läufer gerade alle im Limit schafft, und `score length` misst eine Bahn nach, die du geändert hast. Der
+guter Läufer gerade alle im Limit schafft, und `score length` misst eine Bahn nach, die du geändert hast. `score reject` hält eine
+Stelle, die du nicht willst, aus jedem späteren Vorschlag und Entwurf heraus. Der
 Entwurf schreibt erst mit `--apply`. Zehn Regeln von `check` lesen Score-Bahnen (Wert und Code, ähnliche Codes,
 Ring und offensichtliche Reihenfolge, Längenbänder, Limit und Abzug, Verbindungen, Anteil schwerer Posten, Abstände der Posten), der
 Editor hat ein Score-Fenster, und `export --csv` und `export --sheet` schreiben die Postenliste und den
