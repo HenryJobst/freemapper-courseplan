@@ -21,7 +21,7 @@ Code that several of these programs need lives in a shared library:
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). It is a set of small Rust crates, for example
 `freemapper-text` for the program texts, `freemapper-omap` for reading the map, `freemapper-course` for reading
 Purple Pen files and `freemapper-web` for the editor's local server. The programs use them in a fixed version
-(courseplan: 0.19.0) instead of copying the code. The number placement and the description symbol tables come from
+(courseplan: 0.24.0) instead of copying the code. The number placement and the description symbol tables come from
 there, so courseplan and freemapper-print place numbers the same way.
 
 Planned for the first version:

@@ -3916,6 +3916,7 @@ mod render {
                 dropped_pattern_objects: 0,
                 substituted_fonts: Vec::new(),
                 missing_glyphs: Vec::new(),
+                source_objects: Vec::new(),
             };
             f(&mut r);
             super::super::render_map::limits_of(&r)

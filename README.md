@@ -21,7 +21,7 @@ Code, den mehrere dieser Programme brauchen, liegt in einer gemeinsamen Biblioth
 [freemapper-core](https://github.com/HenryJobst/freemapper-core). Das sind kleine Rust-Crates, zum Beispiel
 `freemapper-text` für die Programmtexte, `freemapper-omap` für das Lesen der Karte, `freemapper-course` für das
 Lesen von Purple-Pen-Dateien und `freemapper-web` für den lokalen Server des Editors. Die Programme binden sie in
-einer festen Version ein (courseplan: 0.19.0), statt den Code zu kopieren. Die Lage der Postennummern und die
+einer festen Version ein (courseplan: 0.24.0), statt den Code zu kopieren. Die Lage der Postennummern und die
 Tabellen der Beschreibungssymbole kommen von dort, daher platzieren courseplan und freemapper-print die Nummern
 gleich.
 

@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- freemapper-core wird von v0.19.0 auf v0.24.0 gehoben (ADR 0091). Druckvorschau und Editor-Karte sehen gleich aus. Was der Core als PDF oder SVG schreibt, lässt Objekte weg, die ganz außerhalb des sichtbaren Rahmens liegen, und schreibt Pfade kompakter; die PDFs und SVGs aus dem Core werden dadurch kleiner, courseplan selbst schreibt noch keine. Waldkarten (ISOM) werden weiterhin abgelehnt.
+
 ## [0.17.0] - 2026-11-13
 
 ### Hinzugefügt
