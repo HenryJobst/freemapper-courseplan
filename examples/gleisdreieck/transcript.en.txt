@@ -18,78 +18,77 @@ $ freemapper-courseplan score suggest gleisdreieck-score.courseplan.toml --start
 -18.342,-260.962  521.3  value 2, route choice 0.5, difficulty 0.41, 135.5 s from the start
 63.979,-251.122  521  value 1, route choice 0.44, difficulty 0.51, 44.9 s from the start
 
-$ freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 31" --time-limit 31 --start S-score --finish F-score --apply
-wrote score course Score 31: 30 controls, 80 points
-94  value 4  at -41.071,61.685
-54  value 4  at 87.141,-81.773
-93  value 3  at -87.777,-103.276
-62  value 2  at -45.879,-233.955
-53  value 3  at 54.069,-183.713
-84  value 4  at 54.408,14.093
-64  value 4  at -18.704,-52.704
-31  value 1  at 23.388,-277.85
-44  value 4  at 21.832,-113.438
-63  value 3  at -21.479611328125003,-173.777984375
-45  value 5  at 35.532,73.237
-92  value 2  at 98.916,-142.407
-74  value 4  at -39.125,0.243
-91  value 1  at 102.241,-201.481
+$ freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 32" --time-limit 32 --start S-score --finish F-score --apply
+wrote score course Score 32: 26 controls, 63 points
+44  value 4  at -87.777,-103.276
+35  value 5  at 93.038,4.45
+72  value 2  at 54.069,-183.713
+64  value 4  at 20.032,5.291
+73  value 3  at -18.704,-52.704
+32  value 2  at 26.978,-291.67
+63  value 3  at 25.87,-115.912
+53  value 3  at -21.479611328125003,-173.777984375
+93  value 3  at 35.532,73.237
+91  value 1  at 98.916,-142.407
+83  value 3  at -39.125,0.243
+81  value 1  at 102.241,-201.481
 52  value 2  at 3.063,-234.819
 82  value 2  at 84.714,-174.006
-73  value 3  at 8.835,-166.572
-61  value 1  at 63.979,-251.122
-34  value 4  at -44.651,-148.332
-71  value 1  at 124.847,-237.286
-72  value 2  at -43.325,-192.607
-81  value 1  at 98.562,-235.451
-41  value 1  at 58.665,-276.985
-33  value 3  at -11.2,-208.488
-83  value 3  at 63.495,-147.369
-43  value 3  at 28.36,-184.081
-42  value 2  at 38.002,-257.312
-51  value 1  at -18.342,-260.962
-32  value 2  at 36.571,-308.88
-35  value 5  at -110.641,-71.144
-good runner: 74 of 80 points, 92.5 percent (band 87 to 93 percent)
-very good runner: 80 points, finishes after 97.8 percent of the limit (band 95 to 100 percent)
-both runners are inside the bands
+43  value 3  at -45.879,-233.955
+51  value 1  at 63.979,-251.122
+34  value 4  at 28.36,-184.081
+61  value 1  at 124.847,-237.286
+71  value 1  at 98.562,-235.451
+42  value 2  at 7.902,-269.497
+31  value 1  at 64.884,-303.514
+62  value 2  at 35.224,-215.907
+92  value 2  at 63.495,-147.369
+41  value 1  at 54.339,-279.116
+33  value 3  at -18.342,-260.962
+54  value 4  at 63.27,-63.019
+good runner: 60 of 63 points, 95.2 percent (band 87 to 93 percent)
+very good runner: 63 points, finishes after 95.8 percent of the limit (band 95 to 100 percent)
+The good runner scores 95.2 percent of all points, 2.2 percentage points above the band of 87 to 93 percent. The set is too short for the limit. That is within the tolerance of 3 percentage points, so it counts as near the target.
+every runner is in the band or within the tolerance of 3 percentage points: near the target, no miss
 
-$ freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 31"
-Score 31: 30 controls, time limit 31 minutes
-good runner: 74 of 80 points, 92.5 percent (band 87 to 93 percent)
-very good runner: 80 points, finishes after 97.8 percent of the limit (band 95 to 100 percent)
-both runners are inside the bands
+$ freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 32"
+Score 32: 26 controls, time limit 32 minutes
+good runner: 60 of 63 points, 95.2 percent (band 87 to 93 percent)
+very good runner: 63 points, finishes after 95.8 percent of the limit (band 95 to 100 percent)
+The good runner scores 95.2 percent of all points, 2.2 percentage points above the band of 87 to 93 percent. The set is too short for the limit. That is within the tolerance of 3 percentage points, so it counts as near the target.
+every runner is in the band or within the tolerance of 3 percentage points: near the target, no miss
 
 $ freemapper-courseplan info gleisdreieck-score.courseplan.toml
 title: Score course Gleisdreieck
 map: gleisdreieck.omap
 map kind: sprint
 rule profile: wkb-2026
-controls: 30, crossing points: 0
+controls: 26, crossing points: 0
 courses: 1 (individual 0, team 0, relay 0, score 1)
 classes: 0
-score course Score 31: 30 controls, 80 points, time limit 31 minutes
+score course Score 32: 26 controls, 63 points, time limit 32 minutes
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 event:
-  warning controls 64, 94: codes 64 and 94 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 63, 93: codes 63 and 93 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 62, 92: codes 62 and 92 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 61, 91: codes 61 and 91 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 63, 93: codes 63 and 93 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 61, 91: codes 61 and 91 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 62, 92: codes 62 and 92 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+course Score 32:
+  warning course Score 32: in score course Score 32 5 of 26 controls are hard, 19.2 percent. The setting asks for 40 percent, with a tolerance of 15 points (wkb2026.score.mix, decision of the project owner)
 0 errors, 4 warnings, 0 hints; 0 accepted, 5 skipped
 check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note "Training: Controls 64 and 94 stand about 470 m apart, so mixing them up is unlikely."
-accepted finding wkb2026.score.code_ambiguity at controls 64, 94
-
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Controls 63 and 93 stand about 390 m apart, so mixing them up is unlikely."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Controls 63 and 93 stand about 760 m apart, so mixing them up is unlikely."
 accepted finding wkb2026.score.code_ambiguity at controls 63, 93
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Controls 62 and 92 stand about 690 m apart, so mixing them up is unlikely."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Controls 61 and 91 stand about 390 m apart, so mixing them up is unlikely."
+accepted finding wkb2026.score.code_ambiguity at controls 61, 91
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Controls 62 and 92 stand about 300 m apart, so mixing them up is unlikely."
 accepted finding wkb2026.score.code_ambiguity at controls 62, 92
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Controls 61 and 91 stand about 250 m apart, so mixing them up is unlikely."
-accepted finding wkb2026.score.code_ambiguity at controls 61, 91
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.mix --course "Score 32" --note "Training: The length bands win over the mix. Few sites are left once dead ends and the map edge are excluded, and only 5 of 26 controls are hard."
+accepted finding wkb2026.score.mix at course Score 32
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 0 errors, 0 warnings, 0 hints; 4 accepted, 5 skipped
@@ -97,18 +96,18 @@ check --all also lists the accepted findings, the acceptances that match no find
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
 accepted:
-  warning controls 64, 94: codes 64 and 94 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 64 and 94 stand about 470 m apart, so mixing them up is unlikely.
+  warning controls 63, 93: codes 63 and 93 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 63 and 93 stand about 760 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 63, 93: codes 63 and 93 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 63 and 93 stand about 390 m apart, so mixing them up is unlikely.
+  warning controls 61, 91: codes 61 and 91 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 61 and 91 stand about 390 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 62, 92: codes 62 and 92 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 62 and 92 stand about 690 m apart, so mixing them up is unlikely.
+  warning controls 62, 92: codes 62 and 92 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 62 and 92 stand about 300 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 61, 91: codes 61 and 91 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 61 and 91 stand about 250 m apart, so mixing them up is unlikely.
-    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
+  warning course Score 32: in score course Score 32 5 of 26 controls are hard, 19.2 percent. The setting asks for 40 percent, with a tolerance of 15 points (wkb2026.score.mix, decision of the project owner)
+    note: Training: The length bands win over the mix. Few sites are left once dead ends and the map edge are excluded, and only 5 of 26 controls are hard.
+    about the rule: The share of hard controls should match the mix_hard_percent setting.
 skipped:
   wkb2026.start.capacity, event: the event has no start window; event start-window sets it
   wkb2026.length.long, event: not checked at a training
@@ -120,8 +119,8 @@ skipped:
 $ freemapper-courseplan export gleisdreieck-score.courseplan.toml --iof-xml course-data.xml
 wrote 1 course to course-data.xml
 
-$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-31.csv --course "Score 31"
-wrote the control list of Score 31 to score-31.csv
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-32.csv --course "Score 32"
+wrote the control list of Score 32 to score-32.csv
 
-$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-31.sheet.md --course "Score 31"
-wrote the evaluation sheet of Score 31 to score-31.sheet.md
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-32.sheet.md --course "Score 32"
+wrote the evaluation sheet of Score 32 to score-32.sheet.md

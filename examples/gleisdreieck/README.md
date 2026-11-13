@@ -4,14 +4,14 @@
 
 <p align="center"><a href="../../docs/manual/images/gleisdreieck-course.jpg"><img src="../../docs/manual/images/gleisdreieck-course.jpg" alt="Die Score-Bahn auf der Karte Gleisdreieck im Editor; Start und Ziel liegen oben rechts" width="520"></a><br><sub>Die Bahn im Editor; Start und Ziel oben rechts, 60 m auseinander. Karte: Remo Madella, MOO Challenge Berlin 2025.</sub></p>
 
-Eine Score-Bahn mit 31 Minuten Zeitlimit auf der Karte „Gleisdreieck“ von Remo Madella (MOO Challenge Berlin 2025,
-1:4000, 297 mal 441 Kartenmillimeter, also etwa 1,2 mal 1,8 km). Die Bahn hat 30 Posten mit 80 Punkten. Sie wurde nur
+Eine Score-Bahn mit 32 Minuten Zeitlimit auf der Karte „Gleisdreieck“ von Remo Madella (MOO Challenge Berlin 2025,
+1:4000, 297 mal 441 Kartenmillimeter, also etwa 1,2 mal 1,8 km). Die Bahn hat 26 Posten mit 63 Punkten. Sie wurde nur
 mit der Kommandozeile gelegt, und die Posten stammen aus `score draft`. Die Karte liegt hier als `gleisdreieck.omap`.
 Remo Madella hat sie am 12.11.2026 für die freemapper-Suite freigegeben; das ist keine offene Lizenz, Einzelheiten
 stehen in [`ATTRIBUTION.txt`](ATTRIBUTION.txt) und unten. Das Bild ist eine Aufnahme des Editors; ein gedrucktes PDF von
 freemapper-print folgt. Die Bahn auf der Karte siehst du im Editor (`freemapper-courseplan edit gleisdreieck-score.courseplan.toml`).
 
-**45 Minuten, die übliche Größe für Erwachsene, schafft das Programm auf dieser Karte nicht.** Siehe „Warum 31 und nicht 45 Minuten“.
+**45 Minuten, die übliche Größe für Erwachsene, schafft das Programm auf dieser Karte nicht.** Siehe „Warum 32 und nicht 45 Minuten“.
 
 ## Dateien
 
@@ -20,7 +20,7 @@ freemapper-print folgt. Die Bahn auf der Karte siehst du im Editor (`freemapper-
 - `transcript.de.txt`, `transcript.en.txt`: die Befehle und ihre Ausgabe
 - `check.de.txt`, `check.en.txt`: die Prüfung der Bahn, mit vier akzeptierten Warnungen
 - `course-data.xml`: die Bahn als IOF-XML 3.0
-- `score-31.csv`, `score-31.sheet.de.md`, `score-31.sheet.md`: Postenliste und Auswertungsbogen
+- `score-32.csv`, `score-32.sheet.de.md`, `score-32.sheet.md`: Postenliste und Auswertungsbogen
 
 ## So ist es entstanden
 
@@ -29,13 +29,13 @@ freemapper-courseplan init gleisdreieck.omap --project gleisdreieck-score.course
 freemapper-courseplan special add gleisdreieck-score.courseplan.toml --kind start --id S-score --at 100,-290
 freemapper-courseplan special add gleisdreieck-score.courseplan.toml --kind finish --id F-score --at 100,-275
 freemapper-courseplan score suggest gleisdreieck-score.courseplan.toml --start S-score --finish F-score --limit 8
-freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 31" --time-limit 31 --start S-score --finish F-score --apply
-freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 31"
+freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 32" --time-limit 32 --start S-score --finish F-score --apply
+freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 32"
 freemapper-courseplan check gleisdreieck-score.courseplan.toml
 freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note "..."
 freemapper-courseplan export gleisdreieck-score.courseplan.toml --iof-xml course-data.xml
-freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-31.csv --course "Score 31"
-freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-31.sheet.de.md --course "Score 31"
+freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-32.csv --course "Score 32"
+freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-32.sheet.de.md --course "Score 32"
 ```
 
 `map extent` ergab eine Ausdehnung von -138,9 bis 157,8 mm in x und -330,4 bis 110,9 mm in y. Start und Ziel liegen im
@@ -49,57 +49,65 @@ Abstände, sagt aber nicht, ob ein Punkt in einer Fläche liegt; sieh dir beide 
 
 | | |
 |---|---|
-| Posten, Punkte | 30, 80 |
-| Zeitlimit | 31 Minuten |
-| Guter Läufer | 74 von 80 Punkten, 92,5 Prozent (Band 87 bis 93): im Band |
-| Sehr guter Läufer | alle 80 Punkte, zurück nach 97,8 Prozent des Limits (Band 95 bis 100): im Band |
+| Posten, Punkte | 26, 63 |
+| Zeitlimit | 32 Minuten |
+| Guter Läufer | 60 von 63 Punkten, 95,2 Prozent (Band 87 bis 93): nahe am Ziel, 2,2 Prozentpunkte über dem Band |
+| Sehr guter Läufer | alle 63 Punkte, zurück nach 95,8 Prozent des Limits (Band 95 bis 100): im Band |
 | Laufzeit, Release-Build, ausgelasteter Rechner | `score suggest` etwa 2 s, `score draft` etwa 9 s, `score length` etwa 1 s |
 
-Beide Läufer liegen in ihren Bändern (ADR 0083), deshalb enden `score draft` und `score length` mit 0 und nennen keine
-Abweichung. Ein Test (`gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet`) hält es so. Die Laufzeiten
-habe ich auf einem Rechner gemessen, den andere Prozesse stark auslasteten (Last zwischen 25 und 80); auf einem ruhigen sind sie
-eher kürzer.
+Der sehr gute Läufer liegt im Band, der gute 2,2 Punkte darüber, also innerhalb der Toleranz von 3 Prozentpunkten (ADR
+0083): nahe am Ziel, kein Fehlschlag. `score draft` und `score length` sagen das und enden mit 0. Ein Test
+(`gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet`) hält es so. Die Laufzeiten habe ich auf einem
+Rechner gemessen, den andere Prozesse stark auslasteten (Last zwischen 25 und 80); auf einem ruhigen sind sie eher
+kürzer.
 
-`check` meldet keinen Fehler und vier Warnungen: Die Codes 64 und 94, 63 und 93, 62 und 92 sowie 61 und 91 sehen auf dem
-Kopf gleich aus. Mit 30 Posten sind die meisten freien Codes vergeben, deshalb kommen solche Paare vor. Die
-Projektdatei akzeptiert die vier Befunde mit dem Hinweis, wie weit die beiden Posten eines Paares auseinander stehen
-(rund 470, 390, 690 und 250 m; der Test rechnet die Abstände nach). Kein Posten liegt tiefer als 60 m in einer Sackgasse
-und keiner näher als 50 m am Rand der kartierten Fläche, zu diesen Regeln sagt `check` also nichts. Das Limit von 31
-Minuten liegt im üblichen Bereich von 30 bis 90 Minuten, eine Limit-Warnung gibt es nicht.
+`check` meldet keinen Fehler und vier Warnungen, alle in der Projektdatei akzeptiert. Drei sind Codepaare, die auf dem
+Kopf gleich aussehen: 63 und 93, 61 und 91, 62 und 92. Mit 26 Posten sind viele freie Codes vergeben, deshalb kommen
+solche Paare vor. Der Hinweis jedes Paares nennt, wie weit die beiden Posten auseinander stehen (rund 760, 390 und 300
+m; der Test rechnet die Abstände nach). Die vierte ist die Mischung aus schweren und leichten Posten: 5 von 26 Posten
+sind schwer, 19 Prozent, die Einstellung verlangt 40 Prozent. Der Entwurf stellt die Längenbänder vor die Mischung (ADR
+0065), und wenn Sackgassen und Kartenrand ausgeschlossen sind, bietet die Karte wenige Stellen. Kein Posten liegt
+tiefer als 60 m in einer Sackgasse und keiner näher als 50 m am Rand der kartierten Fläche, zu diesen Regeln sagt
+`check` also nichts. Das Limit von 32 Minuten liegt im üblichen Bereich von 30 bis 90 Minuten, eine Limit-Warnung gibt
+es nicht.
 
-## Warum 31 und nicht 45 Minuten
+## Warum 32 und nicht 45 Minuten
 
-Ich habe 45, 40, 35 und 30 Minuten probiert und jedes Limit von 31 bis 34, mit den Standardeinstellungen, Startwert 1
+Ich habe 45, 40, 36, 35, 34, 33, 32, 31, 30 und 29 Minuten probiert, mit den Standardeinstellungen, Startwert 1
 und dem Start im Norden wie im Beispiel. Das Ergebnis für den guten und den sehr guten Läufer:
 
 | Limit | Guter Läufer | Sehr guter Läufer | Zustand |
 |---|---|---|---|
-| 45 Min. | 100 Prozent der Punkte | zurück nach 71,8 Prozent des Limits | verfehlt |
-| 40 Min. | 100 Prozent | zurück nach 80,8 Prozent | verfehlt |
-| 35 Min. | 100 Prozent | keine Abweichung genannt | verfehlt |
-| 34 Min. | 100 Prozent | keine Abweichung genannt | verfehlt |
-| 33 Min. | 98,6 Prozent | keine Abweichung genannt | verfehlt |
-| 32 Min. | 98,7 Prozent | zurück nach 90,7 Prozent | verfehlt |
-| 31 Min. | 92,5 Prozent | zurück nach 97,8 Prozent | im Band (beide) |
-| 30 Min. | 94,0 Prozent | zurück nach 95,1 Prozent | nahe am Ziel (gut), im Band (sehr gut) |
+| 45 Min. | 100 Prozent der Punkte | zurück nach 68,3 Prozent des Limits | verfehlt |
+| 40 Min. | 100 Prozent | zurück nach 76,8 Prozent | verfehlt |
+| 36 Min. | 100 Prozent | zurück nach 85,3 Prozent | verfehlt |
+| 35 Min. | 100 Prozent | zurück nach 87,8 Prozent | verfehlt |
+| 34 Min. | 100 Prozent | zurück nach 90,4 Prozent | verfehlt |
+| 33 Min. | 100 Prozent | keine Abweichung genannt | verfehlt |
+| 32 Min. | 95,2 Prozent | zurück nach 95,8 Prozent | nahe am Ziel (gut), im Band (sehr gut) |
+| 31 Min. | 93,9 Prozent | zurück nach 97,6 Prozent | nahe am Ziel (gut), im Band (sehr gut) |
+| 30 Min. | 93,3 Prozent | zurück nach 96,9 Prozent | nahe am Ziel (gut), im Band (sehr gut) |
+| 29 Min. | 93,7 Prozent | zurück nach 94,8 Prozent | nahe am Ziel (beide) |
 
-31 Minuten sind also das größte Limit, bei dem beide Läufer mindestens nahe am Ziel liegen, und beide liegen in ihren
-Bändern. Ab 32 Minuten holt der gute Läufer fast alle oder alle Punkte. Darüber gehen die freien Codes aus: Der beste
-Versuch hat 28 Posten mit 70 Punkten (bei 32 Minuten 29 Posten mit 75 Punkten), und der Entwurf sagt das. Die Suche ist
-nicht erschöpfend, und das Ergebnis kann zwischen benachbarten Limits springen.
+32 Minuten sind also das größte Limit, bei dem beide Läufer mindestens nahe am Ziel liegen. Kein Limit, das ich probiert
+habe, hat beide im Band. Ab 33 Minuten holt der gute Läufer alle Punkte; der beste Versuch hat dann 28 Posten mit 70
+Punkten, und der Entwurf sagt, dass die freien Codes ausgehen. Die Suche ist nicht erschöpfend, und das Ergebnis kann
+zwischen benachbarten Limits springen.
 
-Die erste Fassung des Beispiels hatte 34 Minuten und 33 Posten. Drei neue Grenzen haben das
-geändert (ADR 0085 bis 0087). Die Karte hat links der Flussbrücke einen Streifen am Kai entlang, eine Sackgasse von 208
-m. Posten 54 der alten Fassung stand an ihrer Spitze, 208 m tief, wo der Läufer gar keine Routenwahl hat (ADR 0085
-enthält die Messungen). Sechs weitere Posten standen zwischen 39 und 47 m vom Rand der kartierten Fläche, näher als die
-50 m. Der Entwurf lässt solche Stellen jetzt aus, die Karte bietet also weniger Stellen, und der Coderaum ist bei 28 bis
-30 Posten erschöpft. Das Ergebnis sind 31 Minuten mit 30 Posten. Ich habe keinen Posten von Hand verschoben.
+Die erste Fassung des Beispiels hatte 34 Minuten und 33 Posten. Drei neue Grenzen haben das geändert (ADR 0085 bis
+0087). Die Karte hat links der Flussbrücke einen Streifen am Kai entlang, eine Sackgasse von 208 m. Posten 54 der alten
+Fassung stand an ihrer Spitze, 208 m tief, wo der Läufer gar keine Routenwahl hat (ADR 0085 enthält die Messungen).
+Sechs weitere Posten standen zwischen 39 und 47 m vom Rand der kartierten Fläche, näher als die 50 m. Eine zweite
+Fassung mit 31 Minuten hatte noch einen Posten an der Ecke des Kai-Endes. Er stand in einem Streifen neben einem Zaun,
+wenige Meter vom Kai, und die Prüfung hielt ihn für offenes Gelände. Prüfung und Entwurf beurteilen jetzt auch die
+freien Zellen wenige Meter um einen Posten und nehmen die tiefste; der neue Entwurf ist diese Bahn mit 32 Minuten. Ich
+habe keinen Posten von Hand verschoben.
 
 ## Grenzen dieses Beispiels
 
 Die Routen kommen aus einem Raster der Kartensymbole ohne Höhe, und die Läuferpaces (4:10 und 3:45 Minuten je
 Kilometer) sind eine erste Fassung. Die Stellen liegen dort, wo das Programm sie gefunden hat. Ich habe nicht jede auf
-der Karte angesehen; sieh dir vor dem Einsatz jede Position an. Viele liegen an Gebäudeecken. Posten 63 steht auf einer
+der Karte angesehen; sieh dir vor dem Einsatz jede Position an. Viele liegen an Gebäudeecken. Posten 43 steht auf einer
 versetzten Stelle (Koordinaten mit vielen Nachkommastellen); sieh ihn dir besonders an. Das IOF-XML trägt Zeitlimit, Abzug und Verbindungen in einem
 Erweiterungselement, das in OE nicht ausprobiert ist. Die Datei besteht die Prüfung gegen das IOF-Schema (`xmllint
 --noout --schema ../../tests/fixtures/iof-xml/IOF.xsd course-data.xml`); `createTime` ist die Zeit des Laufs, der die

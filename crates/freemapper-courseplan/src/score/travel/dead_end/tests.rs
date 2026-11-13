@@ -166,3 +166,41 @@ fn the_same_place_gives_the_same_answer() {
     let a = s.dead_end(&p(250.0, 20.0), 60.0);
     assert_eq!(a, s.dead_end(&p(250.0, 20.0), 60.0));
 }
+
+#[test]
+fn a_place_on_a_thin_wall_between_a_dead_end_and_open_ground_takes_the_deeper_side() {
+    // The west wall of the lane is only 4 m thick and open field lies beyond it. A control on that wall may be
+    // approached from the field, but it also stands in the dead end, and the deeper side counts (ADR 0085).
+    let s = surface(vec![
+        building(-250.0, 600.0, 750.0, 700.0),
+        building(-300.0, -300.0, -250.0, 700.0),
+        building(750.0, -300.0, 800.0, 700.0),
+        building(240.0, -300.0, 244.0, 100.0),
+        building(256.0, -300.0, 750.0, 100.0),
+        building(240.0, -300.0, 256.0, -50.0),
+        building(-250.0, -300.0, -240.0, 100.0),
+    ]);
+    let on_wall = s.dead_end(&p(242.0, -30.0), 60.0).expect("judged");
+    assert!(on_wall.depth_m > 100.0, "{on_wall:?}");
+    let in_field = depth(&s, p(100.0, 0.0));
+    assert!(in_field.depth_m <= 12.0, "{in_field:?}");
+}
+
+#[test]
+fn a_free_place_beside_a_thin_wall_also_counts_the_dead_end_behind_it() {
+    // A wall of 2 m between open field (west) and the lane (east). A control 1 m west of the wall stands in the
+    // open, yet a few metres from the dead end, and the deeper side counts (ADR 0085).
+    let s = surface(vec![
+        building(-250.0, 600.0, 750.0, 700.0),
+        building(-300.0, -300.0, -250.0, 700.0),
+        building(750.0, -300.0, 800.0, 700.0),
+        building(241.0, -300.0, 243.0, 100.0),
+        building(256.0, -300.0, 750.0, 100.0),
+        building(241.0, -300.0, 256.0, -50.0),
+        building(-250.0, -300.0, -240.0, 100.0),
+    ]);
+    let beside = s.dead_end(&p(239.5, -30.0), 60.0).expect("judged");
+    assert!(beside.depth_m > 100.0, "{beside:?}");
+    let far = depth(&s, p(100.0, 0.0));
+    assert!(far.depth_m <= 12.0, "{far:?}");
+}

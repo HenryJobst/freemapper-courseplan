@@ -18,78 +18,77 @@ $ freemapper-courseplan score suggest gleisdreieck-score.courseplan.toml --start
 -18.342,-260.962  521.3  Wert 2, Routenwahl 0.5, Schwierigkeit 0.41, 135.5 s vom Start
 63.979,-251.122  521  Wert 1, Routenwahl 0.44, Schwierigkeit 0.51, 44.9 s vom Start
 
-$ freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 31" --time-limit 31 --start S-score --finish F-score --apply
-Score-Bahn Score 31 geschrieben: 30 Posten, 80 Punkte
-94  Wert 4  bei -41.071,61.685
-54  Wert 4  bei 87.141,-81.773
-93  Wert 3  bei -87.777,-103.276
-62  Wert 2  bei -45.879,-233.955
-53  Wert 3  bei 54.069,-183.713
-84  Wert 4  bei 54.408,14.093
-64  Wert 4  bei -18.704,-52.704
-31  Wert 1  bei 23.388,-277.85
-44  Wert 4  bei 21.832,-113.438
-63  Wert 3  bei -21.479611328125003,-173.777984375
-45  Wert 5  bei 35.532,73.237
-92  Wert 2  bei 98.916,-142.407
-74  Wert 4  bei -39.125,0.243
-91  Wert 1  bei 102.241,-201.481
+$ freemapper-courseplan score draft gleisdreieck-score.courseplan.toml "Score 32" --time-limit 32 --start S-score --finish F-score --apply
+Score-Bahn Score 32 geschrieben: 26 Posten, 63 Punkte
+44  Wert 4  bei -87.777,-103.276
+35  Wert 5  bei 93.038,4.45
+72  Wert 2  bei 54.069,-183.713
+64  Wert 4  bei 20.032,5.291
+73  Wert 3  bei -18.704,-52.704
+32  Wert 2  bei 26.978,-291.67
+63  Wert 3  bei 25.87,-115.912
+53  Wert 3  bei -21.479611328125003,-173.777984375
+93  Wert 3  bei 35.532,73.237
+91  Wert 1  bei 98.916,-142.407
+83  Wert 3  bei -39.125,0.243
+81  Wert 1  bei 102.241,-201.481
 52  Wert 2  bei 3.063,-234.819
 82  Wert 2  bei 84.714,-174.006
-73  Wert 3  bei 8.835,-166.572
-61  Wert 1  bei 63.979,-251.122
-34  Wert 4  bei -44.651,-148.332
-71  Wert 1  bei 124.847,-237.286
-72  Wert 2  bei -43.325,-192.607
-81  Wert 1  bei 98.562,-235.451
-41  Wert 1  bei 58.665,-276.985
-33  Wert 3  bei -11.2,-208.488
-83  Wert 3  bei 63.495,-147.369
-43  Wert 3  bei 28.36,-184.081
-42  Wert 2  bei 38.002,-257.312
-51  Wert 1  bei -18.342,-260.962
-32  Wert 2  bei 36.571,-308.88
-35  Wert 5  bei -110.641,-71.144
-guter Läufer: 74 von 80 Punkten, 92.5 Prozent (Band 87 bis 93 Prozent)
-sehr guter Läufer: 80 Punkte, im Ziel nach 97.8 Prozent des Limits (Band 95 bis 100 Prozent)
-beide Läufer liegen in den Bändern
+43  Wert 3  bei -45.879,-233.955
+51  Wert 1  bei 63.979,-251.122
+34  Wert 4  bei 28.36,-184.081
+61  Wert 1  bei 124.847,-237.286
+71  Wert 1  bei 98.562,-235.451
+42  Wert 2  bei 7.902,-269.497
+31  Wert 1  bei 64.884,-303.514
+62  Wert 2  bei 35.224,-215.907
+92  Wert 2  bei 63.495,-147.369
+41  Wert 1  bei 54.339,-279.116
+33  Wert 3  bei -18.342,-260.962
+54  Wert 4  bei 63.27,-63.019
+guter Läufer: 60 von 63 Punkten, 95.2 Prozent (Band 87 bis 93 Prozent)
+sehr guter Läufer: 63 Punkte, im Ziel nach 95.8 Prozent des Limits (Band 95 bis 100 Prozent)
+Der gute Läufer holt 95.2 Prozent aller Punkte, 2.2 Prozentpunkte über dem Band von 87 bis 93 Prozent. Die Menge ist für das Limit zu kurz. Das liegt innerhalb der Toleranz von 3 Prozentpunkten und gilt als nahe am Ziel.
+jeder Läufer liegt im Band oder innerhalb der Toleranz von 3 Prozentpunkten: nahe am Ziel, kein Fehlschlag
 
-$ freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 31"
-Score 31: 30 Posten, Zeitlimit 31 Minuten
-guter Läufer: 74 von 80 Punkten, 92.5 Prozent (Band 87 bis 93 Prozent)
-sehr guter Läufer: 80 Punkte, im Ziel nach 97.8 Prozent des Limits (Band 95 bis 100 Prozent)
-beide Läufer liegen in den Bändern
+$ freemapper-courseplan score length gleisdreieck-score.courseplan.toml "Score 32"
+Score 32: 26 Posten, Zeitlimit 32 Minuten
+guter Läufer: 60 von 63 Punkten, 95.2 Prozent (Band 87 bis 93 Prozent)
+sehr guter Läufer: 63 Punkte, im Ziel nach 95.8 Prozent des Limits (Band 95 bis 100 Prozent)
+Der gute Läufer holt 95.2 Prozent aller Punkte, 2.2 Prozentpunkte über dem Band von 87 bis 93 Prozent. Die Menge ist für das Limit zu kurz. Das liegt innerhalb der Toleranz von 3 Prozentpunkten und gilt als nahe am Ziel.
+jeder Läufer liegt im Band oder innerhalb der Toleranz von 3 Prozentpunkten: nahe am Ziel, kein Fehlschlag
 
 $ freemapper-courseplan info gleisdreieck-score.courseplan.toml
 Titel: Score-Bahn Gleisdreieck
 Karte: gleisdreieck.omap
 Kartenart: Sprintkarte
 Regelprofil: wkb-2026
-Posten: 30, Querungsstellen: 0
+Posten: 26, Querungsstellen: 0
 Bahnen: 1 (einzeln 0, Mannschaft 0, Staffel 0, Score 1)
 Kategorien: 0
-Score-Bahn Score 31: 30 Posten, 80 Punkte, Zeitlimit 31 Minuten
+Score-Bahn Score 32: 26 Posten, 63 Punkte, Zeitlimit 32 Minuten
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 Veranstaltung:
-  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+Bahn Score 32:
+  Warnung Bahn Score 32: In der Score-Bahn Score 32 sind 5 von 26 Posten schwer, also 19,2 Prozent. Die Einstellung verlangt 40 Prozent bei 15 Punkten Toleranz (wkb2026.score.mix, Entscheidung des Projektinhabers)
 0 Fehler, 4 Warnungen, 0 Hinweise; 0 akzeptiert, 5 übersprungen
 check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahmen und die übersprungenen Prüfregeln
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note "Training: Die Posten 64 und 94 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich."
-Befund wkb2026.score.code_ambiguity bei Posten 64, 94 akzeptiert
-
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Die Posten 63 und 93 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Die Posten 63 und 93 stehen rund 760 m auseinander, eine Verwechslung ist kaum möglich."
 Befund wkb2026.score.code_ambiguity bei Posten 63, 93 akzeptiert
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Die Posten 62 und 92 stehen rund 690 m auseinander, eine Verwechslung ist kaum möglich."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Die Posten 61 und 91 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich."
+Befund wkb2026.score.code_ambiguity bei Posten 61, 91 akzeptiert
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Die Posten 62 und 92 stehen rund 300 m auseinander, eine Verwechslung ist kaum möglich."
 Befund wkb2026.score.code_ambiguity bei Posten 62, 92 akzeptiert
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Die Posten 61 und 91 stehen rund 250 m auseinander, eine Verwechslung ist kaum möglich."
-Befund wkb2026.score.code_ambiguity bei Posten 61, 91 akzeptiert
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.mix --course "Score 32" --note "Training: Die Längenbänder gehen vor der Mischung. Nach dem Ausschluss von Sackgassen und Kartenrand bleiben wenige Stellen, und nur 5 von 26 Posten sind schwer."
+Befund wkb2026.score.mix bei Bahn Score 32 akzeptiert
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 0 Fehler, 0 Warnungen, 0 Hinweise; 4 akzeptiert, 5 übersprungen
@@ -97,18 +96,18 @@ check --all zeigt auch die akzeptierten Befunde, die nicht zugeordneten Ausnahme
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
 akzeptiert:
-  Warnung Posten 64, 94: Die Codes 64 und 94 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 64 und 94 stehen rund 470 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 63 und 93 stehen rund 760 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 63, 93: Die Codes 63 und 93 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 63 und 93 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 61 und 91 stehen rund 390 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 62 und 92 stehen rund 690 m auseinander, eine Verwechslung ist kaum möglich.
+  Warnung Posten 62, 92: Die Codes 62 und 92 der Score-Bahn Score 32 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
+    Begründung: Training: Die Posten 62 und 92 stehen rund 300 m auseinander, eine Verwechslung ist kaum möglich.
     Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
-  Warnung Posten 61, 91: Die Codes 61 und 91 der Score-Bahn Score 31 sehen auf dem Kopf gleich aus oder unterscheiden sich nur durch 6 und 9 (wkb2026.score.code_ambiguity, Vorschlag von freemapper-courseplan)
-    Begründung: Training: Die Posten 61 und 91 stehen rund 250 m auseinander, eine Verwechslung ist kaum möglich.
-    Zur Prüfregel: Läufer verwechseln Codes, die auf dem Kopf gleich aussehen oder sich nur durch 6 und 9 unterscheiden. Im Score-Lauf hängt der Wert am Code.
+  Warnung Bahn Score 32: In der Score-Bahn Score 32 sind 5 von 26 Posten schwer, also 19,2 Prozent. Die Einstellung verlangt 40 Prozent bei 15 Punkten Toleranz (wkb2026.score.mix, Entscheidung des Projektinhabers)
+    Begründung: Training: Die Längenbänder gehen vor der Mischung. Nach dem Ausschluss von Sackgassen und Kartenrand bleiben wenige Stellen, und nur 5 von 26 Posten sind schwer.
+    Zur Prüfregel: Der Anteil schwerer Posten soll zur Einstellung mix_hard_percent passen.
 übersprungen:
   wkb2026.start.capacity, Veranstaltung: Die Veranstaltung hat kein Startfenster; event start-window setzt es
   wkb2026.length.long, Veranstaltung: Beim Training wird die Prüfregel nicht angewendet
@@ -120,8 +119,8 @@ akzeptiert:
 $ freemapper-courseplan export gleisdreieck-score.courseplan.toml --iof-xml course-data.xml
 1 Bahn nach course-data.xml geschrieben
 
-$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-31.csv --course "Score 31"
-Postenliste der Bahn Score 31 nach score-31.csv geschrieben
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --csv score-32.csv --course "Score 32"
+Postenliste der Bahn Score 32 nach score-32.csv geschrieben
 
-$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-31.sheet.de.md --course "Score 31"
-Auswertungsbogen der Bahn Score 31 nach score-31.sheet.de.md geschrieben
+$ freemapper-courseplan export gleisdreieck-score.courseplan.toml --sheet score-32.sheet.de.md --course "Score 32"
+Auswertungsbogen der Bahn Score 32 nach score-32.sheet.de.md geschrieben

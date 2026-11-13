@@ -45,8 +45,10 @@ The depth is computed on the cost surface of ADR 0061 by `CostSurface::dead_end`
 3. The alive cells of each band fall into fronts (8-connected). The first band with two fronts of at least 3 m (a
    junction) or one front of at least 60 m (open ground) is where the choice starts. Its distance is the depth. No such
    band within the horizon gives an infinite depth, shown as "at least" the horizon.
-4. A place on a wall or in a blocked cell stands in the nearest free cell within 4 cells that has room around it. A
-   region smaller than the horizon is not judged, so tiny maps flag nothing.
+4. A place on a wall or in a blocked cell is judged from every free cell within 4 cells (8 m), and the deepest answer
+   counts. A place in a free cell is also judged from the free cells 3 cells (6 m) away in the eight directions, with the
+   deepest answer counting, since a fence or a thin building can separate a control from a deep corridor that it also
+   borders (a follow-up fix, 2026-11-13). A region smaller than the horizon is not judged, so tiny maps flag nothing.
 
 A large open area or courtyard is no corridor: its fronts are wide, so the depth is small. The analysis reads the map
 objects only (no out-of-bounds special objects), so `check` and the draft see the same pockets. The suggestion tests
@@ -69,7 +71,7 @@ On a lattice of 20 m over the passable cells, limit 60 m, release build:
 
 On Gleisdreieck the flagged points lie on the quay spur beyond about 60 m from its mouth, plus a few pockets; the
 street grid between the river arms is not flagged. Of the 33 controls of the old example only 54 (the tip of the spur)
-was deeper than 60 m. Rummelsburg course A is clean (12, 12, 20 and 12 m).
+was deeper than 60 m with the first version; the stricter judging adds nothing on Rummelsburg. Rummelsburg course A is clean (12, 12, 20 and 12 m).
 
 ## Run time
 
@@ -95,10 +97,7 @@ both example maps and several seeds compares draft and `check`.
 
 ## Cost if wrong
 
-- A control that stands on a wall between two regions, such as the corner of a building at the end of a quay, takes the
-  depth of the nearest free cell with room around it. If that cell lies on the open side, the control counts as open,
-  although a runner can also approach it from the dead end. On the Gleisdreieck map the redraft has a control at the
-  west corner of the quay end for this reason (the check agrees with the draft, since both ask the same function).
+- Controls near a wall take the deepest of nine places around them (own cell and eight at 6 m, or all free cells within 8 m on a wall). A control that has open ground within 6 m on one side and a dead end of 60 m or more on the other counts as deep, even if the runner could reach it from the open side. The first version took the nearest free cell only, and the redraft of the Gleisdreieck example then put a control at the corner of the quay end; this follow-up closed that gap.
 - A control in the middle of a dead end that goes on more than the limit plus 100 m behind it counts as not deep,
   because both directions reach the rim. Such long dead ends did not occur on the example maps.
 - The raster is 2 m coarse and the depth comes in steps of 4 m. A control within 4 m of the limit may fall on either

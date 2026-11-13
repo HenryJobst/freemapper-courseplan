@@ -507,15 +507,15 @@ Eigenschaften das Score-Fenster.
 
 ![Die Karte Gleisdreieck mit Kandidaten als gestrichelten blauen Kreisen mit ihren Werten und rechts das Score-Fenster.](images/editor-score-candidates-de.jpg)
 
-*Eine neue Score-Bahn „Score 31“ mit 31 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Start und Ziel liegen oben rechts. Rechts stehen die Knöpfe und die Einstellungen, bis zu den drei Grenzen (tiefste Sackgasse, Start bis Ziel, Abstand vom Kartenrand) und den Zielspannen gescrollt. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Eine neue Score-Bahn „Score 32“ mit 32 Minuten Limit, nach „Posten vorschlagen“. Jeder Kandidat ist ein gestrichelter Kreis mit seinem Wert. Start und Ziel liegen oben rechts. Rechts stehen die Knöpfe und die Einstellungen, bis zu den drei Grenzen (tiefste Sackgasse, Start bis Ziel, Abstand vom Kartenrand) und den Zielspannen gescrollt. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Ein Entwurf einer Score-Bahn auf der Karte Gleisdreieck mit den Entwurfsposten und rechts dem Längenbericht beider Läuferprofile.](images/editor-score-draft-de.jpg)
 
-*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht: Beide Läufer liegen in ihren Spannen, und der Bericht sagt das. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Das Ergebnis von „Bahn entwerfen“. Die Entwurfsposten zeigen ihre Kennzahlen. Rechts steht der Längenbericht: Der sehr gute Läufer liegt in seiner Spanne, der gute 2,2 Prozentpunkte darüber, innerhalb der Toleranz von 3. Der Bericht sagt deshalb, dass jeder Läufer in seiner Spanne oder nahe am Ziel liegt. Erst wenn du „Entwurf übernehmen“ wählst, wird etwas geschrieben. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 ![Die fertige Score-Bahn auf der Karte Gleisdreieck mit ihren Posten als Kreisen, dem Längenbericht und einer Warnung rechts.](images/editor-score-applied-de.jpg)
 
-*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 30 Posten mit zusammen 80 Punkten. Die vier Befunde unten sind Warnungen, denn Paare von Kennzahlen wie 63 und 93 sehen auf dem Kopf gleich aus. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
+*Nach „Entwurf übernehmen“ und „Länge prüfen“. Die Bahn hat 26 Posten mit zusammen 63 Punkten. Die vier Befunde unten sind Warnungen: Drei Paare von Kennzahlen wie 63 und 93 sehen auf dem Kopf gleich aus, und der Anteil schwerer Posten liegt unter der Einstellung. Karte: Remo Madella, MOO Challenge Berlin 2025, siehe examples/gleisdreieck/ATTRIBUTION.txt.*
 
 - **Felder.** Zeitlimit, Strafpunkte je Minute (das Feld „Standardstrafe“ kehrt zum Standard zurück) und die
   gemeinsamen Einstellungen: höchster Wert, die Tempi, der Anteil schwerer Posten, der Startwert, die vier Abstände (Wert 1 ab,

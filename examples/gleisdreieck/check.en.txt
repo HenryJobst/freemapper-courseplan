@@ -1,23 +1,24 @@
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 event:
-  warning controls 64, 94: codes 64 and 94 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 63, 93: codes 63 and 93 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 62, 92: codes 62 and 92 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-  warning controls 61, 91: codes 61 and 91 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 63, 93: codes 63 and 93 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 61, 91: codes 61 and 91 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+  warning controls 62, 92: codes 62 and 92 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+course Score 32:
+  warning course Score 32: in score course Score 32 5 of 26 controls are hard, 19.2 percent. The setting asks for 40 percent, with a tolerance of 15 points (wkb2026.score.mix, decision of the project owner)
 0 errors, 4 warnings, 0 hints; 0 accepted, 5 skipped
 check --all also lists the accepted findings, the acceptances that match no finding and the skipped rules
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 64,94 --note "Training: Controls 64 and 94 stand about 470 m apart, so mixing them up is unlikely."
-accepted finding wkb2026.score.code_ambiguity at controls 64, 94
-
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Controls 63 and 93 stand about 390 m apart, so mixing them up is unlikely."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 63,93 --note "Training: Controls 63 and 93 stand about 760 m apart, so mixing them up is unlikely."
 accepted finding wkb2026.score.code_ambiguity at controls 63, 93
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Controls 62 and 92 stand about 690 m apart, so mixing them up is unlikely."
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Controls 61 and 91 stand about 390 m apart, so mixing them up is unlikely."
+accepted finding wkb2026.score.code_ambiguity at controls 61, 91
+
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 62,92 --note "Training: Controls 62 and 92 stand about 300 m apart, so mixing them up is unlikely."
 accepted finding wkb2026.score.code_ambiguity at controls 62, 92
 
-$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.code_ambiguity --controls 61,91 --note "Training: Controls 61 and 91 stand about 250 m apart, so mixing them up is unlikely."
-accepted finding wkb2026.score.code_ambiguity at controls 61, 91
+$ freemapper-courseplan finding accept gleisdreieck-score.courseplan.toml wkb2026.score.mix --course "Score 32" --note "Training: The length bands win over the mix. Few sites are left once dead ends and the map edge are excluded, and only 5 of 26 controls are hard."
+accepted finding wkb2026.score.mix at course Score 32
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml
 0 errors, 0 warnings, 0 hints; 4 accepted, 5 skipped
@@ -25,18 +26,18 @@ check --all also lists the accepted findings, the acceptances that match no find
 
 $ freemapper-courseplan check gleisdreieck-score.courseplan.toml --all
 accepted:
-  warning controls 64, 94: codes 64 and 94 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 64 and 94 stand about 470 m apart, so mixing them up is unlikely.
+  warning controls 63, 93: codes 63 and 93 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 63 and 93 stand about 760 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 63, 93: codes 63 and 93 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 63 and 93 stand about 390 m apart, so mixing them up is unlikely.
+  warning controls 61, 91: codes 61 and 91 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 61 and 91 stand about 390 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 62, 92: codes 62 and 92 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 62 and 92 stand about 690 m apart, so mixing them up is unlikely.
+  warning controls 62, 92: codes 62 and 92 in score course Score 32 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
+    note: Training: Controls 62 and 92 stand about 300 m apart, so mixing them up is unlikely.
     about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
-  warning controls 61, 91: codes 61 and 91 in score course Score 31 look alike when turned upside down or differ only by 6 and 9 (wkb2026.score.code_ambiguity, proposal of freemapper-courseplan)
-    note: Training: Controls 61 and 91 stand about 250 m apart, so mixing them up is unlikely.
-    about the rule: Runners mix up codes that look alike upside down or differ only by 6 and 9. In a score event the value hangs on the code.
+  warning course Score 32: in score course Score 32 5 of 26 controls are hard, 19.2 percent. The setting asks for 40 percent, with a tolerance of 15 points (wkb2026.score.mix, decision of the project owner)
+    note: Training: The length bands win over the mix. Few sites are left once dead ends and the map edge are excluded, and only 5 of 26 controls are hard.
+    about the rule: The share of hard controls should match the mix_hard_percent setting.
 skipped:
   wkb2026.start.capacity, event: the event has no start window; event start-window sets it
   wkb2026.length.long, event: not checked at a training

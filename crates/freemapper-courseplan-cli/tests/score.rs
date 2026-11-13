@@ -199,20 +199,20 @@ fn luebeck_score_example_meets_its_bands_and_check_is_quiet() {
     );
 }
 
-/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 31 minutes, both runners in their band or near
-/// the target (ADR 0083) on a fresh evaluation, exit 0, and `check` quiet apart from four accepted code pairs whose
-/// notes are true: each note names the distance of the two controls. No control stands deeper than 60 m in a dead end
+/// The Gleisdreieck score example (examples/gleisdreieck/README.en.md): 32 minutes, both runners in their band or near
+/// the target (ADR 0083) on a fresh evaluation, exit 0, and `check` quiet apart from accepted findings: three code pairs
+/// whose notes are true (each note names the distance of the two controls) and the share of hard controls. No control stands deeper than 60 m in a dead end
 /// and no position is closer than 50 m to the edge of the mapped area (ADR 0085, ADR 0087), which the quiet `check`
 /// shows.
 #[test]
 fn gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet() {
     let project = repo_root().join("examples/gleisdreieck/gleisdreieck-score.courseplan.toml");
     let p = project.to_str().unwrap();
-    let o = run("en", &["score", "length", p, "Score 31", "--json"]);
+    let o = run("en", &["score", "length", p, "Score 32", "--json"]);
     assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
     let v: serde_json::Value = serde_json::from_str(&out(&o)).unwrap();
-    assert_eq!(v["controls"], 30, "{v}");
-    assert_eq!(v["time_limit_min"], 31);
+    assert_eq!(v["controls"], 26, "{v}");
+    assert_eq!(v["time_limit_min"], 32);
     assert_eq!(v["length"]["ok"], true, "{v}");
     let state = v["length"]["state"].as_str().unwrap();
     assert!(["in_band", "near"].contains(&state), "{v}");
@@ -238,7 +238,15 @@ fn gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet() {
     };
     let accepted = doc["accepted_findings"].as_array().unwrap();
     assert_eq!(accepted.len(), 4);
-    for finding in accepted {
+    let mix = accepted
+        .iter()
+        .filter(|f| f["rule"].as_str() == Some("wkb2026.score.mix"))
+        .count();
+    assert_eq!(mix, 1, "the share of hard controls is accepted once");
+    for finding in accepted
+        .iter()
+        .filter(|f| f["rule"].as_str() == Some("wkb2026.score.code_ambiguity"))
+    {
         let codes: Vec<i64> = finding["controls"]
             .as_array()
             .unwrap()
