@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Changed
+
+- freemapper-core goes from v0.19.0 to v0.24.0 (ADR 0091). Print preview and editor map look the same. Code that writes PDF or SVG from the core now leaves out objects wholly outside the visible frame and writes paths more compactly, so PDFs and SVGs from the core are smaller; courseplan itself writes none yet. Forest maps (ISOM) are still refused.
+
 ## [0.17.0] - 2026-11-13
 
 ### Added
