@@ -3,7 +3,7 @@
 [Deutsche Version](README.md) · [User manual](docs/manual/en.md) · [Glossary](docs/glossary.md) · [Changes](CHANGELOG.en.md)
 
 <!-- claude-cost:start -->
-[![AI effort (Claude API): $590](https://img.shields.io/badge/AI%20effort%20%28Claude%20API%29-%24590-8A2BE2)](docs/ai-cost/history.csv)
+[![AI effort (Claude API): $600](https://img.shields.io/badge/AI%20effort%20%28Claude%20API%29-%24600-8A2BE2)](docs/ai-cost/history.csv)
 <!-- claude-cost:end -->
 
 <p align="center"><a href="examples/README.en.md"><img src="docs/manual/images/editor-overview-en.jpg" alt="The freemapper-courseplan editor with a course on the map Rummelsburger Bucht" width="760"></a><br><sub>The editor with a sprint course on the map "Rummelsburger Bucht" by Remo Madella (MOO Challenge Berlin 2025). Click to open the <a href="examples/README.en.md">examples</a>.</sub></p>

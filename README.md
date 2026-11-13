@@ -3,7 +3,7 @@
 [English version](README.en.md) · [Handbuch](docs/manual/de.md) · [Glossar](docs/glossary.md) · [Änderungen](CHANGELOG.md)
 
 <!-- claude-cost:start -->
-[![KI-Aufwand (Claude API): 590 $](https://img.shields.io/badge/KI--Aufwand%20%28Claude%20API%29-590%20%24-8A2BE2)](docs/ai-cost/history.csv)
+[![KI-Aufwand (Claude API): 600 $](https://img.shields.io/badge/KI--Aufwand%20%28Claude%20API%29-600%20%24-8A2BE2)](docs/ai-cost/history.csv)
 <!-- claude-cost:end -->
 
 <p align="center"><a href="examples/README.md"><img src="docs/manual/images/editor-overview-de.jpg" alt="Der Editor von freemapper-courseplan mit einer Bahn auf der Karte Rummelsburger Bucht" width="760"></a><br><sub>Der Editor mit einer Sprintbahn auf der Karte „Rummelsburger Bucht“ von Remo Madella (MOO Challenge Berlin 2025). Ein Klick öffnet die <a href="examples/README.md">Beispiele</a>.</sub></p>
