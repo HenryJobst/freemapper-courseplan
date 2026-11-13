@@ -1096,6 +1096,24 @@ impl CoursePlanServer {
         reply(self.set_score_course_details_op(req))
     }
 
+    #[tool(
+        description = "Reject a candidate site so that score_suggest and score_draft leave it out"
+    )]
+    async fn reject_site(
+        &self,
+        Parameters(req): Parameters<SitePosition>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.reject_site_op(req))
+    }
+
+    #[tool(description = "Take back the rejection of a candidate site")]
+    async fn unreject_site(
+        &self,
+        Parameters(req): Parameters<SitePosition>,
+    ) -> Result<CallToolResult, McpError> {
+        reply(self.unreject_site_op(req))
+    }
+
     #[tool(description = "Suggest control sites for a score course")]
     async fn score_suggest(
         &self,
@@ -2237,6 +2255,8 @@ pub(crate) const EDITOR_TOOLS: &[&str] = &[
     "remove_score_link",
     "set_score_settings",
     "set_score_course_details",
+    "reject_site",
+    "unreject_site",
     "score_draft",
     "place_numbers",
     "set_course_number",
@@ -2355,6 +2375,8 @@ impl CoursePlanServer {
             "set_control_value" => run!(SetControlValue, set_control_value_op),
             "add_score_link" => run!(ScoreLinkParams, add_score_link_op),
             "remove_score_link" => run!(ScoreLinkParams, remove_score_link_op),
+            "reject_site" => run!(SitePosition, reject_site_op),
+            "unreject_site" => run!(SitePosition, unreject_site_op),
             "set_score_settings" => run!(SetScoreSettings, set_score_settings_op),
             "set_score_course_details" => run!(SetScoreCourseDetails, set_score_course_details_op),
             "place_numbers" => run!(PlaceNumbers, place_numbers_op),
@@ -2556,6 +2578,7 @@ mod tests {
             accepted_findings: vec![],
             sync: None,
             score: None,
+            rejected_sites: Vec::new(),
         };
         ProjectFile::create(&path, event).unwrap();
         path
@@ -2913,7 +2936,7 @@ mod tests {
         for lang in available() {
             let server = CoursePlanServer::new(lang.clone());
             let tools = server.tool_router.list_all();
-            assert_eq!(tools.len(), 52);
+            assert_eq!(tools.len(), 54);
             let mut seen = 0;
             for tool in &tools {
                 let id = format!("mcp-tool-{}", tool.name.replace('_', "-"));

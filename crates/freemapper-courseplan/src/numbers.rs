@@ -710,6 +710,7 @@ mod tests {
             accepted_findings: vec![],
             sync: None,
             score: None,
+            rejected_sites: Vec::new(),
         }
     }
 

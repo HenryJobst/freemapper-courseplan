@@ -93,6 +93,7 @@ pub fn valid_event(import: &PpenImport) -> Event {
         accepted_findings: vec![],
         sync: None,
         score: None,
+        rejected_sites: Vec::new(),
     };
     assert_eq!(validate(&event), vec![]);
     event

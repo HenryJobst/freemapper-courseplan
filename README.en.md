@@ -106,14 +106,14 @@ points. `course add --kind score` makes the course, and `score controls`, `score
 settings` and `score course set` edit it. `score suggest` ranks control sites on the map by route choice,
 `score draft` picks controls, values and codes so that a good runner scores about 90 percent of the points and a
 very good runner just reaches all of them within the limit, and `score length` re-measures a course after you
-changed it. The draft writes nothing until you add `--apply`. Ten rules of `check` read score courses (value and
+changed it. `score reject` keeps a site you do not want out of every later suggestion and draft. The draft writes nothing until you add `--apply`. Ten rules of `check` read score courses (value and
 code, alike codes, ring and obvious order, length bands, limit and penalty, links, mix of hard controls, gaps between controls), the editor
 has a Score panel, and `export --csv` and `export --sheet` write the control list and the evaluation sheet. Routes
 come from a raster of the map symbols without elevation, and the runner profiles are a first version, so treat the
 length bands (targets with a tolerance, both settable) as a good starting point and check the result on the map. The AI assistant has the tools `score_suggest`,
 `score_draft`, `score_length` and the tools for editing. Chapter 3 of the
 [user manual](docs/manual/en.md#score-courses) explains it, the [Gleisdreieck example](examples/gleisdreieck/) holds a finished 32-minute course, and the
-decisions are in ADR 0060 to 0070 and 0082 to 0087. Generated courses keep three limits you can set: no control deep in a dead end, start and
+decisions are in ADR 0060 to 0070 and 0082 to 0089. Generated courses keep three limits you can set: no control deep in a dead end, start and
 finish close together, and a margin from the edge of the mapped area; `check` reports the same limits for any course.
 
 `freemapper-courseplan check <project>` checks the individual and score courses against a rule profile, each finding with

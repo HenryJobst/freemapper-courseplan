@@ -98,6 +98,7 @@ fn event() -> Event {
         accepted_findings: vec![],
         sync: None,
         score: None,
+        rejected_sites: Vec::new(),
     }
 }
 
@@ -2031,4 +2032,26 @@ fn score_distance_settings_are_stored_and_checked() {
         ));
         assert_eq!(e, before);
     }
+}
+
+#[test]
+fn rejected_sites_are_added_once_and_taken_back_within_the_tolerance() {
+    let mut e = score_event();
+    assert!(reject_site(&mut e, &pt(10.0, 10.0), 0.5).unwrap());
+    // The same site a little beside it is not a second rejection.
+    assert!(!reject_site(&mut e, &pt(10.2, 10.1), 0.5).unwrap());
+    assert!(reject_site(&mut e, &pt(20.0, 10.0), 0.5).unwrap());
+    assert_eq!(e.rejected_sites, vec![pt(10.0, 10.0), pt(20.0, 10.0)]);
+    // Taking back works with a position near the stored one.
+    assert_eq!(unreject_site(&mut e, &pt(10.3, 10.0), 0.5).unwrap(), 1);
+    assert_eq!(e.rejected_sites, vec![pt(20.0, 10.0)]);
+    // A site that is not rejected is an error and changes nothing.
+    assert!(matches!(
+        unreject_site(&mut e, &pt(50.0, 50.0), 0.5),
+        Err(EditError::NotFound {
+            what: "rejected site",
+            ..
+        })
+    ));
+    assert_eq!(e.rejected_sites.len(), 1);
 }

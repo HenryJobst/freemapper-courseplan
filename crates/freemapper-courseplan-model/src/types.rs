@@ -683,7 +683,14 @@ pub struct Event {
     /// Score settings; absent until set (ADR 0060).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub score: Option<ScoreSettings>,
+    /// Candidate sites the user rejected; `score suggest` and `score draft` leave them out (ADR 0089).
+    /// Positions in map millimetres; a site within [`REJECTED_SITE_TOLERANCE_M`] of one counts as the same.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rejected_sites: Vec<MapPoint>,
 }
+
+/// Distance in metres on the ground within which a candidate site counts as the rejected one (ADR 0089).
+pub const REJECTED_SITE_TOLERANCE_M: f64 = 3.0;
 
 /// The penalty per started minute of a score course: the stored one, or the default, the highest control
 /// value of the course and at least the event's highest value, so that a minute over never pays off.
@@ -950,6 +957,7 @@ mod tests {
             }],
             sync: None,
             score: Some(ScoreSettings::default()),
+            rejected_sites: vec![MapPoint { x: 1.5, y: 2.5 }],
         };
         let text = toml::to_string(&event).unwrap();
         let back: Event = toml::from_str(&text).unwrap();

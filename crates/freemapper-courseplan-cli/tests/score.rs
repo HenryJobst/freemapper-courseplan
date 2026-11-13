@@ -1030,3 +1030,107 @@ fn a_draft_refuses_ends_that_break_the_settings() {
     assert_eq!(o.status.code(), Some(1));
     assert!(err(&o).contains("dead_end_max_m"), "{}", err(&o));
 }
+
+#[test]
+fn reject_site_json_is_the_mcp_answer() {
+    same(
+        &["score", "reject"],
+        &["--at", "40,30.5"],
+        "reject_site",
+        json!({ "at": { "x": 40.0, "y": 30.5 } }),
+    );
+}
+
+/// A project on the Rummelsburger Bucht map with a start and a finish, in a temp dir.
+fn rummelsburg() -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let target = dir.path().join("m.omap");
+    std::fs::copy(
+        repo_root().join("examples/rummelsburger-bucht/rummelsburg.omap"),
+        &target,
+    )
+    .unwrap();
+    let project = dir.path().join("m.courseplan.toml");
+    let p = project.to_str().unwrap();
+    for args in [
+        vec!["init", target.to_str().unwrap()],
+        vec![
+            "special", "add", p, "--kind", "start", "--id", "S", "--at", "3,0",
+        ],
+        vec![
+            "special", "add", p, "--kind", "finish", "--id", "F", "--at", "10,5",
+        ],
+    ] {
+        let o = run("en", &args);
+        assert_eq!(o.status.code(), Some(0), "{args:?}: {}", err(&o));
+    }
+    (dir, project)
+}
+
+/// The positions of the candidates `score suggest` lists for the project.
+fn suggested(project: &Path) -> Vec<(f64, f64)> {
+    let o = run(
+        "en",
+        &[
+            "score",
+            "suggest",
+            project.to_str().unwrap(),
+            "--limit",
+            "40",
+            "--json",
+        ],
+    );
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    let answer: Value = serde_json::from_str(&out(&o)).unwrap();
+    answer["candidates"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            (
+                c["at"]["x"].as_f64().unwrap(),
+                c["at"]["y"].as_f64().unwrap(),
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn a_rejected_site_stays_out_of_suggest_until_it_is_taken_back() {
+    let (_dir, project) = rummelsburg();
+    let path = project.to_str().unwrap();
+    let before = suggested(&project);
+    assert!(before.len() > 2, "{before:?}");
+    let (x, y) = before[0];
+    // The position given is 0.1 mm beside the site, well within the 3 m of tolerance at any sprint scale.
+    let at = format!("{},{}", x + 0.1, y);
+    let exact = format!("{x},{y}");
+    let o = run("en", &["score", "reject", path, "--at", &at]);
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    assert!(out(&o).contains("rejected the site at"), "{}", out(&o));
+    let after = suggested(&project);
+    assert!(
+        !after.iter().any(|&(ax, ay)| (ax - x).hypot(ay - y) < 0.01),
+        "the rejected site came back: {after:?}"
+    );
+    // The project file keeps it.
+    let text = std::fs::read_to_string(&project).unwrap();
+    assert!(text.contains("rejected_sites"), "{text}");
+    // Rejecting the same site again says so and changes nothing.
+    let again = run("en", &["score", "reject", path, "--at", &exact]);
+    assert_eq!(again.status.code(), Some(0));
+    assert!(out(&again).contains("already"), "{}", out(&again));
+    // Taking it back lets it return.
+    let o = run("de", &["score", "unreject", path, "--at", &at]);
+    assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    assert!(out(&o).contains("Ablehnung"), "{}", out(&o));
+    assert!(
+        suggested(&project)
+            .iter()
+            .any(|&(ax, ay)| (ax - x).hypot(ay - y) < 0.01)
+    );
+    // A site that is not rejected is an error with exit 1.
+    let o = run("en", &["score", "unreject", path, "--at", &at]);
+    assert_eq!(o.status.code(), Some(1));
+    assert!(err(&o).contains("rejected site"), "{}", err(&o));
+}

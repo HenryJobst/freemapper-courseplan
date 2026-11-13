@@ -292,6 +292,14 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   dieselben Bänder und Abweichungen und sagt, in welchem der drei Zustände die Bahn liegt. Es ändert die Bahn nie.
 - Dieselben Antworten liefern die Werkzeuge `score_suggest`, `score_draft` und `score_length`; `--json` gibt sie aus.
   Der Entwurf ist bei gleichem Projekt bei jedem Lauf derselbe.
+- `score reject --at X,Y` lehnt einen Standort ab: Du weißt, dass die Stelle nicht passt, etwa ein privater Hof oder eine
+  Ecke, die niemand sieht. Die Position kommt in die Projektdatei (Schlüssel `rejected_sites`), und `score suggest`,
+  `score draft` und die Kandidatenliste des Editors lassen sie von da an aus. Ein Kandidat innerhalb von 3 m am Boden
+  gilt als derselbe Standort. `score unreject --at X,Y` nimmt die Ablehnung zurück und scheitert, wenn der Standort
+  nicht abgelehnt ist. Ein Posten, der dort schon steht, bleibt. Der Editor hat in der Kandidatentabelle neben
+  "Übernehmen" den Knopf "Ablehnen"; Rückgängig nimmt ihn zurück. Die Werkzeuge heißen `reject_site` und
+  `unreject_site` mit `project` und `at`, und `--json` gibt ihre Antwort aus: `at`, `added` oder `removed` und
+  `rejected_sites`, die Zahl der abgelehnten Standorte. Die Entscheidung steht in ADR 0089.
 
 ## 4. Der Editor
 

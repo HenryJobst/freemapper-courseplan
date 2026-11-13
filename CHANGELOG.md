@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Kandidatenstandorte lassen sich ablehnen (ADR 0089). `score reject --at X,Y` legt die Position in der Projektdatei ab (neuer optionaler Schlüssel `rejected_sites`, das Format bleibt 1), und `score suggest`, `score draft` und die Kandidatenliste des Editors lassen jeden Standort innerhalb von 3 m davon aus. `score unreject --at X,Y` nimmt die Ablehnung zurück. Die Werkzeuge heißen `reject_site` und `unreject_site`, der Editor hat in der Kandidatentabelle neben "Übernehmen" den Knopf "Ablehnen". Ein Programm von vor dieser Version weist eine Projektdatei mit dem neuen Schlüssel ab.
+
 ### Geändert
 
 - Die kartierte Fläche reicht 50 m statt 40 m über die Kartenobjekte hinaus (Regel `wkb2026.map.inside`, `metres`, ADR 0088), dieselbe Zahl wie der Standard-Randabstand. Mit den Standardwerten darf ein Posten am Umriss der Objekte stehen; vorher musste er 10 m innerhalb liegen. Profile, die `metres` selbst setzen, behalten ihren Wert.

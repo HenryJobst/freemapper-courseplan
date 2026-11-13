@@ -279,6 +279,13 @@ freemapper-courseplan score length hall.courseplan.toml Score45
   deviations and says in which of the three states the course is. It never changes the course.
 - The same answers come from the tools `score_suggest`, `score_draft` and `score_length`; `--json` prints them.
   The draft is the same on every run for the same project.
+- `score reject --at X,Y` rejects a site: you know the place is wrong, for example a private yard or a corner nobody sees.
+  The position goes into the project file (key `rejected_sites`), and `score suggest`, `score draft` and the candidate
+  list of the editor leave it out from then on. A candidate within 3 m on the ground counts as the same site. `score
+  unreject --at X,Y` takes it back and fails when the site is not rejected. A control that already stands there stays.
+  The editor has a "Reject" button beside "Accept" in the candidate table; undo takes it back. The tools are
+  `reject_site` and `unreject_site` with `project` and `at`, and `--json` prints their answer: `at`, `added` or
+  `removed`, and `rejected_sites`, the number of rejected sites. The decision is ADR 0089.
 
 ## 4. The editor
 

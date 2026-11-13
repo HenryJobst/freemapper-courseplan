@@ -108,6 +108,8 @@ fn ctx<'a>(specials: &'a [SpecialObject], existing: &'a [MapPoint]) -> SuggestCo
         line_margin_mm: 1.0,
         dead_end: None,
         margin: None,
+        rejected: &[],
+        rejected_tolerance_mm: 0.0,
     }
 }
 
@@ -282,6 +284,27 @@ fn sites_on_a_forbidden_route_line_are_excluded() {
     }];
     let found = suggest(&index, &Fake::plain(), &ctx(&specials, &[])).unwrap();
     assert_eq!(positions(&found), vec![(60.0, 20.0)]);
+}
+
+#[test]
+fn sites_the_user_rejected_are_left_out_within_the_tolerance() {
+    let index = MapIndex::from_features(vec![
+        boulder(40.0, 20.0),
+        boulder(60.0, 20.0),
+        boulder(80.0, 20.0),
+    ]);
+    // A rejection a little beside the first site (0.4 mm, within 0.5 mm) and one exactly on the second.
+    let rejected = [p(40.3, 20.3), p(60.0, 20.0)];
+    let mut c = ctx(&[], &[]);
+    c.rejected = &rejected;
+    c.rejected_tolerance_mm = 0.5;
+    let found = suggest(&index, &Fake::plain(), &c).unwrap();
+    assert_eq!(positions(&found), vec![(80.0, 20.0)]);
+    // A rejection farther than the tolerance leaves the site alone.
+    let far = [p(40.0, 21.0)];
+    c.rejected = &far;
+    let found = suggest(&index, &Fake::plain(), &c).unwrap();
+    assert_eq!(sorted(positions(&found)).len(), 3);
 }
 
 #[test]
@@ -741,6 +764,8 @@ fn luebeck_timing_for_limit_60() {
         limit: 60,
         dead_end: None,
         margin: None,
+        rejected: &[],
+        rejected_tolerance_mm: 0.0,
     };
     // The example's start flag lies inside a building (ADR 0062).
     let flagged = SuggestContext {

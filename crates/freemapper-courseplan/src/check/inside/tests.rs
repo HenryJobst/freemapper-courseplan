@@ -400,7 +400,11 @@ fn finish_inside(inward: f64) -> Event {
 #[test]
 fn a_finish_just_under_the_margin_is_an_error() {
     // 1 mm (4 m) outside the strip is 46 m from the edge of the mapped area: below the 50 m.
-    let r = report(&finish_inside(-1.0), &strip_map(vec![]), vec![margin_rule()]);
+    let r = report(
+        &finish_inside(-1.0),
+        &strip_map(vec![]),
+        vec![margin_rule()],
+    );
     assert_eq!(r.findings.len(), 1, "{:?}", r.findings);
     let f = &r.findings[0];
     assert_eq!(f.severity, Severity::Error);

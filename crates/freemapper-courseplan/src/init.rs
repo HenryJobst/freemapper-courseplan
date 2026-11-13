@@ -81,6 +81,7 @@ pub fn new_event(
         accepted_findings: Vec::new(),
         sync: None,
         score: None,
+        rejected_sites: Vec::new(),
     })
 }
 

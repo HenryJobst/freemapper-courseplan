@@ -54,6 +54,11 @@ pub struct SuggestContext<'a> {
     /// The mapped area and the least distance in metres a site must keep from its edge (ADR 0087). None keeps
     /// all.
     pub margin: Option<(&'a MappedArea, u32)>,
+    /// Sites the user rejected (ADR 0089): a site within `rejected_tolerance_mm` of one is left out.
+    pub rejected: &'a [MapPoint],
+    /// The distance in map millimetres within which a site counts as a rejected one
+    /// ([`REJECTED_SITE_TOLERANCE_M`] on the ground).
+    pub rejected_tolerance_mm: f64,
 }
 
 /// Distance in metres on the ground from a forbidden-route line within which a site is rejected: about
@@ -558,6 +563,11 @@ pub fn suggest_with(
             !out_of_bounds
                 .iter()
                 .any(|rings| point_in_area(&s.at, rings))
+        })
+        .filter(|s| {
+            !ctx.rejected
+                .iter()
+                .any(|r| dist(&s.at, r) <= ctx.rejected_tolerance_mm)
         })
         .filter(|s| {
             ctx.margin

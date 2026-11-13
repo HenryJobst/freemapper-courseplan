@@ -547,6 +547,7 @@ mod overlay {
             accepted_findings: vec![],
             sync: None,
             score: None,
+            rejected_sites: Vec::new(),
         }
     }
 
@@ -947,6 +948,7 @@ mod state {
             accepted_findings: vec![],
             sync: None,
             score: None,
+            rejected_sites: Vec::new(),
         };
         change(&mut event);
         ProjectFile::create(&path, event).unwrap();

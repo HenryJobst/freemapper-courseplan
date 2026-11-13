@@ -553,6 +553,14 @@ pub(super) struct SetScoreCourseDetails {
     pub(super) no_penalty: Option<bool>,
 }
 
+/// A candidate site to reject or to take back.
+#[derive(Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub(super) struct SitePosition {
+    pub(super) project: String,
+    pub(super) at: Point,
+}
+
 #[derive(Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub(super) struct ScoreSuggest {

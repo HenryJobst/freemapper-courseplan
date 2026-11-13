@@ -13,8 +13,8 @@ use freemapper_courseplan_model::{
 mod score;
 pub use score::{
     PenaltyChange, ScoreControlInput, ScoreControlsEdit, ScoreLimits, ScoreSettingsChange,
-    add_score_course, add_score_link, limits_of, remove_score_link, set_control_value,
-    set_score_controls, set_score_course_details, set_score_settings,
+    add_score_course, add_score_link, limits_of, reject_site, remove_score_link, set_control_value,
+    set_score_controls, set_score_course_details, set_score_settings, unreject_site,
 };
 
 use crate::check::{Place, check_of};

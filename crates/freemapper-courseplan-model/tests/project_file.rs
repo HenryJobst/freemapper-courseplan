@@ -1355,3 +1355,43 @@ fn high_values_start_at_sixty_percent_of_the_maximum() {
     };
     assert_eq!((high(5), high(9), high(1)), (4, 6, 1));
 }
+
+#[test]
+fn rejected_sites_round_trip_and_older_files_load() {
+    let dir = tempfile::tempdir().unwrap();
+    // A top-level key has to stand before the first table.
+    let text = event_text("", "", "").replacen(
+        "format = 1\n",
+        "format = 1\nrejected_sites = [[12.5, 7.0], [30.0, 4.5]]\n",
+        1,
+    );
+    let file = write_event(dir.path(), &text);
+    let mut project = ProjectFile::load(&file).unwrap();
+    assert_eq!(
+        project.event.rejected_sites,
+        vec![
+            freemapper_courseplan_model::MapPoint { x: 12.5, y: 7.0 },
+            freemapper_courseplan_model::MapPoint { x: 30.0, y: 4.5 },
+        ]
+    );
+    project.event.rejected_sites.pop();
+    project.save().unwrap();
+    let again = ProjectFile::load(&file).unwrap();
+    assert_eq!(again.event.rejected_sites.len(), 1);
+    // Without rejected sites the key is not written, and a file without it loads.
+    let mut project = again;
+    project.event.rejected_sites.clear();
+    project.save().unwrap();
+    assert!(
+        !std::fs::read_to_string(&file)
+            .unwrap()
+            .contains("rejected_sites")
+    );
+    assert!(
+        ProjectFile::load(&file)
+            .unwrap()
+            .event
+            .rejected_sites
+            .is_empty()
+    );
+}

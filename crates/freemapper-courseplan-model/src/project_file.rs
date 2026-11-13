@@ -432,6 +432,7 @@ fn omitted_when_empty(path: &str, key: &str) -> bool {
     };
     match key {
         "classes" | "controls" | "specials" | "courses" | "accepted_findings"
+        | "rejected_sites"
             if path.is_empty() =>
         {
             true
