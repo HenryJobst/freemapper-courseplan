@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-13
+
 ### Added
 
 - The event has a date and an organizer (ADR 0090), requested by freemapper-print for its title block. `event set PROJECT --date YYYY-MM-DD --organizer TEXT` sets them, `--no-date` and `--no-organizer` remove them. The tool is `set_event_details`, the event settings of the editor have a "Date" and an "Organizer" field, and `info` and `event_info` show both. The project file gets the optional key `organizer` in `[event]` (format stays 1; a program from before this version refuses a file that has it). The IOF XML export writes a set date as `Event/StartTime/Date` and a set organizer as `Event/Organiser/Name`, and nothing for a field that is not set. Purple Pen has no field for either, so `.ppen` export, import and `sync` leave them alone.

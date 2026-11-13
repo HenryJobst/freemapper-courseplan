@@ -87,7 +87,7 @@ Handbuch, Kapitel 2.
 
 ## Status
 
-Die aktuelle Version ist [v0.16.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.16.0) vom
+Die aktuelle Version ist [v0.17.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.17.0) vom
 13. November 2026 (was neu ist, steht in den [Änderungen](CHANGELOG.md)).
 
 freemapper-courseplan ist früh in der Entwicklung. Auf einer Sprint- oder Schulhofkarte (`.omap`) legst du schon

@@ -87,7 +87,7 @@ source never updates itself. Details: user manual, chapter 2.
 
 ## Status
 
-The current version is [v0.16.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.16.0) of
+The current version is [v0.17.0](https://github.com/HenryJobst/freemapper-courseplan/releases/tag/v0.17.0) of
 13 November 2026 (see the [changes](CHANGELOG.en.md) for what is new).
 
 freemapper-courseplan is in early development. On a sprint or schoolyard map (`.omap`) you can already set whole
