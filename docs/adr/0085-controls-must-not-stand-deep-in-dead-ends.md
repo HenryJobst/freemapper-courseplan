@@ -71,6 +71,23 @@ On Gleisdreieck the flagged points lie on the quay spur beyond about 60 m from i
 street grid between the river arms is not flagged. Of the 33 controls of the old example only 54 (the tip of the spur)
 was deeper than 60 m. Rummelsburg course A is clean (12, 12, 20 and 12 m).
 
+## Run time
+
+Measured on 2026-11-13 with release builds of the commit before this work and of this one, back to back, three rounds,
+on a shared Mac with a load average of 25 to 117, so the scatter is large (CPU time, user, median of three rounds):
+
+| Command | Before | After |
+|---|---|---|
+| `score suggest`, Gleisdreieck | 2.6 s | 2.4 s |
+| `score draft`, 31 minutes, Gleisdreieck | 8.6 s | 9.6 s |
+| `score suggest`, Rummelsburger Bucht | 1.2 s | 1.5 s |
+| `score draft`, 11 minutes, Rummelsburger Bucht | 1.9 s | 1.6 s |
+
+The quietest round (load about 25) gave 1.5 and 4.5 s after against 1.7 and 5.7 s before on Gleisdreieck. No slowdown is
+visible beyond the scatter. The analysis costs one more raster build of the fine surface (25 ms on Gleisdreieck) and 3
+to 9 ms for each site the suggestion picks, and the filters leave fewer sites to route. The margin adds one build of a
+raster of the mapped area with two distance transforms, a few hundred milliseconds on Gleisdreieck.
+
 ## Consequences
 
 The Gleisdreieck example is redrafted (changelog). A draft keeps to the limit by construction; a property test over

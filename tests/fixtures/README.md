@@ -19,7 +19,7 @@ Every fixture file is listed here with its source, date and licence. Files made 
 
 | File | Source | Date | Licence |
 |---|---|---|---|
-| `luebeck-sprint/luebeck-sprint.courseplan.toml`, `luebeck-score.courseplan.toml`, `luebeck-sprint.ppen`, `course-data.xml` | Made with this program on `maps/luebeck.omap` (sprint course with seven controls, score course of 15 minutes, their Purple Pen and IOF XML exports). The `map` path (also in the `.ppen`) was changed to `../maps/luebeck.omap` when the files moved here from `examples/luebeck-sprint/`. | 2026-11-09 to 2026-11-12 | GPL-3.0-or-later |
+| `luebeck-sprint/luebeck-sprint.courseplan.toml`, `luebeck-score.courseplan.toml`, `luebeck-sprint.ppen`, `course-data.xml` | Made with this program on `maps/luebeck.omap` (sprint course with seven controls, score course of 15 minutes, their Purple Pen and IOF XML exports); the score project has `[score] map_margin_m = 0` since 2026-11-13, because its controls stand within 50 m of the edge of this small mapped area, ADR 0087). The `map` path (also in the `.ppen`) was changed to `../maps/luebeck.omap` when the files moved here from `examples/luebeck-sprint/`. | 2026-11-09 to 2026-11-12 | GPL-3.0-or-later |
 
 The two example maps are not fixtures either, but they are third-party works, so their provenance sits here too (the example READMEs and `ATTRIBUTION.txt` have the details):
 

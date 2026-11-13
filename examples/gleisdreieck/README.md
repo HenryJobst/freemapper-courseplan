@@ -57,7 +57,7 @@ Abstände, sagt aber nicht, ob ein Punkt in einer Fläche liegt; sieh dir beide 
 
 Beide Läufer liegen in ihren Bändern (ADR 0083), deshalb enden `score draft` und `score length` mit 0 und nennen keine
 Abweichung. Ein Test (`gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet`) hält es so. Die Laufzeiten
-habe ich auf einem Rechner gemessen, den andere Prozesse stark auslasteten (Last etwa 40); auf einem ruhigen sind sie
+habe ich auf einem Rechner gemessen, den andere Prozesse stark auslasteten (Last zwischen 25 und 80); auf einem ruhigen sind sie
 eher kürzer.
 
 `check` meldet keinen Fehler und vier Warnungen: Die Codes 64 und 94, 63 und 93, 62 und 92 sowie 61 und 91 sehen auf dem

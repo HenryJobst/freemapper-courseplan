@@ -56,7 +56,7 @@ point lies inside an area; look at both positions on the map. `transcript.en.txt
 
 Both runners are inside their bands (ADR 0083), so `score draft` and `score length` exit with 0 and name no deviation.
 A test (`gleisdreieck_score_example_reaches_its_targets_and_check_is_quiet`) keeps it that way. I measured the run
-times on a machine that other processes loaded heavily (load average about 40); an idle one is likely faster.
+times on a machine that other processes loaded heavily (load average between 25 and 80); an idle one is likely faster.
 
 `check` reports no error and four warnings: the codes 64 and 94, 63 and 93, 62 and 92, and 61 and 91 look alike when
 turned upside down. With 30 controls most free codes are in use, so such pairs occur. The project file accepts the four
