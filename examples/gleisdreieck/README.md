@@ -53,7 +53,7 @@ Abstände, sagt aber nicht, ob ein Punkt in einer Fläche liegt; sieh dir beide 
 | Zeitlimit | 32 Minuten |
 | Guter Läufer | 60 von 63 Punkten, 95,2 Prozent (Band 87 bis 93): nahe am Ziel, 2,2 Prozentpunkte über dem Band |
 | Sehr guter Läufer | alle 63 Punkte, zurück nach 95,8 Prozent des Limits (Band 95 bis 100): im Band |
-| Laufzeit, Release-Build, ausgelasteter Rechner | `score suggest` etwa 2 s, `score draft` etwa 9 s, `score length` etwa 1 s |
+| Laufzeit, Release-Build, ausgelasteter Rechner | `score suggest` etwa 2 s, `score draft` etwa 10 s, `score length` etwa 1 s |
 
 Der sehr gute Läufer liegt im Band, der gute 2,2 Punkte darüber, also innerhalb der Toleranz von 3 Prozentpunkten (ADR
 0083): nahe am Ziel, kein Fehlschlag. `score draft` und `score length` sagen das und enden mit 0. Ein Test

@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-13
+
 ### Added
 
 - Three recommendations of the project owner, each with a setting in the `[score]` table (ADR 0085 to 0087). A manual course may deviate; `check` only warns, hints or reports, and `score suggest` and `score draft` keep to them.

@@ -52,7 +52,7 @@ point lies inside an area; look at both positions on the map. `transcript.en.txt
 | Time limit | 32 minutes |
 | Good runner | 60 of 63 points, 95.2 percent (band 87 to 93): near the target, 2.2 percentage points above the band |
 | Very good runner | all 63 points, back after 95.8 percent of the limit (band 95 to 100): inside the band |
-| Run time, release build, busy machine | `score suggest` about 2 s, `score draft` about 9 s, `score length` about 1 s |
+| Run time, release build, busy machine | `score suggest` about 2 s, `score draft` about 10 s, `score length` about 1 s |
 
 The very good runner is inside the band and the good runner 2.2 points above it, within the tolerance of 3 percentage
 points (ADR 0083): near the target, no miss. `score draft` and `score length` say so and exit with 0. A test

@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.16.0] - 2026-11-13
+
 ### Hinzugefügt
 
 - Drei Empfehlungen des Nutzers, jede mit einer Einstellung im Abschnitt `[score]` (ADR 0085 bis 0087). Eine Bahn von Hand darf abweichen; `check` warnt, gibt einen Hinweis oder meldet nur, und `score suggest` und `score draft` halten sie ein.
