@@ -4,7 +4,7 @@
 //! edit operations of the other score tools, so validation, saving and undo behave as for them.
 
 use freemapper_courseplan::edit;
-use freemapper_courseplan::map::{MapIndex, MapKind, map_kind_for_file};
+use freemapper_courseplan::map::{MapIndex, map_kind_for_file};
 use freemapper_courseplan::mapped::MappedArea;
 use freemapper_courseplan::score::candidates::{
     Candidate, FORBIDDEN_LINE_MARGIN_M, SuggestContext, suggest_with,
@@ -16,7 +16,7 @@ use freemapper_courseplan::score::travel::{
 };
 use freemapper_courseplan::score::{
     BandState, Draft, DraftFailure, DraftRequest, Hint, LengthIssue, LengthReport, ScoreError,
-    ScoredControl, Tour, analyse_length, draft,
+    ScoredControl, Tour, analyse_length, draft, ensure_not_forest,
 };
 use freemapper_courseplan::text::{FluentValue, Localize, text};
 use freemapper_courseplan_model::{
@@ -195,9 +195,7 @@ impl CoursePlanServer {
     /// The map of the project, refused for a forest map (ADR 0092) and for a map without objects.
     fn score_world(&self, file: &ProjectFile) -> Result<World, String> {
         let doc = self.read_map(file)?;
-        if map_kind_for_file(&doc, &file.map_path()) == MapKind::Forest {
-            return Err(text(&self.lang, "error-score-forest", &[]));
-        }
+        ensure_not_forest(map_kind_for_file(&doc, &file.map_path())).map_err(|e| self.locs(&e))?;
         let index = MapIndex::from_document(&doc);
         if index.is_empty() {
             return Err(self.locs(&ScoreError::MapEmpty));

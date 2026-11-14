@@ -319,12 +319,16 @@ export function panel(host, state, course) {
   section.append(node("h3", { id: "score-heading" }, t("editor-score-heading")));
 
   const bar = node("p", { class: "score-actions" });
+  // The route search has no elevation and no vegetation speed, so a forest map gets no suggest, draft or length
+  // run (ADR 0092); the buttons stay, disabled, with the reason beside them.
+  const forest = state.map?.kind === "forest";
   bar.append(
-    button("score-suggest", "editor-score-suggest", suggest),
-    button("score-draft", "editor-score-draft", draft),
-    button("score-length", "editor-score-length-run", length),
+    button("score-suggest", "editor-score-suggest", suggest, { disabled: forest }),
+    button("score-draft", "editor-score-draft", draft, { disabled: forest }),
+    button("score-length", "editor-score-length-run", length, { disabled: forest }),
   );
   section.append(bar);
+  if (forest) section.append(node("p", { id: "score-forest-note", class: "hint" }, t("editor-score-forest-note")));
   section.append(node("p", { id: "score-progress", class: "hint", role: "status" }, working ? t("editor-score-working") : ""));
   if (note) section.append(node("p", { class: "hint" }, t(note)));
 

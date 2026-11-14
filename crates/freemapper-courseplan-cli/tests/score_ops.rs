@@ -740,3 +740,129 @@ fn a_length_report_is_in_band_near_or_missed() {
     );
     assert!(check("3").contains("length_bands"), "a miss is a finding");
 }
+
+/// A project on the synthetic ISOM 2017-2 forest map with start and finish and the controls 31 and 32.
+fn forest_project() -> (tempfile::TempDir, PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let map = dir.path().join("forest.omap");
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/maps/isom2017-synthetic.omap"),
+        &map,
+    )
+    .unwrap();
+    let project = dir.path().join("forest.courseplan.toml");
+    let ok = |o: Output| assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    ok(run(&["init", p(&map)]));
+    ok(run(&[
+        "special",
+        "add",
+        p(&project),
+        "--kind",
+        "start",
+        "--id",
+        "S1",
+        "--at",
+        "1,7",
+    ]));
+    ok(run(&[
+        "special",
+        "add",
+        p(&project),
+        "--kind",
+        "finish",
+        "--id",
+        "F1",
+        "--at",
+        "11,7",
+    ]));
+    ok(run(&["control", "add", p(&project), "--at", "4,9.5"]));
+    ok(run(&["control", "add", p(&project), "--at", "8,9.5"]));
+    ok(run(&[
+        "course",
+        "add",
+        p(&project),
+        "SC",
+        "--kind",
+        "score",
+        "--time-limit",
+        "45",
+        "--start",
+        "S1",
+        "--finish",
+        "F1",
+    ]));
+    (dir, project)
+}
+
+const FOREST_REFUSAL: &str = "do not work on forest maps";
+
+#[test]
+fn score_commands_refuse_a_forest_map_before_any_raster() {
+    let (_dir, project) = forest_project();
+    let started = std::time::Instant::now();
+    for args in [
+        vec!["score", "suggest", p(&project)],
+        vec!["score", "draft", p(&project), "SC", "--time-limit", "15"],
+        vec!["score", "length", p(&project), "SC"],
+    ] {
+        let o = run(&args);
+        assert_eq!(o.status.code(), Some(1), "{args:?}");
+        assert!(err(&o).starts_with("error: "), "{}", err(&o));
+    }
+    assert!(started.elapsed().as_secs() < 5, "{:?}", started.elapsed());
+}
+
+#[test]
+fn score_draft_and_length_on_a_forest_course_say_so() {
+    let (_dir, project) = forest_project();
+    for args in [
+        vec!["score", "suggest", p(&project), "--course", "SC"],
+        vec!["score", "draft", p(&project), "SC", "--time-limit", "15"],
+        vec!["score", "length", p(&project), "SC"],
+    ] {
+        let o = run(&args);
+        assert_eq!(o.status.code(), Some(1), "{args:?}");
+        assert!(err(&o).contains(FOREST_REFUSAL), "{args:?}: {}", err(&o));
+    }
+}
+
+#[test]
+fn the_mcp_score_tools_refuse_a_forest_map() {
+    let (_dir, project) = forest_project();
+    for (tool, args) in [
+        ("score_suggest", json!({ "project": p(&project) })),
+        (
+            "score_draft",
+            json!({ "project": p(&project), "name": "SC", "time_limit_min": 15 }),
+        ),
+        (
+            "score_length",
+            json!({ "project": p(&project), "name": "SC" }),
+        ),
+    ] {
+        let (is_error, text) = mcp(tool, args);
+        assert!(is_error, "{tool}: {text}");
+        assert!(text.contains(FOREST_REFUSAL), "{tool}: {text}");
+    }
+}
+
+#[test]
+fn a_score_course_set_by_hand_works_on_a_forest_map() {
+    let (_dir, project) = forest_project();
+    let ok = |o: Output| assert_eq!(o.status.code(), Some(0), "{}", err(&o));
+    ok(run(&["score", "controls", p(&project), "SC", "31,32"]));
+    let o = run(&["check", p(&project), "--all"]);
+    assert_eq!(o.status.code(), Some(0), "{}{}", out(&o), err(&o));
+    // The length bands need route times, which a forest map does not get: listed as not checked.
+    assert!(
+        out(&o).contains("wkb2026.score.length_bands"),
+        "{}",
+        out(&o)
+    );
+    assert!(
+        out(&o).contains("route times are not computed on a forest map"),
+        "{}",
+        out(&o)
+    );
+}

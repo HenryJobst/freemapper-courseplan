@@ -1057,6 +1057,7 @@ impl Localize for ScoreError {
                 t("error-score-unknown-control", &[("code", v(code))])
             }
             ScoreError::MapEmpty => t("error-score-map-empty", &[]),
+            ScoreError::ForestMap => t("error-score-forest", &[]),
             ScoreError::BadRouteSetting { name, value } => t(
                 "error-score-bad-route-setting",
                 &[("name", v(name)), ("value", v(value))],
@@ -1903,6 +1904,7 @@ mod tests {
             },
             ScoreError::FinishUnreachable { at: p(100.0, 80.5) },
             ScoreError::MapEmpty,
+            ScoreError::ForestMap,
             ScoreError::BadRouteSetting {
                 name: "overlap",
                 value: 1.5,

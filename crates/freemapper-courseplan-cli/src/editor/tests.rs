@@ -2075,6 +2075,63 @@ mod ops {
         assert_ne!(answer["revision"], revision);
     }
 
+    /// A project on the synthetic ISOM 2017-2 forest map with a start and a finish and the app on it.
+    async fn forest_setup() -> (tempfile::TempDir, std::path::PathBuf, axum::Router, String) {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::copy(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../tests/fixtures/maps/isom2017-synthetic.omap"),
+            dir.path().join("forest.omap"),
+        )
+        .unwrap();
+        let path = dir.path().join("event.courseplan.toml");
+        std::fs::write(
+            &path,
+            "format = 1\n\n[event]\ntitle = \"F\"\ndiscipline = \"training\"\nrule_profile = \"wkb-2026\"\n\n[sources]\nmap = \"forest.omap\"\n\n[[specials]]\nkind = \"start\"\nid = \"S1\"\nmap_mm = [1.0, 7.0]\n\n[[specials]]\nkind = \"finish\"\nid = \"F1\"\nmap_mm = [11.0, 7.0]\n",
+        )
+        .unwrap();
+        let app = router_for(&path);
+        let first = state(&app).await;
+        assert_eq!(first["map"]["kind"], "forest", "{first}");
+        let (status, added) = op(
+            &app,
+            "add_score_course",
+            first["revision"].as_str().unwrap(),
+            json!({"name": "Sc", "start": "S1", "finish": "F1", "time_limit_min": 30}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{added}");
+        let revision = added["revision"].as_str().unwrap().to_owned();
+        (dir, path, app, revision)
+    }
+
+    #[tokio::test]
+    async fn the_score_route_refuses_a_forest_map_without_writing() {
+        let (_dir, path, app, revision) = forest_setup().await;
+        let before = std::fs::read(&path).unwrap();
+        for (tool, body) in [
+            ("score_suggest", json!({})),
+            ("score_length", json!({"name": "Sc"})),
+            ("score_draft", json!({"name": "Sc", "time_limit_min": 15})),
+        ] {
+            let (status, answer) = score_call(&app, tool, Some(&revision), body).await;
+            assert_ne!(status, StatusCode::OK, "{tool}: {answer}");
+            let text = answer.to_string();
+            assert!(
+                text.contains("do not work on forest maps"),
+                "{tool}: {text}"
+            );
+        }
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+    }
+
+    #[test]
+    fn the_score_panel_disables_its_runs_on_a_forest_map() {
+        let js = include_str!("../../web/js/score.js");
+        assert!(js.contains("state.map?.kind === \"forest\""));
+        assert!(js.contains("editor-score-forest-note"));
+    }
+
     #[tokio::test]
     async fn the_score_route_refuses_apply() {
         let (_dir, path, app, revision) = score_setup().await;
