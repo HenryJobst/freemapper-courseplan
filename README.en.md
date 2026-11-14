@@ -38,7 +38,7 @@ Planned for the first version:
 - export to IOF XML 3.0 for result software, for example OE (`export`, usable now; the import into OE is not tested yet);
 - score courses with point values carried by the control code, a time limit, a penalty and mandatory links, with
   suggested control sites, a draft that reaches the length bands within a tolerance, checks and export (`score`, usable now);
-- sprint and schoolyard maps; forest maps come later;
+- sprint and schoolyard maps and forest maps in ISOM 2017-2 (by hand and with `check`; no suggestions or drafts for score courses on forest maps, ADR 0092);
 - use through the editor in the browser (`edit`, usable now: controls, courses, categories, bends, numbers and
   special objects and control descriptions, findings of the check, export, import and sync with Purple Pen, with undo and
   redo and a print preview; on the real map),
@@ -98,7 +98,7 @@ An AI assistant can do the same for you through the MCP server `freemapper-cours
 [user manual](docs/manual/en.md#3-with-an-ai-assistant) explains how to set it up, and [`AGENTS.md`](AGENTS.md) tells the assistant
 how to install and use the program itself. The project file is TOML, and
 you can edit it by hand too. `import`, `export --ppen` and `sync` exchange events with Purple Pen. The program cannot edit team or relay courses yet. It cannot print
-courses either, and it does not read forest maps.
+courses either, and it does not read forest maps in symbol sets other than ISOM 2017-2.
 
 A score course has controls with points, a time limit and a penalty per minute over it, and optionally mandatory
 links that the runner has to run directly after each other. The code carries the value: control 43 is worth 3

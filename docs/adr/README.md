@@ -53,7 +53,7 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0007](0007-rust-toolchain-pinned.md) | rust-toolchain.toml pins the Rust toolchain | Accepted | 2026-11-08 |
 | [0008](0008-one-project-file-for-editor-cli-and-mcp.md) | One project file for editor, CLI and MCP | Accepted | 2026-11-08 |
 | [0009](0009-data-model-for-all-course-kinds-individual-first.md) | Data model for all course kinds, individual courses first | Accepted | 2026-11-08 |
-| [0010](0010-sprint-and-schoolyard-maps-first.md) | Sprint and schoolyard maps first | Accepted | 2026-11-08 |
+| [0010](0010-sprint-and-schoolyard-maps-first.md) | Sprint and schoolyard maps first | Accepted, in part superseded by 0092 | 2026-11-08 |
 | [0011](0011-sync-with-purple-pen-by-three-way-merge.md) | Sync with Purple Pen by three-way merge | Accepted | 2026-11-08 |
 | [0012](0012-check-rules-as-data-with-sources.md) | Check rules as data with sources, WKB 2026 first | Accepted | 2026-11-08 |
 | [0013](0013-one-renderer-in-the-suite.md) | One renderer in the suite, taken from freemapper-print | Accepted | 2026-11-08 |
@@ -135,3 +135,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0089](0089-rejected-sites-per-project.md) | The user can reject candidate sites, per project | Accepted | 2026-11-13 |
 | [0090](0090-event-date-and-organizer.md) | The event has a date and an organizer, and the IOF XML export carries them | Accepted | 2026-11-13 |
 | [0091](0091-freemapper-core-v0-24-0.md) | The freemapper-core pin goes to v0.24.0 | Accepted | 2026-11-13 |
+| [0092](0092-forest-maps-isom-2017-2.md) | Forest maps in ISOM 2017-2, by hand and with `check` | Accepted | 2026-11-14 |

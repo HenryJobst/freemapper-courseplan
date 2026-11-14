@@ -6,9 +6,15 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- Forest maps in ISOM 2017-2 (ADR 0092). `init` accepts a forest map at 1:5000 to 1:15000 whose symbol set is `ISOM 2017-2`, and you set courses on it by hand with the same commands as on a sprint map, in the editor, on the command line and through MCP. `check` uses the forest variants of its rules, and the symbol numbers they read are confirmed against ISOM 2017-2 (`docs/research/2026-11-14-isom-2017-2-symbols.md`). On a forest map the limit for the mapped area (`map.inside`, `map.margin`) is 10 mm on the sheet, which is 100 m at 1:10000. Rules for sprints only are listed as not for forest maps, the Lkm rules of `nor-bb-2021` as not checked without a climb.
+- `score suggest`, `score draft` and `score length`, their MCP tools and the editor's Score panel refuse a forest map: the route search has no elevation and no vegetation speed. A score course set by hand works; `check` lists its length bands as not checked.
+
 ### Changed
 
-- freemapper-core goes from v0.19.0 to v0.24.0 (ADR 0091). Print preview and editor map look the same. Code that writes PDF or SVG from the core now leaves out objects wholly outside the visible frame and writes paths more compactly, so PDFs and SVGs from the core are smaller; courseplan itself writes none yet. Forest maps (ISOM) are still refused.
+- A forest map in another symbol set (ISOM 2000, the first edition ISOM2017) is refused by `init` with a message that names the set found, instead of the general refusal of forest maps.
+- freemapper-core goes from v0.19.0 to v0.24.0 (ADR 0091). Print preview and editor map look the same. Code that writes PDF or SVG from the core now leaves out objects wholly outside the visible frame and writes paths more compactly, so PDFs and SVGs from the core are smaller; courseplan itself writes none yet.
 
 ## [0.17.0] - 2026-11-13
 
