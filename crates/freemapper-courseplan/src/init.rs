@@ -7,7 +7,7 @@ use freemapper_courseplan_model::{
 };
 use thiserror::Error;
 
-use crate::map::{MapKind, map_kind_for_file};
+use crate::map::{ForestSymbolSet, MapKind, forest_symbol_set, map_kind_for_file};
 use crate::omap::OmapError;
 use crate::omap::read::read_map_file;
 
@@ -17,9 +17,9 @@ pub enum InitError {
     #[error("cannot read map {}: {source}", path.display())]
     Map { path: PathBuf, source: OmapError },
     #[error(
-        "Forest maps (ISOM) are not supported yet; this version handles sprint and schoolyard maps (ADR 0010)."
+        "This forest map uses the symbol set {found}, but only ISOM 2017-2 is supported for forest maps (ADR 0092)."
     )]
-    ForestNotSupported,
+    ForestSymbolSetNotSupported { found: String },
     #[error(transparent)]
     Project(#[from] ProjectError),
     #[error("cannot create folder {}: {source}", path.display())]
@@ -45,7 +45,17 @@ pub fn new_event(
     };
     let doc = read_map_file(map_path).map_err(map_error)?;
     if map_kind_for_file(&doc, map_path) == MapKind::Forest {
-        return Err(InitError::ForestNotSupported);
+        match forest_symbol_set(&doc) {
+            ForestSymbolSet::Isom2017_2 => {}
+            ForestSymbolSet::Isom2000 => {
+                return Err(InitError::ForestSymbolSetNotSupported {
+                    found: doc.symbol_set.name.clone(),
+                });
+            }
+            ForestSymbolSet::Unknown(found) => {
+                return Err(InitError::ForestSymbolSetNotSupported { found });
+            }
+        }
     }
     let map_abs = map_path
         .canonicalize()

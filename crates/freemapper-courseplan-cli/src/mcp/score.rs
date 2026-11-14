@@ -192,11 +192,11 @@ impl CoursePlanServer {
         e.localize(&self.lang)
     }
 
-    /// The map of the project, refused for a forest map (ADR 0010) and for a map without objects.
+    /// The map of the project, refused for a forest map (ADR 0092) and for a map without objects.
     fn score_world(&self, file: &ProjectFile) -> Result<World, String> {
         let doc = self.read_map(file)?;
         if map_kind_for_file(&doc, &file.map_path()) == MapKind::Forest {
-            return Err(text(&self.lang, "error-init-forest", &[]));
+            return Err(text(&self.lang, "error-score-forest", &[]));
         }
         let index = MapIndex::from_document(&doc);
         if index.is_empty() {

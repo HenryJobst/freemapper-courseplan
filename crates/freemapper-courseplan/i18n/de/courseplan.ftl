@@ -23,6 +23,7 @@ word-name-accepted-finding-note = Begründung eines akzeptierten Befunds
 word-map-sprint = Sprintkarte
 word-map-schoolyard = Schulhofkarte
 word-map-forest = Waldkarte
+word-symbol-set-unnamed = (ohne Namen)
 
 ## Widersprüche innerhalb einer Veranstaltung (ModelError)
 
@@ -64,7 +65,8 @@ error-project-invalid = { $path } ist keine stimmige Veranstaltung:{ $list }
 ## Veranstaltung anlegen (InitError)
 
 error-init-map = Die Karte { $path } lässt sich nicht lesen: { $source }
-error-init-forest = Waldkarten (ISOM) werden noch nicht unterstützt. Diese Version arbeitet mit Sprint- und Schulhofkarten (ADR 0010).
+error-init-forest = Diese Waldkarte verwendet den Symbolsatz { $found }, für Waldkarten wird aber nur ISOM 2017-2 unterstützt (ADR 0092).
+error-score-forest = Vorschlag, Entwurf und Längenprüfung für Score-Bahnen funktionieren auf Waldkarten nicht. Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit, ihre Zeiten würden in die Irre führen (ADR 0092). Eine von Hand gelegte Score-Bahn lässt sich wie auf jeder Karte anlegen und mit check prüfen.
 error-init-io = Der Ordner { $path } lässt sich nicht anlegen: { $source }
 
 ## Bahnen messen (CourseError)

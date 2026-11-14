@@ -90,6 +90,40 @@ pub fn map_kind_for_file(doc: &MapDocument, map_path: &Path) -> MapKind {
         .unwrap_or_else(|| map_kind(doc))
 }
 
+/// The symbol set of a forest map, as far as the rules are concerned (ADR 0092). The forest rule data
+/// carries ISOM 2017-2 numbers, which mean other things in ISOM 2000 (research file
+/// `docs/research/2026-11-14-isom-2017-2-symbols.md`), so only the first is accepted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ForestSymbolSet {
+    /// ISOM 2017-2, as Mapper and freemapper write it (`ISOM 2017-2`).
+    Isom2017_2,
+    /// ISOM 2000 (`ISOM2000`).
+    Isom2000,
+    /// Anything else: ISOM 2017 first edition, ISSprOM, a set without a name. Holds the name found.
+    Unknown(String),
+}
+
+/// The symbol set that the name of a map's symbol set stands for. Case and spaces do not matter.
+pub fn forest_symbol_set_of_name(name: &str) -> ForestSymbolSet {
+    let normal: String = name
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .flat_map(char::to_lowercase)
+        .collect();
+    if normal == "isom2017-2" {
+        ForestSymbolSet::Isom2017_2
+    } else if normal == "isom2000" {
+        ForestSymbolSet::Isom2000
+    } else {
+        ForestSymbolSet::Unknown(name.to_owned())
+    }
+}
+
+/// The symbol set of `doc`, see [`ForestSymbolSet`].
+pub fn forest_symbol_set(doc: &MapDocument) -> ForestSymbolSet {
+    forest_symbol_set_of_name(&doc.symbol_set.name)
+}
+
 /// Objects freemapper adds around the terrain: the sheet frame, the scale bar and the base area.
 /// They are no map features and do not count for the map extent.
 pub fn is_sheet_furniture(tags: &[(String, String)]) -> bool {

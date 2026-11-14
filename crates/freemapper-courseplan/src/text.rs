@@ -346,7 +346,14 @@ impl Localize for InitError {
                     ("source", v(source.localize(lang))),
                 ],
             ),
-            InitError::ForestNotSupported => text(lang, "error-init-forest", &[]),
+            InitError::ForestSymbolSetNotSupported { found } => {
+                let found = if found.trim().is_empty() {
+                    text(lang, "word-symbol-set-unnamed", &[])
+                } else {
+                    found.clone()
+                };
+                text(lang, "error-init-forest", &[("found", v(found))])
+            }
             InitError::Project(error) => error.localize(lang),
             InitError::Io { path, source } => text(
                 lang,
@@ -1155,6 +1162,7 @@ mod tests {
     /// Sample values for every variable the catalogs use.
     fn sample_args() -> Vec<(&'static str, FluentValue<'static>)> {
         [
+            "found",
             "new",
             "old",
             "released",
@@ -1763,7 +1771,14 @@ mod tests {
                 source,
             });
         }
-        check(&InitError::ForestNotSupported);
+        check(&InitError::ForestSymbolSetNotSupported {
+            found: "ISOM2000".into(),
+        });
+        let unnamed = InitError::ForestSymbolSetNotSupported {
+            found: String::new(),
+        };
+        assert!(unnamed.localize(&de()).contains("(ohne Namen)"));
+        assert!(unnamed.localize(&Lang::english()).contains("(no name)"));
         check(&InitError::Project(ProjectError::AlreadyExists {
             path: path(),
         }));
