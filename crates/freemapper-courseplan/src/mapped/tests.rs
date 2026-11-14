@@ -153,3 +153,16 @@ fn a_large_map_gets_coarser_cells_instead_of_failing() {
     assert!(a.cell_m > CELL_M);
     assert!(a.margin_m(&p(10_000.0, 10_000.0)) >= MAX_MARGIN_M - 1.0);
 }
+
+#[test]
+fn a_longer_reach_maps_more_ground() {
+    // A building of 300 by 300 m at 1:1000: with the default reach the mapped area ends 50 m beyond it,
+    // with a reach of 100 m 100 m beyond it.
+    let index = one_building();
+    let short = MappedArea::build(&index, 1000).unwrap();
+    let long = MappedArea::build_with_reach(&index, 1000, 100.0).unwrap();
+    let at = p(375.0, 150.0);
+    assert_eq!(short.margin_m(&at), 0.0);
+    assert!(long.margin_m(&at) > 0.0);
+    assert!(long.margin_m(&p(150.0, 150.0)) > short.margin_m(&p(150.0, 150.0)));
+}

@@ -66,7 +66,7 @@ error-project-invalid = { $path } ist keine stimmige Veranstaltung:{ $list }
 
 error-init-map = Die Karte { $path } lässt sich nicht lesen: { $source }
 error-init-forest = Diese Waldkarte verwendet den Symbolsatz { $found }, für Waldkarten wird aber nur ISOM 2017-2 unterstützt (ADR 0092).
-error-score-forest = Vorschlag, Entwurf und Längenprüfung für Score-Bahnen funktionieren auf Waldkarten nicht. Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit, ihre Zeiten würden in die Irre führen (ADR 0092). Eine von Hand gelegte Score-Bahn lässt sich wie auf jeder Karte anlegen und mit check prüfen.
+error-score-forest = Vorschlag, Entwurf und Längenprüfung für Score-Bahnen funktionieren auf Waldkarten nicht: Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit, ihre Zeiten würden in die Irre führen (ADR 0092). Eine von Hand gelegte Score-Bahn funktioniert; check prüft ihre Längenbänder dann nicht.
 error-init-io = Der Ordner { $path } lässt sich nicht anlegen: { $source }
 
 ## Bahnen messen (CourseError)

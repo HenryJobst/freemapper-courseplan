@@ -310,7 +310,7 @@ fn forest_map_is_refused() {
     .unwrap();
     let o = run(&["score", "suggest", p(&project)]);
     assert_eq!(o.status.code(), Some(1));
-    assert!(err(&o).contains("Forest maps"), "{}", err(&o));
+    assert!(err(&o).contains("forest maps"), "{}", err(&o));
 }
 
 #[test]

@@ -20,9 +20,9 @@ use freemapper_courseplan_model::MapPoint;
 use super::stops::{Stop, StopKind, stops_of};
 use super::{
     ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_NO_MAP_EXTENT, Skipped, number,
-    symbol_matches,
+    symbol_matches, value_number,
 };
-use crate::map::{FeatureGeometry, MapFeature, MapIndex};
+use crate::map::{FeatureGeometry, MapFeature, MapIndex, MapKind};
 use freemapper_courseplan_model::ControlCode;
 
 fn ignored_symbols(run: &RuleRun<'_>) -> Vec<String> {
@@ -175,13 +175,25 @@ fn stops_to_test(ctx: &CheckContext<'_>, run: &RuleRun<'_>) -> Vec<Stop> {
     stops
 }
 
+/// The reach of `inside_map` in ground metres on this map: the rule value `metres`, or on a forest map the
+/// sheet distance `forest_sheet_mm` at the scale of the map (ADR 0092). `None` when the rule lacks the value.
+fn reach_m(ctx: &CheckContext<'_>, run: &RuleRun<'_>) -> Option<f64> {
+    if ctx.map_kind == MapKind::Forest
+        && let Some(mm) = value_number(run.rule(), "forest_sheet_mm")
+    {
+        return Some(mm * f64::from(ctx.map_scale) / 1000.0);
+    }
+    value_number(run.rule(), "metres")
+}
+
 pub(super) fn inside_map(
     ctx: &CheckContext<'_>,
     run: &RuleRun<'_>,
     findings: &mut Vec<Finding>,
     skipped: &mut Vec<Skipped>,
 ) {
-    let Some(limit) = number(run, "metres", skipped) else {
+    let Some(limit) = reach_m(ctx, run) else {
+        number(run, "metres", skipped);
         return;
     };
     let Some(percent) = number(run, "frame_percent", skipped) else {
@@ -235,7 +247,11 @@ pub(super) fn map_margin(
     if limit == 0 {
         return;
     }
-    let Some(area) = crate::mapped::MappedArea::build(&ctx.index, ctx.map_scale) else {
+    // The reach of `inside_map` on this map: the same edge as that rule. The margin rule carries only
+    // the forest sheet distance; a sprint or schoolyard map keeps the 50 m of the mapped area.
+    let reach = reach_m(ctx, run).unwrap_or(crate::mapped::MAPPED_METRES);
+    let Some(area) = crate::mapped::MappedArea::build_with_reach(&ctx.index, ctx.map_scale, reach)
+    else {
         skipped.push(run.skipped(Location::Event, SKIP_NO_MAP_EXTENT, Vec::new()));
         return;
     };

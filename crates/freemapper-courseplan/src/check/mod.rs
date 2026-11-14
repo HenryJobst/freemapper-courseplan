@@ -969,4 +969,6 @@ fn run_key(
 pub(crate) mod testing;
 
 #[cfg(test)]
+mod forest_tests;
+#[cfg(test)]
 mod tests;

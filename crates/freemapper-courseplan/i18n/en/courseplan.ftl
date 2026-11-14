@@ -66,7 +66,7 @@ error-project-invalid = { $path } is not a consistent event:{ $list }
 
 error-init-map = cannot read map { $path }: { $source }
 error-init-forest = This forest map uses the symbol set { $found }, but only ISOM 2017-2 is supported for forest maps (ADR 0092).
-error-score-forest = Score suggest, draft and length do not work on forest maps. The route search knows no elevation and no vegetation speed, so its times would mislead (ADR 0092). A score course set by hand and checked with check works as on any map.
+error-score-forest = Score suggest, draft and length do not work on forest maps: the route search knows neither elevation nor vegetation speed, so its times would mislead (ADR 0092). Setting a score course by hand works; check leaves its length bands untested.
 error-init-io = cannot create folder { $path }: { $source }
 
 ## Measuring courses (CourseError)
