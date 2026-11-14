@@ -761,7 +761,7 @@ want the position anyway, accept the finding with a reason.
 A start, finish, control or crossing point must also lie on the mapped area. Many maps are not rectangles: the
 Rummelsburger Bucht is a diagonal strip, and the rest of the sheet is blank, although it lies inside the rectangle
 around all map objects (which is what the warning `wkb2026.map.edge` measures against). A position in the blank part
-is an error, rule `wkb2026.map.inside`. A position counts as mapped when a map object lies within 50 m of it. The sheet
+is an error, rule `wkb2026.map.inside`. A position counts as mapped when a map object lies within 50 m of it (on a forest map, within 10 mm on the sheet, see Forest maps below). The sheet
 frame and layout symbols such as the north lines pattern (601) do not count as objects. The message names the
 position in map millimetres and the nearest object. A square between buildings with no object in it stays inside as
 long as it is not much wider than 80 m; on a map with large empty areas, accept the finding with a reason or ask for a
@@ -769,7 +769,7 @@ larger value in the rule (ADR 0084).
 
 A start, finish, control or crossing point must also keep at least 50 m from the edge of the mapped area, so that the
 runner can always run on mapped ground (error, rule `wkb2026.map.margin`, ADR 0087). The edge is where no map object lies
-within 50 m any more, the same limit as above. The distance is measured on a raster of the mapped area and is right to
+within 50 m any more, the same limit as above (on a forest map the forest limit). The distance is measured on a raster of the mapped area and is right to
 about 2 m. A position outside the mapped area gets only the error above. The setting is `map_margin_m` (0 to 200, 0
 switches the rule off), changed with `score settings --map-margin`.
 
@@ -783,6 +783,34 @@ close together: `check` gives a hint when they are more than 400 m apart in a st
 `score settings --start-finish-max`). A course made by hand may deviate from all three; `score suggest` and `score draft`
 keep to them. `score draft` refuses a start and finish that are further apart or closer to the edge than the settings
 allow, and says which setting to change.
+
+### Forest maps
+
+The program sets courses on forest maps made after ISOM 2017-2, at 1:5000 to 1:15000, with the same commands as on a
+sprint map. `init` reads the name of the map's symbol set. A forest map in `ISOM 2017-2` is accepted. A forest map in
+`ISOM2000`, in the first edition `ISOM2017` or in another set is refused, and the message names the set it found,
+because the rule data uses ISOM 2017-2 symbol numbers that mean something else in ISOM 2000 (ADR 0092). Convert such a
+map in OpenOrienteering Mapper first. Sprint and schoolyard maps work as before. The program takes the kind of the map
+from `freemapper.toml` if that names one, else from the symbol set and the scale; an ISOM map at 1:4000 counts as a
+sprint map.
+
+On a forest map `check` uses the forest variants of the rules: at least 30 m between controls, similar features within
+60 m (the groups are ISOM 2017-2 symbols, see the research file `docs/research/2026-11-14-isom-2017-2-symbols.md`) and
+a control in an area with the symbol 520 or 709 as an error. A symbol that is hidden in the map file does not count as
+map content, and the 709 symbol is hidden in Mapper's ISOM 2017-2 symbol set. The limit for the mapped area is a
+distance on the sheet, 10 mm: 50 m at 1:5000, 100 m at 1:10000 and 150 m at 1:15000. `map.inside` and `map.margin` use
+it; the setting `map_margin_m` keeps its 50 m.
+
+Not everything is checked. The dead end rule and the distance between start and finish are recommendations for sprints;
+`check --all` lists them as "not for forest maps". The Lkm rules of the overlay `nor-bb-2021` need the climb of the
+course, which the program cannot work out without an elevation model; enter it with `course set --climb`, or the rule
+stays skipped. The rule about the running route through out-of-bounds areas still waits for the route analysis.
+
+`score suggest`, `score draft` and `score length` refuse a forest map, and so do the matching MCP tools and the Score
+panel of the editor, where the three buttons stay but are disabled. The route search works on a raster of the map
+symbols and knows neither elevation nor the speed through vegetation, so its times would mislead. You can still add a
+score course, its controls and links by hand. `check` then tests codes, values and links, and lists the length bands as
+not checked.
 
 ### Skipped rules
 

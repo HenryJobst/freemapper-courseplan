@@ -119,3 +119,24 @@ fn luebeck_feature_set_is_pinned() {
     assert_eq!(index.len(), 2143);
     assert_eq!((points, lines, areas), (0, 17, 2126));
 }
+
+#[test]
+fn isom2017_synthetic_reads_as_forest() {
+    let path = fixture("isom2017-synthetic.omap");
+    let doc = read_map_file(Path::new(&path)).unwrap();
+    assert_eq!(doc.georef.scale_denominator, 10000);
+    assert_eq!(doc.symbol_set.name, "ISOM 2017-2");
+    assert_eq!(map_kind(&doc), MapKind::Forest);
+    assert_eq!(
+        freemapper_courseplan::map::map_kind_for_file(&doc, Path::new(&path)),
+        MapKind::Forest
+    );
+    let read: usize = doc.parts.iter().map(|p| p.objects.len()).sum();
+    assert_eq!(read, objects_in_parts(&path));
+    assert_eq!(read, 20);
+    let index = MapIndex::from_document(&doc);
+    // The 709 area is hidden in Mapper's ISOM 2017-2 set (a course-setting symbol), so the index skips it.
+    assert_eq!(index.len(), 19);
+    let (min, max) = index.extent().unwrap();
+    assert!(max.x - min.x > 30.0 && max.y - min.y > 30.0);
+}

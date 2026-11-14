@@ -49,6 +49,12 @@ impl MappedArea {
     /// The mapped area of the terrain objects of `index` at map scale 1:`scale`, or `None` when there are
     /// none (a map with no objects, or with layout symbols only).
     pub fn build(index: &MapIndex, scale: u32) -> Option<MappedArea> {
+        Self::build_with_reach(index, scale, MAPPED_METRES)
+    }
+
+    /// Like [`MappedArea::build`], with a place counting as mapped when an object lies within `reach_m`
+    /// metres of it. A forest map takes its reach from the sheet (`wkb2026.map.inside`, ADR 0092).
+    pub fn build_with_reach(index: &MapIndex, scale: u32, reach_m: f64) -> Option<MappedArea> {
         let features = terrain_features(index, IGNORED_SYMBOLS, FRAME_PERCENT);
         if features.is_empty() || scale == 0 {
             return None;
@@ -80,7 +86,7 @@ impl MappedArea {
             return None;
         }
         let mm_per_m = 1000.0 / f64::from(scale);
-        let pad_mm = (MAPPED_METRES + MAX_MARGIN_M + 2.0 * CELL_M) * mm_per_m;
+        let pad_mm = (reach_m + MAX_MARGIN_M + 2.0 * CELL_M) * mm_per_m;
         let span = ((hi.x - lo.x) + 2.0 * pad_mm, (hi.y - lo.y) + 2.0 * pad_mm);
         let mut cell_m = CELL_M;
         while (span.0 / (cell_m * mm_per_m)) * (span.1 / (cell_m * mm_per_m)) > MAX_CELLS {
@@ -114,7 +120,7 @@ impl MappedArea {
         }
         // Distance to the nearest object, in cells; mapped is within the reach.
         let to_object = squared_distance(&object, width, height);
-        let reach_cells = MAPPED_METRES / cell_m;
+        let reach_cells = reach_m / cell_m;
         let unmapped: Vec<bool> = to_object
             .iter()
             .map(|&d2| d2.sqrt() > reach_cells)

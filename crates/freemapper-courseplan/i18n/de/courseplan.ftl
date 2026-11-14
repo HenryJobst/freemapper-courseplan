@@ -23,6 +23,7 @@ word-name-accepted-finding-note = Begründung eines akzeptierten Befunds
 word-map-sprint = Sprintkarte
 word-map-schoolyard = Schulhofkarte
 word-map-forest = Waldkarte
+word-symbol-set-unnamed = (ohne Namen)
 
 ## Widersprüche innerhalb einer Veranstaltung (ModelError)
 
@@ -64,7 +65,8 @@ error-project-invalid = { $path } ist keine stimmige Veranstaltung:{ $list }
 ## Veranstaltung anlegen (InitError)
 
 error-init-map = Die Karte { $path } lässt sich nicht lesen: { $source }
-error-init-forest = Waldkarten (ISOM) werden noch nicht unterstützt. Diese Version arbeitet mit Sprint- und Schulhofkarten (ADR 0010).
+error-init-forest = Diese Waldkarte verwendet den Symbolsatz { $found }, für Waldkarten wird aber nur ISOM 2017-2 unterstützt (ADR 0092).
+error-score-forest = Vorschlag, Entwurf und Längenprüfung für Score-Bahnen funktionieren auf Waldkarten nicht: Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit, ihre Zeiten würden in die Irre führen (ADR 0092). Eine von Hand gelegte Score-Bahn funktioniert; check prüft ihre Längenbänder dann nicht.
 error-init-io = Der Ordner { $path } lässt sich nicht anlegen: { $source }
 
 ## Bahnen messen (CourseError)
@@ -167,6 +169,7 @@ check-skip-needs-route-analysis = Die Regel betrifft die Laufroute, und die Rout
 check-skip-value-missing = Der Prüfregel fehlt der Wert { $name }
 check-skip-no-map-extent = Die Karte enthält keine Objekte und hat daher keinen Rand
 check-skip-score-no-map = Die Karte hat keine Objekte, daher lassen sich keine Laufzeiten berechnen
+check-skip-score-forest = Auf einer Waldkarte werden keine Laufzeiten berechnet: Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit
 check-skip-score-travel = Laufzeiten lassen sich nicht berechnen. Der Fehlertext ist englisch: { $error }
 check-skip-start-window-missing = Die Veranstaltung hat kein Startfenster; event start-window setzt es
 check-skip-starters-missing = Kategorien ohne erwartete Starterzahl: { $classes }; class set --starters setzt sie
@@ -1596,6 +1599,7 @@ editor-score-band-tolerance = Toleranz um die Ziele (Prozentpunkte)
 editor-score-suggest = Posten vorschlagen
 editor-score-draft = Bahn entwerfen
 editor-score-length-run = Länge prüfen
+editor-score-forest-note = Vorschlag, Entwurf und Längenprüfung gibt es auf einer Waldkarte nicht: Die Routensuche kennt weder Höhe noch Vegetationsgeschwindigkeit. Posten, Werte und Verbindungen lassen sich von Hand setzen.
 editor-score-apply = Entwurf übernehmen
 editor-score-discard = Verwerfen
 editor-score-accept = Übernehmen

@@ -9,8 +9,8 @@ use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings, SpecialO
 
 use super::geometry::{distance, polyline_meets_area, polylines_meet};
 use super::{
-    ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_SCORE_NO_MAP, SKIP_SCORE_TRAVEL,
-    SKIP_VALUE_MISSING, ScoreCourseContext, Skipped, value_number,
+    ArgValue, CheckContext, Finding, Location, RuleRun, SKIP_SCORE_FOREST, SKIP_SCORE_NO_MAP,
+    SKIP_SCORE_TRAVEL, SKIP_VALUE_MISSING, ScoreCourseContext, Skipped, value_number,
 };
 use crate::rules::Severity;
 use crate::score::ScoreError;
@@ -342,6 +342,13 @@ fn surface_for(
     settings: &ScoreSettings,
     params: &RouteParams,
 ) -> Result<CostSurface, Box<Skipped>> {
+    if crate::score::ensure_not_forest(ctx.map_kind).is_err() {
+        return Err(Box::new(run.skipped(
+            course.location(),
+            SKIP_SCORE_FOREST,
+            Vec::new(),
+        )));
+    }
     if ctx.index.is_empty() {
         return Err(Box::new(run.skipped(
             course.location(),

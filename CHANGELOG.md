@@ -6,9 +6,15 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Waldkarten nach ISOM 2017-2 (ADR 0092). `init` nimmt eine Waldkarte im Maßstab 1:5000 bis 1:15000 an, deren Symbolsatz `ISOM 2017-2` heißt, und du legst Bahnen darauf von Hand mit denselben Befehlen wie auf einer Sprintkarte, im Editor, auf der Kommandozeile und über MCP. `check` benutzt die Waldfassungen seiner Regeln, und die Symbolnummern, die sie lesen, sind gegen ISOM 2017-2 bestätigt (`docs/research/2026-11-14-isom-2017-2-symbols.md`). Auf einer Waldkarte ist die Grenze für die kartierte Fläche (`map.inside`, `map.margin`) 10 mm auf dem Blatt, bei 1:10000 also 100 m. Regeln nur für Sprints stehen als „nicht für Waldkarten“ in der Liste, die Lkm-Regeln von `nor-bb-2021` ohne Höhenmeter als nicht geprüft.
+- `score suggest`, `score draft` und `score length`, ihre MCP-Werkzeuge und der Score-Bereich des Editors lehnen eine Waldkarte ab: Die Routensuche kennt weder Höhe noch Geschwindigkeit durch Bewuchs. Eine von Hand angelegte Score-Bahn funktioniert; `check` führt ihre Längenbänder als nicht geprüft auf.
+
 ### Geändert
 
-- freemapper-core wird von v0.19.0 auf v0.24.0 gehoben (ADR 0091). Druckvorschau und Editor-Karte sehen gleich aus. Was der Core als PDF oder SVG schreibt, lässt Objekte weg, die ganz außerhalb des sichtbaren Rahmens liegen, und schreibt Pfade kompakter; die PDFs und SVGs aus dem Core werden dadurch kleiner, courseplan selbst schreibt noch keine. Waldkarten (ISOM) werden weiterhin abgelehnt.
+- Eine Waldkarte in einem anderen Symbolsatz (ISOM 2000, die erste Ausgabe ISOM2017) lehnt `init` mit einer Meldung ab, die den gefundenen Satz nennt, statt wie bisher jede Waldkarte pauschal abzulehnen.
+- freemapper-core wird von v0.19.0 auf v0.24.0 gehoben (ADR 0091). Druckvorschau und Editor-Karte sehen gleich aus. Was der Core als PDF oder SVG schreibt, lässt Objekte weg, die ganz außerhalb des sichtbaren Rahmens liegen, und schreibt Pfade kompakter; die PDFs und SVGs aus dem Core werden dadurch kleiner, courseplan selbst schreibt noch keine.
 
 ## [0.17.0] - 2026-11-13
 

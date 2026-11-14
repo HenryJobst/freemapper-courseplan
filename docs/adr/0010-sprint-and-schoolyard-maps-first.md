@@ -1,7 +1,7 @@
 # 0010. Sprint and schoolyard maps first
 
 Date: 2026-11-08
-Status: Accepted
+Status: Accepted; superseded in part by [0092](0092-forest-maps-isom-2017-2.md) (forest maps in ISOM 2017-2)
 
 ## Context
 

@@ -38,7 +38,7 @@ Geplant ist für die erste Version:
 - Export nach IOF-XML 3.0 für die Auswertung, zum Beispiel in OE (`export`, schon nutzbar, der OE-Import ist noch nicht getestet);
 - Score-Bahnen mit Punktwerten, die der Postencode trägt, mit Zeitlimit, Abzug und Pflichtverbindungen, mit
   vorgeschlagenen Postenstellen, einem Entwurf, der die Längenbänder mit einer Toleranz erreicht, Prüfungen und Export (`score`, schon nutzbar);
-- Sprint- und Schulhofkarten; Waldkarten kommen später;
+- Sprint- und Schulhofkarten und Waldkarten nach ISOM 2017-2 (von Hand und mit `check`; Vorschläge und Entwürfe für Score-Bahnen gibt es auf Waldkarten nicht, ADR 0092);
 - Bedienung über den Editor im Browser (`edit`, schon nutzbar: Posten, Bahnen, Kategorien, Knicke, Nummern und
   Sonderobjekte und Postenbeschreibungen, Befunde der Prüfung, Export, Import und Abgleich mit Purple Pen, mit
   Rückgängig und Wiederholen und einer Druckvorschau; auf der echten Karte), über die Kommandozeile oder über einen KI-Assistenten (MCP).
@@ -98,7 +98,7 @@ Bahn; `list` und `map` berichten über Einzelheiten und Karte, und `--json` gibt
 einrichtest, steht in [Kapitel 3 des Handbuchs](docs/manual/de.md#3-mit-einem-ki-assistenten), und [`AGENTS.md`](AGENTS.md) sagt dem
 Assistenten, wie er das Programm selbst installiert und benutzt. Die Projektdatei ist
 TOML, du kannst sie auch von Hand bearbeiten. `import`, `export --ppen` und `sync` tauschen Veranstaltungen mit Purple Pen aus. Mannschafts- und Staffelbahnen kann das Programm
-noch nicht bearbeiten. Drucken kann es auch noch nicht, und Waldkarten liest es nicht.
+noch nicht bearbeiten. Drucken kann es auch noch nicht, und Waldkarten in anderen Symbolsätzen als ISOM 2017-2 liest es nicht.
 
 Eine Score-Bahn hat Posten mit Punkten, ein Zeitlimit und einen Abzug je Minute darüber, dazu wahlweise
 Pflichtverbindungen, die man direkt nacheinander laufen muss. Der Code trägt den Wert: Posten 43 zählt 3 Punkte.

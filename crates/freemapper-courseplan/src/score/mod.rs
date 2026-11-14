@@ -17,6 +17,17 @@ pub use tour::{
     best_tour_seeded,
 };
 
+/// Refuses the route search on a forest map: it reads a raster of the map symbols without elevation and
+/// without vegetation speed, so its times would mislead (ADR 0092). Every operation that builds a raster
+/// calls this first.
+pub fn ensure_not_forest(kind: crate::map::MapKind) -> Result<(), ScoreError> {
+    if kind == crate::map::MapKind::Forest {
+        Err(ScoreError::ForestMap)
+    } else {
+        Ok(())
+    }
+}
+
 /// Why the score code could not do what was asked. Matchable; a text per variant joins the Fluent
 /// catalogs with the operations that raise it.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -62,6 +73,10 @@ pub enum ScoreError {
     UnknownControl(String),
     #[error("the map has no objects, so there is nothing to search routes on")]
     MapEmpty,
+    #[error(
+        "Score suggest, draft and length do not work on forest maps: the route search knows neither elevation nor vegetation speed, so its times would mislead (ADR 0092). Setting a score course by hand works; check leaves its length bands untested."
+    )]
+    ForestMap,
     #[error("route setting {name} is out of range: {value}")]
     BadRouteSetting { name: &'static str, value: f64 },
     #[error("the map would need {cells} raster cells, more than the limit of {limit}")]

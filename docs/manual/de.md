@@ -798,7 +798,7 @@ Lage trotzdem, akzeptierst du den Befund mit einer Begründung.
 Start, Ziel, Posten und Querungsstellen müssen außerdem auf der kartierten Fläche liegen. Viele Karten sind keine
 Rechtecke: Die Rummelsburger Bucht ist ein schräger Streifen, und der Rest des Blatts ist weiß, obwohl er im Rechteck
 um alle Kartenobjekte liegt (woran die Warnung `wkb2026.map.edge` misst). Eine Stelle im weißen Teil ist ein Fehler,
-Regel `wkb2026.map.inside`. Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 50 m entfernt liegt. Der
+Regel `wkb2026.map.inside`. Eine Stelle gilt als kartiert, wenn ein Kartenobjekt höchstens 50 m entfernt liegt (auf einer Waldkarte höchstens 10 mm auf dem Blatt, siehe Waldkarten unten). Der
 Blattrahmen und Layoutsymbole wie das Nordlinienmuster (601) zählen nicht als Objekte. Die Meldung nennt die Stelle in
 Kartenmillimetern und das nächste Objekt. Ein Platz zwischen Gebäuden ohne Objekt darin bleibt innen, solange er nicht
 viel breiter als 80 m ist; bei einer Karte mit großen leeren Flächen akzeptierst du den Befund mit einer Begründung oder
@@ -806,7 +806,7 @@ bittest um einen größeren Wert in der Regel (ADR 0084).
 
 Start, Ziel, Posten und Querungsstellen müssen außerdem mindestens 50 m vom Rand der kartierten Fläche entfernt bleiben,
 damit der Läufer immer auf kartiertem Gebiet laufen kann (Fehler, Regel `wkb2026.map.margin`, ADR 0087). Der Rand ist
-dort, wo kein Kartenobjekt mehr innerhalb von 50 m liegt, dieselbe Grenze wie oben. Der Abstand wird auf einem Raster
+dort, wo kein Kartenobjekt mehr innerhalb von 50 m liegt, dieselbe Grenze wie oben (auf einer Waldkarte die Grenze für Wald). Der Abstand wird auf einem Raster
 der kartierten Fläche gemessen und stimmt auf etwa 2 m. Eine Stelle außerhalb der kartierten Fläche bekommt nur den
 Fehler von oben. Die Einstellung heißt `map_margin_m` (0 bis 200, 0 schaltet die Regel ab) und ändert sich mit
 `score settings --map-margin`.
@@ -821,6 +821,35 @@ auseinander liegen (Regel `wkb2026.course.start_finish_distance`, ADR 0086, Eins
 2000, `score settings --start-finish-max`). Eine Bahn von Hand darf von allen dreien abweichen; `score suggest` und
 `score draft` halten sie ein. `score draft` lehnt einen Start und ein Ziel ab, die weiter auseinander oder näher am Rand
 liegen, als die Einstellungen erlauben, und nennt die Einstellung, die du ändern kannst.
+
+### Waldkarten
+
+Das Programm legt Bahnen auch auf Waldkarten nach ISOM 2017-2 im Maßstab 1:5000 bis 1:15000, mit denselben Befehlen wie
+auf einer Sprintkarte. `init` liest den Namen des Symbolsatzes der Karte. Eine Waldkarte in `ISOM 2017-2` wird
+angenommen. Eine Waldkarte in `ISOM2000`, in der ersten Ausgabe `ISOM2017` oder in einem anderen Satz lehnt `init` ab und
+nennt in der Meldung den gefundenen Satz, denn die Regeldaten benutzen Symbolnummern aus ISOM 2017-2, die in ISOM 2000
+etwas anderes bedeuten (ADR 0092). Wandle eine solche Karte zuerst in OpenOrienteering Mapper um. Sprint- und
+Schulhofkarten arbeiten wie bisher. Die Kartenart nimmt das Programm aus `freemapper.toml`, wenn dort eine steht,
+sonst aus Symbolsatz und Maßstab; eine ISOM-Karte im Maßstab 1:4000 zählt als Sprintkarte.
+
+Auf einer Waldkarte gelten die Waldfassungen der Regeln: mindestens 30 m zwischen Posten, ähnliche Objekte innerhalb von
+60 m (die Gruppen bestehen aus Symbolen von ISOM 2017-2, siehe die Recherchedatei
+`docs/research/2026-11-14-isom-2017-2-symbols.md`) und ein Posten in einer Fläche mit dem Symbol 520 oder 709 als Fehler.
+Ein Symbol, das die Kartendatei ausblendet, zählt nicht als Karteninhalt; das Symbol 709 ist im ISOM-2017-2-Satz von
+Mapper ausgeblendet. Die Grenze für die kartierte Fläche ist ein Abstand auf dem Blatt, 10 mm: 50 m bei 1:5000, 100 m bei
+1:10000 und 150 m bei 1:15000. `map.inside` und `map.margin` benutzen sie; die Einstellung `map_margin_m` behält ihre
+50 m.
+
+Nicht alles wird geprüft. Die Sackgassenregel und der Abstand zwischen Start und Ziel sind Empfehlungen für Sprints;
+`check --all` führt sie als „nicht für Waldkarten“ auf. Die Lkm-Regeln des Overlays `nor-bb-2021` brauchen die
+Höhenmeter der Bahn, die das Programm ohne Höhenmodell nicht ausrechnen kann; trage sie mit `course set --climb` ein,
+sonst bleibt die Regel übersprungen. Die Regel zur Laufroute durch Sperrgebiete wartet weiter auf die Routenanalyse.
+
+`score suggest`, `score draft` und `score length` lehnen eine Waldkarte ab, ebenso die passenden MCP-Werkzeuge und der
+Score-Bereich des Editors, wo die drei Schaltflächen stehen bleiben, aber gesperrt sind. Die Routensuche arbeitet auf
+einem Raster der Kartensymbole und kennt weder Höhe noch Geschwindigkeit durch Bewuchs, ihre Zeiten würden in die Irre
+führen. Eine Score-Bahn mit Posten und Verbindungen kannst du weiter von Hand anlegen. `check` prüft dann Codes, Werte
+und Verbindungen und führt die Längenbänder als nicht geprüft auf.
 
 ### Übersprungene Prüfregeln
 

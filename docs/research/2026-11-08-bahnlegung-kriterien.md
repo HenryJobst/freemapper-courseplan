@@ -4,6 +4,9 @@ Stand: 8. November 2026. Zusammengeführt aus zwei Web-Recherchen (deutsche Rege
 ausländische Verbände). Alle Zahlen wurden in den genannten Dokumenten gelesen; Unsicheres ist markiert.
 Grundlage für einen Prüf- und Vorschlagsmodus in freemapper-courseplan.
 
+Die Symbolnummern von ISOM 2017-2, die die Waldregeln lesen, sind in
+[`2026-11-14-isom-2017-2-symbols.md`](2026-11-14-isom-2017-2-symbols.md) bestätigt (Quelle und Bedeutung je Nummer).
+
 **Klassen:**
 
 - **A**: aus Kartengeometrie, Höhenmodell und Bahndaten maschinell prüfbar (feste Regel, keine KI)

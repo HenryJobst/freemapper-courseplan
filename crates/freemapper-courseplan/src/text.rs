@@ -346,7 +346,14 @@ impl Localize for InitError {
                     ("source", v(source.localize(lang))),
                 ],
             ),
-            InitError::ForestNotSupported => text(lang, "error-init-forest", &[]),
+            InitError::ForestSymbolSetNotSupported { found } => {
+                let found = if found.trim().is_empty() {
+                    text(lang, "word-symbol-set-unnamed", &[])
+                } else {
+                    found.clone()
+                };
+                text(lang, "error-init-forest", &[("found", v(found))])
+            }
             InitError::Project(error) => error.localize(lang),
             InitError::Io { path, source } => text(
                 lang,
@@ -1050,6 +1057,7 @@ impl Localize for ScoreError {
                 t("error-score-unknown-control", &[("code", v(code))])
             }
             ScoreError::MapEmpty => t("error-score-map-empty", &[]),
+            ScoreError::ForestMap => t("error-score-forest", &[]),
             ScoreError::BadRouteSetting { name, value } => t(
                 "error-score-bad-route-setting",
                 &[("name", v(name)), ("value", v(value))],
@@ -1155,6 +1163,7 @@ mod tests {
     /// Sample values for every variable the catalogs use.
     fn sample_args() -> Vec<(&'static str, FluentValue<'static>)> {
         [
+            "found",
             "new",
             "old",
             "released",
@@ -1423,12 +1432,13 @@ mod tests {
 
     /// Every non-test source file directly under `src/check/`; the guard test below fails when a
     /// new module is missing here, so its message ids are scanned.
-    const CHECK_SOURCES: [(&str, &str); 16] = [
+    const CHECK_SOURCES: [(&str, &str); 17] = [
         ("mod.rs", include_str!("check/mod.rs")),
         ("codes.rs", include_str!("check/codes.rs")),
         ("context.rs", include_str!("check/context.rs")),
         ("distance.rs", include_str!("check/distance.rs")),
         ("forbidden.rs", include_str!("check/forbidden.rs")),
+        ("forest_tests.rs", include_str!("check/forest_tests.rs")),
         ("geometry.rs", include_str!("check/geometry.rs")),
         ("inside.rs", include_str!("check/inside.rs")),
         ("legs.rs", include_str!("check/legs.rs")),
@@ -1763,7 +1773,14 @@ mod tests {
                 source,
             });
         }
-        check(&InitError::ForestNotSupported);
+        check(&InitError::ForestSymbolSetNotSupported {
+            found: "ISOM2000".into(),
+        });
+        let unnamed = InitError::ForestSymbolSetNotSupported {
+            found: String::new(),
+        };
+        assert!(unnamed.localize(&de()).contains("(ohne Namen)"));
+        assert!(unnamed.localize(&Lang::english()).contains("(no name)"));
         check(&InitError::Project(ProjectError::AlreadyExists {
             path: path(),
         }));
@@ -1887,6 +1904,7 @@ mod tests {
             },
             ScoreError::FinishUnreachable { at: p(100.0, 80.5) },
             ScoreError::MapEmpty,
+            ScoreError::ForestMap,
             ScoreError::BadRouteSetting {
                 name: "overlap",
                 value: 1.5,

@@ -20,7 +20,16 @@ objects near a position. Give it positions in map millimetres, or work them out 
 
 Tell the person these limits before you start:
 
-- Only sprint and schoolyard maps work. Forest maps (ISOM) are refused. The map must be an `.omap` or `.xmap`.
+- Sprint and schoolyard maps work, and so do forest maps in ISOM 2017-2 at 1:5000 to 1:15000 (ADR 0092). A forest map
+  in another symbol set (ISOM 2000, the first edition ISOM2017) is refused; the person converts it in Mapper. The map
+  must be an `.omap` or `.xmap`. On a forest map you set courses by hand and run `check`; `score suggest`, `score draft`
+  and `score length`, their MCP tools and the editor's Score panel refuse it, because the route search has no elevation
+  and no vegetation speed. A forest course needs no new commands. Forest rules in `check` are the variants of the same
+  rules: 30 m between controls, similar features within 60 m, controls in areas with the symbol 520 or 709. Rules
+  for sprints only (`control.dead_end`, `course.start_finish_distance`) are listed as not for forest maps, and rules
+  that need elevation (the Lkm rules of `nor-bb-2021`, which need the climb) or the route analysis are listed as not
+  checked. The limit for the mapped area (`map.inside`, `map.margin`) is 10 mm on the sheet on a forest map: 100 m at
+  1:10000. Say so to the person; no forest map in ISOM 2017-2 has been tried except a synthetic test map.
 - Individual and score courses can be edited and checked. `info` gives a length for individual courses only; a
   score course is measured with `score length`. Team and relay courses are not built. IOF XML export writes individual and score courses; it skips the others and says so. The Purple Pen export skips score courses too and says so.
 - A score course has controls with values, a time limit, a penalty and optional mandatory links. `score suggest`,
@@ -67,7 +76,7 @@ Tell the person these limits before you start:
   against out-of-bounds areas, nor controls that are on no course; look at those yourself. A start, finish, control or
   crossing point closer than 50 m to the edge of the mapped area is an error too (rule `wkb2026.map.margin`, ADR 0087), a
   control deeper than 60 m in a dead end a warning (`wkb2026.control.dead_end`, ADR 0085) and a start more than 400 m from
-  the finish a hint (`wkb2026.course.start_finish_distance`, ADR 0086). The last two apply to sprint and schoolyard maps.
+  the finish a hint (`wkb2026.course.start_finish_distance`, ADR 0086). The last two apply to sprint and schoolyard maps only.
 - OCAD is not needed and not tested.
 - `check` tests distances, angles, codes, out-of-bounds areas and the mapped area, not whether a control stands at the
   right feature.
@@ -373,8 +382,13 @@ Rules:
 
 Texts as the English catalog has them:
 
-- `Forest maps (ISOM) are not supported yet; this version handles sprint and schoolyard maps (ADR 0010).`:
-  nothing to fix on your side; tell the person.
+- `This forest map uses the symbol set <name>, but only ISOM 2017-2 is supported for forest maps (ADR 0092).`
+  (`init`): the map is ISOM 2000, the first edition ISOM2017 or another set. Nothing to fix on your side; tell the
+  person to convert the map in Mapper (Mapper ships `ISOM2000-ISOM 2017-2.crt` and `ISOM2017-ISOM 2017-2.crt`). The same
+  message appears when a `freemapper.toml` says `map_kind = "forest"` for a map of another symbol set.
+- `Score suggest, draft and length do not work on forest maps: ...` (`score suggest|draft|length`, the MCP tools, the
+  editor): do not retry. Set the score course by hand (`score controls`, `score link add`); `check` then lists its
+  length bands as not checked.
 - `<path> is a relative path; use an absolute path or one starting with ~` (MCP): pass an absolute path.
 - `<path> changed on disk after it was read, so nothing was written. Read the project again and repeat the change`
   (MCP; the CLI says `<path> changed since it was read; nothing was written`): read the project again and repeat.

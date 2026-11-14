@@ -485,6 +485,9 @@ pub const SKIP_STARTERS_MISSING: &str = "check-skip-starters-missing";
 pub const SKIP_NO_MAP_EXTENT: &str = "check-skip-no-map-extent";
 /// Reason: the map has no objects, so no route times can be computed for a score rule.
 pub const SKIP_SCORE_NO_MAP: &str = "check-skip-score-no-map";
+/// Reason: the map is a forest map, whose route times the program cannot compute (no elevation, no vegetation
+/// speed; ADR 0092).
+pub const SKIP_SCORE_FOREST: &str = "check-skip-score-forest";
 /// Reason: the route search of a score rule failed; argument `error`, in English.
 pub const SKIP_SCORE_TRAVEL: &str = "check-skip-score-travel";
 /// Reason: a profile switched the rule off (`enabled = false`); argument `overlay`, the id of
@@ -968,5 +971,7 @@ fn run_key(
 #[cfg(test)]
 pub(crate) mod testing;
 
+#[cfg(test)]
+mod forest_tests;
 #[cfg(test)]
 mod tests;

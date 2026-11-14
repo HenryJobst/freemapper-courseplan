@@ -147,7 +147,8 @@ fn init_refuses_forest_map() {
     let out = run(dir.path(), &["init", map.to_str().unwrap()]);
     assert_eq!(out.status.code(), Some(1));
     assert!(stderr(&out).starts_with("error: "), "{}", stderr(&out));
-    assert!(stderr(&out).contains("Forest maps"));
+    assert!(stderr(&out).contains("ISOM2000"), "{}", stderr(&out));
+    assert!(stderr(&out).contains("ISOM 2017-2"), "{}", stderr(&out));
     assert!(!dir.path().join("forest-sample.courseplan.toml").exists());
 }
 
@@ -226,7 +227,8 @@ fn init_refuses_forest_map_in_german() {
     assert_eq!(out.status.code(), Some(1));
     let err = stderr(&out);
     assert!(err.starts_with("Fehler: "), "{err}");
-    assert!(err.contains("Waldkarten"), "{err}");
+    assert!(err.contains("Waldkarte"), "{err}");
+    assert!(err.contains("ISOM2000"), "{err}");
 }
 
 #[test]

@@ -23,6 +23,7 @@ word-name-accepted-finding-note = note of an accepted finding
 word-map-sprint = sprint
 word-map-schoolyard = schoolyard
 word-map-forest = forest
+word-symbol-set-unnamed = (no name)
 
 ## Inconsistencies inside an event (ModelError)
 
@@ -64,7 +65,8 @@ error-project-invalid = { $path } is not a consistent event:{ $list }
 ## Starting an event (InitError)
 
 error-init-map = cannot read map { $path }: { $source }
-error-init-forest = Forest maps (ISOM) are not supported yet; this version handles sprint and schoolyard maps (ADR 0010).
+error-init-forest = This forest map uses the symbol set { $found }, but only ISOM 2017-2 is supported for forest maps (ADR 0092).
+error-score-forest = Score suggest, draft and length do not work on forest maps: the route search knows neither elevation nor vegetation speed, so its times would mislead (ADR 0092). Setting a score course by hand works; check leaves its length bands untested.
 error-init-io = cannot create folder { $path }: { $source }
 
 ## Measuring courses (CourseError)
@@ -167,6 +169,7 @@ check-skip-needs-route-analysis = the rule is about the running route, and the r
 check-skip-value-missing = the rule has no value { $name }
 check-skip-no-map-extent = the map has no objects, so it has no edge
 check-skip-score-no-map = the map has no objects, so no route times can be computed
+check-skip-score-forest = route times are not computed on a forest map: the route search knows neither elevation nor vegetation speed
 check-skip-score-travel = route times cannot be computed. The error text is English: { $error }
 check-skip-start-window-missing = the event has no start window; event start-window sets it
 check-skip-starters-missing = classes without an expected number of starters: { $classes }; class set --starters sets it
@@ -1601,6 +1604,7 @@ editor-score-band-tolerance = Tolerance around the targets (percentage points)
 editor-score-suggest = Suggest controls
 editor-score-draft = Draft course
 editor-score-length-run = Check length
+editor-score-forest-note = Suggest, draft and length are not available on a forest map: the route search knows neither elevation nor vegetation speed. Controls, values and links can be set by hand.
 editor-score-apply = Apply draft
 editor-score-discard = Discard
 editor-score-accept = Accept

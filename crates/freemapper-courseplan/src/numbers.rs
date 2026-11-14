@@ -763,6 +763,23 @@ mod tests {
         assert_eq!(base_scale(MapKind::Forest), 15000);
     }
 
+    /// `overprint_sizes` repeats values that freemapper-printrules owns; the two must agree for every kind, so a
+    /// forest map gets the circle of ISOM 2017-2 (5.0 mm) and a sprint map that of ISSprOM 2019-2 (6.0 mm).
+    #[test]
+    fn overprint_sizes_agree_with_the_print_rules() {
+        let rules = freemapper_printrules::rules::base();
+        for kind in [MapKind::Sprint, MapKind::Schoolyard, MapKind::Forest] {
+            let ours = overprint_sizes(kind);
+            let theirs = rules.course_symbol(kind);
+            assert_eq!(
+                ours.circle_diameter_mm, theirs.circle_diameter_mm,
+                "{kind:?}"
+            );
+            assert_eq!(ours.line_width_mm, theirs.line_width_mm, "{kind:?}");
+            assert_eq!(ours.number_height_mm, theirs.number_height_mm, "{kind:?}");
+        }
+    }
+
     fn place(e: &Event, scale: u32) -> Vec<NumberPlacement> {
         place_on(e, &MapIndex::default(), scale)
     }
