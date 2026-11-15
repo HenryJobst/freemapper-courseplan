@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- `cargo deny check` prüft Lizenzen, Sicherheitsmeldungen, Quellen und Duplikate der Abhängigkeiten (`deny.toml`, eigener CI-Job, ADR 0095).
+
 ## [0.18.1] - 2026-11-15
 
 ### Geändert
