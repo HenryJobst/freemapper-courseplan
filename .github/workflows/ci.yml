@@ -38,3 +38,10 @@ jobs:
       # this feature reaches them.
       - run: cargo clippy --locked -p freemapper-courseplan-cli --all-targets --features test-stub -- -D warnings
       - run: cargo test --locked -p freemapper-courseplan-cli --features test-stub --test update --test mcp_update
+
+  # Licences, advisories, bans and sources of the dependencies (deny.toml, ADR 0095).
+  deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1

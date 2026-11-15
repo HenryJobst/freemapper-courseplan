@@ -6,6 +6,10 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+### Added
+
+- `cargo deny check` tests the licences, advisories, sources and duplicates of the dependencies (`deny.toml`, own CI job, ADR 0095).
+
 ## [0.18.1] - 2026-11-15
 
 ### Changed

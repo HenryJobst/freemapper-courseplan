@@ -138,3 +138,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0092](0092-forest-maps-isom-2017-2.md) | Forest maps in ISOM 2017-2, by hand and with `check` | Accepted | 2026-11-14 |
 | [0093](0093-agpl-3.0-or-later.md) | AGPL-3.0-or-later | Accepted, supersedes ADR 0002 | 2026-11-15 |
 | [0094](0094-freemapper-core-v0-28-0.md) | The freemapper-core pin goes to v0.28.0 | Accepted | 2026-11-15 |
+| [0095](0095-cargo-deny.md) | cargo-deny checks the dependencies | Accepted | 2026-11-15 |
