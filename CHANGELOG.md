@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- freemapper-core auf v0.29.0 angehoben: Schriften liest jetzt `skrifa` statt des nicht mehr gepflegten `ttf-parser`; die Ausnahme in `deny.toml` entfällt (ADR 0096).
 - `cargo deny check` prüft Lizenzen, Sicherheitsmeldungen, Quellen und Duplikate der Abhängigkeiten (`deny.toml`, eigener CI-Job, ADR 0095).
 
 ## [0.18.1] - 2026-11-15
