@@ -117,6 +117,6 @@ Datei erzeugt hat.
 
 Karte und Urheber stehen in [`ATTRIBUTION.txt`](ATTRIBUTION.txt). **Remo Madella hat die Karte für die
 freemapper-Suite freigegeben, nicht unter einer offenen Lizenz.** Wer sie außerhalb der Suite nutzen will, fragt ihn.
-Das Programm und die Bahndaten (Projektdatei, Exporte, Ausgaben) stehen unter GPL-3.0-or-later; der Karteninhalt
+Das Programm und die Bahndaten (Projektdatei, Exporte, Ausgaben) stehen unter AGPL-3.0-or-later; der Karteninhalt
 behält seine eigene Lage. Ob die Erlaubnis auch das Verteilen der `.omap` im öffentlichen Repository meint, ist nicht
 geklärt (ADR 0077).

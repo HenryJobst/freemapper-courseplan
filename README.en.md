@@ -195,4 +195,4 @@ and uses a local `[patch]` during development. The details are in the README of
 
 ## Licence
 
-freemapper-courseplan is licensed [GPL-3.0-or-later](LICENSE), like freemapper and freemapper-print (ADR 0002).
+freemapper-courseplan is licensed [AGPL-3.0-or-later](LICENSE), like freemapper and freemapper-print (ADR 0093).
