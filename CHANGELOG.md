@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Die Website <https://freemapper.de> zeigt die Programme der Suite, die Handbücher und die Änderungen; README und Handbuch verweisen auf sie. Nach einem Release stößt der Release-Workflow ihren Neubau an, wenn das Secret `SITE_DISPATCH_TOKEN` gesetzt ist; sonst folgt sie mit ihrem täglichen Bau (ADR 0097).
 - freemapper-core auf v0.29.0 angehoben: Schriften liest jetzt `skrifa` statt des nicht mehr gepflegten `ttf-parser`; die Ausnahme in `deny.toml` entfällt (ADR 0096).
 - `cargo deny check` prüft Lizenzen, Sicherheitsmeldungen, Quellen und Duplikate der Abhängigkeiten (`deny.toml`, eigener CI-Job, ADR 0095).
 

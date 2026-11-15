@@ -1,7 +1,7 @@
 # freemapper-courseplan for AI agents
 
 This file tells an AI agent how to install freemapper-courseplan and how to use it for a person who sets
-orienteering courses. It ships in every release archive next to the program. People read
+orienteering courses. It ships in every release archive next to the program. People read the website <https://freemapper.de>,
 [README.en.md](README.en.md) (English) or [README.md](README.md) (German); the [user manual](docs/manual/en.md) has
 the details.
 
