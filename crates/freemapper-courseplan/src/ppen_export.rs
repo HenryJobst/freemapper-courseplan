@@ -653,6 +653,8 @@ fn to_raw_in(
                 event_name: Some(event.event.title.clone()),
                 map_scale: Some(map_scale),
                 item_scaling: Some(scaling),
+                event_date: None,
+                organiser: None,
             },
             notes: Vec::new(),
         },

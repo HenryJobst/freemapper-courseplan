@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Geändert
 
+- freemapper-core auf v0.28.0 angehoben (AGPL-Kern, ADR 0094). Das Verhalten ändert sich nicht.
 - Lizenz: AGPL-3.0-or-later statt GPL-3.0-or-later (ADR 0093), wie freemapper, freemapper-core und das andere Programm. Wer eine geänderte Version als Netzwerkdienst betreibt, muss ihren Quelltext anbieten. Bisherige Veröffentlichungen bleiben GPL-3.0-or-later.
 
 ## [0.18.0] - 2026-11-14
