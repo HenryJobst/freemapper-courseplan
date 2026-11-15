@@ -1,6 +1,6 @@
 # freemapper-courseplan user manual
 
-[Deutsch](de.md) · [README](../../README.en.md)
+[Website](https://freemapper.de/en/) · [Deutsch](de.md) · [README](../../README.en.md)
 
 This manual takes shape along with the first usable version. It will lead step by step from the finished OOM map
 to finished courses that OE evaluates and freemapper-print prints, even without command-line experience.

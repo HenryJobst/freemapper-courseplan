@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- The website <https://freemapper.de> shows the programs of the suite, the manuals and the changes; README and manual link to it. After a release the release workflow starts its rebuild when the secret `SITE_DISPATCH_TOKEN` is set; otherwise it follows with its daily build (ADR 0097).
 - freemapper-core pin v0.29.0: fonts are read by `skrifa` instead of the unmaintained `ttf-parser`; the ignore in `deny.toml` is gone (ADR 0096).
 - `cargo deny check` tests the licences, advisories, sources and duplicates of the dependencies (`deny.toml`, own CI job, ADR 0095).
 
