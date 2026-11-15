@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- freemapper-core pin v0.29.0: fonts are read by `skrifa` instead of the unmaintained `ttf-parser`; the ignore in `deny.toml` is gone (ADR 0096).
 - `cargo deny check` tests the licences, advisories, sources and duplicates of the dependencies (`deny.toml`, own CI job, ADR 0095).
 
 ## [0.18.1] - 2026-11-15
