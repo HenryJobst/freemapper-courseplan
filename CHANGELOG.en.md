@@ -6,6 +6,8 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-11-15
+
 ### Changed
 
 - freemapper-core pin v0.28.0 (AGPL core, ADR 0094). No change in behaviour.

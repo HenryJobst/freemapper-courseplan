@@ -6,6 +6,8 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+## [0.18.1] - 2026-11-15
+
 ### Geändert
 
 - freemapper-core auf v0.28.0 angehoben (AGPL-Kern, ADR 0094). Das Verhalten ändert sich nicht.
