@@ -6,6 +6,10 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- Lizenz: AGPL-3.0-or-later statt GPL-3.0-or-later (ADR 0093), wie freemapper, freemapper-core und das andere Programm. Wer eine geänderte Version als Netzwerkdienst betreibt, muss ihren Quelltext anbieten. Bisherige Veröffentlichungen bleiben GPL-3.0-or-later.
+
 ## [0.18.0] - 2026-11-14
 
 ### Hinzugefügt

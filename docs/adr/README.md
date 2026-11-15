@@ -45,7 +45,7 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | Number | Title | Status | Date |
 |---|---|---|---|
 | [0001](0001-rust-with-a-pure-rust-core.md) | Rust with a pure-Rust core | Accepted | 2026-11-08 |
-| [0002](0002-gpl-3.0-or-later.md) | GPL-3.0-or-later | Accepted | 2026-11-08 |
+| [0002](0002-gpl-3.0-or-later.md) | GPL-3.0-or-later | Superseded by ADR 0093 | 2026-11-08 |
 | [0003](0003-glossary-first-english-code-bilingual-docs.md) | Glossary first, English code, bilingual user docs | Accepted | 2026-11-08 |
 | [0004](0004-mcp-over-stdio-as-a-primary-interface.md) | MCP over stdio as a primary interface | Accepted | 2026-11-08 |
 | [0005](0005-course-editor-in-a-local-browser-page.md) | Course editor in a local browser page | Accepted | 2026-11-08 |
@@ -136,3 +136,4 @@ Keep an ADR between 10 and 30 lines. Write it in English, like all technical doc
 | [0090](0090-event-date-and-organizer.md) | The event has a date and an organizer, and the IOF XML export carries them | Accepted | 2026-11-13 |
 | [0091](0091-freemapper-core-v0-24-0.md) | The freemapper-core pin goes to v0.24.0 | Accepted | 2026-11-13 |
 | [0092](0092-forest-maps-isom-2017-2.md) | Forest maps in ISOM 2017-2, by hand and with `check` | Accepted | 2026-11-14 |
+| [0093](0093-agpl-3.0-or-later.md) | AGPL-3.0-or-later | Accepted, supersedes ADR 0002 | 2026-11-15 |

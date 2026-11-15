@@ -113,5 +113,5 @@ run that made the file.
 
 Map and author are named in [`ATTRIBUTION.txt`](ATTRIBUTION.txt). **Remo Madella released the map for use within the
 freemapper suite, not under an open licence.** If you want to use it outside the suite, ask him. The program and the
-course data (project file, exports, outputs) are under GPL-3.0-or-later; the map content keeps its own situation.
+course data (project file, exports, outputs) are under AGPL-3.0-or-later; the map content keeps its own situation.
 Whether the permission also covers distributing the `.omap` in the public repository is not settled (ADR 0077).

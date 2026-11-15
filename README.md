@@ -201,4 +201,4 @@ bindet es während der Entwicklung über einen lokalen `[patch]` ein. Die Einzel
 
 ## Lizenz
 
-freemapper-courseplan steht unter der [GPL-3.0-or-later](LICENSE), wie freemapper und freemapper-print (ADR 0002).
+freemapper-courseplan steht unter der [AGPL-3.0-or-later](LICENSE), wie freemapper und freemapper-print (ADR 0093).
