@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- The READMEs carry badges for line coverage, MSRV, ADRs, the number of checks and the licence. `scripts/badges.sh` writes them from the data in the repository, and the check fails when they are out of date (amendment to ADR 0098).
 - `scripts/check.sh` bundles the gates for the licence line, the spelling of the English documents, internal links, secrets in the history, declared but unused dependencies, action pins, the ADR index, the changelog pair, rustdoc without warnings, line coverage and the MSRV (ADR 0098). `lefthook.yml` runs the fast gates before a commit and `secrets` before a push; every Rust file carries the line `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - The website <https://freemapper.de> shows the programs of the suite, the manuals and the changes; README and manual link to it. After a release the release workflow starts its rebuild when the secret `SITE_DISPATCH_TOKEN` is set; otherwise it follows with its daily build (ADR 0097).
 - freemapper-core pin v0.29.0: fonts are read by `skrifa` instead of the unmaintained `ttf-parser`; the ignore in `deny.toml` is gone (ADR 0096).
@@ -15,6 +16,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Changed
 
+- The coverage job reports the measurement on every run and catches a `docs/coverage.json` that is not committed yet; both were invisible before.
 - `deny.toml` ignores `RUSTSEC-2026-0543`: `chrono` is unmaintained but reaches courseplan through rmcp and schemars, and neither can drop it; the advisory names missing maintenance, not a vulnerability (amendment to ADR 0095).
 - freemapper-core moves to v0.29.1: its manifest sets `default-features = false` on the workspace entry now, so cargo before 1.99 reads it again. The MSRV therefore stays 1.88 and is checked with 1.88.0 from now on (ADR 0098, amendment).
 - Line coverage is measured: 91.0 %. `docs/coverage.json` holds the measurement, the floor sits at 89.0 %, and a run below it fails.
