@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The control description symbols for the column pickers (`GET api/symbols?column=C..H`, ADR 0051): the IOF
 //! 2024 ids a column offers, their text in the process language and their drawing as SVG.
 //!

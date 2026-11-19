@@ -8,9 +8,17 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- `scripts/check.sh` bundles the gates for the licence line, the spelling of the English documents, internal links, secrets in the history, declared but unused dependencies, action pins, the ADR index, the changelog pair, rustdoc without warnings, line coverage and the MSRV (ADR 0098). `lefthook.yml` runs the fast gates before a commit and `secrets` before a push; every Rust file carries the line `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - The website <https://freemapper.de> shows the programs of the suite, the manuals and the changes; README and manual link to it. After a release the release workflow starts its rebuild when the secret `SITE_DISPATCH_TOKEN` is set; otherwise it follows with its daily build (ADR 0097).
 - freemapper-core pin v0.29.0: fonts are read by `skrifa` instead of the unmaintained `ttf-parser`; the ignore in `deny.toml` is gone (ADR 0096).
 - `cargo deny check` tests the licences, advisories, sources and duplicates of the dependencies (`deny.toml`, own CI job, ADR 0095).
+
+### Changed
+
+- `deny.toml` ignores `RUSTSEC-2026-0543`: `chrono` is unmaintained but reaches courseplan through rmcp and schemars, and neither can drop it; the advisory names missing maintenance, not a vulnerability (amendment to ADR 0095).
+- The declared MSRV rises from 1.88 to 1.99. The workspace's own code does not need it; the manifest of freemapper-core v0.29.0 does, because cargo rejects a member overriding `default-features` of an inherited workspace dependency until 1.99. A CI job checks the claim with 1.99.0 (ADR 0098).
+- Line coverage is measured: 91.0 %. `docs/coverage.json` holds the measurement, the floor sits at 89.0 %, and a run below it fails.
+- Two ADR references named the renamed file `0062-score-candidates.md`, and the changelog linked the removed example `luebeck-sprint.ppen`; both name the right thing now, and the example stays as a name without a link.
 
 ## [0.18.1] - 2026-11-15
 
@@ -287,7 +295,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
   is set yet; for that file the Purple Pen ids are stored in the project. The AI assistant has the tool
   `export_ppen`. The writer comes from freemapper-core v0.4.0 (`freemapper-course`). **Not yet opened in
   Purple Pen 4.0** (ADR 0035).
-- The example [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen); a test compares it with a
+- The example `luebeck-sprint.ppen`; a test compares it with a
   fresh export, another reads it back and exports onto it.
 - A test reads the IOF XML export (the Lübeck example and an event with a crossing point) back through the IOF
   reader of freemapper-course and compares controls, positions, courses, order of stops and number positions.

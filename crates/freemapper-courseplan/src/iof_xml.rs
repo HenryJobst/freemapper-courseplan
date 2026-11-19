@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! IOF XML 3.0 `CourseData` export for result software such as OE.
 //!
 //! The writer turns an [`Event`] and the map scale into one XML string. Individual and score courses are

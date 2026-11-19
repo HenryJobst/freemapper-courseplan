@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Sync with the linked Purple Pen file from the page (ADR 0054).
 //!
 //! The page names no file: the sync uses the project's `sources.ppen`, as the CLI does, with the link checks

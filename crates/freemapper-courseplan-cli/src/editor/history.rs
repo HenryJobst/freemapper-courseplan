@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The undo history of the editor: a chain of whole-file snapshots (ADR 0043).
 //!
 //! Each successful operation appends the project file's text after it to the chain; the text before it is

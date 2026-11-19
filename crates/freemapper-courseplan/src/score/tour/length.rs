@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Length analysis of a score course.
 
 use freemapper_courseplan_model::{MapPoint, ScoreSettings};

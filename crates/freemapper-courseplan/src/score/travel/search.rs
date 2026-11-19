@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Dijkstra on the 8-neighbour grid and the penalty method for alternatives.
 
 use std::cmp::Ordering;

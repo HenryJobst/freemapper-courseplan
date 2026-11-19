@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The stops of a course as the checks see them: start, controls, crossing points and finish,
 //! with their position and kind, from the legs of `CourseContext`.
 

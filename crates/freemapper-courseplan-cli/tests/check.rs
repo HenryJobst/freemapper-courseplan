@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `check`, `finding accept`/`remove` and `event profile` on the command line.
 
 use std::path::{Path, PathBuf};

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `sync` on the command line: the project and its linked Purple Pen file, with real files in a temp dir.
 
 use std::path::{Path, PathBuf};

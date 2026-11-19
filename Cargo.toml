@@ -7,7 +7,7 @@ version = "0.18.1"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 repository = "https://github.com/HenryJobst/freemapper-courseplan"
-rust-version = "1.88"
+rust-version = "1.99"
 
 [workspace.dependencies]
 freemapper-courseplan-model = { path = "crates/freemapper-courseplan-model" }

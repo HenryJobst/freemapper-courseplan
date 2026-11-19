@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The three Purple Pen views of a sync: base, ours and theirs, each as what the `.ppen` import makes of a
 //! file (D3). Seen through the same reader, fit and rounding, Purple Pen's added defaults and the model's
 //! lossy mapping cannot show up as changes.

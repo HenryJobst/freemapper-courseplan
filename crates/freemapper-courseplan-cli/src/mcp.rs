@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `freemapper-courseplan mcp`: the MCP server on stdio, so an AI assistant can set courses for a
 //! user. The tools are thin wrappers over the library: each call loads the project, applies one
 //! edit, saves on success and answers with compact JSON. Tool, parameter and field names stay

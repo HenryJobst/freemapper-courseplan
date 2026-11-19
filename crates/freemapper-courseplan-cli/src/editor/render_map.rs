@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The map from the shared renderer (ADR 0046, D13): `freemapper-render` builds one page of the whole map at
 //! map scale, draws parts of it as SVG and answers which map object lies under a point.
 //!

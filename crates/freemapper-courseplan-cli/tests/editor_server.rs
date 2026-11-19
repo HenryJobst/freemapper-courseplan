@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The `edit` command end to end: the binary is spawned with `--no-browser` and spoken to over raw HTTP.
 
 use std::io::{BufRead, BufReader, Read, Write};

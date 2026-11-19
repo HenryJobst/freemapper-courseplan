@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Applies the resolved merge to the project (D6, D8, D10, D11).
 //!
 //! The result starts as a clone of the project. Where the Purple Pen side wins, its value is written into

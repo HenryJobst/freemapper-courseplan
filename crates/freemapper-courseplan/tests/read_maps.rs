@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Reads the two real maps in `tests/fixtures/maps` and queries them.
 
 use freemapper_courseplan::map::{MapIndex, MapKind, map_kind};

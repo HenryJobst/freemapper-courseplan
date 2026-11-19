@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the number gap check. Maps are 1:4000 sprint maps.
 
 use freemapper_courseplan_model::{CourseKind, Event, NumberPlacement};

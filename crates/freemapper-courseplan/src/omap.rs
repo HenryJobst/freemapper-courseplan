@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The OpenOrienteering Mapper reader and map model come from `freemapper-omap` (freemapper-core);
 //! this module keeps the old paths (`crate::omap::read::read_map_file` …) working.
 

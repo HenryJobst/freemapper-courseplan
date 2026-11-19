@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `freemapper-courseplan update` and the daily check (ADR 0076), against the stub of
 //! `tests/support/update_stub.rs`. The tests that reach the network code need a build with the
 //! `test-stub` feature (`cargo test -p freemapper-courseplan-cli --features test-stub --test update`);

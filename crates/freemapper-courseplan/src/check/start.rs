@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Start checks (plan M2b, Task 7): enough different first controls for the starters of one
 //! start, and first legs that do not run in nearly the same direction.
 //!

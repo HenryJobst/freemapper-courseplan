@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Mandatory links as chains. A link means two controls are run one directly after the other, either
 //! way round. Links that share a control (A-B, B-C) form a chain; the solver treats a chain as one
 //! unit that is run forwards or backwards (ADR 0064).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the mapped area and its margin (ADR 0087). Maps are at 1:1000, so one map millimetre is one metre
 //! on the ground, and the raster cells are 2 m: a margin is right to about 2 m.
 

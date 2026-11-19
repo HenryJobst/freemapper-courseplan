@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `sync`: merges the project with its linked Purple Pen file (ADR 0040). The same functions serve the CLI
 //! and, later, the MCP tools.
 

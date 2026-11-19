@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Edit operations of score courses (ADR 0067): the course, its controls with values, the mandatory
 //! links, the event's score settings and the course details. They follow the rules of `edit`: work on
 //! a clone, validate, write back only a consistent result.

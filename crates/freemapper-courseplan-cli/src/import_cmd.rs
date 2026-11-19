@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `import --ppen` and `init --ppen`: take over a Purple Pen event. The same functions serve the
 //! CLI and the MCP tool.
 

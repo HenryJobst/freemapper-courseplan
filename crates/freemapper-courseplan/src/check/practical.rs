@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Checks of the practical sprint (ADR 0085, ADR 0086): a control deep in a dead end, and a start far from the
 //! finish. Both are recommendations of the project owner, not rules of the WKB. The limits are the event
 //! settings `dead_end_max_m` and `start_finish_max_m`; the generation of score courses keeps to the same

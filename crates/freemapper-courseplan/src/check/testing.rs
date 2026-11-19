@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Builders for check tests: a small event, a map without features or with given objects, and
 //! hand-made rules and rule sets.
 

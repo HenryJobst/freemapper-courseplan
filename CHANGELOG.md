@@ -8,9 +8,17 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- `scripts/check.sh` bündelt die Gates für die Lizenzzeile, die Rechtschreibung der englischen Doku, interne Links, Geheimnisse in der Historie, ungenutzte Abhängigkeiten, Action-Pins, den ADR-Index, das Changelog-Paar, rustdoc ohne Warnungen, die Zeilenabdeckung und die MSRV (ADR 0098). `lefthook.yml` ruft die schnellen Gates vor dem Commit und `secrets` vor dem Push; jede Rust-Datei trägt die Zeile `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - Die Website <https://freemapper.de> zeigt die Programme der Suite, die Handbücher und die Änderungen; README und Handbuch verweisen auf sie. Nach einem Release stößt der Release-Workflow ihren Neubau an, wenn das Secret `SITE_DISPATCH_TOKEN` gesetzt ist; sonst folgt sie mit ihrem täglichen Bau (ADR 0097).
 - freemapper-core auf v0.29.0 angehoben: Schriften liest jetzt `skrifa` statt des nicht mehr gepflegten `ttf-parser`; die Ausnahme in `deny.toml` entfällt (ADR 0096).
 - `cargo deny check` prüft Lizenzen, Sicherheitsmeldungen, Quellen und Duplikate der Abhängigkeiten (`deny.toml`, eigener CI-Job, ADR 0095).
+
+### Geändert
+
+- `deny.toml` nimmt `RUSTSEC-2026-0543` aus: `chrono` ist nicht mehr gepflegt, kommt aber über rmcp und schemars und ist ohne die beiden nicht zu ersetzen; die Meldung nennt fehlende Pflege, keine Schwachstelle (Nachtrag zu ADR 0095).
+- Die deklarierte MSRV steigt von 1.88 auf 1.99. Nicht der eigene Code braucht sie, sondern das Manifest von freemapper-core v0.29.0: Cargo lehnt dort ein `default-features = false` an einer geerbten Workspace-Abhängigkeit ab, bis 1.99. Ein CI-Job prüft die Angabe mit 1.99.0 (ADR 0098).
+- Die Zeilenabdeckung wird gemessen: 91,0 %. `docs/coverage.json` hält den Messwert, die Schwelle steht bei 89,0 %; ein Lauf darunter scheitert.
+- Zwei ADR-Verweise nannten die umbenannte Datei `0062-score-candidates.md`, und das Changelog verlinkte das entfernte Beispiel `luebeck-sprint.ppen`; beide nennen jetzt das Richtige, das Beispiel bleibt als Name ohne Verweis.
 
 ## [0.18.1] - 2026-11-15
 
@@ -285,7 +293,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
   im Projekt als `sources.ppen` ein, wenn dort noch keine steht; für diese Datei speichert er die
   Purple-Pen-Kennungen im Projekt. Der KI-Assistent hat das Werkzeug `export_ppen`. Den Schreiber liefert
   freemapper-core v0.4.0 (`freemapper-course`). **In Purple Pen 4.0 noch nicht geöffnet** (ADR 0035).
-- Das Beispiel [`luebeck-sprint.ppen`](examples/luebeck-sprint/luebeck-sprint.ppen); ein Test vergleicht es mit
+- Das Beispiel `luebeck-sprint.ppen`; ein Test vergleicht es mit
   einem frischen Export, ein zweiter liest es wieder ein und exportiert es auf sich selbst.
 - Ein Test liest den IOF-XML-Export (Lübeck-Beispiel und ein Ereignis mit Wechselpunkt) mit dem IOF-Leser von
   freemapper-course wieder ein und vergleicht Posten, Positionen, Bahnen, Reihenfolge und Nummernlagen.

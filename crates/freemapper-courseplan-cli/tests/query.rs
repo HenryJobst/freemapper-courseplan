@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `list`, `map` and `event start-window --none` on the command line (ADR 0059): `--json` equals the MCP
 //! tool's answer on the Luebeck example, and the errors are the CLI's.
 

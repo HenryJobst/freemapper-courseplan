@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Table checks (plan M2b, Task 8): the length of a course against the HE course (WKB26
 //! Anlage 5 Nr. 3 to 5), easy and hard categories on one course (Anlage 5 Nr. 2) and the
 //! performance kilometres against the NOR recommendation (overlay nor-bb-2021).

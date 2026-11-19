@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Dead ends and the ends of a course: the rules of the practical sprint (ADR 0085, ADR 0086, ADR 0087).
 //!
 //! The check and the generation read the same functions, so a draft never holds a control that `check` warns

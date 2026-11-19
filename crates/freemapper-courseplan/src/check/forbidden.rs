@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `control_in_forbidden`: a control that stands inside an out-of-bounds area (WKB26 A 2.2, per the
 //! research file; ADR 0081). Only the control is tested, not the legs and not start, finish or
 //! crossing points.

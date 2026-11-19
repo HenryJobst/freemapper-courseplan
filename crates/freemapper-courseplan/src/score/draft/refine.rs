@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Local search around the best prefix set (ADR 0074): swap, add or drop one control, or move one
 //! value one step off its quantile, and keep what brings the length bands closer. Seeded and bounded by
 //! a budget of tour evaluations, so the answer is the same on every run.

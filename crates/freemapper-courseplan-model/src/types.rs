@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Serde domain types of an event: controls, special objects, courses of all kinds, classes.
 //!
 //! Positions are [`MapPoint`]s: millimetres at map scale, y down. Terms follow `docs/glossary.md`.

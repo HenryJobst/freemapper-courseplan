@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Dead ends on the cost surface (ADR 0085): how far into a pocket of the walkable network a place lies.
 //!
 //! A runner who goes to a control in a dead end has no route choice: every route shares one corridor and

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The score tools that need the map: `score_suggest`, `score_draft` and `score_length` (ADR 0068).
 //! Each is one `*_op` function, run by the MCP tool, by `call_json` (CLI, editor) and nowhere else.
 //! Suggestions and analyses write nothing; the draft writes only with `apply: true`, through the

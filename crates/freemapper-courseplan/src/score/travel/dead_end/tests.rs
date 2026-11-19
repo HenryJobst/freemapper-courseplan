@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the dead-end depth (ADR 0085). Maps are at 1:1000, so a map millimetre is a metre on the ground,
 //! and the raster cells are 2 m.
 

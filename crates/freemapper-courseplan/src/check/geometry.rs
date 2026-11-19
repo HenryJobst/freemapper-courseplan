@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Geometry of the leg checks in map millimetres: the drawn part of a leg, whether it meets a
 //! line or an area, angles between directions and stretches where two lines run against each
 //! other.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `init --ppen` and `import --ppen` on the command line.
 
 use std::path::{Path, PathBuf};

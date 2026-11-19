@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The map as the editor page sees it: a coordinate mapping, a page box, an SVG for a rectangle and hit
 //! testing (ADR 0046, D13). `PlaceholderMap` stands in until the shared renderer is wired in; it draws the
 //! extent frame, a 10 mm grid and a note, never map content.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the distance checks. Maps are 1:4000 sprint maps unless named otherwise, so one map
 //! mm is 4 m and the control circle radius is 3 mm (12 m).
 

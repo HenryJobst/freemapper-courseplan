@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Seeded heuristic for many controls: cheapest insertion by points per second, 2-opt, and a
 //! remove-and-refill pass, repeated from several seeded orders; the best result wins.
 

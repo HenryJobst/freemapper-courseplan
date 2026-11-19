@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The overlay of a patch: the base file's own values wherever the project still equals what the import
 //! made of them.
 //!

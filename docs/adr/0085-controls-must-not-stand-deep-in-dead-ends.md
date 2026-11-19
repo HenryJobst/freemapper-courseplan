@@ -1,6 +1,6 @@
 # 0085: Controls must not stand deep in dead ends
 
-Status: Accepted, 2026-11-12. Follows [0062](0062-score-candidates.md) and [0082](0082-score-candidates-keep-out-of-out-of-bounds-map-areas.md).
+Status: Accepted, 2026-11-12. Follows [0062](0062-score-candidates-and-points.md) and [0082](0082-score-candidates-keep-out-of-out-of-bounds-map-areas.md).
 
 ## Context
 

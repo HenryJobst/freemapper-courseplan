@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The edit commands: `control`, `special`, `class` and `course`. Each loads the project, applies one edit
 //! from `freemapper_courseplan::edit`, saves, and prints one confirmation line from the catalog.
 //! The map is read only where the operation checks a point against its extent.

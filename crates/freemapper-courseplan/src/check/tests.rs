@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use freemapper_courseplan_model::{AcceptedFinding, CourseKind, Discipline, LegRef};
 
 use super::testing::*;

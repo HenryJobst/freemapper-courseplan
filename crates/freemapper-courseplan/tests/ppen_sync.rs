@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `sync_ppen` on the Lübeck example linked to a Purple Pen file (spec section 7, one test per merge case).
 
 mod common;

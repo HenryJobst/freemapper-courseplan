@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of `inside_map`. Maps are 1:4000 sprint maps; 1 mm on the map is 4 m on the ground.
 
 use freemapper_courseplan_model::{CourseKind, Event, ScoreControl, SpecialObject};

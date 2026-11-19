@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The draft: a set of controls, values and codes for a score course whose length meets both runner
 //! bands (design 2026-11-11 §4.4, ADR 0065). Nothing is written; the caller applies the result.
 

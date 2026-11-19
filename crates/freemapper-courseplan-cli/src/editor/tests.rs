@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! In-process tests of the editor routes and of the embedded page.
 
 use std::collections::BTreeSet;

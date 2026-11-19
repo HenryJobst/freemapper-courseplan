@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `check`, `finding accept`/`remove`, `event profile`, `event start-window` and `event set`. `check` prints
 //! the findings grouped by course and a summary; it exits with 1 when a finding that is not
 //! accepted is an error.

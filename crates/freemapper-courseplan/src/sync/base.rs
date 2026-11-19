@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The sync base copy: where it lives, its hash, and what is stripped from it (D1, D2).
 
 use std::borrow::Cow;

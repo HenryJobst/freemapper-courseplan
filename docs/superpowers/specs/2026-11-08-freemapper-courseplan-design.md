@@ -13,9 +13,9 @@ planning criteria is in [`docs/research/2026-11-08-bahnlegung-kriterien.md`](../
 
 The freemapper suite covers the path from official geodata to a printed orienteering map:
 
-- [freemapper](../../../../freemapper) produces an OOM starter map from official geodata.
+- [freemapper](https://github.com/HenryJobst/freemapper) produces an OOM starter map from official geodata.
 - The mapper finishes the map in OpenOrienteering Mapper (OOM).
-- [freemapper-print](../../../../freemapper-print) turns map and courses into print PDFs.
+- [freemapper-print](https://github.com/HenryJobst/freemapper-print) turns map and courses into print PDFs.
 
 Course setting is the missing step. The author uses Purple Pen today *(user)*. Purple Pen has no API, no
 scripting and no command line beyond opening a file, so it cannot be driven by another program or an AI agent.

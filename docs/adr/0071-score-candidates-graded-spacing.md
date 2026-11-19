@@ -1,6 +1,6 @@
 # 0071: Score candidates: graded spacing and rim weight
 
-Status: Accepted, 2026-11-11. Amends [0062](0062-score-candidates.md).
+Status: Accepted, 2026-11-11. Amends [0062](0062-score-candidates-and-points.md).
 
 ## Context
 

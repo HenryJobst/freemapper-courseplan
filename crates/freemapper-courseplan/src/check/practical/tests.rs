@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of `control_dead_end` and `start_finish_distance` (ADR 0085, ADR 0086). Maps are 1:4000, so one map
 //! millimetre is 4 m on the ground.
 
