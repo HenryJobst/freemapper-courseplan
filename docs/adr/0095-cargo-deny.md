@@ -33,3 +33,9 @@ switch to AGPL-3.0-or-later. freemapper-print asked for the same check here *(ag
 
 - A false alarm blocks CI until an ignore with a reason is added. The first run passed with no findings that needed a
   change beyond the three ignores.
+
+## Amendment 2026-11-19
+RUSTSEC-2026-0543 reports `chrono` as unmaintained. `chrono` reaches courseplan through rmcp and
+schemars, and neither has a release without it; the advisory names missing maintenance, not a
+vulnerability, and offers no safe upgrade. The ignore is bound to this one ID and leaves as soon as
+rmcp and schemars drop the crate.
