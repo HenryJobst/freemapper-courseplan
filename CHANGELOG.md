@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Die READMEs tragen Badges für Zeilenabdeckung, MSRV, ADRs, Zahl der Prüfungen und Lizenz. `scripts/badges.sh` schreibt sie aus den Daten im Repository, und die Prüfung scheitert, wenn sie veralten (Nachtrag zu ADR 0098).
 - `scripts/check.sh` bündelt die Gates für die Lizenzzeile, die Rechtschreibung der englischen Doku, interne Links, Geheimnisse in der Historie, ungenutzte Abhängigkeiten, Action-Pins, den ADR-Index, das Changelog-Paar, rustdoc ohne Warnungen, die Zeilenabdeckung und die MSRV (ADR 0098). `lefthook.yml` ruft die schnellen Gates vor dem Commit und `secrets` vor dem Push; jede Rust-Datei trägt die Zeile `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - Die Website <https://freemapper.de> zeigt die Programme der Suite, die Handbücher und die Änderungen; README und Handbuch verweisen auf sie. Nach einem Release stößt der Release-Workflow ihren Neubau an, wenn das Secret `SITE_DISPATCH_TOKEN` gesetzt ist; sonst folgt sie mit ihrem täglichen Bau (ADR 0097).
 - freemapper-core auf v0.29.0 angehoben: Schriften liest jetzt `skrifa` statt des nicht mehr gepflegten `ttf-parser`; die Ausnahme in `deny.toml` entfällt (ADR 0096).
@@ -15,6 +16,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Geändert
 
+- Der Coverage-Job nennt den Messwert in jeder Ausgabe und erkennt auch eine `docs/coverage.json`, die noch nicht versioniert ist; vorher blieb beides unsichtbar.
 - `deny.toml` nimmt `RUSTSEC-2026-0543` aus: `chrono` ist nicht mehr gepflegt, kommt aber über rmcp und schemars und ist ohne die beiden nicht zu ersetzen; die Meldung nennt fehlende Pflege, keine Schwachstelle (Nachtrag zu ADR 0095).
 - freemapper-core auf v0.29.1 angehoben: Sein Manifest setzt `default-features = false` jetzt am Workspace-Eintrag, damit liest es wieder Cargo vor 1.99. Die MSRV bleibt deshalb 1.88 und wird ab jetzt mit 1.88.0 geprüft (ADR 0098, Nachtrag).
 - Die Zeilenabdeckung wird gemessen: 91,0 %. `docs/coverage.json` hält den Messwert, die Schwelle steht bei 89,0 %; ein Lauf darunter scheitert.
