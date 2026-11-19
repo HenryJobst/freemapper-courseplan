@@ -1,7 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Export of the project to a Purple Pen event (`.ppen`), the inverse of [`crate::ppen_import`].
 //!
 //! `freemapper-course` writes the file (core ADR 0014). Its writer takes a `RawEvent` in the file's frame
-//! and never flips; [`to_raw`] maps the project onto one:
+//! and never flips; `to_raw` maps the project onto one:
 //!
 //! - Frame: the project holds map mm with y down, a `.ppen` file mm with y up, both at the map scale. A
 //!   point `(x, y)` becomes `(x, -y)`; there is no translation and no µm step (a `RawPoint` is mm).
@@ -27,9 +29,9 @@
 //! - Ids: the Purple Pen ids of the project only when asked, that is when the target is the file the project
 //!   is linked to or a new file; ids from another file could capture unrelated objects there. Onto an
 //!   unlinked base file, starts, finishes and crossing points that pair neither by id nor by name pair by
-//!   their order ([`kth_renames`]).
+//!   their order (`kth_renames`).
 //! - Descriptions: a `.ppen` stores Purple Pen's symbol ids, which are 2004 numbers with suffixes, while the
-//!   project stores IOF Control Descriptions 2024 numbers. [`ppen_columns`] wraps the inverse of
+//!   project stores IOF Control Descriptions 2024 numbers. `ppen_columns` wraps the inverse of
 //!   `freemapper-course` (core ADR 0017, ADR 0037), which is built from the symbol database, so it cannot
 //!   drift from the import. A 2024 number that no Purple Pen id maps to has no counterpart in Purple Pen;
 //!   one the file's standard lacks, or the column does not offer, is left out of the exported description
@@ -549,7 +551,7 @@ pub(crate) fn to_raw(
     )
 }
 
-/// [`to_raw`] for descriptions of the given standard (`"2004"`, `"2018"`), the base file's in a patch.
+/// `to_raw` for descriptions of the given standard (`"2004"`, `"2018"`), the base file's in a patch.
 fn to_raw_in(
     event: &Event,
     kind: MapKind,
@@ -734,7 +736,7 @@ fn description(c: &Control, standard: &str, notes: &mut Vec<ExportNote>) -> Opti
 /// Starts, finishes and crossing points are left out on purpose *(controller's ruling)*: Purple Pen stores
 /// no code for them, a re-import names them `STA1`, `FIN1`, `CROSS1` … in file order, and an export onto
 /// the file pairs them again (by Purple Pen id, else by that name, else by their order; see
-/// [`kth_renames`]). A note for each would only be noise.
+/// `kth_renames`). A note for each would only be noise.
 fn codes_not_stored(controls: &[PControl<RawPoint>]) -> Vec<String> {
     controls
         .iter()

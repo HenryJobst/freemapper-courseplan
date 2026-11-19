@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Exact round trips by dynamic programming over subsets of units. A state is the set of units
 //! visited and the unit run last with its direction; the table holds the shortest time. The
 //! subsets are bitmasks, so this only runs on at most [`super::EXACT_MAX`] units.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The CSV list and the evaluation sheet of a score course (ADR 0070).
 //!
 //! Both are plain text made from the event alone. The CSV has one row per control with code, value and

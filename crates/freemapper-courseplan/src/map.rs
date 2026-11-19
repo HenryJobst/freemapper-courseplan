@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Spatial queries on an OOM map: which map features lie near a point.
 //!
 //! [`MapIndex`] flattens the objects of a [`MapDocument`] into points, lines and area rings in

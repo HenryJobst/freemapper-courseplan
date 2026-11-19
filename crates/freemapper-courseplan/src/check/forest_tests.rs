@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `check` on the synthetic ISOM 2017-2 forest map (`tests/fixtures/maps/isom2017-synthetic.omap`, ADR 0092).
 //! The map is 1:10000, so 1 map mm is 10 m on the ground.
 

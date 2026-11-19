@@ -439,6 +439,9 @@ This section is for coding agents in a clone of the repository, not for using th
 - Build and check: `cargo build --release --locked`, `cargo fmt --all --check`,
   `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace --locked`. The toolchain is
   pinned in `rust-toolchain.toml`.
+- The housekeeping gates: `scripts/check.sh` runs licence line, spelling, links, history, dependencies, action
+  pins, ADR index and changelog pair; `scripts/check.sh doc coverage msrv` builds the workspace and checks
+  rustdoc, line coverage and the MSRV. CI runs the same commands (ADR 0098).
 - Read `CLAUDE.md`, the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
   [`docs/glossary.md`](docs/glossary.md) and [`docs/adr/`](docs/adr/README.md) before changing code. Source
   code and technical docs are English; user docs are German and English. German text says "Bundesland" for a state.

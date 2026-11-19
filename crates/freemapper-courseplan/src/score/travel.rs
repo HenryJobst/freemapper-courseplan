@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Travel time over the map: a raster cost surface with the fastest route and clearly different
 //! alternatives (ADR 0061). The score code talks to [`TravelTime`] only, so a fuller route analysis
 //! can replace the surface later.

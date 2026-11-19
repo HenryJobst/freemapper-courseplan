@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The editor's state: the project file as the server last read it (parsed once per revision), its
 //! revision, and the JSON the page reads (`api/state`, `api/revision`, `api/overlay`) (ADR 0046).
 

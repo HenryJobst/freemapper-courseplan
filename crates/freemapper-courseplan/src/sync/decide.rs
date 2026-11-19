@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Conflict keys, their display values, and the sides picked for them (D9, D15).
 
 use std::collections::HashMap;

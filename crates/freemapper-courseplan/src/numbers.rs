@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Automatic placement of control numbers.
 //!
 //! The search itself lives in `freemapper-course` (`placement`, shared with freemapper-print, ADR

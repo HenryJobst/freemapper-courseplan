@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The mapped area as a raster, and the distance of a place to its edge (ADR 0087).
 //!
 //! A place counts as mapped when a map object lies within [`MAPPED_METRES`] of it, the test of the check

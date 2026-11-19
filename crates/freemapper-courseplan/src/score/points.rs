@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Point values from effort and difficulty, and the codes that carry them (ADR 0063).
 
 use freemapper_courseplan_model::{ControlCode, MapPoint, ScoreSettings};

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Control candidates: clear sites on the map with route choice, difficulty and effort (ADR 0062).
 
 use freemapper_courseplan_model::{MapPoint, SpecialObject};
@@ -57,7 +59,7 @@ pub struct SuggestContext<'a> {
     /// Sites the user rejected (ADR 0089): a site within `rejected_tolerance_mm` of one is left out.
     pub rejected: &'a [MapPoint],
     /// The distance in map millimetres within which a site counts as a rejected one
-    /// ([`REJECTED_SITE_TOLERANCE_M`] on the ground).
+    /// ([`freemapper_courseplan_model::REJECTED_SITE_TOLERANCE_M`] on the ground).
     pub rejected_tolerance_mm: f64,
 }
 

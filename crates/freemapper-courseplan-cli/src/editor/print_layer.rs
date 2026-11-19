@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The print preview: the course as `freemapper-render` draws it (ADR 0057, ADR 0046 D12/D13).
 //!
 //! The editor's own overlay (`overlay.rs`) is what the page edits; this module hands the same course to the

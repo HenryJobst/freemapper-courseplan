@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The raster of the cost surface: a speed factor per cell, painted from the map objects.
 
 use std::collections::HashMap;

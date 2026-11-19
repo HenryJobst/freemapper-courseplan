@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Control code checks (plan M2b, Task 6): the range of codes, forbidden pairs, codes that
 //! read alike next to each other, and identical objects in the control circle.
 //!

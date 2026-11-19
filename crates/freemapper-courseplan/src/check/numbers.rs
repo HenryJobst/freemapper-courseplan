@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Checks of the control numbers: the gap between circle and number (plan number gap range).
 
 use std::collections::BTreeSet;

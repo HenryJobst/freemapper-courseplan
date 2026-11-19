@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! A small synthetic sprint map for the score tools: twelve buildings on a paved area at 1:4000, so that
 //! suggestions, drafts and length analyses run in seconds. The symbol set is the one of the Luebeck
 //! fixture, which gives the map the ISSprOM symbol codes the route search and the candidates read.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Exports projects to Purple Pen events (`.ppen`): onto the three test events of `tests/fixtures/ppen`
 //! they were imported from (fitted against frame maps, see `common`), and from scratch for the Lübeck
 //! example.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! freemapper-courseplan sets orienteering courses on an OOM map: controls, courses, control
 //! descriptions, number positions and checks, with exchange to Purple Pen and IOF XML 3.0.
 //!

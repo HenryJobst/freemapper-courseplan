@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The check engine: runs the rules of a [`RuleSet`] on the individual courses of an event and
 //! collects [`Finding`]s, accepted findings and [`Skipped`] rules (design §5.6, ADR 0025).
 //!

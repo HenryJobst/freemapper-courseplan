@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `score suggest|draft|length` on the command line and over MCP (ADR 0068), on a small synthetic map.
 
 use std::io::{BufRead, BufReader, Write};

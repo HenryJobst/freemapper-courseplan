@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `score controls|value|link|settings|course` and `course add --kind score`: the score editing tools on the
 //! command line (ADR 0067). Like the read commands (ADR 0059), each runs the tool's operation through
 //! `CoursePlanServer::call_json`, so `--json` prints what the MCP tool answers; without it the same value

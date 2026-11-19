@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the table checks. Maps are 1:10000 (not a standard scale; the note about it is dropped), so 1 mm on the map is 10 m on the ground. Every
 //! course runs from the start S1 at (0, 0) over one control on the x axis to the finish F1 at
 //! (100, 0); a course of `total` mm has its control at x = (total + 100) / 2.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `init` on forest maps: ISOM 2017-2 is accepted, other forest symbol sets are refused (ADR 0092).
 
 use std::path::PathBuf;

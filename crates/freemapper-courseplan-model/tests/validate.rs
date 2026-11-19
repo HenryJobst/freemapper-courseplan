@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Consistency checks on names, ids and geometry (final review of M2a, items 2, 3 and 13).
 
 use freemapper_courseplan_model::{

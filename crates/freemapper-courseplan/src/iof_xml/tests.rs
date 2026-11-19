@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use super::*;
 use freemapper_courseplan_model::{
     Class, ControlCode, ControlDescription, CourseControl, EventMeta, FORMAT_VERSION, ProjectFile,

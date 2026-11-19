@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The event data model of freemapper-courseplan and its project file: controls, courses of all kinds
 //! (individual, team, relay, score), classes and special objects.
 //!

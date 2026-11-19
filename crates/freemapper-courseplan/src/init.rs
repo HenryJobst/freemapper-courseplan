@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Starting an event from a map: `freemapper-courseplan init`.
 
 use std::path::{Component, Path, PathBuf};

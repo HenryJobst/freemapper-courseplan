@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Import of a Purple Pen event (`.ppen`) into the courseplan model.
 //!
 //! `freemapper-course` reads the file and fits it to the map (core ADR 0013): after the fit every point is

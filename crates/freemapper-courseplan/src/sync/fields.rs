@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Fields of the matched objects and their classification by the three-way rule (D3 to D6, D10, D11).
 //!
 //! Every object of a view is cut into fields (D4). Each field has a value per side, `None` when the

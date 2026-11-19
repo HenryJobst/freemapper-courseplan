@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The order in which candidates enter the draft: forced ones first, then spatially spread, with the
 //! easy/hard mix kept in every prefix.
 

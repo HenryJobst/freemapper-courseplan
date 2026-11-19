@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Imports the three Purple Pen test events of `tests/fixtures/ppen` (see the README there), each fitted
 //! against a frame map (`common::frame_map`).
 

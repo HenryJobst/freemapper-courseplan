@@ -1,8 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Rule profiles: check rules as data files (ADR 0012, ADR 0025).
 //!
 //! The format, the parser and the merge live in the shared crate `freemapper-rules` (freemapper-core
 //! ADR 0011). This module holds what is specific to this program: the embedded profiles
-//! ([`EMBEDDED`]), the [`SCHEMA`] with the rule keys, table values and filters, and thin wrappers
+//! (`EMBEDDED`), the [`SCHEMA`] with the rule keys, table values and filters, and thin wrappers
 //! that bind the schema and the embedded files. `rules/README.md` describes the file format for
 //! people who add a profile.
 //!

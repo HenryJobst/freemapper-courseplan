@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Checks of score courses (ADR 0066): the value in the code, ambiguous codes, a ring of controls,
 //! an obvious order, the length bands of both runner profiles, the limit and penalty, the
 //! mandatory links and the mix of easy and hard controls.

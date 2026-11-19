@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `inside_map`: a start, finish, control or crossing point must lie on the mapped area (ADR 0084).
 //!
 //! `map_edge` measures against the bounding box of the map objects. A map is rarely a rectangle: a

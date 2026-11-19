@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the start checks. Maps are 1:4000 sprint maps. The start S1 is at (0, 0).
 
 use freemapper_courseplan_model::{Class, Event, SpecialObject};

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Pure three-way merge helpers: the pick rule for one field (D5) and diff3 over stop lists (D6).
 
 /// Outcome of the three-way rule for one optional value.

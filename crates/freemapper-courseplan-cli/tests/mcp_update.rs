@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The update tools and the note of the MCP server (ADR 0076). A build from source neither checks nor
 //! installs; the stub tests need `--features test-stub` (see `tests/update.rs`).
 

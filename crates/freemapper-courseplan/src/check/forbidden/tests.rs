@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of `control_in_forbidden`. Maps are 1:4000 sprint maps unless named otherwise.
 
 use freemapper_courseplan_model::{

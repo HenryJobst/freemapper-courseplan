@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The project file: an event stored as TOML, loaded and validated.
 
 use std::path::{Path, PathBuf};

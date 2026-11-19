@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! What every check reads: the event, the map index, the map kind and scale, and per individual
 //! course its legs, control numbers and print scale. Built once per `check` run.
 

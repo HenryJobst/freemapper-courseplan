@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The `edit` command: a local web server for the course editor (ADR 0042, ADR 0005).
 //!
 //! The shell around the routes (127.0.0.1 binding, token, Host and Origin checks, security headers) is

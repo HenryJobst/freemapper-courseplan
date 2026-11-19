@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Export and import from the menu (ADR 0053): IOF XML and Purple Pen files, down- and uploaded.
 //!
 //! The page never names a file. The server writes only the project's own linked `.ppen`, by the rules of the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! `list controls|courses|specials|classes` and `map extent|near`: the read-only MCP tools on the
 //! command line (ADR 0059). Each command runs the tool's operation through `CoursePlanServer::call_json`,
 //! so the answer is the one the MCP tool gives. `--json` prints it unchanged (with `"ok": true`, as the

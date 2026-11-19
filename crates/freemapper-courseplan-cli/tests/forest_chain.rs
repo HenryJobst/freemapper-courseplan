@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! A course set by hand on a forest map, from `init` to the exports and the editor (ADR 0092). The map is the
 //! synthetic ISOM 2017-2 map of `tests/fixtures/maps`, 1:10000.
 

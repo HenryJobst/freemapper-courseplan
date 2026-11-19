@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 use freemapper_courseplan_model::{MapPoint, SpecialObject};
 
 use std::sync::atomic::{AtomicUsize, Ordering};

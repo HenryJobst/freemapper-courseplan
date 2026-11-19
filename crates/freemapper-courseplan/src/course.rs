@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Course geometry: the legs of a course, control numbers and course length.
 //!
 //! Only individual courses are supported in M2a. A leg runs from one stop of the course (start,

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Geometry helpers of [`super::MapIndex`]: curve flattening and distances in millimetres.
 
 use freemapper_courseplan_model::MapPoint;

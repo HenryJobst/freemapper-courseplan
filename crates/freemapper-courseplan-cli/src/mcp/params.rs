@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! The parameters of the MCP tools. Their descriptions come from the catalog
 //! (`localize_schema` in the parent module), not from doc comments.
 

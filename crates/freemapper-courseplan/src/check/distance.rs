@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Map-based distance checks (plan M2b, Task 4): controls too close to each other or to similar
 //! features, controls near the map edge and legs through other controls. The rule about legs through
 //! out-of-bounds areas is not checked here: it needs the running route (ADR 0080).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Round trips: the tour from start to finish that scores the most points within the time limit
 //! (ADR 0064). Leg times come from [`TravelTime`] once per pair, so the solvers search no map.
 

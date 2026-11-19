@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! What Purple Pen does to a `.ppen` when it saves it, for the sync tests.
 
 use std::path::{Path, PathBuf};

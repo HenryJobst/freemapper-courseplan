@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Leg shape checks (plan M2b, Task 5): acute angles at controls and legs that run against
 //! each other. Lengths are measured in map mm and compared in metres on the ground, angles in
 //! degrees. Both checks look at the legs of one course at a time.

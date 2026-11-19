@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Tests of the leg shape checks. Maps are 1:4000 sprint maps, so one map mm is 4 m: the
 //! opposing-legs values of 10 m and 30 m are 2.5 mm and 7.5 mm.
 

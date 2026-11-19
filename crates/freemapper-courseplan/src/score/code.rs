@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Score codes carry the point value: the second digit of a two-digit code, the last digit of a
 //! longer one. The tens digit tells controls of equal value apart.
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Score course editing on the command line and over MCP (ADR 0067): the commands round-trip through the
 //! project file, `--json` equals the MCP tool's answer, and refusals read as one sentence.
 

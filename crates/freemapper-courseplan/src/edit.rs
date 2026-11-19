@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Edit operations on an event: controls, special objects, courses and classes.
 //!
 //! Every operation works on a clone of the event and validates the clone. Only a consistent result

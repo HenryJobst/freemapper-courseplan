@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Helpers shared by the `.ppen` import and export tests.
 //!
 //! The maps of the three Purple Pen test events of `tests/fixtures/ppen` (see the README there) are not in

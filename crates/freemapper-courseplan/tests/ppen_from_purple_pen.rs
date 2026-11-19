@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Two real Purple Pen 4.0 files of the Lübeck example (`tests/fixtures/ppen/luebeck-sprint-pp4-*.ppen`, see
 //! the README there), imported against the real Lübeck map: the file Purple Pen 4.0 saved without a change
 //! and the file after edits made in Purple Pen. The edits come back through the import, and an export onto

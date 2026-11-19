@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Matching of the objects of the three views (D7, D14).
 //!
 //! Each object belongs to at most one [`Triple`]. The order is: theirs to base, ours to base, then what is

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
 //! Consistency checks on an [`Event`]. These reject files that cannot be a consistent event; they do not
 //! judge course quality (that is `check`).
 
