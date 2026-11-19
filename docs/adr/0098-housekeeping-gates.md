@@ -59,3 +59,9 @@ private items, and nothing measured coverage or tested the `msrv` claim.
   better number.
 - The next freemapper-core release carries the workspace-dependency fix; until this repository
   moves to that tag, its MSRV stays at 1.99.
+
+## Amendment 2026-11-19
+The MSRV paragraph above described the state under the pinned freemapper-core v0.29.0 tag. v0.29.1
+carries the manifest fix: `default-features = false` stands on freemapper-core's workspace entry
+instead of on one of its members, so cargo before 1.99 reads it again. courseplan moves to v0.29.1
+and declares 1.88 again; the `msrv` job checks 1.88.0.

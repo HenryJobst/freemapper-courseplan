@@ -16,7 +16,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 ### Geändert
 
 - `deny.toml` nimmt `RUSTSEC-2026-0543` aus: `chrono` ist nicht mehr gepflegt, kommt aber über rmcp und schemars und ist ohne die beiden nicht zu ersetzen; die Meldung nennt fehlende Pflege, keine Schwachstelle (Nachtrag zu ADR 0095).
-- Die deklarierte MSRV steigt von 1.88 auf 1.99. Nicht der eigene Code braucht sie, sondern das Manifest von freemapper-core v0.29.0: Cargo lehnt dort ein `default-features = false` an einer geerbten Workspace-Abhängigkeit ab, bis 1.99. Ein CI-Job prüft die Angabe mit 1.99.0 (ADR 0098).
+- freemapper-core auf v0.29.1 angehoben: Sein Manifest setzt `default-features = false` jetzt am Workspace-Eintrag, damit liest es wieder Cargo vor 1.99. Die MSRV bleibt deshalb 1.88 und wird ab jetzt mit 1.88.0 geprüft (ADR 0098, Nachtrag).
 - Die Zeilenabdeckung wird gemessen: 91,0 %. `docs/coverage.json` hält den Messwert, die Schwelle steht bei 89,0 %; ein Lauf darunter scheitert.
 - Zwei ADR-Verweise nannten die umbenannte Datei `0062-score-candidates.md`, und das Changelog verlinkte das entfernte Beispiel `luebeck-sprint.ppen`; beide nennen jetzt das Richtige, das Beispiel bleibt als Name ohne Verweis.
 
