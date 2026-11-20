@@ -39,3 +39,7 @@ RUSTSEC-2026-0543 reports `chrono` as unmaintained. `chrono` reaches courseplan 
 schemars, and neither has a release without it; the advisory names missing maintenance, not a
 vulnerability, and offers no safe upgrade. The ignore is bound to this one ID and leaves as soon as
 rmcp and schemars drop the crate.
+
+## Amendment 2026-11-20
+rmcp is now 3.9.0 (with rmcp-macros 3.9.0; 3.11.0 of the macros is younger than two weeks, ADR 0006). It fixes
+RUSTSEC-2026-0457 and RUSTSEC-2026-0462, so both ignores are gone. Only the ignore for `chrono` remains.
