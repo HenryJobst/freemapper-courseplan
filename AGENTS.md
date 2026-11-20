@@ -444,7 +444,7 @@ This section is for coding agents in a clone of the repository, not for using th
   rustdoc, line coverage and the MSRV. `scripts/check.sh sbom` compares `docs/sbom.cdx.json` (`sbom --fix`
   rewrites it); `complexity`, `hack` and `mutants` (diff against `github/main`) have their own CI jobs. `architecture` fails when
   the model, library and CLI crates depend on each other against the layer order. CI runs the
-  same commands (ADR 0098, 0099, 0100).
+  same commands (ADR 0098, 0099, 0100, 0101). `tests` compares `docs/tests.json` with the declared `#[test]`s (`tests --fix` rewrites it) and CI holds the timed Linux test run to its `budget`.
 - Read `CLAUDE.md`, the [design](docs/superpowers/specs/2026-11-08-freemapper-courseplan-design.md),
   [`docs/glossary.md`](docs/glossary.md) and [`docs/adr/`](docs/adr/README.md) before changing code. Source
   code and technical docs are English; user docs are German and English. German text says "Bundesland" for a state.
