@@ -49,8 +49,9 @@ fn missing(run: &RuleRun<'_>, name: &str, skipped: &mut Vec<Skipped>) {
 }
 
 /// The rule categories of the classes of a course, each once in order of first use, and the
-/// names of the classes without a category. A class the event does not define is left out; the
-/// project file refuses it elsewhere.
+/// names of the classes without a category. A class name the event does not list has no
+/// category and is left out without a skip: classes are free names (design 4.2a), and the project
+/// file does not refuse such a name.
 fn categories_of<'c>(
     ctx: &'c CheckContext<'_>,
     course: &CourseContext<'_>,
