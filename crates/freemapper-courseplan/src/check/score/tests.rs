@@ -581,3 +581,58 @@ fn score_length_timing() {
     let r = run_rule_on(&e, &big, "score_length_bands", "cell_metres = 4.0");
     eprintln!("{:?}: {:?} {:?}", t.elapsed(), r.findings.len(), r.skipped);
 }
+
+// A profile that lacks a value
+
+/// The names of the values a report says are missing.
+fn missing_values(report: &CheckReport) -> Vec<String> {
+    report
+        .skipped
+        .iter()
+        .filter(|s| s.reason_id == SKIP_VALUE_MISSING)
+        .flat_map(|s| {
+            s.args.iter().filter_map(|(name, value)| match value {
+                ArgValue::Text(text) if *name == "name" => Some(text.clone()),
+                _ => None,
+            })
+        })
+        .collect()
+}
+
+#[test]
+fn a_score_rule_without_its_values_names_the_first_one_it_lacks() {
+    // The profile is data: a rule without a number is skipped with its name, never judged on a
+    // default and never silently passed.
+    for (key, values, lacks) in [
+        ("score_ring", "", "max_gap_degrees"),
+        (
+            "score_ring",
+            "max_gap_degrees = 90",
+            "max_radius_variation_percent",
+        ),
+        ("score_obvious_order", "", "min_hull_percent"),
+        (
+            "score_obvious_order",
+            "min_hull_percent = 50",
+            "max_chain_excess_percent",
+        ),
+        ("score_length_bands", "", "cell_metres"),
+        ("score_limit_and_penalty", "", "min_minutes"),
+        ("score_limit_and_penalty", "min_minutes = 30", "max_minutes"),
+        ("score_mix", "", "tolerance_percent"),
+    ] {
+        let r = run_rule(&five(), key, &values.replace(", ", "\n"));
+        assert_eq!(missing_values(&r), [lacks], "{key} with `{values}`: {r:?}");
+        assert!(r.findings.is_empty(), "{key}: {:?}", r.findings);
+    }
+}
+
+#[test]
+fn a_score_rule_with_its_values_is_not_skipped_for_a_missing_one() {
+    let r = run_rule(
+        &five(),
+        "score_limit_and_penalty",
+        "min_minutes = 30\nmax_minutes = 90",
+    );
+    assert!(missing_values(&r).is_empty(), "{r:?}");
+}

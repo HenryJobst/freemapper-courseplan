@@ -2045,4 +2045,447 @@ mod tests {
             "a.toml lässt sich nicht einlesen: TOML parse error at line 3"
         );
     }
+
+    /// Every value renders a finished sentence in both languages: the German one differs from the
+    /// English one, no message id or placeholder is left in it, and every argument shows up.
+    fn speaks(value: &impl Localize, needles: &[&str]) {
+        let en = value.localize(&Lang::english());
+        let german = value.localize(&de());
+        assert_ne!(en, german, "German equals English: {en}");
+        for (lang, out) in [("en", &en), ("de", &german)] {
+            assert!(out.contains(' '), "{lang}: not a sentence: {out}");
+            assert!(!out.contains('{') && !out.contains("$"), "{lang}: {out}");
+            for needle in needles {
+                assert!(out.contains(needle), "{lang}: `{needle}` missing in {out}");
+            }
+        }
+    }
+
+    #[test]
+    fn every_import_note_names_its_arguments_in_both_languages() {
+        use freemapper_course::FitNote;
+        use freemapper_course::fit::YAxis;
+        let notes: Vec<(ImportNote, Vec<&str>)> = vec![
+            (ImportNote::UnknownElement(s("Zork")), vec!["Zork"]),
+            (
+                ImportNote::Skipped {
+                    course: s("KURS7"),
+                    why: "no start",
+                },
+                vec!["KURS7"],
+            ),
+            (
+                ImportNote::GapsNotSupported { course: s("KURS7") },
+                vec!["KURS7"],
+            ),
+            (
+                ImportNote::UnmappedSymbol {
+                    control: s("CTL44"),
+                    column: 'D',
+                    id: s("SYM9.9"),
+                },
+                vec!["CTL44", "D", "SYM9.9"],
+            ),
+            (
+                ImportNote::NumberIntoCircle {
+                    control: s("CTL44"),
+                },
+                vec!["CTL44"],
+            ),
+            (ImportNote::Fit(FitNote::ScaleUnchecked), vec![]),
+            (ImportNote::Fit(FitNote::OrientationAssumed), vec![]),
+            (
+                ImportNote::Fit(FitNote::AxisAgainstFormat {
+                    set: YAxis::Up,
+                    format: YAxis::Down,
+                }),
+                vec![],
+            ),
+            (ImportNote::Fit(FitNote::GeorefCheckOff), vec![]),
+            (
+                ImportNote::MapExchange {
+                    course: s("KURS7"),
+                    control: s("CTL44"),
+                },
+                vec!["KURS7", "CTL44"],
+            ),
+            (
+                ImportNote::MapExchangeAtControl {
+                    course: s("KURS7"),
+                    control: s("CTL44"),
+                },
+                vec!["KURS7", "CTL44"],
+            ),
+            (
+                ImportNote::SecondaryTitle {
+                    course: s("KURS7"),
+                    title: s("TITEL2"),
+                },
+                vec!["KURS7", "TITEL2"],
+            ),
+            (
+                ImportNote::ColumnFText {
+                    control: s("CTL44"),
+                    text: s("2x3m"),
+                },
+                vec!["CTL44", "2x3m"],
+            ),
+            (
+                ImportNote::StartFinishDescription { id: s("SF12") },
+                vec!["SF12"],
+            ),
+            (ImportNote::MapIssueAsStart { id: s("MI12") }, vec!["MI12"]),
+            (ImportNote::SpecialSkipped { kind: "text" }, vec![]),
+            (ImportNote::SpecialWithoutCourse { kind: "water" }, vec![]),
+            (ImportNote::SpecialOffMap { kind: "first aid" }, vec![]),
+            (
+                ImportNote::CourseRenamed {
+                    from: s("ALT"),
+                    to: s("NEU"),
+                },
+                vec!["ALT", "NEU"],
+            ),
+            (
+                ImportNote::ControlWithoutPosition {
+                    control: s("CTL44"),
+                },
+                vec!["CTL44"],
+            ),
+            (
+                ImportNote::NumberGapClamped {
+                    control: s("CTL44"),
+                },
+                vec!["CTL44"],
+            ),
+            (
+                ImportNote::SpecialCourseAmbiguous {
+                    kind: "water",
+                    name: s("KURS7"),
+                },
+                vec!["KURS7"],
+            ),
+            (
+                ImportNote::Forked {
+                    family: s("FAM"),
+                    variants: vec![s("FAM1"), s("FAM2")],
+                },
+                vec!["FAM", "FAM1, FAM2"],
+            ),
+            (ImportNote::NotesTruncated, vec![]),
+        ];
+        for (note, needles) in &notes {
+            speaks(note, needles);
+        }
+        // The kind words of the special objects are translated, not passed through.
+        let de = de();
+        let skipped = ImportNote::SpecialSkipped {
+            kind: "out-of-bounds",
+        };
+        assert!(
+            skipped.localize(&de).contains("Sperrgebiet"),
+            "{}",
+            skipped.localize(&de)
+        );
+        // The reasons a course is left out all have a German text of their own.
+        for why in [
+            "variations",
+            "alternative controls",
+            "score course",
+            "no start",
+            "no finish",
+            "start or finish inside the course",
+            "no name",
+        ] {
+            let note = ImportNote::Skipped {
+                course: s("K"),
+                why,
+            };
+            let out = note.localize(&de);
+            assert!(
+                !out.contains(why),
+                "reason `{why}` is not translated: {out}"
+            );
+            assert_ne!(out, note.localize(&Lang::english()));
+        }
+    }
+
+    #[test]
+    fn export_and_sync_notes_name_their_arguments_in_both_languages() {
+        use freemapper_course::KeptObject;
+        let kept = |o| ExportNote::Kept(o);
+        let notes: Vec<(ExportNote, Vec<&str>)> = vec![
+            (
+                ExportNote::CourseSkipped {
+                    course: s("KURS7"),
+                    kind: "team",
+                },
+                vec!["KURS7"],
+            ),
+            (
+                ExportNote::SpecialSkipped {
+                    id: s("SP5"),
+                    why: "marked route",
+                },
+                vec!["SP5"],
+            ),
+            (
+                ExportNote::SymbolWithoutPpenId {
+                    control: s("CTL44"),
+                    column: 'E',
+                    id: s("SYM1.2"),
+                },
+                vec!["CTL44", "E", "SYM1.2"],
+            ),
+            (
+                ExportNote::SymbolNotInStandard {
+                    control: s("CTL44"),
+                    column: 'E',
+                    id: s("SYM1.2"),
+                    standard: s("ISCD2018"),
+                },
+                vec!["CTL44", "SYM1.2", "ISCD2018"],
+            ),
+            (
+                ExportNote::SymbolWrongColumn {
+                    control: s("CTL44"),
+                    column: 'E',
+                    id: s("SYM1.2"),
+                },
+                vec!["CTL44", "SYM1.2"],
+            ),
+            (
+                ExportNote::SymbolVariantChosen {
+                    control: s("CTL44"),
+                    column: 'E',
+                    id: s("SYM1.2"),
+                    written: s("SYM1.2b"),
+                },
+                vec!["CTL44", "SYM1.2", "SYM1.2b"],
+            ),
+            (
+                ExportNote::CodeNotStored { code: s("CODE88") },
+                vec!["CODE88"],
+            ),
+            (
+                ExportNote::FlaggingImplied {
+                    course: s("KURS7"),
+                    from: s("FROM1"),
+                    to: s("TO1"),
+                },
+                vec!["KURS7", "FROM1", "TO1"],
+            ),
+            (
+                ExportNote::PartialFlaggingDropped {
+                    course: s("KURS7"),
+                    from: s("FROM1"),
+                    to: s("TO1"),
+                },
+                vec!["KURS7", "FROM1", "TO1"],
+            ),
+            (
+                kept(KeptObject::Control {
+                    id: 4711,
+                    code: s("CODE88"),
+                }),
+                vec!["4711", "CODE88"],
+            ),
+            (
+                kept(KeptObject::Course {
+                    id: 4712,
+                    name: s("KURS7"),
+                }),
+                vec!["4712", "KURS7"],
+            ),
+            (
+                kept(KeptObject::Special {
+                    id: 4713,
+                    kind: s("water"),
+                }),
+                vec!["4713"],
+            ),
+        ];
+        for (note, needles) in &notes {
+            speaks(note, needles);
+        }
+        let sync = vec![
+            (
+                SyncNote::DeletionKept {
+                    control: s("CTL44"),
+                    course: s("KURS7"),
+                },
+                vec!["CTL44", "KURS7"],
+            ),
+            (
+                SyncNote::LegChangeDropped {
+                    from: s("FROM1"),
+                    to: s("TO1"),
+                },
+                vec!["FROM1", "TO1"],
+            ),
+            (
+                SyncNote::NewNameTaken {
+                    from: s("ALT"),
+                    to: s("NEU"),
+                },
+                vec!["ALT", "NEU"],
+            ),
+            (SyncNote::BaseIgnored { why: "missing" }, vec![]),
+            (SyncNote::BaseIgnored { why: "other link" }, vec![]),
+            (SyncNote::FirstSync, vec![]),
+            (SyncNote::BaseRepaired, vec![]),
+        ];
+        for (note, needles) in &sync {
+            speaks(note, needles);
+        }
+        // A note that was not written carries the text of the export note inside its own.
+        let wrapped = SyncNote::NotWritten(ExportNote::CodeNotStored { code: s("CODE88") });
+        speaks(&wrapped, &["CODE88"]);
+        // The reason of an ignored base copy is a German phrase, not the English key.
+        for why in ["missing", "other link", "hash"] {
+            let out = SyncNote::BaseIgnored { why }.localize(&de());
+            assert!(!out.contains(why), "`{why}` untranslated: {out}");
+        }
+    }
+
+    #[test]
+    fn ppen_import_errors_say_what_does_not_fit() {
+        use freemapper_course::{CourseError, FitError};
+        let scale = PpenImportError::Fit(FitError::ScaleMismatch {
+            file: 4000,
+            map: 15000,
+        });
+        speaks(&scale, &["4000", "15000"]);
+        let unknown = PpenImportError::Fit(FitError::MapScaleUnknown { file: 4000 });
+        speaks(&unknown, &["4000"]);
+        let outside = PpenImportError::Fit(FitError::OutsideMap {
+            inside: 3,
+            total: 41,
+        });
+        speaks(&outside, &["3", "41"]);
+        // The other fit errors keep the library's English text inside a localized sentence.
+        let other = PpenImportError::Fit(FitError::GeorefMismatch {
+            control: s("CTL44"),
+            metres: 1234.0,
+        });
+        speaks(&other, &["CTL44"]);
+        let read = PpenImportError::Read(CourseError::Xml(s("kaputt")));
+        speaks(&read, &["kaputt"]);
+        // Each of them is a different text.
+        let all = [&scale, &unknown, &outside, &other, &read];
+        let texts: BTreeSet<String> = all.iter().map(|e| e.localize(&de())).collect();
+        assert_eq!(texts.len(), all.len());
+    }
+
+    #[test]
+    fn sync_and_ppen_export_errors_name_the_file_and_the_cause() {
+        use freemapper_course::{CourseError, KeptObject, PpenWriteError as W};
+        let lang_en = Lang::english();
+        let base = || PpenImportError::Read(CourseError::Xml(s("kaputt")));
+        // The path of the linked file reaches the texts that are about the file.
+        for (e, needles) in [
+            (SyncError::Base(base()), vec!["a/b.ppen", "kaputt"]),
+            (SyncError::Theirs(base()), vec!["a/b.ppen", "kaputt"]),
+            (SyncError::UnknownVersion(s("V99")), vec!["a/b.ppen", "V99"]),
+            (
+                SyncError::Unmatched(vec![
+                    KeptObject::Control {
+                        id: 1,
+                        code: s("CODE88"),
+                    },
+                    KeptObject::Course {
+                        id: 2,
+                        name: s("KURS7"),
+                    },
+                ]),
+                vec!["a/b.ppen", "CODE88", "KURS7", "2"],
+            ),
+            (
+                SyncError::Verify(vec![s("KEY1"), s("KEY2")]),
+                vec!["KEY1, KEY2"],
+            ),
+            (
+                SyncError::Invalid(vec![ModelError::DuplicateCourse(s("KURS7"))]),
+                vec!["KURS7"],
+            ),
+        ] {
+            for lang in available() {
+                let out = sync_error(&e, &lang, "a/b.ppen");
+                for needle in &needles {
+                    assert!(
+                        out.contains(needle),
+                        "{}: `{needle}` missing in {out}",
+                        lang.code()
+                    );
+                }
+            }
+            assert_ne!(
+                sync_error(&e, &lang_en, "a/b.ppen"),
+                sync_error(&e, &de(), "a/b.ppen"),
+                "{e:?}"
+            );
+        }
+        // Without a path, `localize` still renders the error.
+        assert!(
+            SyncError::Verify(vec![s("KEY1")])
+                .localize(&lang_en)
+                .contains("KEY1")
+        );
+
+        let writes = vec![
+            (PpenExportError::Base(base()), vec!["a/b.ppen", "kaputt"]),
+            (
+                PpenExportError::Write(W::Base(CourseError::Xml(s("kaputt")))),
+                vec!["a/b.ppen"],
+            ),
+            (
+                PpenExportError::Write(W::UnknownVersion(s("V99"))),
+                vec!["V99"],
+            ),
+            (
+                PpenExportError::Write(W::Unsupported(s("WAS1"))),
+                vec!["WAS1"],
+            ),
+            (PpenExportError::Write(W::Invalid(s("WAS2"))), vec!["WAS2"]),
+            (
+                PpenExportError::Write(W::SharedLeg {
+                    from: s("FROM1"),
+                    to: s("TO1"),
+                    first: s("KURS1"),
+                    second: s("KURS2"),
+                }),
+                vec!["FROM1", "TO1", "KURS1", "KURS2"],
+            ),
+            (
+                PpenExportError::Write(W::SharedCircleGaps {
+                    control: s("CTL44"),
+                    scale: 7500,
+                    first: s("KURS1"),
+                    second: s("KURS2"),
+                }),
+                vec!["CTL44", "7500", "KURS1", "KURS2"],
+            ),
+            (PpenExportError::Write(W::Limit(s("WAS3"))), vec!["WAS3"]),
+            (
+                PpenExportError::CircleGapLimit { limit: 4242 },
+                vec!["4242"],
+            ),
+        ];
+        let mut seen = BTreeSet::new();
+        for (e, needles) in &writes {
+            for lang in available() {
+                let out = ppen_export_error(e, &lang, "a/b.ppen");
+                for needle in needles {
+                    assert!(
+                        out.contains(needle),
+                        "{}: `{needle}` missing in {out}",
+                        lang.code()
+                    );
+                }
+            }
+            let german = ppen_export_error(e, &de(), "a/b.ppen");
+            assert_ne!(ppen_export_error(e, &lang_en, "a/b.ppen"), german, "{e:?}");
+            seen.insert(german);
+        }
+        assert_eq!(seen.len(), writes.len(), "two errors share one text");
+    }
 }

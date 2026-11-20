@@ -588,3 +588,104 @@ pub(crate) fn sync(
         Err(Failure::Findings)
     }
 }
+
+#[cfg(test)]
+mod message_tests {
+    use super::*;
+    use freemapper_courseplan::text::{available, parse_lang_arg};
+
+    fn german() -> Lang {
+        parse_lang_arg("de").unwrap()
+    }
+
+    /// Words every language must put into the text, and only sentences that differ.
+    fn check(error: impl Fn() -> SyncCmdError, needles: &[&str]) {
+        let en = error().message(&Lang::english());
+        let de = error().message(&german());
+        assert_ne!(en, de, "{en}");
+        for lang in available() {
+            let out = error().message(&lang);
+            for needle in needles {
+                assert!(
+                    out.contains(needle),
+                    "{}: `{needle}` not in {out}",
+                    lang.code()
+                );
+            }
+            assert!(!out.contains("error-"), "{}: {out}", lang.code());
+        }
+    }
+
+    #[test]
+    fn every_failure_of_a_sync_names_what_it_is_about() {
+        let path = || PathBuf::from("dir/event.ppen");
+        check(|| SyncCmdError::NoLink(path()), &["dir/event.ppen"]);
+        check(|| SyncCmdError::LinkMissing(path()), &["dir/event.ppen"]);
+        check(|| SyncCmdError::NotMap(path()), &["dir/event.ppen"]);
+        check(|| SyncCmdError::Overwrites(path()), &["dir/event.ppen"]);
+        check(|| SyncCmdError::BaseUnusable(path()), &["dir/event.ppen"]);
+        check(
+            || SyncCmdError::ChangedMeanwhile(path()),
+            &["dir/event.ppen"],
+        );
+        check(
+            || SyncCmdError::TakeKey("control/34/position".into()),
+            &["control/34/position"],
+        );
+        check(|| SyncCmdError::Internal("course"), &["course"]);
+        check(
+            || SyncCmdError::Read(path(), ReadFileError::NotAFile),
+            &["dir/event.ppen"],
+        );
+        check(
+            || SyncCmdError::Read(path(), ReadFileError::TooLarge),
+            &["dir/event.ppen"],
+        );
+        check(
+            || {
+                SyncCmdError::Read(
+                    path(),
+                    ReadFileError::Io(std::io::Error::other("disk gone")),
+                )
+            },
+            &["dir/event.ppen", "disk gone"],
+        );
+        check(
+            || SyncCmdError::Sync(path(), Box::new(SyncError::UnknownVersion("V99".into()))),
+            &["dir/event.ppen", "V99"],
+        );
+    }
+
+    #[test]
+    fn a_partial_write_lists_the_files_and_the_cause() {
+        let error = || SyncCmdError::Partial {
+            written: vec![
+                PathBuf::from("a/project.toml"),
+                PathBuf::from("a/base.ppen"),
+            ],
+            source: ProjectError::AlreadyExists {
+                path: PathBuf::from("a/other.toml"),
+            },
+        };
+        check(error, &["a/project.toml, a/base.ppen", "a/other.toml"]);
+    }
+
+    #[test]
+    fn the_caller_words_project_and_map_errors_itself() {
+        // The MCP server redacts these two; the sync must hand them over, not word them.
+        let project = SyncCmdError::Project(ProjectError::AlreadyExists {
+            path: PathBuf::from("p.toml"),
+        })
+        .message_with(
+            &Lang::english(),
+            &|_| "PROJECT-REDACTED".to_owned(),
+            &|_, _| unreachable!(),
+        );
+        assert_eq!(project, "PROJECT-REDACTED");
+        let map = SyncCmdError::Map(PathBuf::from("m.omap"), OmapError::MissingElement("map"))
+            .message_with(&Lang::english(), &|_| unreachable!(), &|path, _| {
+                format!("MAP-REDACTED {}", path.display())
+            });
+        assert_eq!(map, "MAP-REDACTED m.omap");
+    }
+}

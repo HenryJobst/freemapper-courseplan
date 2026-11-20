@@ -68,7 +68,7 @@ const TOOLS: [&str; 55] = [
 
 struct Session {
     child: Child,
-    stdin: ChildStdin,
+    stdin: Option<ChildStdin>,
     stdout: BufReader<ChildStdout>,
     next_id: u64,
     info: Value,
@@ -99,7 +99,7 @@ impl Session {
         let stdout = BufReader::new(child.stdout.take().unwrap());
         let mut session = Self {
             child,
-            stdin,
+            stdin: Some(stdin),
             stdout,
             next_id: 1,
             info: Value::Null,
@@ -117,8 +117,9 @@ impl Session {
     }
 
     fn send(&mut self, message: Value) {
-        writeln!(self.stdin, "{message}").unwrap();
-        self.stdin.flush().unwrap();
+        let stdin = self.stdin.as_mut().unwrap();
+        writeln!(stdin, "{message}").unwrap();
+        stdin.flush().unwrap();
     }
 
     fn request(&mut self, method: &str, params: Value) -> Value {
@@ -167,8 +168,19 @@ impl Session {
 }
 
 impl Drop for Session {
+    /// Ends the server as a client does, by closing its input, so that it exits normally and
+    /// writes its coverage data; a kill would lose what the tests ran in the server. A server that
+    /// does not follow within five seconds is killed.
     fn drop(&mut self) {
+        drop(self.stdin.take());
+        for _ in 0..100 {
+            if matches!(self.child.try_wait(), Ok(Some(_))) {
+                return;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
         let _ = self.child.kill();
+        let _ = self.child.wait();
     }
 }
 

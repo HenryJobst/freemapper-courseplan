@@ -90,7 +90,8 @@ fn mcp(tool: &str, arguments: Value) -> (bool, String) {
         "tools/call",
         json!({ "name": tool, "arguments": arguments }),
     );
-    let _ = child.kill();
+    drop(ask);
+    drop(stdin);
     let _ = child.wait();
     (
         result["isError"] == true,
@@ -867,4 +868,106 @@ fn a_score_course_set_by_hand_works_on_a_forest_map() {
         "{}",
         out(&o)
     );
+}
+
+#[test]
+fn score_tools_refuse_bad_arguments_over_mcp_and_write_nothing() {
+    let (_dir, project) = fixture();
+    let before = std::fs::read(&project).unwrap();
+    let project_arg = p(&project);
+    for (tool, arguments, expected) in [
+        (
+            "score_draft",
+            json!({"project": project_arg, "name": "Sc", "time_limit_min": 0}),
+            "at least 1 minute",
+        ),
+        (
+            "score_suggest",
+            json!({"project": project_arg, "min_distance_mm": -0.5}),
+            "-0.5 is not a distance",
+        ),
+        (
+            "score_suggest",
+            json!({"project": project_arg, "start": "NOPE"}),
+            "NOPE",
+        ),
+        (
+            "score_suggest",
+            json!({"project": project_arg, "finish": "NOPE"}),
+            "NOPE",
+        ),
+        (
+            "score_suggest",
+            json!({"project": project_arg, "course": "Missing"}),
+            "Missing",
+        ),
+    ] {
+        let (is_error, text) = mcp(tool, arguments);
+        assert!(is_error, "{tool} answered: {text}");
+        assert!(text.contains(expected), "{tool}: {text}");
+    }
+    assert_eq!(std::fs::read(&project).unwrap(), before);
+}
+
+#[test]
+fn score_tools_need_a_start_and_a_finish_in_the_event() {
+    let (_dir, project) = fixture();
+    let project_arg = p(&project);
+    let (is_error, text) = mcp(
+        "remove_special",
+        json!({"project": project_arg, "id": "S1"}),
+    );
+    assert!(!is_error, "{text}");
+    for (tool, arguments) in [
+        ("score_suggest", json!({"project": project_arg})),
+        (
+            "score_draft",
+            json!({"project": project_arg, "name": "Sc", "time_limit_min": 6}),
+        ),
+    ] {
+        let (is_error, text) = mcp(tool, arguments);
+        assert!(is_error, "{tool} answered: {text}");
+        assert!(text.contains("no start"), "{tool}: {text}");
+    }
+    let (is_error, text) = mcp(
+        "remove_special",
+        json!({"project": project_arg, "id": "F1"}),
+    );
+    assert!(!is_error, "{text}");
+    let (is_error, text) = mcp("score_suggest", json!({"project": project_arg}));
+    assert!(is_error && text.contains("no start"), "{text}");
+}
+
+#[test]
+fn a_draft_for_an_existing_score_course_keeps_its_own_start_and_finish() {
+    let (_dir, project) = fixture();
+    let project_arg = p(&project);
+    ok(&[
+        "score",
+        "draft",
+        project_arg,
+        "Sc",
+        "--time-limit",
+        LIMIT,
+        "--apply",
+    ]);
+    let before = std::fs::read(&project).unwrap();
+    // The course ends where it began; a different finish would move it.
+    for ends in [json!({"start": "F1"}), json!({"finish": "S1"})] {
+        let mut arguments = json!({"project": project_arg, "name": "Sc", "time_limit_min": 6});
+        for (key, value) in ends.as_object().unwrap() {
+            arguments[key] = value.clone();
+        }
+        let (is_error, text) = mcp("score_draft", arguments);
+        assert!(is_error, "answered: {text}");
+        assert!(text.contains("has its own start and finish"), "{text}");
+    }
+    // Naming the ends it has is fine, and a second draft does not write without `apply`.
+    let (is_error, text) = mcp(
+        "score_draft",
+        json!({"project": project_arg, "name": "Sc", "time_limit_min": 6,
+               "start": "S1", "finish": "F1"}),
+    );
+    assert!(!is_error, "{text}");
+    assert_eq!(std::fs::read(&project).unwrap(), before);
 }
