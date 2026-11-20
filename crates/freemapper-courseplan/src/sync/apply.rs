@@ -1226,6 +1226,10 @@ mod tests {
     }
 
     fn setup(project: Event, theirs: PpenImport) -> Run {
+        setup_from(base(), project, theirs)
+    }
+
+    fn setup_from(base: PpenImport, project: Event, theirs: PpenImport) -> Run {
         let ours = PpenImport {
             controls: project.controls.clone(),
             specials: project.specials.clone(),
@@ -1255,7 +1259,7 @@ mod tests {
                 .collect(),
         };
         let v = Views {
-            base: base(),
+            base,
             ours,
             theirs,
             ours_ids: ids,
@@ -1452,5 +1456,133 @@ mod tests {
     fn taken_theirs_on_conflict_sets_theirs_value() {
         let a = conflict_run(Some(Side::Theirs));
         assert!((at(&a.event, "34") - 22.0).abs() < 1e-9);
+    }
+
+    fn water(id: &str, ppen_id: u32, x: f64, courses: &[&str]) -> SpecialObject {
+        SpecialObject::Water {
+            id: id.to_owned(),
+            ppen_id: Some(ppen_id),
+            map_mm: MapPoint { x, y: 5.0 },
+            courses: courses.iter().map(|c| (*c).to_owned()).collect(),
+        }
+    }
+
+    fn route(id: &str, ppen_id: u32, xs: &[f64], courses: &[&str]) -> SpecialObject {
+        SpecialObject::MarkedRoute {
+            id: id.to_owned(),
+            ppen_id: Some(ppen_id),
+            points: xs.iter().map(|&x| MapPoint { x, y: 7.0 }).collect(),
+            courses: courses.iter().map(|c| (*c).to_owned()).collect(),
+        }
+    }
+
+    fn with_special(mut imp: PpenImport, special: SpecialObject) -> PpenImport {
+        imp.specials.push(special);
+        imp
+    }
+
+    fn special<'e>(e: &'e Event, id: &str) -> Option<&'e SpecialObject> {
+        e.specials.iter().find(|s| s.id() == id)
+    }
+
+    #[test]
+    fn a_new_special_of_purple_pen_arrives_with_its_courses() {
+        let theirs = with_special(base(), water("W1", 200, 15.0, &["A"]));
+        let a = run(&setup(project(&base()), theirs), &none());
+        let Some(SpecialObject::Water {
+            map_mm, courses, ..
+        }) = special(&a.event, "W1")
+        else {
+            panic!("the water point did not arrive: {:?}", a.event.specials);
+        };
+        assert!((map_mm.x - 15.0).abs() < 1e-9 && (map_mm.y - 5.0).abs() < 1e-9);
+        assert_eq!(courses, &["A".to_owned()]);
+        assert!(a.delete.specials.is_empty());
+        assert!(a.notes.is_empty(), "{:?}", a.notes);
+    }
+
+    #[test]
+    fn a_new_special_whose_name_is_taken_gets_the_next_free_one() {
+        // The project already uses "W1" for a control of its own.
+        let mut p = project(&base());
+        p.controls.push(Control {
+            ppen_id: None,
+            ..ctl("W1", 0, 60.0)
+        });
+        let theirs = with_special(base(), water("W1", 200, 15.0, &["A"]));
+        let a = run(&setup(p, theirs), &none());
+        assert!(special(&a.event, "W1").is_none());
+        assert!(special(&a.event, "W2").is_some(), "{:?}", a.event.specials);
+        assert!(a.notes.contains(&SyncNote::NewNameTaken {
+            from: "W1".to_owned(),
+            to: "W2".to_owned()
+        }));
+        // The project's own control keeps its name.
+        assert!(a.event.controls.iter().any(|c| c.code.0 == "W1"));
+    }
+
+    #[test]
+    fn a_special_for_a_course_that_was_not_imported_is_left_out() {
+        // Taken over without its course, it would apply to all courses.
+        let theirs = with_special(base(), water("W1", 200, 15.0, &["GONE"]));
+        let a = run(&setup(project(&base()), theirs), &none());
+        assert!(special(&a.event, "W1").is_none(), "{:?}", a.event.specials);
+    }
+
+    #[test]
+    fn a_special_moved_in_purple_pen_takes_its_new_shape_and_courses() {
+        let old = with_special(base(), route("R1", 300, &[1.0, 2.0], &["A"]));
+        let mut theirs = base();
+        theirs.courses.push(course("B", 2, &["31", "35"]));
+        theirs
+            .specials
+            .push(route("R1", 300, &[1.0, 2.0, 3.5], &["A", "B"]));
+        // The project knows both courses already, so the new course list can be taken over.
+        let mut p = project(&old);
+        p.courses.push(course("B", 2, &["31", "35"]));
+        let mut base = old.clone();
+        base.courses.push(course("B", 2, &["31", "35"]));
+        let a = run(&setup_from(base, p, theirs), &none());
+        let Some(SpecialObject::MarkedRoute {
+            points, courses, ..
+        }) = special(&a.event, "R1")
+        else {
+            panic!("{:?}", a.event.specials);
+        };
+        assert_eq!(points.len(), 3, "{points:?}");
+        assert!((points[2].x - 3.5).abs() < 1e-9);
+        assert_eq!(courses, &["A".to_owned(), "B".to_owned()]);
+    }
+
+    #[test]
+    fn a_special_deleted_in_purple_pen_leaves_the_project() {
+        let old = with_special(base(), water("W1", 200, 15.0, &["A"]));
+        let a = run(&setup_from(old.clone(), project(&old), base()), &none());
+        assert!(special(&a.event, "W1").is_none(), "{:?}", a.event.specials);
+        assert!(a.delete.specials.is_empty());
+    }
+
+    #[test]
+    fn a_special_deleted_in_the_project_is_deleted_in_purple_pen() {
+        let old = with_special(base(), water("W1", 200, 15.0, &["A"]));
+        let a = run(&setup_from(old.clone(), project(&base()), old), &none());
+        assert!(special(&a.event, "W1").is_none());
+        assert_eq!(a.delete.specials, vec![200]);
+        assert!(a.delete.controls.is_empty());
+    }
+
+    #[test]
+    fn a_start_deleted_in_the_project_is_deleted_as_a_control_in_purple_pen() {
+        // Purple Pen keeps starts and finishes among its controls.
+        let mut old = base();
+        old.specials.push(SpecialObject::Start {
+            id: "S2".to_owned(),
+            ppen_id: Some(555),
+            map_mm: MapPoint { x: 0.0, y: 0.0 },
+        });
+        let a = run(&setup_from(old.clone(), project(&base()), old), &none());
+        assert!(special(&a.event, "S2").is_none());
+        assert_eq!(a.delete.controls, vec![555]);
+        assert!(a.delete.specials.is_empty());
     }
 }
