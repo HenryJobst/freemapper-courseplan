@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- `scripts/check.sh architecture` fails when the model, library or CLI crate depends on another against the layer order, or on a crate only the CLI may use (command line, servers, network client); the model knows neither the suite nor XML (ADR 0100).
 - CI mutates the Rust lines a branch changes (`cargo-mutants --in-diff`, job `mutants`) and fails when a test does not catch a mutant; a job `hack` checks the workspace with each feature alone; `scripts/check.sh complexity` fails above the cognitive complexity of 54 (`clippy.toml`); `scripts/check.sh sbom` compares `docs/sbom.cdx.json`, the CycloneDX list of the CLI's dependencies, with a fresh one (ADR 0099).
 - A property test with `proptest` for `ControlCode`: any code survives the TOML round trip (ADR 0099).
 

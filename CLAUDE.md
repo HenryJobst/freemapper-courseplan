@@ -31,7 +31,8 @@ https://github.com/HenryJobst/freemapper) and freemapper-print (`../freemapper-p
   hooks in `.claude/` and `lefthook.yml` run them.
 - `scripts/check.sh` holds the housekeeping gates (licence line, spelling, links, history, dependencies, action
   pins, ADR index, changelog pair) and `scripts/check.sh doc coverage msrv complexity hack mutants` the ones that build;
-  `sbom` compares `docs/sbom.cdx.json` and `sbom --fix` rewrites it (ADR 0098, 0099). CI runs the tests with
+  `sbom` compares `docs/sbom.cdx.json` and `sbom --fix` rewrites it; `architecture` fails when the model, library or CLI crate depends against the layer order
+  (ADR 0098, 0099, 0100). CI runs the tests with
   `cargo nextest run --workspace` and `cargo test --doc`.
 - Work on without asking for confirmation as long as the next step is clear *(user, 2026-11-08)*: the next
   plan from the approved design, its execution, merges and releases. Ask only for decisions that are the

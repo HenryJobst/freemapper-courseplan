@@ -17,6 +17,7 @@
 #   changelog  `CHANGELOG.md` and `CHANGELOG.en.md` match `Cargo.toml`
 #   badges     the README badges match the data in the repository
 #   sbom       `docs/sbom.cdx.json` is the CycloneDX list of the CLI's dependencies
+#   architecture the model crate stays free of the suite, the library of the CLI and its servers
 #   doc        rustdoc builds without warnings
 #   coverage   line coverage is not below its floor or its snapshot
 #   msrv       the workspace builds with the documented MSRV
@@ -364,7 +365,58 @@ gate_mutants() {
   esac
 }
 
-cheap=(spdx typos links secrets machete actions adr changelog badges sbom)
+# Three layers: the model (the course plan as data, read and written as TOML), the library
+# (reads maps, plans, renders: it builds on the model and the suite's crates) and the CLI (the
+# driver: arguments, the MCP and web servers, the update client, the settings folders). The model
+# knows no suite crate and no XML; the library knows no driver crate; nothing depends on the CLI
+# (ADR 0100). Every workspace member must be placed in a layer, so a new crate is a decision.
+gate_architecture() {
+  cargo metadata --format-version 1 --no-deps --locked | python3 -c '
+import json
+import sys
+
+LAYERS = {
+    "freemapper-courseplan-model": "model",
+    "freemapper-courseplan": "library",
+    "freemapper-courseplan-cli": "driver",
+}
+# Layer -> workspace crates it may depend on.
+MAY_USE = {"model": set(), "library": {"freemapper-courseplan-model"}, "driver": set(LAYERS)}
+# What only the driver may use: argument parsing, servers, the async runtime, the update client
+# and the settings folders.
+DRIVER_ONLY = {
+    "axum", "clap", "dirs", "freemapper-update", "freemapper-web", "rmcp", "rust-embed",
+    "schemars", "serde_json", "tokio", "ureq",
+}
+# What the model must not know: the suite and the map XML.
+NOT_IN_MODEL = {"quick-xml"}
+
+packages = json.load(sys.stdin)["packages"]
+problems = []
+for package in packages:
+    name = package["name"]
+    layer = LAYERS.get(name)
+    if layer is None:
+        problems.append(f"{name} is in no layer; place it in LAYERS in gate_architecture")
+        continue
+    for dependency in package["dependencies"]:
+        if dependency["kind"] == "dev":
+            continue
+        target = dependency["name"]
+        if target in LAYERS and target not in MAY_USE[layer]:
+            problems.append(f"{name} ({layer}) may not depend on {target}")
+        elif layer != "driver" and target in DRIVER_ONLY:
+            problems.append(f"{name} ({layer}) depends on {target}, which only the driver may use")
+        elif layer == "model" and (target.startswith("freemapper-") or target in NOT_IN_MODEL):
+            problems.append(f"{name} (model) depends on {target}, which the model must not know")
+
+for problem in problems:
+    print(problem, file=sys.stderr)
+sys.exit(1 if problems else 0)
+' || report "the crate layers are violated (ADR 0100)"
+}
+
+cheap=(spdx typos links secrets machete actions adr changelog badges sbom architecture)
 gates=()
 spdx_fix=0
 
@@ -383,7 +435,7 @@ for gate in "${gates[@]}"; do
   case "$gate" in
   spdx) gate_spdx "$spdx_fix" ;;
   sbom) gate_sbom "$spdx_fix" ;;
-  typos | links | secrets | machete | actions | adr | changelog | badges | doc | coverage | msrv | complexity | hack | mutants)
+  typos | links | secrets | machete | actions | adr | changelog | badges | architecture | doc | coverage | msrv | complexity | hack | mutants)
     "gate_$gate"
     ;;
   *)
