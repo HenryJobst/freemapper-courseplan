@@ -8,6 +8,9 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- CI mutates the Rust lines a branch changes (`cargo-mutants --in-diff`, job `mutants`) and fails when a test does not catch a mutant; a job `hack` checks the workspace with each feature alone; `scripts/check.sh complexity` fails above the cognitive complexity of 54 (`clippy.toml`); `scripts/check.sh sbom` compares `docs/sbom.cdx.json`, the CycloneDX list of the CLI's dependencies, with a fresh one (ADR 0099).
+- A property test with `proptest` for `ControlCode`: any code survives the TOML round trip (ADR 0099).
+
 - rmcp 3.9.0 instead of 3.6.0; the two ignores for the rmcp advisories in `deny.toml` are gone (ADR 0095, amendment).
 - The READMEs carry badges for line coverage, MSRV, ADRs, the number of checks and the licence. `scripts/badges.sh` writes them from the data in the repository, and the check fails when they are out of date (amendment to ADR 0098).
 - `scripts/check.sh` bundles the gates for the licence line, the spelling of the English documents, internal links, secrets in the history, declared but unused dependencies, action pins, the ADR index, the changelog pair, rustdoc without warnings, line coverage and the MSRV (ADR 0098). `lefthook.yml` runs the fast gates before a commit and `secrets` before a push; every Rust file carries the line `// SPDX-License-Identifier: AGPL-3.0-or-later`.
@@ -17,6 +20,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Changed
 
+- The `check` job runs the tests with `cargo-nextest`, about twice as fast, and the doc tests with `cargo test --doc` (ADR 0099).
 - The coverage job reports the measurement on every run and catches a `docs/coverage.json` that is not committed yet; both were invisible before.
 - `deny.toml` ignores `RUSTSEC-2026-0543`: `chrono` is unmaintained but reaches courseplan through rmcp and schemars, and neither can drop it; the advisory names missing maintenance, not a vulnerability (amendment to ADR 0095).
 - freemapper-core moves to v0.29.1: its manifest sets `default-features = false` on the workspace entry now, so cargo before 1.99 reads it again. The MSRV therefore stays 1.88 and is checked with 1.88.0 from now on (ADR 0098, amendment).

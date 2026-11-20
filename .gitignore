@@ -5,3 +5,4 @@
 # Examples: generated PDFs and previews are kept; downloaded map data is not.
 /examples/*/data/
 .claude/settings.local.json
+mutants.out*/
