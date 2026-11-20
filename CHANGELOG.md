@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- `scripts/check.sh architecture` scheitert, wenn das Modell-, das Bibliotheks- oder das CLI-Crate gegen die Schichtenfolge von einander abhängt oder ein Crate nutzt, das nur die CLI nutzen darf (Befehlszeile, Server, Netzwerk-Client); das Modell kennt weder die Suite noch XML (Entscheidung 0100).
 - CI mutiert die Rust-Zeilen, die ein Branch ändert (`cargo-mutants --in-diff`, Job `mutants`), und scheitert, wenn kein Test einen Mutanten fängt; ein Job `hack` prüft den Workspace mit jedem Feature allein; `scripts/check.sh complexity` scheitert oberhalb der kognitiven Komplexität 54 (`clippy.toml`); `scripts/check.sh sbom` vergleicht `docs/sbom.cdx.json`, die CycloneDX-Liste der CLI-Abhängigkeiten, mit einer frischen (Entscheidung 0099).
 - Ein Property-Test mit `proptest` für `ControlCode`: jeder Code übersteht den TOML-Roundtrip (Entscheidung 0099).
 - rmcp 3.9.0 statt 3.6.0; die zwei Ausnahmen für die rmcp-Meldungen in `deny.toml` entfallen (ADR 0095, Nachtrag).
