@@ -793,6 +793,31 @@ mod tests {
     }
 
     #[test]
+    fn a_control_code_that_is_neither_integer_nor_string_says_what_it_expected() {
+        let error = toml::from_str::<Holder>("code = true")
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains("a control code as integer or string"),
+            "{error}"
+        );
+    }
+
+    proptest::proptest! {
+        /// Whatever text a control code holds, writing it to TOML and reading it back gives the same code: an
+        /// integer where the text is a plain number that fits, a string everywhere else (leading zeros, 20
+        /// digits, quotes, line breaks).
+        #[test]
+        fn any_control_code_survives_toml(
+            text in proptest::prop_oneof!["[0-9]{0,22}", "[A-Z]{0,2}[0-9]{0,3}", "\\PC{0,12}"]
+        ) {
+            let holder = Holder { code: ControlCode(text) };
+            let written = toml::to_string(&holder).unwrap();
+            proptest::prop_assert_eq!(toml::from_str::<Holder>(&written).unwrap(), holder);
+        }
+    }
+
+    #[test]
     fn special_ppen_id_round_trips_in_toml() {
         #[derive(Debug, PartialEq, Serialize, Deserialize)]
         struct Wrap {

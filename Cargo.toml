@@ -25,6 +25,8 @@ freemapper-printrules = { git = "https://github.com/HenryJobst/freemapper-core",
 freemapper-contract = { git = "https://github.com/HenryJobst/freemapper-core", tag = "v0.29.1", default-features = false }
 serde = { version = "1", features = ["derive"] }
 toml = "1.2.1"
+# Tests only: property tests for the file formats (ADR 0099).
+proptest = { version = "1.7.0", default-features = false, features = ["std"] }
 toml_edit = { version = "=0.25.17", features = ["serde"] }
 thiserror = "2.0.21"
 tempfile = "3.27.0"
