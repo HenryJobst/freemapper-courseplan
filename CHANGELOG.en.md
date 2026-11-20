@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- rmcp 3.9.0 instead of 3.6.0; the two ignores for the rmcp advisories in `deny.toml` are gone (ADR 0095, amendment).
 - The READMEs carry badges for line coverage, MSRV, ADRs, the number of checks and the licence. `scripts/badges.sh` writes them from the data in the repository, and the check fails when they are out of date (amendment to ADR 0098).
 - `scripts/check.sh` bundles the gates for the licence line, the spelling of the English documents, internal links, secrets in the history, declared but unused dependencies, action pins, the ADR index, the changelog pair, rustdoc without warnings, line coverage and the MSRV (ADR 0098). `lefthook.yml` runs the fast gates before a commit and `secrets` before a push; every Rust file carries the line `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - The website <https://freemapper.de> shows the programs of the suite, the manuals and the changes; README and manual link to it. After a release the release workflow starts its rebuild when the secret `SITE_DISPATCH_TOKEN` is set; otherwise it follows with its daily build (ADR 0097).

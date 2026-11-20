@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- rmcp 3.9.0 statt 3.6.0; die zwei Ausnahmen für die rmcp-Meldungen in `deny.toml` entfallen (ADR 0095, Nachtrag).
 - Die READMEs tragen Badges für Zeilenabdeckung, MSRV, ADRs, Zahl der Prüfungen und Lizenz. `scripts/badges.sh` schreibt sie aus den Daten im Repository, und die Prüfung scheitert, wenn sie veralten (Nachtrag zu ADR 0098).
 - `scripts/check.sh` bündelt die Gates für die Lizenzzeile, die Rechtschreibung der englischen Doku, interne Links, Geheimnisse in der Historie, ungenutzte Abhängigkeiten, Action-Pins, den ADR-Index, das Changelog-Paar, rustdoc ohne Warnungen, die Zeilenabdeckung und die MSRV (ADR 0098). `lefthook.yml` ruft die schnellen Gates vor dem Commit und `secrets` vor dem Push; jede Rust-Datei trägt die Zeile `// SPDX-License-Identifier: AGPL-3.0-or-later`.
 - Die Website <https://freemapper.de> zeigt die Programme der Suite, die Handbücher und die Änderungen; README und Handbuch verweisen auf sie. Nach einem Release stößt der Release-Workflow ihren Neubau an, wenn das Secret `SITE_DISPATCH_TOKEN` gesetzt ist; sonst folgt sie mit ihrem täglichen Bau (ADR 0097).
