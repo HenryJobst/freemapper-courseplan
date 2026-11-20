@@ -317,6 +317,9 @@ fn the_kind_words_of_the_refusals_are_german_in_a_german_server() {
     assert!(text.contains("jede Bahn"), "{text}");
 }
 
+/// Only where the home folder comes from `HOME`: on Windows it comes from the system, and the
+/// test cannot move it.
+#[cfg(unix)]
 #[test]
 fn paths_with_a_tilde_are_resolved_in_the_home_folder() {
     let home = tempfile::tempdir().unwrap();
