@@ -100,7 +100,8 @@ fn mcp(tool: &str, arguments: Value) -> Value {
         "tools/call",
         json!({ "name": tool, "arguments": arguments }),
     );
-    let _ = child.kill();
+    drop(ask);
+    drop(stdin);
     let _ = child.wait();
     assert_ne!(result["isError"], true, "{result}");
     serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap()

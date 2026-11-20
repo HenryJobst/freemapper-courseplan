@@ -100,7 +100,8 @@ fn mcp(tool: &str, arguments: Value) -> Value {
         "tools/call",
         json!({ "name": tool, "arguments": arguments }),
     );
-    let _ = child.kill();
+    drop(ask);
+    drop(stdin);
     let _ = child.wait();
     assert_ne!(result["isError"], true, "{result}");
     serde_json::from_str(result["content"][0]["text"].as_str().unwrap()).unwrap()
@@ -754,7 +755,7 @@ fn an_empty_code_is_refused_not_dropped() {
             break v;
         }
     };
-    let _ = child.kill();
+    drop(stdin);
     let _ = child.wait();
     assert_eq!(reply["result"]["isError"], true, "{reply}");
     assert!(

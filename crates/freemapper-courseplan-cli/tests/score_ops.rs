@@ -90,7 +90,8 @@ fn mcp(tool: &str, arguments: Value) -> (bool, String) {
         "tools/call",
         json!({ "name": tool, "arguments": arguments }),
     );
-    let _ = child.kill();
+    drop(ask);
+    drop(stdin);
     let _ = child.wait();
     (
         result["isError"] == true,
