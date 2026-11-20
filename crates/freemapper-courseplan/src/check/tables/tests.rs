@@ -511,3 +511,48 @@ fn the_nor_long_table_with_real_data() {
         assert_eq!(found.len(), usize::from(outside), "{climb}: {found:?}");
     }
 }
+
+#[test]
+fn a_table_rule_without_its_values_names_the_first_one_it_lacks() {
+    let e = long(200.0, &[c("H-18")]);
+    let he = r#"courses = [
+  { course = 1, printed = "HE", categories = ["HE"], he_length_percent = [100, 100] },
+]"#;
+    for (key, values, lacks) in [
+        ("length_table", String::new(), "courses"),
+        ("length_table", he.to_owned(), "reference_category"),
+        ("difficulty_mix", String::new(), "levels"),
+        (
+            "difficulty_mix",
+            "[levels]\n\"HE\" = 5".to_owned(),
+            "easy_levels",
+        ),
+        (
+            "difficulty_mix",
+            "easy_levels = [1]\n[levels]\n\"HE\" = 5".to_owned(),
+            "hard_levels",
+        ),
+        (
+            "difficulty_mix",
+            "easy_levels = [1]\nhard_levels = [5]".to_owned(),
+            "levels",
+        ),
+        ("nor_lkm", String::new(), "courses"),
+    ] {
+        let rule = with_values(rule("t.rule", key, Severity::Warning), &values);
+        let r = run(&e, vec![rule]);
+        let names: Vec<String> = r
+            .skipped
+            .iter()
+            .filter(|s| s.reason_id == SKIP_VALUE_MISSING)
+            .flat_map(|s| {
+                s.args.iter().filter_map(|(name, value)| match value {
+                    ArgValue::Text(text) if *name == "name" => Some(text.clone()),
+                    _ => None,
+                })
+            })
+            .collect();
+        assert_eq!(names, [lacks], "{key} with `{values}`: {r:?}");
+        assert!(r.findings.is_empty(), "{key}: {:?}", r.findings);
+    }
+}
