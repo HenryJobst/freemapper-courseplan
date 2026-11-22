@@ -1,0 +1,11 @@
+name: Wunsch / Feature request
+description: Eine Idee oder eine fehlende Bahnart. / An idea, or a course type that is missing.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: wish
+    attributes:
+      label: Was soll freemapper-courseplan können? / What should freemapper-courseplan do?
+      description: Wofür brauchst du es (Training, Wettkampf, Schule)? / What do you need it for?
+    validations:
+      required: true

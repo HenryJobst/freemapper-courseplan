@@ -8,6 +8,7 @@ This file lists all notable changes to freemapper-courseplan, newest first. The 
 
 ### Added
 
+- Issues of users stand out: a workflow sets the label `von-nutzer` on every issue that does not come from the owner or a collaborator; two forms (bug, request) ask for the version, the map and what happened (ADR 0103).
 - ADR 0102 records the findings on running tests and mutation tests: how the `mutants` gate ends, why a calculation needs a test that fixes its value, and why part of the coverage rise is a measurement artefact (two test servers are still ended with a kill).
 - Two badges in the READMEs: the number of tests and the test budget (15 min). `docs/tests.json` holds both; `scripts/check.sh tests` counts the `#[test]` in the sources and fails on a difference (`tests --fix` rewrites it), and the Linux test run in CI fails when it exceeds the budget (ADR 0101).
 - `scripts/check.sh architecture` fails when the model, library or CLI crate depends on another against the layer order, or on a crate only the CLI may use (command line, servers, network client); the model knows neither the suite nor XML (ADR 0100).
