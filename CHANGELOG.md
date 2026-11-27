@@ -8,6 +8,7 @@ Hier stehen alle wichtigen Änderungen an freemapper-courseplan, die neueste zue
 
 ### Hinzugefügt
 
+- Die README zeigt wie freemapper Version, Downloads, Commits und CI als Badges in drei Gruppen. Ein täglicher Workflow zählt die Downloads der Programm-Archive (ohne Prüfsummen und Update-Dateien) und legt das Ergebnis auf dem Branch `badges` ab (wie freemapper, ADR 0177).
 - Issues von Nutzern fallen auf: Ein Workflow setzt auf jedes Issue, das nicht vom Eigentümer oder einem Mitarbeiter stammt, das Label `von-nutzer`; zwei Vorlagen (Fehler, Wunsch) fragen Version, Karte und Ablauf ab (ADR 0103).
 - Entscheidung 0102 hält fest, was das Ausführen der Tests und der Mutationstests gezeigt hat: wie das Gate `mutants` endet, warum eine Rechnung einen Test braucht, der ihren Wert festlegt, und warum ein Teil des Coverage-Anstiegs ein Messartefakt ist (zwei Testserver werden noch mit einem Kill beendet).
 - Zwei Badges in den READMEs: die Zahl der Tests und das Testbudget (15 min). `docs/tests.json` hält beides; `scripts/check.sh tests` zählt die `#[test]` im Quelltext und scheitert bei Abweichung (`tests --fix` schreibt neu), und der Linux-Testlauf in der CI scheitert, wenn er das Budget überschreitet (Entscheidung 0101).
